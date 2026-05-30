@@ -349,7 +349,7 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
   <section class="sec">
     <div class="container">
       <div class="sec-head"><div class="sec-title">Partisipan Trading</div><div class="sec-line"></div></div>
-      <div class="nas-grid">
+      <div class="nas-grid" id="pubNasabahGrid">
         <div class="nas-card"><div class="nas-num" style="background:#E74C3C">N1</div><div class="nas-code">Nasabah #1</div><div class="nas-modal">Modal: $25.00</div><div class="nas-cadangan">🛡️ Cadangan: $12.50</div></div>
         <div class="nas-card"><div class="nas-num" style="background:#9B59B6">N2</div><div class="nas-code">Nasabah #2</div><div class="nas-modal">Modal: $25.00</div><div class="nas-cadangan">🛡️ Cadangan: $12.50</div></div>
         <div class="nas-card"><div class="nas-num" style="background:#2980B9">N3</div><div class="nas-code">Nasabah #3</div><div class="nas-modal">Modal: $25.00</div><div class="nas-cadangan">🛡️ Cadangan: $12.50</div></div>
@@ -427,6 +427,7 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <div class="tab" onclick="showAPage('nasabah',this)">👥 Nasabah</div>
       <div class="tab" onclick="showAPage('riwayat',this)">📅 Riwayat</div>
       <div class="tab" onclick="showAPage('lapkeu',this)">📋 Lap.Keu</div>
+      <div class="tab" onclick="showAPage('kelola',this)">👤 Kelola</div>
       <div class="tab" onclick="showPublic()" style="color:#E24B4A;margin-left:auto">🌐 Website</div>
     </div>
     <div class="a-wrap">
@@ -517,6 +518,41 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       </div>
       <div class="a-divider"></div>
       <button class="btn btn-danger" onclick="resetData()">🗑️ Reset Semua Data</button>
+    </div>
+
+    <!-- KELOLA NASABAH -->
+    <div class="a-page" id="apage-kelola">
+      <div class="a-header"><h2>Kelola Nasabah</h2><p>Tambah, edit, hapus nasabah</p></div>
+
+      <!-- TAMBAH NASABAH -->
+      <div class="card">
+        <div class="card-title">➕ TAMBAH NASABAH BARU</div>
+        <div class="field"><label>Nama Nasabah</label><input type="text" id="nasNama" placeholder="contoh: Budi"/></div>
+        <div class="field"><label>Modal ($)</label><input type="number" id="nasModal" placeholder="contoh: 25" step="0.01"/></div>
+        <div class="field">
+          <label>Warna Avatar</label>
+          <select id="nasWarna">
+            <option value="#E74C3C">🔴 Merah</option>
+            <option value="#E67E22">🟠 Orange</option>
+            <option value="#F1C40F">🟡 Kuning</option>
+            <option value="#27AE60">🟢 Hijau</option>
+            <option value="#2980B9">🔵 Biru</option>
+            <option value="#9B59B6">🟣 Ungu</option>
+            <option value="#1ABC9C">🩵 Tosca</option>
+            <option value="#E91E63">🩷 Pink</option>
+          </select>
+        </div>
+        <button class="btn btn-gold" onclick="tambahNasabah()">➕ Tambah Nasabah</button>
+      </div>
+
+      <!-- DAFTAR NASABAH -->
+      <div class="card">
+        <div class="card-title">👥 DAFTAR NASABAH AKTIF</div>
+        <div id="kelolaList"></div>
+      </div>
+
+      <!-- RINGKASAN -->
+      <div class="a-stats" id="kelolaStats" style="margin-top:0"></div>
     </div>
 
     </div>
@@ -783,8 +819,115 @@ async function renderLapkeu(){
 }
 async function resetData(){if(!confirm('Hapus SEMUA data?'))return;await writeDB([]);renderRiwayat();renderNasabah();renderLapkeu();showToast('🗑️ Direset')}
 
+// ===== KELOLA NASABAH =====
+const DEFAULT_NASABAH = [
+  {nama:'Arif', modal:25, warna:'#E74C3C'},
+  {nama:'Inul', modal:25, warna:'#9B59B6'},
+  {nama:'Rapel',modal:25, warna:'#2980B9'},
+  {nama:'Aci',  modal:25, warna:'#27AE60'},
+]
+
+function getNasabahList(){
+  const stored = localStorage.getItem('baroto_nasabah')
+  return stored ? JSON.parse(stored) : DEFAULT_NASABAH
+}
+
+function saveNasabahList(list){
+  localStorage.setItem('baroto_nasabah', JSON.stringify(list))
+  // Update global NASABAH array
+  NASABAH.length = 0
+  list.forEach(n => NASABAH.push(n))
+  // Update public website
+  updatePublicNasabah()
+}
+
+function tambahNasabah(){
+  const nama = document.getElementById('nasNama').value.trim()
+  const modal = parseFloat(document.getElementById('nasModal').value)||0
+  const warna = document.getElementById('nasWarna').value
+  if(!nama){alert('Isi nama nasabah!');return}
+  if(modal<=0){alert('Isi modal!');return}
+  const list = getNasabahList()
+  list.push({nama, modal, warna})
+  saveNasabahList(list)
+  document.getElementById('nasNama').value = ''
+  document.getElementById('nasModal').value = ''
+  renderKelola()
+  showToast(`✅ ${nama} berhasil ditambahkan!`)
+}
+
+function hapusNasabah(idx){
+  const list = getNasabahList()
+  if(!confirm(`Hapus nasabah ${list[idx].nama}?`))return
+  list.splice(idx,1)
+  saveNasabahList(list)
+  renderKelola()
+  showToast('🗑️ Nasabah dihapus')
+}
+
+function renderKelola(){
+  const list = getNasabahList()
+  const totModal = list.reduce((s,n)=>s+n.modal,0)
+  const totCadangan = totModal * 0.5
+
+  document.getElementById('kelolaStats').innerHTML=`
+    <div class="a-stat blue"><div class="a-slabel">Total Nasabah</div><div class="a-sval">${list.length}</div></div>
+    <div class="a-stat"><div class="a-slabel">Total Modal</div><div class="a-sval">$${totModal.toFixed(2)}</div></div>
+    <div class="a-stat blue"><div class="a-slabel">Dana Cadangan</div><div class="a-sval">$${totCadangan.toFixed(2)}</div></div>`
+
+  const el = document.getElementById('kelolaList')
+  if(!list.length){el.innerHTML='<div class="empty">Belum ada nasabah</div>';return}
+  
+  el.innerHTML = list.map((n,i)=>`
+    <div class="list-item" style="margin-bottom:8px">
+      <div style="width:36px;height:36px;border-radius:50%;background:${n.warna};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">N${i+1}</div>
+      <div class="li-info">
+        <div class="li-title">${n.nama} <span class="badge badge-g">AKTIF</span></div>
+        <div class="li-sub">Modal: $${n.modal.toFixed(2)} · Cadangan: $${(n.modal*0.5).toFixed(2)} · Dividen: $${((n.modal/list.reduce((s,x)=>s+x.modal,0))*100).toFixed(1)}% share</div>
+      </div>
+      <button class="li-del" onclick="hapusNasabah(${i})" title="Hapus">🗑️</button>
+    </div>`).join('')
+}
+
+function updatePublicNasabah(){
+  const list = getNasabahList()
+  const colors = ['#E74C3C','#9B59B6','#2980B9','#27AE60','#E67E22','#F1C40F','#1ABC9C','#E91E63']
+  const pubGrid = document.getElementById('pubNasabahGrid')
+  if(!pubGrid) return
+  pubGrid.innerHTML = list.map((n,i)=>`
+    <div class="nas-card">
+      <div class="nas-num" style="background:${n.warna||colors[i%colors.length]}">N${i+1}</div>
+      <div class="nas-code">Nasabah #${i+1}</div>
+      <div class="nas-modal">Modal: $${n.modal.toFixed(2)}</div>
+      <div class="nas-cadangan">🛡️ Cadangan: $${(n.modal*0.5).toFixed(2)}</div>
+    </div>`).join('')
+}
+
+// Init nasabah dari storage
+function initNasabah(){
+  const stored = getNasabahList()
+  NASABAH.length = 0
+  stored.forEach(n => NASABAH.push(n))
+  updatePublicNasabah()
+}
+
+// ===== OVERRIDE showAPage untuk kelola =====
+const _origShowAPage = showAPage
+// Patch showAPage
+function showAPage(id, el){
+  document.querySelectorAll('.a-page').forEach(p=>p.classList.remove('active'))
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
+  document.getElementById('apage-'+id).classList.add('active')
+  if(el)el.classList.add('active')
+  if(id==='riwayat')renderRiwayat()
+  if(id==='nasabah')renderNasabah()
+  if(id==='lapkeu')renderLapkeu()
+  if(id==='kelola')renderKelola()
+}
+
 // Init public stats
 updatePublicStats()
+initNasabah()
 
 // ===== SCAN FBS =====
 let scanImageBase64 = ''
