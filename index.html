@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Baroto Investasi — EA Trading XAUUSD</title>
+<meta name="description" content="Baroto Investasi: platform trading emas XAUUSD berbasis Expert Advisor otomatis. Modal terjangkau, hasil transparan. Hubungi WA 08123016198."/>
+<meta name="keywords" content="baroto investasi, trading emas, EA XAUUSD, investasi otomatis, robot trading"/>
+<meta name="robots" content="index, follow"/>
+<meta property="og:title" content="Baroto Investasi — EA Trading XAUUSD"/>
+<meta property="og:description" content="Robot trading emas XAUUSD otomatis 24/5. High Risk High Return. Hubungi WA untuk info."/>
+<meta property="og:type" content="website"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --gold:#c9a84c;--gold-dim:#c9a84c22;--gold-mid:#c9a84c55;
+  --green:#27AE60;--red:#E24B4A;--blue:#5ba3f5;
+  --blue-dim:#5ba3f522;--blue-mid:#5ba3f533;
+  --bg:#0a0c0f;--bg2:#0e1014;--bg3:#111318;
+  --border:#1e2228;--text:#e8e2d5;--muted:#9e9886;
+  --dim:#6b6557;--dimmer:#4a4438;--wa:#25D366;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 50% at 50% -10%,#c9a84c18,transparent),
+             radial-gradient(ellipse 60% 40% at 85% 85%,#1a3a2a33,transparent)}
+.page{position:relative;z-index:1}
+.container{max-width:960px;margin:0 auto;padding:0 20px}
+
+/* ===== PUBLIC SITE ===== */
+#publicSite{display:block}
+#adminSite{display:none}
+
+/* NAV */
+.nav-wrap{position:sticky;top:0;z-index:100;background:#0a0c0fee;backdrop-filter:blur(12px);border-bottom:1px solid var(--gold-dim)}
+.nav-inner{max-width:960px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.nav-brand{display:flex;flex-direction:column}
+.nav-logo{font-family:'Cinzel',serif;font-size:16px;font-weight:900;color:var(--gold);letter-spacing:2px;line-height:1}
+.nav-tagline{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-top:2px}
+.nav-badge{background:#E24B4A22;border:1px solid #E24B4A44;color:#eb8585;font-size:10px;padding:4px 10px;border-radius:10px;letter-spacing:1px;white-space:nowrap}
+.nav-cta{background:var(--wa);color:#0a0c0f;font-weight:700;font-size:12px;padding:8px 16px;border-radius:6px;text-decoration:none;white-space:nowrap}
+
+/* HERO */
+.hero{text-align:center;padding:56px 20px 40px;border-bottom:1px solid var(--gold-dim)}
+.hero-brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:18px}
+.hero-logo-icon{width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#c9a84c,#e8c14a);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+.hero-logo-text h1{font-family:'Cinzel',serif;font-size:clamp(22px,5vw,40px);font-weight:900;color:#f0e8d0;line-height:1;letter-spacing:2px}
+.hero-logo-text span{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--gold)}
+.hero-sub{font-family:'Cinzel',serif;font-size:clamp(11px,2vw,15px);color:var(--gold);font-weight:700;letter-spacing:2px;margin-bottom:12px}
+.hero-meta{font-size:12px;color:var(--dim);margin-bottom:24px;line-height:1.8}
+.hero-meta span{color:var(--blue);font-weight:600}
+.hero-meta strong{color:var(--green)}
+.hero-btns{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+.btn-wa{display:inline-block;background:var(--wa);color:#0a0c0f;font-weight:700;font-size:13px;padding:13px 26px;border-radius:7px;text-decoration:none;transition:transform .2s}
+.btn-wa:hover{transform:translateY(-2px)}
+.btn-ghost{display:inline-block;background:transparent;color:var(--gold);font-weight:600;font-size:13px;padding:13px 20px;border-radius:7px;border:1px solid var(--gold-mid);text-decoration:none}
+.real-alert{background:#c9a84c15;border:1px solid var(--gold-mid);border-radius:10px;padding:12px 16px;margin:20px auto 0;max-width:560px;font-size:11px;color:var(--gold);line-height:1.6}
+
+/* STATS */
+.stats-section{padding:36px 0 24px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.stat-card{background:var(--bg3);border:1px solid var(--gold-dim);border-radius:14px;padding:16px 12px;text-align:center;transition:border-color .3s,transform .3s}
+.stat-card:hover{border-color:var(--gold-mid);transform:translateY(-2px)}
+.s-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.s-val{font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--gold);line-height:1}
+.s-sub{font-size:10px;color:var(--green);margin-top:3px}
+.s-sub.blue{color:var(--blue)}
+.s-sub.red{color:var(--red)}
+
+.divider{height:1px;background:var(--gold-dim);margin:4px 0}
+.sec{padding:24px 0 18px}
+.sec-head{margin-bottom:16px}
+.sec-title{font-family:'Cinzel',serif;font-size:14px;color:var(--gold);letter-spacing:1px;margin-bottom:4px}
+.sec-line{width:28px;height:1px;background:var(--gold)}
+
+/* SKEMA */
+.skema-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px}
+.skema-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.skema-item{border-radius:10px;padding:14px;text-align:center}
+.skema-item.gold{background:#c9a84c10;border:1px solid var(--gold-dim)}
+.skema-item.blue{background:var(--blue-dim);border:1px solid var(--blue-mid)}
+.skema-item.green{background:#27AE6010;border:1px solid #27AE6033}
+.skema-item.red{background:#E24B4A10;border:1px solid #E24B4A33}
+.skema-pct{font-family:'Cinzel',serif;font-size:26px;font-weight:900;margin-bottom:3px}
+.skema-item.gold .skema-pct{color:var(--gold)}
+.skema-item.blue .skema-pct{color:var(--blue)}
+.skema-item.green .skema-pct{color:var(--green)}
+.skema-item.red .skema-pct{color:#E24B4A}
+.skema-lbl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.skema-desc{font-size:10px;color:var(--muted);line-height:1.5}
+.skema-note{font-size:11px;color:var(--dimmer);text-align:center;background:#ffffff05;border-radius:6px;padding:10px;border:1px solid var(--border);line-height:1.6}
+
+/* TABLE */
+.tbl-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:400px}
+th{padding:11px 14px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);background:var(--bg3);text-align:left;border-bottom:1px solid var(--border);font-weight:500}
+td{padding:11px 14px;font-size:12px;color:#c8bfa8;border-bottom:1px solid #1a1e24;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.td-m{color:#8a8070!important;font-size:11px!important}
+.profit{color:var(--green)!important;font-weight:600!important}
+.loss{color:var(--red)!important;font-weight:600!important}
+.tag{display:inline-block;font-size:9px;padding:2px 7px;border-radius:4px;font-weight:600}
+.tag-green{background:#27AE6022;color:#6fcf97;border:1px solid #27AE6033}
+.tag-red{background:#E24B4A22;color:#eb8585;border:1px solid #E24B4A33}
+.tag-gold{background:var(--gold-dim);color:#e8c14a;border:1px solid var(--gold-mid)}
+.tag-blue{background:var(--blue-dim);color:#8fc3f8;border:1px solid var(--blue-mid)}
+.bar-bg{height:4px;background:var(--border);border-radius:3px;width:60px;overflow:hidden}
+.bar-g{height:100%;background:var(--green);border-radius:3px}
+.bar-r{height:100%;background:var(--red);border-radius:3px}
+
+/* NASABAH */
+.nas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.nas-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center}
+.nas-num{width:44px;height:44px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
+.nas-code{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.nas-modal{font-size:10px;color:var(--dim);margin-bottom:4px}
+.nas-cadangan{font-size:10px;color:var(--blue)}
+
+/* INFO */
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.info-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:10px;align-items:flex-start}
+.info-icon{width:36px;height:36px;border-radius:9px;background:var(--gold-dim);border:1px solid var(--gold-mid);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.info-content h4{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px}
+.info-content p{font-size:11px;color:var(--dim);line-height:1.6}
+
+/* GABUNG */
+.gabung-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:20px}
+.step-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;gap:10px;align-items:flex-start}
+.step-num{font-family:'Cinzel',serif;font-size:18px;font-weight:900;color:var(--gold-mid);flex-shrink:0}
+.step-content h4{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px}
+.step-content p{font-size:11px;color:var(--dim);line-height:1.5}
+
+/* CTA */
+.cta-section{text-align:center;padding:40px 20px 24px;border-top:1px solid var(--border);margin-top:10px}
+.cta-brand{font-family:'Cinzel',serif;font-size:22px;color:#f0e8d0;margin-bottom:4px;font-weight:900;letter-spacing:2px}
+.cta-sub{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.cta-desc{font-size:12px;color:var(--dim);margin-bottom:20px;line-height:1.7;max-width:380px;margin-left:auto;margin-right:auto}
+.wa-box{display:inline-flex;align-items:center;gap:12px;background:#25D36615;border:1px solid #25D36633;border-radius:10px;padding:13px 22px;margin-bottom:20px}
+.wa-label{font-size:9px;color:#4a9e6a;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px}
+.wa-num{font-family:'Cinzel',serif;font-size:17px;font-weight:700;color:var(--wa);letter-spacing:1px}
+.cta-btns{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+
+footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
+.disclaimer{font-size:10px;color:var(--dimmer);line-height:1.7;max-width:560px;margin:0 auto 8px}
+.footer-copy{font-size:10px;color:#3a3830}
+
+/* ===== ADMIN PANEL ===== */
+.admin-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:var(--bg2);border:1px solid var(--gold-mid);border-radius:16px;padding:28px 22px;width:100%;max-width:360px;text-align:center}
+.login-icon{font-size:44px;margin-bottom:10px}
+.login-title{font-size:18px;font-weight:700;color:var(--gold);margin-bottom:3px}
+.login-sub{font-size:11px;color:var(--dim);margin-bottom:22px}
+.login-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:16px;color:var(--text);font-family:'Outfit',sans-serif;outline:none;text-align:center;letter-spacing:4px;margin-bottom:12px;transition:border-color .2s}
+.login-input:focus{border-color:var(--gold-mid)}
+.login-btn{width:100%;background:var(--gold);color:#0a0c0f;font-weight:700;font-size:14px;padding:12px;border-radius:8px;border:none;cursor:pointer;font-family:'Outfit',sans-serif}
+.login-error{font-size:11px;color:var(--red);margin-top:6px;display:none}
+.back-btn{font-size:11px;color:var(--dim);margin-top:12px;cursor:pointer;text-decoration:underline;display:block}
+
+/* ADMIN APP */
+.admin-app{display:none}
+.nav-tabs{position:sticky;top:0;z-index:100;background:#0a0c0fee;backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;overflow-x:auto}
+.tab{padding:12px 13px;font-size:11px;font-weight:600;color:var(--dim);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.a-page{display:none}.a-page.active{display:block}
+.a-wrap{max-width:520px;margin:0 auto;padding:0 16px 80px}
+
+.a-header{text-align:center;padding:20px 0 14px}
+.a-header h2{font-size:15px;font-weight:700;color:var(--gold);margin-bottom:2px}
+.a-header p{font-size:11px;color:var(--dim)}
+.clock{display:inline-block;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--blue);margin-top:6px}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px}
+.card-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11px;color:var(--dim);margin-bottom:4px;font-weight:500}
+.field input,.field select,.field textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);font-family:'Outfit',sans-serif;outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus{border-color:var(--gold-mid)}
+.field textarea{resize:vertical;min-height:55px;font-size:12px;line-height:1.5}
+.toggle-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.toggle-btn{padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:13px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;font-family:'Outfit',sans-serif}
+.toggle-btn.ap{background:#27AE6022;border-color:#27AE6055;color:var(--green)}
+.toggle-btn.al{background:#E24B4A22;border-color:#E24B4A55;color:var(--red)}
+.nom-wrap{position:relative}
+.nom-prefix{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:600;pointer-events:none;color:var(--dim)}
+.nom-prefix.profit{color:var(--green)}
+.nom-prefix.loss{color:var(--red)}
+.nom-input{padding-left:34px!important}
+
+.btn{width:100%;padding:11px;border-radius:10px;border:none;cursor:pointer;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;transition:all .2s;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-gold{background:var(--gold);color:#0a0c0f}
+.btn-gold:disabled{opacity:.5;cursor:not-allowed}
+.btn-wa{background:var(--wa);color:#0a0c0f}
+.btn-copy{background:transparent;color:var(--blue);border:1px solid #5ba3f533}
+.btn-danger{background:#E24B4A15;color:var(--red);border:1px solid #E24B4A33;font-size:11px}
+
+.status-bar{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:11px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sdot.online{background:var(--green)}
+.sdot.offline{background:var(--red)}
+.sdot.loading{background:var(--gold);animation:pulse .8s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.preview-box{background:var(--bg3);border:1px solid var(--gold-dim);border-radius:12px;padding:12px;margin-bottom:8px;display:none}
+.preview-box.show{display:block}
+.preview-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.preview-msg{font-size:11px;line-height:1.9;color:var(--text);white-space:pre-wrap;word-break:break-word}
+
+.a-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.a-stat{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center}
+.a-slabel{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.a-sval{font-size:14px;font-weight:700;color:var(--gold)}
+.a-stat.green .a-sval{color:var(--green)}
+.a-stat.red .a-sval{color:var(--red)}
+.a-stat.blue .a-sval{color:var(--blue)}
+
+.list-item{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:7px}
+.li-date{font-size:10px;color:var(--dim);width:55px;flex-shrink:0;line-height:1.4}
+.li-info{flex:1}
+.li-title{font-size:11px;color:var(--muted);margin-bottom:2px}
+.li-sub{font-size:10px;color:var(--dim)}
+.li-amount{font-size:12px;font-weight:700}
+.li-amount.p{color:var(--green)}
+.li-amount.l{color:var(--red)}
+.li-del{background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:4px}
+.li-del:hover{color:var(--red)}
+.badge{display:inline-block;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:600}
+.badge-g{background:#27AE6022;color:#6fcf97;border:1px solid #27AE6033}
+.badge-r{background:#E24B4A22;color:#eb8585;border:1px solid #E24B4A33}
+
+.nas-laporan{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px}
+.nas-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.nas-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.nas-nm{font-size:13px;font-weight:600;color:var(--text)}
+.nas-md{font-size:10px;color:var(--dim)}
+.nas-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.nas-box{background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:8px;text-align:center}
+.nas-blabel{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
+.nas-bval{font-size:13px;font-weight:700}
+
+.lk-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1e2444}
+.lk-row:last-child{border-bottom:none}
+.lk-label{font-size:11px;color:var(--muted)}
+.lk-val{font-size:12px;font-weight:600}
+.lk-total{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg3);border-radius:8px;margin-top:7px}
+
+.empty{text-align:center;padding:18px;color:var(--dim);font-size:12px}
+.a-divider{height:1px;background:var(--border);margin:10px 0}
+.tip{background:var(--gold-dim);border:1px solid var(--gold-mid);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--gold);line-height:1.6;text-align:center;margin-top:8px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#27AE60;color:#fff;padding:10px 20px;border-radius:20px;font-size:12px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{opacity:1}
+
+@media(max-width:600px){.skema-grid{grid-template-columns:1fr 1fr}.container{padding:0 14px}.nav-inner{padding:12px 14px}}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<!-- =============== PUBLIC SITE =============== -->
+<div id="publicSite" class="page">
+  <div class="nav-wrap">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <div class="nav-logo">BAROTO INVESTASI</div>
+        <div class="nav-tagline">EA Trading XAUUSD</div>
+      </div>
+      <div class="nav-badge">High Risk</div>
+      <a href="https://wa.me/628123016198" class="nav-cta" target="_blank">💬 WA Kami</a>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="hero-brand">
+      <div class="hero-logo-icon">📈</div>
+      <div class="hero-logo-text">
+        <h1>BAROTO</h1>
+        <span>Investasi · EA Trading</span>
+      </div>
+    </div>
+    <div class="hero-sub">XAUUSD · Robot Trading Emas · High Risk</div>
+    <div class="hero-meta">
+      Platform: <span>FBS Live Account</span> &nbsp;|&nbsp;
+      Balance: <strong id="pubBalance">$142.54 USD</strong> &nbsp;|&nbsp;
+      Info via <span>WA Admin</span>
+    </div>
+    <div class="hero-btns">
+      <a href="https://wa.me/628123016198?text=Halo%20Baroto%20Investasi%2C%20saya%20mau%20bergabung" class="btn-wa" target="_blank">💬 Gabung via WA</a>
+      <a href="#kinerja" class="btn-ghost">Lihat Kinerja ↓</a>
+    </div>
+    <div class="container">
+      <div class="real-alert">⚠️ <strong>Data dari akun live trading MT4 — bukan simulasi.</strong> Kinerja masa lalu tidak menjamin hasil di masa depan. Trading mengandung risiko tinggi. Pahami risiko sebelum bergabung.</div>
+    </div>
+  </section>
+
+  <section class="stats-section">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="s-label">Balance EA</div><div class="s-val" id="pubBal2">$142.54</div><div class="s-sub blue">FBS Live</div></div>
+        <div class="stat-card"><div class="s-label">Net P/L</div><div class="s-val" id="pubNet">$0.00</div><div class="s-sub" id="pubNetSub">—</div></div>
+        <div class="stat-card"><div class="s-label">Risk Reward</div><div class="s-val">1:3</div><div class="s-sub">setiap posisi</div></div>
+        <div class="stat-card"><div class="s-label">Max Loss</div><div class="s-val">10%</div><div class="s-sub red">per bulan</div></div>
+        <div class="stat-card"><div class="s-label">Dana Cadangan</div><div class="s-val">50%</div><div class="s-sub blue">modal aman</div></div>
+        <div class="stat-card"><div class="s-label">Dividen</div><div class="s-val">40%</div><div class="s-sub">dari profit</div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container"><div class="divider"></div></div>
+
+  <section class="sec" id="skema">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Skema Investasi</div><div class="sec-line"></div></div>
+      <div class="skema-box">
+        <div class="skema-grid">
+          <div class="skema-item gold"><div class="skema-lbl">Modal → EA</div><div class="skema-pct">50%</div><div class="skema-desc">Diputar di EA Trading XAUUSD otomatis 24/5</div></div>
+          <div class="skema-item blue"><div class="skema-lbl">Modal → Cadangan</div><div class="skema-pct">50%</div><div class="skema-desc">Dana cadangan aman, bisa dicairkan kapan saja jika mendesak</div></div>
+        </div>
+        <div class="skema-grid">
+          <div class="skema-item green"><div class="skema-lbl">Profit → Nasabah</div><div class="skema-pct">40%</div><div class="skema-desc">Dibagi rata ke semua nasabah setiap bulan</div></div>
+          <div class="skema-item red"><div class="skema-lbl">Profit → Ops</div><div class="skema-pct">60%</div><div class="skema-desc">VPS, maintenance EA, pengembangan sistem</div></div>
+        </div>
+        <div class="skema-note" style="margin-top:12px">📌 Contoh: Modal $100 → $50 EA + $50 Dana Cadangan<br>Profit $10 → $4 dividen nasabah + $6 operasional</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="kinerja">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Rekam Jejak Kinerja EA</div><div class="sec-line"></div></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Bulan</th><th>Profit/Loss</th><th>Dividen/Nas.</th><th>Status</th></tr></thead>
+          <tbody id="pubKinerja">
+            <tr><td class="td-m">Des 2025</td><td class="loss">−$66.05</td><td style="color:var(--red);font-size:11px">−$6.61</td><td><span class="tag tag-red">LOSS</span></td></tr>
+            <tr><td class="td-m">Jan 2026</td><td class="profit">+$1.218.83</td><td style="color:var(--green);font-size:11px;font-weight:600">+$121.88</td><td><span class="tag tag-gold">TERBAIK ⭐</span></td></tr>
+            <tr><td class="td-m">Feb 2026</td><td class="profit">+$380.02</td><td style="color:var(--green);font-size:11px">+$38.00</td><td><span class="tag tag-green">PROFIT</span></td></tr>
+            <tr><td class="td-m">Apr 2026</td><td class="loss">−$3.450.42</td><td style="color:var(--red);font-size:11px">−$345.04</td><td><span class="tag tag-red">LOSS BESAR</span></td></tr>
+            <tr><td class="td-m">Mei 2026</td><td class="profit" id="pubMei">+$208.53</td><td style="color:var(--green);font-size:11px" id="pubMeiDiv">+$20.85</td><td><span class="tag tag-blue">BERJALAN</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="background:#E24B4A10;border:1px solid #E24B4A33;border-radius:8px;padding:11px 14px;margin-top:10px;font-size:11px;color:#eb8585;line-height:1.7">⚠️ Data di atas termasuk kerugian besar April 2026. Trading tidak selalu profit. Risiko kerugian selalu ada.</div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Partisipan Trading</div><div class="sec-line"></div></div>
+      <div class="nas-grid">
+        <div class="nas-card"><div class="nas-num" style="background:#E74C3C">N1</div><div class="nas-code">Nasabah #1</div><div class="nas-modal">Modal: $25.00</div><div class="nas-cadangan">🛡️ Cadangan: $12.50</div></div>
+        <div class="nas-card"><div class="nas-num" style="background:#9B59B6">N2</div><div class="nas-code">Nasabah #2</div><div class="nas-modal">Modal: $25.00</div><div class="nas-cadangan">🛡️ Cadangan: $12.50</div></div>
+        <div class="nas-card"><div class="nas-num" style="background:#2980B9">N3</div><div class="nas-code">Nasabah #3</div><div class="nas-modal">Modal: $25.00</div><div class="nas-cadangan">🛡️ Cadangan: $12.50</div></div>
+        <div class="nas-card"><div class="nas-num" style="background:#27AE60">N4</div><div class="nas-code">Nasabah #4</div><div class="nas-modal">Modal: $25.00</div><div class="nas-cadangan">🛡️ Cadangan: $12.50</div></div>
+      </div>
+      <div style="background:var(--blue-dim);border:1px solid var(--blue-mid);border-radius:10px;padding:12px;text-align:center;font-size:11px;color:var(--blue);margin-top:10px">🔒 Identitas nasabah dirahasiakan sesuai kebijakan privasi Baroto Investasi</div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Keunggulan</div><div class="sec-line"></div></div>
+      <div class="info-grid">
+        <div class="info-card"><div class="info-icon">🤖</div><div class="info-content"><h4>EA Otomatis 24/5</h4><p>Robot trading bekerja tanpa emosi di pasar emas XAUUSD setiap hari.</p></div></div>
+        <div class="info-card"><div class="info-icon">🛡️</div><div class="info-content"><h4>Dana Cadangan Aman</h4><p>50% modal masuk dana cadangan. Bisa dicairkan kapan saja jika mendesak.</p></div></div>
+        <div class="info-card"><div class="info-icon">💎</div><div class="info-content"><h4>Dividen Bulanan</h4><p>40% profit EA dibagi rata ke nasabah setiap bulan secara transparan.</p></div></div>
+        <div class="info-card"><div class="info-icon">📊</div><div class="info-content"><h4>Laporan Transparan</h4><p>Laporan keuangan lengkap dikirim rutin ke nasabah via WhatsApp.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="gabung">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Cara Bergabung</div><div class="sec-line"></div></div>
+      <div class="gabung-grid">
+        <div class="step-card"><div class="step-num">01</div><div class="step-content"><h4>Hubungi Admin WA</h4><p>Chat WA 0812-3016-198. Konfirmasi jumlah modal yang ingin diinvestasikan.</p></div></div>
+        <div class="step-card"><div class="step-num">02</div><div class="step-content"><h4>Konfirmasi Pembayaran</h4><p>Admin informasikan metode pembayaran. Proses mudah & cepat.</p></div></div>
+        <div class="step-card"><div class="step-num">03</div><div class="step-content"><h4>Modal Dibagi</h4><p>50% masuk EA trading, 50% masuk dana cadangan atas nama nasabah.</p></div></div>
+        <div class="step-card"><div class="step-num">04</div><div class="step-content"><h4>Terima Dividen</h4><p>Laporan rutin via WA. Dividen 40% profit dibagikan tiap bulan.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-brand">BAROTO INVESTASI</div>
+      <div class="cta-sub">EA Trading XAUUSD · High Risk High Return</div>
+      <div class="cta-desc">Robot trading emas XAUUSD otomatis. Dana cadangan aman, profit dibagi transparan. Hubungi WA untuk info lengkap.</div>
+      <div style="margin-bottom:20px">
+        <div class="wa-box"><div style="font-size:24px">💬</div><div><div class="wa-label">Admin WhatsApp</div><div class="wa-num">0812-3016-198</div></div></div>
+      </div>
+      <div class="cta-btns">
+        <a href="https://wa.me/628123016198?text=Halo%20Baroto%20Investasi%2C%20saya%20mau%20bergabung" class="btn-wa" target="_blank">💬 Chat WA Sekarang</a>
+        <a href="#skema" class="btn-ghost">Pelajari Skema</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="disclaimer">⚠️ <strong>PERINGATAN RISIKO:</strong> Trading forex & emas mengandung risiko kerugian sangat tinggi. Anda dapat kehilangan sebagian atau seluruh modal. Kinerja EA masa lalu TIDAK menjamin hasil masa depan. Baroto Investasi bukan lembaga keuangan resmi dan tidak terdaftar di OJK. Pahami risiko sebelum bergabung.</div>
+    <div class="footer-copy">© 2025–2026 Baroto Investasi · EA Trading XAUUSD</div>
+  </footer>
+</div>
+
+<!-- =============== ADMIN SITE =============== -->
+<div id="adminSite">
+
+  <!-- LOGIN -->
+  <div class="admin-login" id="adminLogin">
+    <div class="login-card">
+      <div class="login-icon">🔐</div>
+      <div class="login-title">BAROTO INVESTASI</div>
+      <div class="login-sub">Admin Panel · Masukkan PIN untuk lanjut</div>
+      <input type="password" class="login-input" id="pinInput" placeholder="••••••" maxlength="6" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <button class="login-btn" onclick="doLogin()">🔓 Masuk</button>
+      <div class="login-error" id="loginError">PIN salah! Coba lagi.</div>
+      <span class="back-btn" onclick="showPublic()">← Kembali ke website</span>
+    </div>
+  </div>
+
+  <!-- ADMIN APP -->
+  <div class="admin-app" id="adminApp">
+    <div class="nav-tabs">
+      <div class="tab active" onclick="showAPage('input',this)">✏️ Input</div>
+      <div class="tab" onclick="showAPage('nasabah',this)">👥 Nasabah</div>
+      <div class="tab" onclick="showAPage('riwayat',this)">📅 Riwayat</div>
+      <div class="tab" onclick="showAPage('lapkeu',this)">📋 Lap.Keu</div>
+      <div class="tab" onclick="showPublic()" style="color:#E24B4A;margin-left:auto">🌐 Website</div>
+    </div>
+    <div class="a-wrap">
+
+    <div class="a-page active" id="apage-input">
+      <div class="a-header"><h2 id="adminH2">Laporan Harian</h2><p>Admin Baroto Investasi</p><div class="clock" id="clock">⏰ --:--:--</div></div>
+      <div class="status-bar" id="statusBar"><div class="sdot loading" id="sdot"></div><span id="statusTxt">Menghubungkan...</span></div>
+      <div class="tip">🔒 Panel admin — jangan bagikan halaman ini ke nasabah.</div>
+      <div class="card" style="margin-top:10px">
+        <div class="card-title">✏️ INPUT DATA HARIAN</div>
+        <div class="field"><label>Tanggal</label><input type="date" id="inpTgl"/></div>
+        <div class="field"><label>Hasil Trading</label>
+          <div class="toggle-row">
+            <button class="toggle-btn" id="btnP" onclick="setType('profit')">✅ PROFIT</button>
+            <button class="toggle-btn" id="btnL" onclick="setType('loss')">❌ LOSS</button>
+          </div>
+        </div>
+        <div class="field"><label>Nominal ($)</label>
+          <div class="nom-wrap"><span class="nom-prefix" id="prefSign">$</span><input type="number" id="inpNom" class="nom-input" placeholder="0.00" step="0.01" min="0"/></div>
+        </div>
+        <div class="field"><label>Jumlah Trade</label><input type="number" id="inpTrade" placeholder="contoh: 3"/></div>
+        <div class="field"><label>Balance EA ($)</label><input type="number" id="inpBal" placeholder="contoh: 44.33" step="0.01"/></div>
+        <div class="field"><label>Catatan</label><textarea id="inpCat" placeholder="XAUUSD sell, market volatile..."></textarea></div>
+      </div>
+      <button class="btn btn-gold" id="btnSimpan" onclick="simpanData()">💾 Simpan & Generate Laporan</button>
+      <div class="preview-box" id="previewBox"><div class="preview-label">👁 PREVIEW LAPORAN WA</div><div class="preview-msg" id="previewMsg"></div></div>
+      <button class="btn btn-wa" id="btnWA" style="display:none" onclick="kirimWA()">💬 Kirim ke Grup WA</button>
+      <button class="btn btn-copy" id="btnCopy" style="display:none" onclick="copyMsg()">📋 Copy Pesan</button>
+    </div>
+
+    <div class="a-page" id="apage-nasabah">
+      <div class="a-header"><h2>Laporan Nasabah</h2><p>Dividen & status per nasabah</p></div>
+      <div class="a-stats" id="nasStats"></div>
+      <div id="nasCards"></div>
+      <div class="a-divider"></div>
+      <div class="card">
+        <div class="card-title">📤 KIRIM KE NASABAH</div>
+        <div class="field"><label>Pilih Nasabah</label>
+          <select id="selNas"><option value="Arif">Arif</option><option value="Inul">Inul</option><option value="Rapel">Rapel</option><option value="Aci">Aci</option><option value="semua">Semua Nasabah</option></select>
+        </div>
+        <button class="btn btn-gold" onclick="genNas()">📋 Generate Laporan Nasabah</button>
+        <div class="preview-box" id="prevNas"><div class="preview-label">👁 PREVIEW</div><div class="preview-msg" id="prevNasMsg"></div></div>
+        <button class="btn btn-wa" id="btnWANas" style="display:none" onclick="kirimWANas()">💬 Kirim WA</button>
+        <button class="btn btn-copy" id="btnCopyNas" style="display:none" onclick="copyNas()">📋 Copy</button>
+      </div>
+    </div>
+
+    <div class="a-page" id="apage-riwayat">
+      <div class="a-header"><h2>Riwayat Trading</h2><p>Histori laporan harian</p></div>
+      <div class="a-stats" id="rwStats"></div>
+      <div id="rwList"></div>
+    </div>
+
+    <div class="a-page" id="apage-lapkeu">
+      <div class="a-header"><h2>Laporan Keuangan</h2><p>Neraca & laba rugi</p></div>
+      <div class="card">
+        <div class="card-title">🏦 NERACA</div>
+        <div class="lk-row"><span class="lk-label">Total Modal Nasabah</span><span class="lk-val" style="color:var(--gold)">$100.00</span></div>
+        <div class="lk-row"><span class="lk-label">50% → EA Trading</span><span class="lk-val" style="color:var(--gold)">$50.00</span></div>
+        <div class="lk-row"><span class="lk-label">50% → Dana Cadangan</span><span class="lk-val" style="color:var(--blue)">$50.00</span></div>
+        <div class="lk-row"><span class="lk-label">Akumulasi Net P/L</span><span class="lk-val" id="lkNet">$0.00</span></div>
+        <div class="lk-total"><span style="font-size:12px;font-weight:700">Total Aset</span><span id="lkAset" style="font-size:16px;font-weight:700;color:var(--green)">$100.00</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📈 LABA RUGI</div>
+        <div class="lk-row"><span class="lk-label">Total Profit EA</span><span class="lk-val" style="color:var(--green)" id="lkProfit">$0.00</span></div>
+        <div class="lk-row"><span class="lk-label">Total Loss EA</span><span class="lk-val" style="color:var(--red)" id="lkLoss">$0.00</span></div>
+        <div class="lk-row"><span class="lk-label">60% → Operasional</span><span class="lk-val" style="color:var(--red)" id="lkOps">$0.00</span></div>
+        <div class="lk-row"><span class="lk-label">40% → Dividen</span><span class="lk-val" style="color:var(--green)" id="lkDiv">$0.00</span></div>
+        <div class="lk-total"><span style="font-size:12px;font-weight:700">Dividen/Nasabah</span><span id="lkDivPer" style="font-size:16px;font-weight:700;color:var(--green)">$0.00</span></div>
+      </div>
+      <div class="a-divider"></div>
+      <button class="btn btn-danger" onclick="resetData()">🗑️ Reset Semua Data</button>
+    </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== ROUTING =====
+const ADMIN_PATH = 'admin'
+const PIN = '081230'
+const API_KEY = '$2a$10$UiUqdOLzF3saQuSvMIcVDeFW3WtWKvivI.Ed1qUtyT0hhPddsgGAq'
+const NASABAH = [
+  {nama:'Arif', modal:25, warna:'#E74C3C'},
+  {nama:'Inul', modal:25, warna:'#9B59B6'},
+  {nama:'Rapel',modal:25, warna:'#2980B9'},
+  {nama:'Aci',  modal:25, warna:'#27AE60'},
+]
+const TOTAL=100, PCT_DIV=0.4, PCT_OPS=0.6
+
+// Cek URL hash
+function checkRoute(){
+  if(window.location.hash === '#admin' || window.location.hash === '#'+ADMIN_PATH){
+    document.getElementById('publicSite').style.display='none'
+    document.getElementById('adminSite').style.display='block'
+  }
+}
+window.addEventListener('hashchange', checkRoute)
+checkRoute()
+
+function showPublic(){
+  window.location.hash=''
+  document.getElementById('publicSite').style.display='block'
+  document.getElementById('adminSite').style.display='none'
+}
+
+// ===== DB =====
+let BIN_ID = localStorage.getItem('baroto_bin_id')||null
+async function initDB(){
+  setStatus('loading','Menghubungkan ke database...')
+  try {
+    if(!BIN_ID){
+      const res=await fetch('https://api.jsonbin.io/v3/b',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Master-Key':API_KEY,'X-Bin-Name':'baroto-data','X-Bin-Private':'false'},
+        body:JSON.stringify({laporan:[],lastUpdate:''})
+      })
+      const d=await res.json()
+      if(d.metadata){BIN_ID=d.metadata.id;localStorage.setItem('baroto_bin_id',BIN_ID);setStatus('online','Database terhubung ✅')}
+      else throw new Error()
+    } else {
+      const res=await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':API_KEY}})
+      if(res.ok){setStatus('online',`Database terhubung ✅`)}
+      else{BIN_ID=null;localStorage.removeItem('baroto_bin_id');await initDB()}
+    }
+    updatePublicStats()
+  } catch{setStatus('offline','Offline — data tersimpan lokal')}
+}
+async function readDB(){
+  if(!BIN_ID)return getLocal()
+  try{const res=await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':API_KEY}});const d=await res.json();return d.record?.laporan||[]}
+  catch{return getLocal()}
+}
+async function writeDB(laporan){
+  saveLocal(laporan)
+  if(!BIN_ID)return
+  try{await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},body:JSON.stringify({laporan,lastUpdate:new Date().toISOString()})});setStatus('online','Tersimpan ✅');updatePublicStats()}
+  catch{setStatus('offline','Gagal sync')}
+}
+function getLocal(){return JSON.parse(localStorage.getItem('baroto_data')||'[]')}
+function saveLocal(d){localStorage.setItem('baroto_data',JSON.stringify(d))}
+function setStatus(t,m){document.getElementById('sdot').className='sdot '+t;document.getElementById('statusTxt').textContent=m}
+
+// Update public stats dari database
+async function updatePublicStats(){
+  const data=await readDB()
+  if(!data.length)return
+  const totP=data.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const totL=data.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const netVal=totP-totL
+  const lastBal=data[0]?.balance||142.54
+  document.getElementById('pubBalance').textContent=`$${parseFloat(lastBal).toFixed(2)} USD`
+  document.getElementById('pubBal2').textContent=`$${parseFloat(lastBal).toFixed(2)}`
+  document.getElementById('pubNet').textContent=`${netVal>=0?'+':''}$${netVal.toFixed(2)}`
+  document.getElementById('pubNet').style.color=netVal>=0?'#27AE60':'#E24B4A'
+  document.getElementById('pubNetSub').textContent=`${data.length} hari trading`
+}
+
+// ===== HELPERS =====
+const MONTHS=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']
+const DAYS=['Min','Sen','Sel','Rab','Kam','Jum','Sab']
+function pad(x){return String(x).padStart(2,'0')}
+function fmtDate(v){const d=new Date(v+'T00:00:00');return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`}
+function fmtShort(v){const d=new Date(v+'T00:00:00');return `${d.getDate()} ${MONTHS[d.getMonth()]}`}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+
+// Clock
+function tick(){const n=new Date();if(document.getElementById('clock'))document.getElementById('clock').textContent=`⏰ ${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`}
+setInterval(tick,1000);tick()
+const now=new Date()
+const tglToday=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`
+const tglStr=`${pad(now.getDate())}-${pad(now.getMonth()+1)}-${now.getFullYear()}`
+if(document.getElementById('inpTgl'))document.getElementById('inpTgl').value=tglToday
+if(document.getElementById('adminH2'))document.getElementById('adminH2').textContent=`Laporan ${tglStr}`
+
+// ===== LOGIN =====
+function doLogin(){
+  const pin=document.getElementById('pinInput').value
+  if(pin===PIN){
+    document.getElementById('adminLogin').style.display='none'
+    document.getElementById('adminApp').style.display='block'
+    initDB(); renderRiwayat(); renderNasabah(); renderLapkeu()
+  } else {
+    document.getElementById('loginError').style.display='block'
+    document.getElementById('pinInput').value=''
+    setTimeout(()=>document.getElementById('loginError').style.display='none',2000)
+  }
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const pi=document.getElementById('pinInput')
+  if(pi)pi.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()})
+})
+
+// ===== TABS =====
+function showAPage(id,el){
+  document.querySelectorAll('.a-page').forEach(p=>p.classList.remove('active'))
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
+  document.getElementById('apage-'+id).classList.add('active')
+  if(el)el.classList.add('active')
+  if(id==='riwayat')renderRiwayat()
+  if(id==='nasabah')renderNasabah()
+  if(id==='lapkeu')renderLapkeu()
+}
+
+// ===== TYPE =====
+let cType=null
+function setType(t){
+  cType=t
+  document.getElementById('btnP').className='toggle-btn'+(t==='profit'?' ap':'')
+  document.getElementById('btnL').className='toggle-btn'+(t==='loss'?' al':'')
+  const p=document.getElementById('prefSign')
+  p.className='nom-prefix '+t
+  p.textContent=t==='profit'?'+$':'-$'
+}
+
+// ===== SIMPAN =====
+let pesanFinal=''
+async function simpanData(){
+  const tgl=document.getElementById('inpTgl').value
+  const nom=parseFloat(document.getElementById('inpNom').value)||0
+  const trade=document.getElementById('inpTrade').value||'?'
+  const bal=parseFloat(document.getElementById('inpBal').value)||0
+  const cat=document.getElementById('inpCat').value.trim()
+  if(!tgl){alert('Isi tanggal!');return}
+  if(!cType){alert('Pilih Profit atau Loss!');return}
+  if(nom<=0){alert('Isi nominal!');return}
+  if(bal<=0){alert('Isi balance!');return}
+  const btn=document.getElementById('btnSimpan')
+  btn.disabled=true;btn.textContent='⏳ Menyimpan...'
+  const data=await readDB()
+  const idx=data.findIndex(x=>x.tanggal===tgl)
+  const entry={tanggal:tgl,type:cType,nominal:nom,trade,balance:bal,catatan:cat,waktu:`${pad(now.getHours())}:${pad(now.getMinutes())}`}
+  if(idx>=0)data[idx]=entry;else data.push(entry)
+  data.sort((a,b)=>b.tanggal.localeCompare(a.tanggal))
+  await writeDB(data)
+  btn.disabled=false;btn.textContent='💾 Simpan & Generate Laporan'
+  showToast('✅ Tersimpan!')
+  const isP=cType==='profit'
+  const em=isP?'🟢':'🔴'
+  const divTotal=(isP?nom:0)*PCT_DIV
+  const divPer=divTotal/NASABAH.length
+  const ops=(isP?nom:0)*PCT_OPS
+  pesanFinal=`${em} *LAPORAN HARIAN — BAROTO INVESTASI*\n${em} ${fmtDate(tgl)}\n━━━━━━━━━━━━━━━━━━━━━━\n📊 *Hasil: ${isP?'PROFIT ✅':'LOSS ❌'}*\n💰 Profit/Loss   : *${isP?'+':'-'}$${nom.toFixed(2)}*\n🏦 Balance EA    : *$${bal.toFixed(2)}*\n📈 Jumlah Trade  : ${trade} trade\n━━━━━━━━━━━━━━━━━━━━━━\n💎 *DISTRIBUSI PROFIT*\n🔧 60% Operasional : $${ops.toFixed(2)}\n👥 40% Dividen Nas.: $${divTotal.toFixed(2)}\nPer nasabah        : ${isP?'+':''}$${divPer.toFixed(4)}\n━━━━━━━━━━━━━━━━━━━━━━${cat?'\n📝 '+cat+'\n━━━━━━━━━━━━━━━━━━━━━━':''}\n🤖 EA XAUUSD otomatis 24/5\n⚠️ Trading mengandung risiko tinggi\n🌐 https://barotoinvestasi.netlify.app\n━━━━━━━━━━━━━━━━━━━━━━\n_Info: WA 0812-3016-198_`
+  document.getElementById('previewMsg').textContent=pesanFinal
+  document.getElementById('previewBox').classList.add('show')
+  document.getElementById('btnWA').style.display='flex'
+  document.getElementById('btnCopy').style.display='flex'
+  renderRiwayat();renderNasabah();renderLapkeu()
+}
+function kirimWA(){if(!pesanFinal)return;window.open('https://wa.me/?text='+encodeURIComponent(pesanFinal),'_blank')}
+function copyMsg(){if(!pesanFinal)return;navigator.clipboard.writeText(pesanFinal).then(()=>showToast('✅ Disalin!'))}
+
+// ===== RIWAYAT =====
+async function renderRiwayat(){
+  const data=await readDB()
+  const totP=data.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const totL=data.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const netVal=totP-totL
+  const wr=data.length?Math.round(data.filter(d=>d.type==='profit').length/data.length*100):0
+  document.getElementById('rwStats').innerHTML=`
+    <div class="a-stat ${netVal>=0?'green':'red'}"><div class="a-slabel">Net P/L</div><div class="a-sval">${netVal>=0?'+':''}$${netVal.toFixed(2)}</div></div>
+    <div class="a-stat"><div class="a-slabel">Win Rate</div><div class="a-sval">${wr}%</div></div>
+    <div class="a-stat blue"><div class="a-slabel">Dividen</div><div class="a-sval">$${(totP*PCT_DIV/NASABAH.length).toFixed(3)}</div></div>`
+  const el=document.getElementById('rwList')
+  if(!data.length){el.innerHTML='<div class="empty">Belum ada data</div>';return}
+  el.innerHTML=data.map(d=>`<div class="list-item">
+    <div class="li-date">${fmtShort(d.tanggal)}<br><span style="font-size:9px;color:#3a3830">${d.waktu||''}</span></div>
+    <div class="li-info"><div class="li-title">EA XAUUSD · ${d.trade||'?'} trade · <span class="badge ${d.type==='profit'?'badge-g':'badge-r'}">${d.type.toUpperCase()}</span></div>
+    <div class="li-sub">Balance: $${(+d.balance).toFixed(2)} · Div/nas: ${d.type==='profit'?'+':''}$${d.type==='profit'?((+d.nominal)*PCT_DIV/NASABAH.length).toFixed(4):'0.0000'}${d.catatan?' · '+d.catatan:''}</div></div>
+    <div class="li-amount ${d.type==='profit'?'p':'l'}">${d.type==='profit'?'+':'-'}$${(+d.nominal).toFixed(2)}</div>
+    <button class="li-del" onclick="delEntry('${d.tanggal}')">✕</button></div>`).join('')
+}
+async function delEntry(tgl){if(!confirm('Hapus data '+tgl+'?'))return;const data=(await readDB()).filter(x=>x.tanggal!==tgl);await writeDB(data);renderRiwayat();renderNasabah();renderLapkeu();showToast('🗑️ Dihapus')}
+
+// ===== NASABAH =====
+let pesanNas=''
+async function renderNasabah(){
+  const data=await readDB()
+  const totP=data.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const totL=data.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const netVal=totP-totL
+  const divPer=(totP*PCT_DIV)/NASABAH.length
+  document.getElementById('nasStats').innerHTML=`
+    <div class="a-stat ${netVal>=0?'green':'red'}"><div class="a-slabel">Net P/L</div><div class="a-sval">${netVal>=0?'+':''}$${netVal.toFixed(2)}</div></div>
+    <div class="a-stat blue"><div class="a-slabel">Total Div</div><div class="a-sval">$${(totP*PCT_DIV).toFixed(2)}</div></div>
+    <div class="a-stat"><div class="a-slabel">Per Nas</div><div class="a-sval">$${divPer.toFixed(3)}</div></div>`
+  document.getElementById('nasCards').innerHTML=NASABAH.map(n=>`
+    <div class="nas-laporan">
+      <div class="nas-head"><div class="nas-av" style="background:${n.warna}">👤</div><div><div class="nas-nm">${n.nama}</div><div class="nas-md">Modal: $${n.modal} · Cadangan: $${(n.modal*0.5).toFixed(2)}</div></div></div>
+      <div class="nas-row">
+        <div class="nas-box"><div class="nas-blabel">Dividen</div><div class="nas-bval" style="color:${divPer>=0?'#27AE60':'#E24B4A'}">${divPer>=0?'+':''}$${divPer.toFixed(4)}</div></div>
+        <div class="nas-box"><div class="nas-blabel">Dana Cadangan</div><div class="nas-bval" style="color:#5ba3f5">$${(n.modal*0.5).toFixed(2)}</div></div>
+      </div>
+    </div>`).join('')
+}
+async function genNas(){
+  const nama=document.getElementById('selNas').value
+  const data=await readDB()
+  const totP=data.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const totL=data.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const netVal=totP-totL
+  const divPer=(totP*PCT_DIV)/NASABAH.length
+  const tgl=fmtDate(tglToday)
+  if(nama==='semua'){
+    pesanNas=`📊 *LAPORAN KEUANGAN — BAROTO INVESTASI*\n📅 Per ${tgl}\n━━━━━━━━━━━━━━━━━━━━━━\n*NERACA*\n💰 Total Modal    : $${TOTAL}.00\n🤖 EA Trading     : $${TOTAL*0.5}.00\n🛡️ Dana Cadangan  : $${TOTAL*0.5}.00\n━━━━━━━━━━━━━━━━━━━━━━\n*LABA RUGI*\n📈 Total Profit   : +$${totP.toFixed(2)}\n📉 Total Loss     : -$${totL.toFixed(2)}\n💎 Net P/L        : ${netVal>=0?'+':''}$${netVal.toFixed(2)}\n━━━━━━━━━━━━━━━━━━━━━━\n*DIVIDEN NASABAH (40%)*\n${NASABAH.map(n=>`👤 ${n.nama.padEnd(8)}: +$${divPer.toFixed(4)}`).join('\n')}\n━━━━━━━━━━━━━━━━━━━━━━\n⚠️ Trading mengandung risiko tinggi\n🌐 https://barotoinvestasi.netlify.app`
+  } else {
+    const n=NASABAH.find(x=>x.nama===nama)
+    pesanNas=`📊 *LAPORAN NASABAH — ${n.nama.toUpperCase()}*\n📅 Per ${tgl}\n━━━━━━━━━━━━━━━━━━━━━━\n💳 Modal Awal     : $${n.modal}.00\n🤖 EA Trading     : $${(n.modal*0.5).toFixed(2)}\n🛡️ Dana Cadangan  : $${(n.modal*0.5).toFixed(2)}\n━━━━━━━━━━━━━━━━━━━━━━\n💎 Dividen        : +$${divPer.toFixed(4)}\n📊 Net P/L EA     : ${netVal>=0?'+':''}$${netVal.toFixed(2)}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ Dana Cadangan  : $${(n.modal*0.5).toFixed(2)} (bisa ditarik)\n━━━━━━━━━━━━━━━━━━━━━━\nTerima kasih, ${n.nama}! 🙏\n⚠️ Trading mengandung risiko tinggi\n🌐 https://barotoinvestasi.netlify.app`
+  }
+  document.getElementById('prevNasMsg').textContent=pesanNas
+  document.getElementById('prevNas').classList.add('show')
+  document.getElementById('btnWANas').style.display='flex'
+  document.getElementById('btnCopyNas').style.display='flex'
+}
+function kirimWANas(){if(!pesanNas)return;window.open('https://wa.me/?text='+encodeURIComponent(pesanNas),'_blank')}
+function copyNas(){if(!pesanNas)return;navigator.clipboard.writeText(pesanNas).then(()=>showToast('✅ Disalin!'))}
+
+// ===== LAP KEU =====
+async function renderLapkeu(){
+  const data=await readDB()
+  const totP=data.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const totL=data.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const netVal=totP-totL
+  document.getElementById('lkNet').textContent=`${netVal>=0?'+':''}$${netVal.toFixed(2)}`
+  document.getElementById('lkNet').style.color=netVal>=0?'#27AE60':'#E24B4A'
+  document.getElementById('lkAset').textContent=`$${(TOTAL+netVal).toFixed(2)}`
+  document.getElementById('lkAset').style.color=netVal>=0?'#27AE60':'#E24B4A'
+  document.getElementById('lkProfit').textContent=`+$${totP.toFixed(2)}`
+  document.getElementById('lkLoss').textContent=`-$${totL.toFixed(2)}`
+  document.getElementById('lkOps').textContent=`$${(totP*PCT_OPS).toFixed(2)}`
+  document.getElementById('lkDiv').textContent=`$${(totP*PCT_DIV).toFixed(2)}`
+  document.getElementById('lkDivPer').textContent=`$${(totP*PCT_DIV/NASABAH.length).toFixed(4)}`
+}
+async function resetData(){if(!confirm('Hapus SEMUA data?'))return;await writeDB([]);renderRiwayat();renderNasabah();renderLapkeu();showToast('🗑️ Direset')}
+
+// Init public stats
+updatePublicStats()
+</script>
+</body>
+</html>
