@@ -428,6 +428,8 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <div class="tab" onclick="showAPage('riwayat',this)">📅 Riwayat</div>
       <div class="tab" onclick="showAPage('lapkeu',this)">📋 Lap.Keu</div>
       <div class="tab" onclick="showAPage('kelola',this)">👤 Kelola</div>
+      <div class="tab" onclick="showAPage('galeri',this)">🖼️ Galeri</div>
+      <div class="tab" onclick="showAPage('dividen',this)">💰 Dividen</div>
       <div class="tab" onclick="showPublic()" style="color:#E24B4A;margin-left:auto">🌐 Website</div>
     </div>
     <div class="a-wrap">
@@ -555,6 +557,123 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <div class="a-stats" id="kelolaStats" style="margin-top:0"></div>
     </div>
 
+    <!-- GALERI PENCAPAIAN -->
+    <div class="a-page" id="apage-galeri">
+      <div class="a-header"><h2>Galeri Pencapaian</h2><p>Foto & video hasil trading EA</p></div>
+
+      <!-- UPLOAD MEDIA -->
+      <div class="card" style="border-color:#c9a84c44">
+        <div class="card-title" style="color:var(--gold)">📸 UPLOAD FOTO / VIDEO PENCAPAIAN</div>
+        <div class="field">
+          <label>Judul Pencapaian</label>
+          <input type="text" id="galJudul" placeholder="contoh: Profit Jan 2026 — +$1.218"/>
+        </div>
+        <div class="field">
+          <label>Keterangan</label>
+          <textarea id="galKet" placeholder="Deskripsi singkat pencapaian..."></textarea>
+        </div>
+        <div class="field">
+          <label>Tanggal</label>
+          <input type="date" id="galTgl"/>
+        </div>
+        <div class="field">
+          <label>Kategori</label>
+          <select id="galKat">
+            <option value="profit">🟢 Profit Record</option>
+            <option value="milestone">⭐ Milestone</option>
+            <option value="laporan">📊 Laporan FBS</option>
+            <option value="lainnya">📌 Lainnya</option>
+          </select>
+        </div>
+        <div id="galDropZone" onclick="document.getElementById('galFile').click()" style="border:2px dashed #c9a84c44;border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:10px">
+          <div style="font-size:32px;margin-bottom:6px">🖼️</div>
+          <div style="font-size:12px;color:var(--gold)">Klik untuk upload Foto atau Video</div>
+          <div style="font-size:10px;color:var(--dim);margin-top:3px">JPG, PNG, MP4, MOV — media tersimpan di browser</div>
+        </div>
+        <input type="file" id="galFile" accept="image/*,video/*" style="display:none" onchange="galUpload(this)" multiple/>
+        <div id="galPreviews" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"></div>
+        <button class="btn btn-gold" onclick="simpanGaleri()">💾 Simpan ke Galeri</button>
+      </div>
+
+      <!-- FILTER & STATS -->
+      <div class="a-stats" id="galStats" style="margin-bottom:10px"></div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <button class="toggle-btn ap" id="galF-semua" onclick="filterGaleri('semua')" style="font-size:11px;padding:6px 10px">Semua</button>
+        <button class="toggle-btn" id="galF-profit" onclick="filterGaleri('profit')" style="font-size:11px;padding:6px 10px">🟢 Profit</button>
+        <button class="toggle-btn" id="galF-milestone" onclick="filterGaleri('milestone')" style="font-size:11px;padding:6px 10px">⭐ Milestone</button>
+        <button class="toggle-btn" id="galF-laporan" onclick="filterGaleri('laporan')" style="font-size:11px;padding:6px 10px">📊 Laporan</button>
+      </div>
+
+      <!-- GRID GALERI -->
+      <div id="galGrid"></div>
+
+      <!-- MODAL LIGHTBOX -->
+      <div id="galModal" onclick="tutupGalModal()" style="display:none;position:fixed;inset:0;background:#000000cc;z-index:999;flex-direction:column;align-items:center;justify-content:center;padding:20px">
+        <div onclick="event.stopPropagation()" style="background:var(--bg2);border:1px solid var(--gold-mid);border-radius:16px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto">
+          <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <span id="galModalJudul" style="font-weight:700;color:var(--gold);font-size:13px"></span>
+            <button onclick="tutupGalModal()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px">✕</button>
+          </div>
+          <div id="galModalMedia" style="padding:14px"></div>
+          <div style="padding:0 14px 14px">
+            <div id="galModalKet" style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:8px"></div>
+            <div id="galModalMeta" style="font-size:10px;color:var(--dim)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATATAN DISTRIBUSI DIVIDEN -->
+    <div class="a-page" id="apage-dividen">
+      <div class="a-header"><h2>Catatan Dividen</h2><p>Riwayat distribusi dividen nasabah</p></div>
+
+      <!-- INPUT DISTRIBUSI -->
+      <div class="card" style="border-color:#27AE6044">
+        <div class="card-title" style="color:var(--green)">💰 CATAT DISTRIBUSI DIVIDEN</div>
+        <div class="field">
+          <label>Periode (Bulan/Tahun)</label>
+          <input type="month" id="divPeriode"/>
+        </div>
+        <div class="field">
+          <label>Total Profit EA ($)</label>
+          <input type="number" id="divTotProfit" placeholder="contoh: 208.53" step="0.01" oninput="hitungDiv()"/>
+        </div>
+        <div class="field">
+          <label>Catatan / Keterangan</label>
+          <textarea id="divCatatan" placeholder="Misal: Profit dari 18 hari trading XAUUSD..."></textarea>
+        </div>
+
+        <!-- PREVIEW DISTRIBUSI -->
+        <div id="divPreview" style="display:none;background:var(--bg3);border:1px solid #27AE6033;border-radius:10px;padding:12px;margin-bottom:10px">
+          <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#27AE60;margin-bottom:10px">💎 PREVIEW DISTRIBUSI</div>
+          <div class="lk-row"><span class="lk-label">Total Profit EA</span><span id="dPrevTot" class="lk-val" style="color:var(--green)">$0.00</span></div>
+          <div class="lk-row"><span class="lk-label">60% Operasional</span><span id="dPrevOps" class="lk-val" style="color:var(--red)">$0.00</span></div>
+          <div class="lk-row"><span class="lk-label">40% Dana Dividen</span><span id="dPrevDiv" class="lk-val" style="color:var(--gold)">$0.00</span></div>
+          <div style="margin-top:8px;padding:8px 0;border-top:1px solid var(--border)">
+            <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:7px">PER NASABAH</div>
+            <div id="dPrevNas"></div>
+          </div>
+        </div>
+
+        <button class="btn btn-gold" onclick="simpanDividen()">💾 Simpan Catatan Distribusi</button>
+      </div>
+
+      <!-- RINGKASAN TOTAL -->
+      <div class="a-stats" id="divStats" style="margin-bottom:10px"></div>
+
+      <!-- RIWAYAT DISTRIBUSI -->
+      <div class="card">
+        <div class="card-title">📋 RIWAYAT DISTRIBUSI DIVIDEN</div>
+        <div id="divList"></div>
+      </div>
+
+      <!-- PER NASABAH -->
+      <div class="card">
+        <div class="card-title">👥 TOTAL DITERIMA PER NASABAH</div>
+        <div id="divPerNas"></div>
+      </div>
+    </div>
+
     </div>
   </div>
 </div>
@@ -658,6 +777,8 @@ const tglToday=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate(
 const tglStr=`${pad(now.getDate())}-${pad(now.getMonth()+1)}-${now.getFullYear()}`
 if(document.getElementById('inpTgl'))document.getElementById('inpTgl').value=tglToday
 if(document.getElementById('adminH2'))document.getElementById('adminH2').textContent=`Laporan ${tglStr}`
+if(document.getElementById('galTgl'))document.getElementById('galTgl').value=tglToday
+if(document.getElementById('divPeriode'))document.getElementById('divPeriode').value=`${now.getFullYear()}-${pad(now.getMonth()+1)}`
 
 // ===== LOGIN =====
 function doLogin(){
@@ -665,7 +786,7 @@ function doLogin(){
   if(pin===PIN){
     document.getElementById('adminLogin').style.display='none'
     document.getElementById('adminApp').style.display='block'
-    initDB(); renderRiwayat(); renderNasabah(); renderLapkeu()
+    initDB(); renderRiwayat(); renderNasabah(); renderLapkeu(); renderGaleri(); renderDividen()
   } else {
     document.getElementById('loginError').style.display='block'
     document.getElementById('pinInput').value=''
@@ -923,11 +1044,275 @@ function showAPage(id, el){
   if(id==='nasabah')renderNasabah()
   if(id==='lapkeu')renderLapkeu()
   if(id==='kelola')renderKelola()
+  if(id==='galeri')renderGaleri()
+  if(id==='dividen')renderDividen()
 }
 
-// Init public stats
-updatePublicStats()
-initNasabah()
+// ===== GALERI PENCAPAIAN =====
+let galFilesData = [] // [{dataUrl, type, name}]
+let galFilter = 'semua'
+
+function getGaleri(){return JSON.parse(localStorage.getItem('baroto_galeri')||'[]')}
+function saveGaleri(g){localStorage.setItem('baroto_galeri',JSON.stringify(g))}
+
+function galUpload(input){
+  const files = Array.from(input.files)
+  if(!files.length) return
+  galFilesData = []
+  const previews = document.getElementById('galPreviews')
+  previews.innerHTML = ''
+  let loaded = 0
+  files.forEach((file,i)=>{
+    const reader = new FileReader()
+    reader.onload = function(e){
+      galFilesData.push({dataUrl: e.target.result, type: file.type, name: file.name})
+      const isVideo = file.type.startsWith('video/')
+      previews.innerHTML += `<div style="border-radius:8px;overflow:hidden;position:relative;background:#000;aspect-ratio:16/9">
+        ${isVideo
+          ? `<video src="${e.target.result}" style="width:100%;height:100%;object-fit:cover" muted></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px">▶️</div>`
+          : `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover"/>`
+        }
+      </div>`
+      loaded++
+      if(loaded===files.length) document.getElementById('galDropZone').style.borderColor='var(--gold)'
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+function simpanGaleri(){
+  const judul = document.getElementById('galJudul').value.trim()
+  const ket = document.getElementById('galKet').value.trim()
+  const tgl = document.getElementById('galTgl').value
+  const kat = document.getElementById('galKat').value
+  if(!judul){alert('Isi judul pencapaian!');return}
+  if(!tgl){alert('Isi tanggal!');return}
+  if(!galFilesData.length){alert('Upload minimal 1 foto atau video!');return}
+  const galeri = getGaleri()
+  galeri.unshift({id:Date.now(), judul, ket, tgl, kat, media: galFilesData, ts: new Date().toISOString()})
+  saveGaleri(galeri)
+  // reset
+  document.getElementById('galJudul').value=''
+  document.getElementById('galKet').value=''
+  document.getElementById('galTgl').value=''
+  document.getElementById('galPreviews').innerHTML=''
+  galFilesData=[]
+  document.getElementById('galDropZone').style.borderColor='#c9a84c44'
+  renderGaleri()
+  showToast('✅ Pencapaian tersimpan ke galeri!')
+}
+
+function filterGaleri(f){
+  galFilter = f
+  document.querySelectorAll('[id^="galF-"]').forEach(b=>b.className='toggle-btn')
+  document.getElementById('galF-'+f).className='toggle-btn ap'
+  renderGaleri()
+}
+
+const KAT_LABEL = {profit:'🟢 Profit Record', milestone:'⭐ Milestone', laporan:'📊 Laporan FBS', lainnya:'📌 Lainnya'}
+const KAT_COLOR = {profit:'#27AE60', milestone:'#c9a84c', laporan:'#5ba3f5', lainnya:'#9e9886'}
+
+function renderGaleri(){
+  const all = getGaleri()
+  const data = galFilter==='semua' ? all : all.filter(g=>g.kat===galFilter)
+  
+  document.getElementById('galStats').innerHTML=`
+    <div class="a-stat blue"><div class="a-slabel">Total Item</div><div class="a-sval">${all.length}</div></div>
+    <div class="a-stat green"><div class="a-slabel">Profit</div><div class="a-sval">${all.filter(g=>g.kat==='profit').length}</div></div>
+    <div class="a-stat"><div class="a-slabel">Milestone</div><div class="a-sval" style="color:var(--gold)">${all.filter(g=>g.kat==='milestone').length}</div></div>`
+
+  const el = document.getElementById('galGrid')
+  if(!data.length){el.innerHTML='<div class="empty">Belum ada pencapaian di galeri</div>';return}
+
+  el.innerHTML = data.map((g,i)=>{
+    const firstMedia = g.media[0]
+    const isVideo = firstMedia.type.startsWith('video/')
+    const katColor = KAT_COLOR[g.kat]||'#9e9886'
+    return `<div class="card" style="padding:0;overflow:hidden;cursor:pointer;margin-bottom:10px" onclick="bukaGalModal(${JSON.stringify(g.id)})">
+      <div style="position:relative;aspect-ratio:16/9;background:#000">
+        ${isVideo
+          ? `<video src="${firstMedia.dataUrl}" style="width:100%;height:100%;object-fit:cover" muted></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px;background:#00000044">▶️</div>`
+          : `<img src="${firstMedia.dataUrl}" style="width:100%;height:100%;object-fit:cover"/>`
+        }
+        ${g.media.length>1?`<div style="position:absolute;top:8px;right:8px;background:#00000088;color:#fff;font-size:10px;padding:3px 7px;border-radius:10px">+${g.media.length-1} lagi</div>`:''}
+        <div style="position:absolute;bottom:8px;left:8px;background:${katColor}22;border:1px solid ${katColor}55;color:${katColor};font-size:9px;padding:3px 8px;border-radius:8px;font-weight:600">${KAT_LABEL[g.kat]||g.kat}</div>
+      </div>
+      <div style="padding:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px">${g.judul}</div>
+        ${g.ket?`<div style="font-size:11px;color:var(--dim);line-height:1.5;margin-bottom:5px">${g.ket}</div>`:''}
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:10px;color:var(--dimmer)">${fmtDate(g.tgl)}</div>
+          <button onclick="event.stopPropagation();hapusGaleri(${g.id})" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:4px">🗑️ Hapus</button>
+        </div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+function bukaGalModal(id){
+  const galeri = getGaleri()
+  const g = galeri.find(x=>x.id===id)
+  if(!g) return
+  document.getElementById('galModalJudul').textContent = g.judul
+  document.getElementById('galModalKet').textContent = g.ket||''
+  document.getElementById('galModalMeta').textContent = `${KAT_LABEL[g.kat]} · ${fmtDate(g.tgl)}`
+  
+  const mediaEl = document.getElementById('galModalMedia')
+  mediaEl.innerHTML = g.media.map(m=>{
+    const isVideo = m.type.startsWith('video/')
+    return isVideo
+      ? `<video src="${m.dataUrl}" controls style="width:100%;border-radius:8px;margin-bottom:8px"></video>`
+      : `<img src="${m.dataUrl}" style="width:100%;border-radius:8px;margin-bottom:8px"/>`
+  }).join('')
+  
+  const modal = document.getElementById('galModal')
+  modal.style.display = 'flex'
+}
+
+function tutupGalModal(){
+  document.getElementById('galModal').style.display='none'
+  // pause any videos
+  document.querySelectorAll('#galModalMedia video').forEach(v=>v.pause())
+}
+
+function hapusGaleri(id){
+  if(!confirm('Hapus item galeri ini?'))return
+  const galeri = getGaleri().filter(g=>g.id!==id)
+  saveGaleri(galeri)
+  renderGaleri()
+  showToast('🗑️ Dihapus dari galeri')
+}
+
+// ===== CATATAN DIVIDEN =====
+function getDivHistory(){return JSON.parse(localStorage.getItem('baroto_dividen')||'[]')}
+function saveDivHistory(d){localStorage.setItem('baroto_dividen',JSON.stringify(d))}
+
+function hitungDiv(){
+  const tot = parseFloat(document.getElementById('divTotProfit').value)||0
+  if(tot<=0){document.getElementById('divPreview').style.display='none';return}
+  const ops = tot*PCT_OPS
+  const divTotal = tot*PCT_DIV
+  const nas = getNasabahList()
+  const totModal = nas.reduce((s,n)=>s+n.modal,0)
+  document.getElementById('divPreview').style.display='block'
+  document.getElementById('dPrevTot').textContent=`+$${tot.toFixed(2)}`
+  document.getElementById('dPrevOps').textContent=`$${ops.toFixed(2)}`
+  document.getElementById('dPrevDiv').textContent=`$${divTotal.toFixed(2)}`
+  document.getElementById('dPrevNas').innerHTML=nas.map(n=>{
+    const share = totModal>0 ? n.modal/totModal : 1/nas.length
+    const divN = divTotal*share
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1a1e2433">
+      <div style="display:flex;align-items:center;gap:7px">
+        <div style="width:22px;height:22px;border-radius:50%;background:${n.warna};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff">${n.nama[0]}</div>
+        <span style="font-size:11px;color:var(--muted)">${n.nama}</span>
+      </div>
+      <span style="font-size:12px;font-weight:700;color:var(--green)">+$${divN.toFixed(4)}</span>
+    </div>`
+  }).join('')
+}
+
+function simpanDividen(){
+  const periode = document.getElementById('divPeriode').value
+  const tot = parseFloat(document.getElementById('divTotProfit').value)||0
+  const catatan = document.getElementById('divCatatan').value.trim()
+  if(!periode){alert('Pilih periode!');return}
+  if(tot<=0){alert('Isi total profit!');return}
+  
+  const nas = getNasabahList()
+  const totModal = nas.reduce((s,n)=>s+n.modal,0)
+  const divTotal = tot*PCT_DIV
+  const distribusi = nas.map(n=>{
+    const share = totModal>0 ? n.modal/totModal : 1/nas.length
+    return {nama:n.nama, warna:n.warna, dividen: divTotal*share}
+  })
+  
+  const history = getDivHistory()
+  // cek duplikat periode
+  const existIdx = history.findIndex(h=>h.periode===periode)
+  const entry = {periode, totProfit:tot, ops:tot*PCT_OPS, divTotal, distribusi, catatan, ts:new Date().toISOString()}
+  if(existIdx>=0){if(!confirm(`Data periode ${periode} sudah ada. Timpa?`))return; history[existIdx]=entry}
+  else history.unshift(entry)
+  history.sort((a,b)=>b.periode.localeCompare(a.periode))
+  saveDivHistory(history)
+  
+  // reset form
+  document.getElementById('divPeriode').value=''
+  document.getElementById('divTotProfit').value=''
+  document.getElementById('divCatatan').value=''
+  document.getElementById('divPreview').style.display='none'
+  
+  renderDividen()
+  showToast('✅ Distribusi dividen tersimpan!')
+}
+
+function renderDividen(){
+  const history = getDivHistory()
+  const totDiv = history.reduce((s,h)=>s+h.divTotal,0)
+  const totOps = history.reduce((s,h)=>s+h.ops,0)
+  const totProfit = history.reduce((s,h)=>s+h.totProfit,0)
+  
+  document.getElementById('divStats').innerHTML=`
+    <div class="a-stat green"><div class="a-slabel">Total Profit</div><div class="a-sval">$${totProfit.toFixed(2)}</div></div>
+    <div class="a-stat blue"><div class="a-slabel">Total Dividen</div><div class="a-sval">$${totDiv.toFixed(2)}</div></div>
+    <div class="a-stat"><div class="a-slabel">Periode</div><div class="a-sval">${history.length}</div></div>`
+  
+  const el = document.getElementById('divList')
+  if(!history.length){el.innerHTML='<div class="empty">Belum ada catatan distribusi</div>';return}
+  
+  el.innerHTML = history.map(h=>{
+    const [yr,mo] = h.periode.split('-')
+    const bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][parseInt(mo)-1]
+    return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
+      <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${bulan} ${yr}</div>
+          ${h.catatan?`<div style="font-size:10px;color:var(--dim);margin-top:1px">${h.catatan}</div>`:''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;font-weight:700;color:var(--green)">+$${h.totProfit.toFixed(2)}</div>
+          <div style="font-size:10px;color:var(--dim)">Div: $${h.divTotal.toFixed(2)}</div>
+        </div>
+      </div>
+      <div style="padding:8px 12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:4px">
+        ${h.distribusi.map(d=>`
+          <div style="text-align:center;padding:5px;background:var(--bg2);border-radius:6px">
+            <div style="font-size:9px;color:var(--dim);margin-bottom:2px">${d.nama}</div>
+            <div style="font-size:11px;font-weight:700;color:var(--green)">+$${d.dividen.toFixed(4)}</div>
+          </div>`).join('')}
+      </div>
+      <div style="padding:4px 12px 8px;text-align:right">
+        <button onclick="hapusDividen('${h.periode}')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:10px">🗑️ Hapus</button>
+      </div>
+    </div>`
+  }).join('')
+  
+  // Per nasabah summary
+  const nas = getNasabahList()
+  const totalPerNas = {}
+  history.forEach(h=>h.distribusi.forEach(d=>{
+    if(!totalPerNas[d.nama]) totalPerNas[d.nama]={dividen:0, warna:d.warna}
+    totalPerNas[d.nama].dividen += d.dividen
+  }))
+  const nasEl = document.getElementById('divPerNas')
+  if(!Object.keys(totalPerNas).length){nasEl.innerHTML='<div class="empty">Belum ada data</div>';return}
+  nasEl.innerHTML = Object.entries(totalPerNas).map(([nama,info])=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:7px">
+      <div style="width:36px;height:36px;border-radius:50%;background:${info.warna};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">${nama[0]}</div>
+      <div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--text)">${nama}</div>
+        <div style="font-size:10px;color:var(--dim)">${history.length} periode distribusi</div></div>
+      <div style="font-size:15px;font-weight:700;color:var(--green)">+$${info.dividen.toFixed(4)}</div>
+    </div>`).join('')
+}
+
+function hapusDividen(periode){
+  if(!confirm(`Hapus catatan dividen ${periode}?`))return
+  const history = getDivHistory().filter(h=>h.periode!==periode)
+  saveDivHistory(history)
+  renderDividen()
+  showToast('🗑️ Dihapus')
+}
+
+
 
 // ===== SCAN FBS =====
 let scanImageBase64 = ''
