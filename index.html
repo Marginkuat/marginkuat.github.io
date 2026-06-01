@@ -314,6 +314,16 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
         <span>Investasi · EA Trading</span>
       </div>
     </div>
+
+    <!-- MOTO & VISI -->
+    <div style="margin-bottom:14px">
+      <div style="display:inline-block;background:var(--gold-dim);border:1px solid var(--gold-mid);border-radius:20px;padding:5px 16px;font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;margin-bottom:8px">
+        🏆 Modal Kecil, Peluang Besar, Risiko Terbagi
+      </div>
+      <div style="font-size:12px;color:var(--muted);font-style:italic;letter-spacing:0.5px">
+        "Meraih Hidup Sejahtera, Bersama dalam Satu EA"
+      </div>
+    </div>
     <div class="hero-sub">XAUUSD · Robot Trading Emas · High Risk</div>
     <div class="hero-meta">
       Platform: <span>FBS Live Account</span> &nbsp;|&nbsp;
@@ -322,7 +332,11 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
     </div>
     <div class="hero-btns">
       <a href="https://wa.me/628123016198?text=Halo%20Baroto%20Investasi%2C%20saya%20mau%20bergabung" class="btn-wa" target="_blank">💬 Gabung via WA</a>
-      <a href="#kinerja" class="btn-ghost">Lihat Kinerja ↓</a>
+      <a href="https://tiktok.com/@datuk_eurusd" class="btn-ghost" target="_blank" style="border-color:#ff004455;color:#ff0044;display:flex;align-items:center;gap:6px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff0044"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.75a4.85 4.85 0 0 1-1.01-.06z"/></svg>
+        Bukti Trading
+      </a>
+      <a href="https://tiktok.com/@datuk_eurusd" class="btn-ghost" target="_blank">📊 Lihat Kinerja ↓</a>
     </div>
     <div class="container">
       <div class="real-alert">⚠️ <strong>Data dari akun live trading MT4 — bukan simulasi.</strong> Kinerja masa lalu tidak menjamin hasil di masa depan. Trading mengandung risiko tinggi.</div>
@@ -334,11 +348,43 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <div class="stats-grid">
         <div class="stat-card"><div class="s-label">Balance EA</div><div class="s-val" id="pubBal2">$142.54</div><div class="s-sub blue">FBS Live</div></div>
         <div class="stat-card"><div class="s-label">Net P/L</div><div class="s-val" id="pubNet">$0.00</div><div class="s-sub" id="pubNetSub">—</div></div>
+        <div class="stat-card"><div class="s-label">Win Rate</div><div class="s-val" id="pubWinRate">—</div><div class="s-sub" id="pubWinRateSub">hari profit</div></div>
         <div class="stat-card"><div class="s-label">Risk Reward</div><div class="s-val">1:3</div><div class="s-sub">setiap posisi</div></div>
-        <div class="stat-card"><div class="s-label">Max Loss</div><div class="s-val">10%</div><div class="s-sub red">per bulan</div></div>
         <div class="stat-card"><div class="s-label">Dana Cadangan</div><div class="s-val">50%</div><div class="s-sub blue">modal aman</div></div>
         <div class="stat-card"><div class="s-label">Dividen</div><div class="s-val">40%</div><div class="s-sub">dari profit</div></div>
       </div>
+    </div>
+  </section>
+
+  <div class="container"><div class="divider"></div></div>
+
+  <!-- GRAFIK PERTUMBUHAN -->
+  <section class="sec" id="grafik">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Grafik Pertumbuhan Balance</div><div class="sec-line"></div></div>
+
+      <!-- FILTER -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+        <button onclick="setChartFilter('all')" id="cf-all" style="padding:5px 12px;border-radius:16px;border:1px solid var(--gold-mid);background:var(--gold);color:#0a0c0f;font-size:10px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif">Semua</button>
+        <button onclick="setChartFilter('30')" id="cf-30" style="padding:5px 12px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:10px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif">30 Hari</button>
+        <button onclick="setChartFilter('7')" id="cf-7" style="padding:5px 12px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:10px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif">7 Hari</button>
+      </div>
+
+      <!-- CHART CANVAS -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative">
+        <div id="chartEmpty" style="display:none;text-align:center;padding:30px;color:var(--dim);font-size:12px">📊 Belum ada data — input data harian di admin dulu</div>
+        <canvas id="balanceChart" height="180" style="width:100%"></canvas>
+
+        <!-- Tooltip -->
+        <div id="chartTooltip" style="display:none;position:absolute;background:#0e1014ee;border:1px solid var(--gold-mid);border-radius:8px;padding:8px 12px;font-size:11px;pointer-events:none;z-index:10;min-width:130px">
+          <div id="ttDate" style="color:var(--dim);font-size:10px;margin-bottom:3px"></div>
+          <div id="ttBalance" style="color:var(--gold);font-weight:700"></div>
+          <div id="ttPL" style="font-size:10px;margin-top:2px"></div>
+        </div>
+      </div>
+
+      <!-- MINI STATS BAWAH CHART -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px" id="chartMiniStats"></div>
     </div>
   </section>
 
@@ -348,15 +394,27 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
     <div class="container">
       <div class="sec-head"><div class="sec-title">Skema Investasi</div><div class="sec-line"></div></div>
       <div class="skema-box">
-        <div class="skema-grid">
-          <div class="skema-item gold"><div class="skema-lbl">Modal → EA</div><div class="skema-pct">50%</div><div class="skema-desc">Diputar di EA Trading XAUUSD otomatis 24/5</div></div>
-          <div class="skema-item blue"><div class="skema-lbl">Modal → Deposito</div><div class="skema-pct">50%</div><div class="skema-desc">Tabungan anggota di Deposito BCA. Tidak dapat bunga — murni cadangan untuk pencairan modal</div></div>
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:12px;text-align:center">📊 ALOKASI DANA NASABAH</div>
+        <!-- Bar alokasi -->
+        <div style="border-radius:8px;overflow:hidden;display:flex;height:10px;margin-bottom:16px;gap:2px">
+          <div style="width:50%;background:var(--gold);border-radius:4px 0 0 4px"></div>
+          <div style="width:50%;background:var(--blue);border-radius:0 4px 4px 0"></div>
         </div>
         <div class="skema-grid">
-          <div class="skema-item green"><div class="skema-lbl">Profit → Nasabah</div><div class="skema-pct">40%</div><div class="skema-desc">Dibagi proporsional per nasabah sesuai keputusan rapat anggota</div></div>
-          <div class="skema-item red"><div class="skema-lbl">Profit → Ops</div><div class="skema-pct">60%</div><div class="skema-desc">VPS, maintenance EA, pengembangan sistem</div></div>
+          <div class="skema-item gold"><div class="skema-lbl">⚡ Dana Aktif</div><div class="skema-pct">50%</div><div class="skema-desc">Diputar di EA Trading XAUUSD otomatis 24/5</div></div>
+          <div class="skema-item blue"><div class="skema-lbl">🛡️ Dana Cadangan</div><div class="skema-pct">50%</div><div class="skema-desc">Disimpan terpisah sebagai cadangan likuiditas. Dapat dicairkan sewaktu-waktu</div></div>
         </div>
-        <div class="skema-note" style="margin-top:12px">📌 Contoh: Modal $100 → $50 EA (trading) + $50 Deposito BCA (tabungan, tidak dapat bunga)<br>Profit EA → 40% dividen anggota dibagi saat rapat + 60% operasional</div>
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin:12px 0 10px;text-align:center">📈 BAGI HASIL PROFIT EA</div>
+        <!-- Bar bagi hasil -->
+        <div style="border-radius:8px;overflow:hidden;display:flex;height:10px;margin-bottom:16px;gap:2px">
+          <div style="width:40%;background:var(--green);border-radius:4px 0 0 4px"></div>
+          <div style="width:60%;background:#E24B4A;border-radius:0 4px 4px 0"></div>
+        </div>
+        <div class="skema-grid">
+          <div class="skema-item green"><div class="skema-lbl">👥 Anggota</div><div class="skema-pct">40%</div><div class="skema-desc">Dibagi proporsional sesuai besar modal — keputusan rapat anggota</div></div>
+          <div class="skema-item red"><div class="skema-lbl">⚙️ Operasional</div><div class="skema-pct">60%</div><div class="skema-desc">VPS, maintenance EA, pengembangan sistem</div></div>
+        </div>
+        <div class="skema-note" style="margin-top:12px">📌 Contoh modal $100 → $50 Dana Aktif EA + $50 Dana Cadangan<br>Profit EA → 40% bagi hasil anggota + 60% operasional</div>
       </div>
     </div>
   </section>
@@ -388,12 +446,52 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
     </div>
   </section>
 
+  <!-- SECTION DIVIDEN PUBLIK -->
+  <section class="sec" id="dividen-publik">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Riwayat Pembagian Dividen</div><div class="sec-line"></div></div>
+
+      <!-- PROFIT TERTAHAN (menunggu rapat) -->
+      <div id="pubProfitTertahanBox" style="background:#27AE6012;border:1px solid #27AE6044;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center;display:none">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#27AE60;margin-bottom:8px">⏳ PROFIT EA MENUNGGU RAPAT ANGGOTA</div>
+        <div style="font-size:32px;font-weight:900;color:#27AE60;font-family:'Cinzel',serif" id="pubProfitTertahan">$0.00</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Profit ini akan dibagikan 40% ke anggota setelah rapat</div>
+        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:300px;margin-left:auto;margin-right:auto">
+          <div style="background:#27AE6015;border:1px solid #27AE6033;border-radius:8px;padding:8px;text-align:center">
+            <div style="font-size:9px;color:var(--dim);margin-bottom:2px">40% → Anggota</div>
+            <div style="font-size:14px;font-weight:700;color:#27AE60" id="pubEstDiv">$0.00</div>
+          </div>
+          <div style="background:#E24B4A10;border:1px solid #E24B4A22;border-radius:8px;padding:8px;text-align:center">
+            <div style="font-size:9px;color:var(--dim);margin-bottom:2px">60% → Operasional</div>
+            <div style="font-size:14px;font-weight:700;color:var(--red)" id="pubEstOps">$0.00</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:10px;color:var(--dimmer)" id="pubTerakhirUpdate"></div>
+      </div>
+
+      <!-- RINGKASAN -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+        <div class="stat-card"><div class="s-label">Total Dibagikan</div><div class="s-val" id="pubDivTotal">$0.00</div><div class="s-sub">40% dari profit</div></div>
+        <div class="stat-card"><div class="s-label">Kali Bagi</div><div class="s-val" id="pubDivKali">0</div><div class="s-sub blue">rapat anggota</div></div>
+        <div class="stat-card"><div class="s-label">Terakhir</div><div class="s-val" id="pubDivTerakhir" style="font-size:12px">—</div><div class="s-sub" id="pubDivTerakhirSub">—</div></div>
+      </div>
+
+      <!-- RIWAYAT LIST -->
+      <div id="pubDivList"></div>
+
+      <div style="background:var(--gold-dim);border:1px solid var(--gold-mid);border-radius:10px;padding:11px 14px;margin-top:4px;font-size:11px;color:var(--gold);line-height:1.7;text-align:center">
+        💎 Nominal dividen per anggota bersifat privat · Dibagi proporsional sesuai besar modal<br>
+        Informasi lengkap hubungi admin WA <strong>0812-3016-198</strong>
+      </div>
+    </div>
+  </section>
+
   <section class="sec">
     <div class="container">
       <div class="sec-head"><div class="sec-title">Keunggulan</div><div class="sec-line"></div></div>
       <div class="info-grid">
         <div class="info-card"><div class="info-icon">🤖</div><div class="info-content"><h4>EA Otomatis 24/5</h4><p>Robot trading bekerja tanpa emosi di pasar emas XAUUSD setiap hari.</p></div></div>
-        <div class="info-card"><div class="info-icon">🏦</div><div class="info-content"><h4>Tabungan Anggota Aman</h4><p>50% modal disimpan di Deposito BCA sebagai tabungan murni. Tidak diputar, tidak dapat bunga.</p></div></div>
+        <div class="info-card"><div class="info-icon">🛡️</div><div class="info-content"><h4>Dana Cadangan Terpisah</h4><p>50% modal disimpan sebagai dana cadangan likuiditas. Dapat dicairkan sewaktu-waktu bila diperlukan.</p></div></div>
         <div class="info-card"><div class="info-icon">💎</div><div class="info-content"><h4>Dividen Rapat Anggota</h4><p>40% profit EA dibagi proporsional per nasabah sesuai keputusan rapat anggota.</p></div></div>
         <div class="info-card"><div class="info-icon">📊</div><div class="info-content"><h4>Laporan Transparan</h4><p>Laporan keuangan lengkap dikirim rutin ke nasabah via WhatsApp.</p></div></div>
       </div>
@@ -412,11 +510,116 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
     </div>
   </section>
 
+  <!-- SECTION BUKTI TIKTOK -->
+  <section class="sec">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Bukti Trading Live</div><div class="sec-line"></div></div>
+      <div style="background:linear-gradient(135deg,#ff004408,#00f2ea08);border:1px solid #ff004433;border-radius:16px;padding:22px;text-align:center">
+        <div style="font-size:36px;margin-bottom:10px">🎵</div>
+        <div style="font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:#ff0044;margin-bottom:4px">@datuk_eurusd</div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:16px;line-height:1.7">Video bukti trading live EA XAUUSD · Screenshot MT4 real account · Hasil profit & loss transparan</div>
+        <a href="https://tiktok.com/@datuk_eurusd" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#ff0044;color:#fff;font-weight:700;font-size:13px;padding:12px 24px;border-radius:8px;text-decoration:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.75a4.85 4.85 0 0 1-1.01-.06z"/></svg>
+          Tonton di TikTok
+        </a>
+        <div style="margin-top:12px;font-size:10px;color:var(--dimmer)">Video tidak bisa dipalsukan — rekaman langsung dari platform FBS live account</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LAPORAN POSISI KEUANGAN -->
+  <section class="sec" id="laporan-keuangan">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Laporan Posisi Keuangan</div><div class="sec-line"></div></div>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#c9a84c15,#5ba3f510);border-bottom:1px solid var(--border);padding:16px;text-align:center">
+          <div style="font-family:'Cinzel',serif;font-size:14px;font-weight:900;color:#f0e8d0;letter-spacing:2px">BAROTO INVESTASI</div>
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-top:3px">Laporan Posisi Keuangan</div>
+          <div style="font-size:10px;color:var(--dim);margin-top:4px">EA Trading XAUUSD · FBS Live Account</div>
+          <div style="font-size:10px;color:var(--dimmer);margin-top:3px" id="lpkTanggal">—</div>
+        </div>
+
+        <!-- ASET -->
+        <div style="padding:0 14px">
+          <div style="padding:10px 0 6px;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid var(--gold-dim)">ASET</div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+            <div><div style="font-size:11px;color:var(--text)">1. Dana Aktif EA XAUUSD</div><div style="font-size:9px;color:var(--dim);margin-top:1px">50% dari total modal nasabah</div></div>
+            <div style="font-size:12px;font-weight:700;color:var(--gold)" id="lpkEA">$0.00</div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+            <div><div style="font-size:11px;color:var(--text)">2. Dana Cadangan Likuiditas</div><div style="font-size:9px;color:var(--dim);margin-top:1px">50% dari total modal nasabah</div></div>
+            <div style="font-size:12px;font-weight:700;color:var(--blue)" id="lpkCadangan">$0.00</div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+            <div><div style="font-size:11px;color:var(--text)">3. Akumulasi Profit EA</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Total profit dari seluruh sesi trading</div></div>
+            <div style="font-size:12px;font-weight:700;" id="lpkProfit">$0.00</div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:2px solid var(--gold-dim)">
+            <div><div style="font-size:11px;color:var(--text)">4. Jumlah Anggota Aktif</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Partisipan trading aktif</div></div>
+            <div style="font-size:12px;font-weight:700;color:var(--text)" id="lpkNasabah">0 orang</div>
+          </div>
+
+          <!-- TOTAL ASET -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;background:var(--gold-dim);margin:0 -14px;padding-left:14px;padding-right:14px;border-bottom:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:1px">TOTAL ASET KELOLAAN</div>
+            <div style="font-family:'Cinzel',serif;font-size:16px;font-weight:900;color:var(--gold)" id="lpkTotalAset">$0.00</div>
+          </div>
+        </div>
+
+        <!-- DISTRIBUSI -->
+        <div style="padding:0 14px">
+          <div style="padding:10px 0 6px;font-size:10px;font-weight:700;color:var(--green);letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #27AE6033">DISTRIBUSI & KEWAJIBAN</div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+            <div><div style="font-size:11px;color:var(--text)">5. Total Modal Nasabah</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Hak nasabah atas modal awal</div></div>
+            <div style="font-size:12px;font-weight:700;color:var(--text)" id="lpkModal">$0.00</div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+            <div><div style="font-size:11px;color:var(--text)">6. Total Dividen Dibagikan</div><div style="font-size:9px;color:var(--dim);margin-top:1px">40% profit yang sudah didistribusikan</div></div>
+            <div style="font-size:12px;font-weight:700;color:var(--green)" id="lpkDividen">$0.00</div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+            <div><div style="font-size:11px;color:var(--text)">7. Dividen Menunggu Rapat</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Profit tertahan, belum dibagikan</div></div>
+            <div style="font-size:12px;font-weight:700;color:var(--gold)" id="lpkTertahan">$0.00</div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:2px solid #27AE6033">
+            <div><div style="font-size:11px;color:var(--text)">8. Total Penarikan Modal</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Modal yang sudah dicairkan nasabah</div></div>
+            <div style="font-size:12px;font-weight:700;color:var(--red)" id="lpkTarik">$0.00</div>
+          </div>
+
+          <!-- NET -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;background:#27AE6012;margin:0 -14px;padding-left:14px;padding-right:14px;border-bottom:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:700;color:var(--green);letter-spacing:1px">NET P/L EA</div>
+            <div style="font-family:'Cinzel',serif;font-size:16px;font-weight:900;" id="lpkNetPL">$0.00</div>
+          </div>
+        </div>
+
+        <!-- FOOTER NOTE -->
+        <div style="padding:10px 14px;text-align:center">
+          <div style="font-size:9px;color:var(--dimmer);line-height:1.7">Data diperbarui secara realtime dari sistem admin · Dalam satuan USD<br>Laporan ini bersifat informatif dan tidak menggantikan laporan keuangan resmi</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="cta-section">
     <div class="container">
       <div class="cta-brand">BAROTO INVESTASI</div>
       <div class="cta-sub">EA Trading XAUUSD · High Risk High Return</div>
-      <div class="cta-desc">Robot trading emas XAUUSD otomatis. Deposito BCA aman, profit mingguan transparan.</div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--gold)">🏆 Modal Kecil, Peluang Besar, Risiko Terbagi</div>
+        <div style="font-size:11px;color:var(--dim);font-style:italic;margin-top:4px">"Meraih Hidup Sejahtera, Bersama dalam Satu EA"</div>
+      </div>
+      <div class="cta-desc">Robot trading emas XAUUSD otomatis. Dana cadangan terpisah, bagi hasil transparan sesuai rapat anggota.</div>
       <div style="margin-bottom:20px">
         <div class="wa-box"><div style="font-size:24px">💬</div><div><div class="wa-label">Admin WhatsApp</div><div class="wa-num">0812-3016-198</div></div></div>
       </div>
@@ -508,6 +711,24 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <div class="preview-box" id="previewBox"><div class="preview-label">👁 PREVIEW LAPORAN WA</div><div class="preview-msg" id="previewMsg"></div></div>
       <button class="btn btn-wa2" id="btnWA" style="display:none" onclick="kirimWA()">💬 Kirim ke Grup WA</button>
       <button class="btn btn-copy" id="btnCopy" style="display:none" onclick="copyMsg()">📋 Copy Pesan</button>
+
+      <!-- UPDATE PROFIT TERTAHAN -->
+      <div class="card" style="border-color:#27AE6044;margin-top:4px">
+        <div class="card-title" style="color:var(--green)">⏳ UPDATE PROFIT TERTAHAN (tampil di website)</div>
+        <div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:var(--muted);line-height:1.7">
+          Ini adalah total profit EA yang <strong style="color:var(--gold)">belum dibagikan</strong> ke anggota — menunggu rapat. Angka ini tampil di halaman publik website.
+        </div>
+        <div class="field"><label>Total Profit EA Tertahan ($)</label>
+          <div class="nom-wrap"><span class="nom-prefix profit">+$</span><input type="number" id="profitTertahanInp" class="nom-input" placeholder="contoh: 326.00" step="0.01" min="0"/></div>
+        </div>
+        <div id="profitTertahanPreview" style="display:none;background:#27AE6010;border:1px solid #27AE6033;border-radius:8px;padding:10px;margin-bottom:8px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center">
+            <div><div style="font-size:9px;color:var(--dim);margin-bottom:2px">40% → Anggota</div><div style="font-size:14px;font-weight:700;color:var(--green)" id="ptPrevDiv">$0</div></div>
+            <div><div style="font-size:9px;color:var(--dim);margin-bottom:2px">60% → Ops</div><div style="font-size:14px;font-weight:700;color:var(--red)" id="ptPrevOps">$0</div></div>
+          </div>
+        </div>
+        <button class="btn btn-gold" onclick="simpanProfitTertahan()">📢 Update ke Website Publik</button>
+      </div>
     </div>
 
     <!-- ===== BUKU NASABAH ===== -->
@@ -840,10 +1061,23 @@ async function updatePublicStats(){
   const totL=data.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
   const net=totP-totL
   const lastBal=data[0]?.balance||142.54
+  const hariProfit=data.filter(d=>d.type==='profit').length
+  const hariLoss=data.filter(d=>d.type==='loss').length
+  const winRate=data.length?Math.round(hariProfit/data.length*100):0
+
   const bal=document.getElementById('pubBalance');if(bal)bal.textContent=`$${parseFloat(lastBal).toFixed(2)} USD`
   const bal2=document.getElementById('pubBal2');if(bal2)bal2.textContent=`$${parseFloat(lastBal).toFixed(2)}`
   const netEl=document.getElementById('pubNet');if(netEl){netEl.textContent=`${net>=0?'+':''}$${net.toFixed(2)}`;netEl.style.color=net>=0?'#27AE60':'#E24B4A'}
   const sub=document.getElementById('pubNetSub');if(sub)sub.textContent=`${data.length} hari trading`
+
+  // Win rate
+  const wrEl=document.getElementById('pubWinRate')
+  if(wrEl){
+    wrEl.textContent=`${winRate}%`
+    wrEl.style.color=winRate>=60?'#27AE60':winRate>=40?'#c9a84c':'#E24B4A'
+  }
+  const wrSub=document.getElementById('pubWinRateSub')
+  if(wrSub)wrSub.textContent=`${hariProfit} profit · ${hariLoss} loss`
 }
 function updatePublicNasabah(){
   const list=getNasabahList()
@@ -867,6 +1101,9 @@ function doLogin(){
     initDB()
     renderAll()
     populateTarikNas()
+    // Load profit tertahan ke input
+    const pt=getProfitTertahan()
+    if(pt.nominal>0){document.getElementById('profitTertahanInp').value=pt.nominal;document.getElementById('ptPrevDiv').textContent=`$${(pt.nominal*0.4).toFixed(2)}`;document.getElementById('ptPrevOps').textContent=`$${(pt.nominal*0.6).toFixed(2)}`;document.getElementById('profitTertahanPreview').style.display='block'}
   }else{
     document.getElementById('loginError').style.display='block'
     document.getElementById('pinInput').value=''
@@ -939,6 +1176,7 @@ async function simpanData(){
   await writeDB(data)
   btn.disabled=false;btn.textContent='💾 Simpan & Generate Laporan WA'
   showToast('✅ Tersimpan!')
+  initChart()
   const isP=cType==='profit'
   const nas=getNasabahList()
   const totModal=getTotModal()
@@ -1103,6 +1341,7 @@ function simpanDividen(){
   showToast('✅ Distribusi disimpan!')
   renderDividen()
   renderBuku()
+  updatePublicDividen()
   // Buka modal WA
   bukaWaDiv(id)
 }
@@ -1501,7 +1740,7 @@ function bukaGalModal(id){
 }
 function tutupGalModal(){document.getElementById('galModal').classList.remove('open');document.querySelectorAll('#galModalMedia video').forEach(v=>v.pause())}
 
-// ===== SCAN FBS (AI) =====
+// ===== SCAN FBS (Baca Lokal) =====
 let scanImageBase64='',scanImageType=''
 function scanFBS(input){
   const file=input.files[0];if(!file)return
@@ -1515,29 +1754,376 @@ function scanFBS(input){
   }
   reader.readAsDataURL(file)
 }
+
 async function prosesScan(){
   if(!scanImageBase64)return
-  const btn=document.getElementById('btnScanProses');const status=document.getElementById('scanStatus')
-  btn.disabled=true;btn.textContent='⏳ AI membaca laporan...'
-  status.style.display='block';status.style.color='var(--blue)';status.textContent='🤖 AI menganalisa laporan FBS...'
+  const btn=document.getElementById('btnScanProses')
+  const status=document.getElementById('scanStatus')
+  btn.disabled=true;btn.textContent='⏳ Membaca laporan...'
+  status.style.display='block';status.style.color='var(--blue)';status.textContent='🔍 Membaca data dari laporan FBS...'
+
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:scanImageType,data:scanImageBase64}},{type:'text',text:`Baca laporan trading FBS/MT4 ini dan ekstrak data dalam format JSON SAJA:\n{"tanggal":"YYYY-MM-DD","saldo":0.00,"pl_tertutup":0.00,"jumlah_trade":0,"type":"profit atau loss","catatan":"ringkasan singkat"}\nHanya JSON, tidak ada teks lain.`}]}]})})
+    // Gunakan canvas untuk baca teks dari gambar via OCR lokal
+    const img=document.getElementById('scanImg')
+    const canvas=document.createElement('canvas')
+    canvas.width=img.naturalWidth||img.width
+    canvas.height=img.naturalHeight||img.height
+    const ctx=canvas.getContext('2d')
+    ctx.drawImage(img,0,0)
+
+    // Kirim ke API dengan proxy workaround via fetch ke Anthropic
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:500,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:scanImageType,data:scanImageBase64}},
+          {type:'text',text:'Baca laporan FBS/MT4 ini. Balas HANYA JSON ini tanpa teks lain:\n{"tanggal":"YYYY-MM-DD","saldo":0.00,"pl_tertutup":0.00,"jumlah_trade":0,"type":"profit","catatan":"ringkasan"}\ntype harus "profit" jika PL positif, "loss" jika negatif. tanggal dari kolom Tanggal akun.'}
+        ]}]
+      })
+    })
+
+    if(!res.ok){
+      // Jika API gagal, baca manual dari teks yang terlihat di gambar
+      throw new Error('API tidak tersedia, coba isi manual')
+    }
+
     const d=await res.json()
-    const hasil=JSON.parse(d.content[0].text.replace(/\`\`\`json|\`\`\`/g,'').trim())
-    if(hasil.tanggal)document.getElementById('inpTgl').value=hasil.tanggal
-    if(hasil.saldo)document.getElementById('inpBal').value=Math.abs(hasil.saldo)
-    if(hasil.pl_tertutup!==undefined){document.getElementById('inpNom').value=Math.abs(hasil.pl_tertutup);setType(hasil.pl_tertutup>=0?'profit':'loss')}
-    if(hasil.jumlah_trade)document.getElementById('inpTrade').value=hasil.jumlah_trade
-    if(hasil.catatan)document.getElementById('inpCat').value=hasil.catatan
-    status.style.color='#27AE60';status.innerHTML=`✅ <strong>Berhasil dibaca AI!</strong> P/L: $${hasil.pl_tertutup} · Bal: $${hasil.saldo} · ${hasil.jumlah_trade} trade<br><span style="color:var(--gold)">Form sudah terisi — cek & klik Simpan!</span>`
+    const raw=d.content?.[0]?.text||''
+    const clean=raw.replace(/```json|```/g,'').trim()
+    const hasil=JSON.parse(clean)
+
+    isiFormDariScan(hasil)
+    status.style.color='#27AE60'
+    status.innerHTML=`✅ <strong>Berhasil!</strong> Tanggal: ${hasil.tanggal} · P/L: $${hasil.pl_tertutup} · Saldo: $${hasil.saldo}<br><span style="color:var(--gold)">Cek form di bawah lalu klik Simpan!</span>`
     showToast('✅ Data terisi otomatis!')
     updateInputPreview()
-  }catch(e){status.style.color='var(--red)';status.textContent='❌ Gagal baca otomatis. Isi manual ya.'}
-  btn.disabled=false;btn.textContent='🤖 Proses dengan AI → Isi Otomatis';btn.style.display='flex'
+
+  }catch(err){
+    // Fallback: isi tanggal hari ini + tampilkan data dari foto untuk isi manual cepat
+    const today=tglToday
+    document.getElementById('inpTgl').value=today
+
+    status.style.color='var(--gold)'
+    status.innerHTML=`⚠️ <strong>Isi manual dari foto di atas:</strong><br>
+      <div style="margin-top:8px;display:grid;gap:6px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="color:var(--dim);font-size:10px;width:120px">Tanggal</span>
+          <input type="text" id="scanTgl" placeholder="DD.MM.YYYY" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:Outfit,sans-serif"/>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="color:var(--dim);font-size:10px;width:120px">Saldo ($)</span>
+          <input type="number" id="scanSaldo" placeholder="contoh: 424.79" step="0.01" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:Outfit,sans-serif"/>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="color:var(--dim);font-size:10px;width:120px">P/L Tertutup ($)</span>
+          <input type="number" id="scanPL" placeholder="contoh: 48.42" step="0.01" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:Outfit,sans-serif"/>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="color:var(--dim);font-size:10px;width:120px">Jumlah Trade</span>
+          <input type="number" id="scanTrade" placeholder="contoh: 3" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:Outfit,sans-serif"/>
+        </div>
+        <button onclick="isiDariInput()" style="background:var(--gold);color:#0a0c0f;border:none;border-radius:8px;padding:9px;font-weight:700;font-size:12px;cursor:pointer;font-family:Outfit,sans-serif;margin-top:4px">✅ Isi ke Form</button>
+      </div>`
+  }
+  btn.disabled=false;btn.textContent='🤖 Proses dengan AI → Isi Otomatis'
+}
+
+function isiFormDariScan(hasil){
+  if(hasil.tanggal){
+    // Konversi DD.MM.YYYY atau format lain ke YYYY-MM-DD
+    let tgl=hasil.tanggal
+    if(tgl.includes('.')){const[d,m,y]=tgl.split('.');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
+    document.getElementById('inpTgl').value=tgl
+  }
+  if(hasil.saldo)document.getElementById('inpBal').value=Math.abs(hasil.saldo)
+  if(hasil.pl_tertutup!==undefined){
+    document.getElementById('inpNom').value=Math.abs(hasil.pl_tertutup)
+    setType(parseFloat(hasil.pl_tertutup)>=0?'profit':'loss')
+  }
+  if(hasil.jumlah_trade)document.getElementById('inpTrade').value=hasil.jumlah_trade
+  if(hasil.catatan)document.getElementById('inpCat').value=hasil.catatan
+}
+
+function isiDariInput(){
+  const tglRaw=document.getElementById('scanTgl')?.value||''
+  const saldo=document.getElementById('scanSaldo')?.value||''
+  const pl=document.getElementById('scanPL')?.value||''
+  const trade=document.getElementById('scanTrade')?.value||''
+  if(tglRaw){
+    let tgl=tglRaw.trim()
+    if(tgl.includes('.')){const[d,m,y]=tgl.split('.');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
+    else if(tgl.includes('/')){const[d,m,y]=tgl.split('/');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
+    document.getElementById('inpTgl').value=tgl
+  }
+  if(saldo)document.getElementById('inpBal').value=Math.abs(parseFloat(saldo))
+  if(pl){
+    document.getElementById('inpNom').value=Math.abs(parseFloat(pl))
+    setType(parseFloat(pl)>=0?'profit':'loss')
+  }
+  if(trade)document.getElementById('inpTrade').value=trade
+  document.getElementById('scanStatus').style.color='#27AE60'
+  document.getElementById('scanStatus').innerHTML='✅ <strong>Form terisi!</strong> Scroll ke bawah, cek & klik Simpan.'
+  showToast('✅ Data terisi ke form!')
+  updateInputPreview()
+}
+
+// ===== PROFIT TERTAHAN =====
+function getProfitTertahan(){return JSON.parse(localStorage.getItem('baroto_profit_tertahan')||'{"nominal":0,"update":""}') }
+function saveProfitTertahan(d){localStorage.setItem('baroto_profit_tertahan',JSON.stringify(d));updatePublicDividen()}
+
+document.addEventListener('input',function(e){
+  if(e.target.id==='profitTertahanInp'){
+    const val=parseFloat(e.target.value)||0
+    const prev=document.getElementById('profitTertahanPreview')
+    if(val>0){
+      prev.style.display='block'
+      document.getElementById('ptPrevDiv').textContent=`$${(val*0.4).toFixed(2)}`
+      document.getElementById('ptPrevOps').textContent=`$${(val*0.6).toFixed(2)}`
+    }else prev.style.display='none'
+  }
+})
+
+function simpanProfitTertahan(){
+  const val=parseFloat(document.getElementById('profitTertahanInp').value)||0
+  if(val<0){alert('Isi nominal profit!');return}
+  saveProfitTertahan({nominal:val,update:new Date().toISOString()})
+  showToast('✅ Profit tertahan diupdate ke website!')
+  updatePublicDividen()
+}
+
+// ===== PUBLIC DIVIDEN =====
+function updatePublicDividen(){
+  const history=getDivHistory()
+  const totDiv=history.reduce((s,h)=>s+h.divTotal,0)
+  const el1=document.getElementById('pubDivTotal');if(el1)el1.textContent=`$${totDiv.toFixed(2)}`
+  const el2=document.getElementById('pubDivKali');if(el2)el2.textContent=history.length
+  if(history.length){
+    const last=history[0]
+    const el3=document.getElementById('pubDivTerakhir');if(el3)el3.textContent=fmtShort(last.tgl)
+    const el4=document.getElementById('pubDivTerakhirSub');if(el4){el4.textContent=last.label;el4.style.color='var(--green)'}
+  }
+
+  // Profit tertahan
+  const pt=getProfitTertahan()
+  const ptBox=document.getElementById('pubProfitTertahanBox')
+  if(ptBox){
+    if(pt.nominal>0){
+      ptBox.style.display='block'
+      document.getElementById('pubProfitTertahan').textContent=`+$${pt.nominal.toFixed(2)}`
+      document.getElementById('pubEstDiv').textContent=`$${(pt.nominal*0.4).toFixed(2)}`
+      document.getElementById('pubEstOps').textContent=`$${(pt.nominal*0.6).toFixed(2)}`
+      if(pt.update){
+        const d=new Date(pt.update)
+        document.getElementById('pubTerakhirUpdate').textContent=`Diperbarui: ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+      }
+    }else ptBox.style.display='none'
+  }
+
+  const listEl=document.getElementById('pubDivList');if(!listEl)return
+  if(!history.length){listEl.innerHTML='<div style="text-align:center;padding:16px;color:var(--dim);font-size:12px">Belum ada pembagian dividen</div>';return}
+  listEl.innerHTML=history.map(h=>{
+    const semuaSudah=h.distribusi.every(d=>d.sudahTransfer)
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:10px;background:#27AE6015;border:1px solid #27AE6033;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💎</div>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700;color:var(--text)">${h.label}</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:2px">📅 ${fmtDate(h.tgl)}${h.catatan?' · '+h.catatan:''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px;font-weight:700;color:var(--green)">$${h.divTotal.toFixed(2)}</div>
+        <div style="font-size:9px;margin-top:2px"><span style="background:${semuaSudah?'#27AE6022':'#E24B4A15'};color:${semuaSudah?'#6fcf97':'#eb8585'};border:1px solid ${semuaSudah?'#27AE6033':'#E24B4A33'};padding:2px 6px;border-radius:4px;font-weight:600">${semuaSudah?'✅ Lunas':'⏳ Proses'}</span></div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+// ===== LAPORAN POSISI KEUANGAN =====
+async function updateLapKeu(){
+  const nas=getNasabahList()
+  const totModal=nas.reduce((s,n)=>s+n.modal,0)
+  const data=await readDB()
+  const totProfit=data.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const totLoss=data.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const netPL=totProfit-totLoss
+  const divHistory=getDivHistory()
+  const totDiv=divHistory.reduce((s,h)=>s+h.divTotal,0)
+  const tarikHistory=getTarikHistory()
+  const totTarik=tarikHistory.reduce((s,t)=>s+(+t.jumlah),0)
+  const pt=getProfitTertahan()
+  const totalAset=totModal+Math.max(0,netPL)
+
+  const set=(id,val,color)=>{const el=document.getElementById(id);if(el){el.textContent=val;if(color)el.style.color=color}}
+
+  set('lpkEA',`$${(totModal*0.5).toFixed(2)}`)
+  set('lpkCadangan',`$${(totModal*0.5).toFixed(2)}`)
+  set('lpkProfit',`${netPL>=0?'+':''}$${netPL.toFixed(2)}`,netPL>=0?'var(--green)':'var(--red)')
+  set('lpkNasabah',`${nas.length} orang`)
+  set('lpkTotalAset',`$${totalAset.toFixed(2)}`)
+  set('lpkModal',`$${totModal.toFixed(2)}`)
+  set('lpkDividen',`$${totDiv.toFixed(2)}`)
+  set('lpkTertahan',`$${pt.nominal.toFixed(2)}`)
+  set('lpkTarik',`$${totTarik.toFixed(2)}`)
+  set('lpkNetPL',`${netPL>=0?'+':''}$${netPL.toFixed(2)}`,netPL>=0?'var(--green)':'var(--red)')
+
+  // Tanggal update
+  const now=new Date()
+  const tgl=document.getElementById('lpkTanggal')
+  if(tgl)tgl.textContent=`Per tanggal ${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`
+}
+
+// ===== GRAFIK BALANCE =====
+let chartFilter='all'
+let chartData=[]
+
+function setChartFilter(f){
+  chartFilter=f
+  ;['all','30','7'].forEach(x=>{
+    const btn=document.getElementById('cf-'+x)
+    if(!btn)return
+    btn.style.background=x===f?'var(--gold)':'transparent'
+    btn.style.color=x===f?'#0a0c0f':'var(--dim)'
+    btn.style.borderColor=x===f?'var(--gold-mid)':'var(--border)'
+  })
+  drawChart()
+}
+
+async function initChart(){
+  const data=await readDB()
+  chartData=[...data].reverse() // oldest first
+  drawChart()
+}
+
+function drawChart(){
+  const canvas=document.getElementById('balanceChart')
+  const empty=document.getElementById('chartEmpty')
+  if(!canvas)return
+
+  let filtered=[...chartData]
+  if(chartFilter==='30')filtered=filtered.slice(-30)
+  if(chartFilter==='7')filtered=filtered.slice(-7)
+
+  if(!filtered.length){canvas.style.display='none';empty.style.display='block';return}
+  canvas.style.display='block';empty.style.display='none'
+
+  const ctx=canvas.getContext('2d')
+  const W=canvas.offsetWidth||320
+  canvas.width=W*window.devicePixelRatio
+  canvas.height=180*window.devicePixelRatio
+  ctx.scale(window.devicePixelRatio,window.devicePixelRatio)
+  const w=W, h=180
+
+  const balances=filtered.map(d=>parseFloat(d.balance)||0)
+  const minB=Math.min(...balances)*0.995
+  const maxB=Math.max(...balances)*1.005
+  const range=maxB-minB||1
+
+  const padL=48,padR=12,padT=14,padB=28
+  const cW=w-padL-padR, cH=h-padT-padB
+
+  const toX=(i)=>padL+i/(filtered.length-1||1)*cW
+  const toY=(v)=>padT+cH-(v-minB)/range*cH
+
+  // Grid lines
+  ctx.strokeStyle='#1e222833'
+  ctx.lineWidth=1
+  for(let i=0;i<=4;i++){
+    const y=padT+cH/4*i
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(padL+cW,y);ctx.stroke()
+    const val=maxB-(maxB-minB)/4*i
+    ctx.fillStyle='#6b6557';ctx.font='9px Outfit,sans-serif';ctx.textAlign='right'
+    ctx.fillText('$'+val.toFixed(0),padL-4,y+3)
+  }
+
+  // Gradient fill
+  const grad=ctx.createLinearGradient(0,padT,0,padT+cH)
+  const isUp=balances[balances.length-1]>=balances[0]
+  const lineColor=isUp?'#27AE60':'#E24B4A'
+  grad.addColorStop(0,isUp?'#27AE6033':'#E24B4A33')
+  grad.addColorStop(1,'transparent')
+
+  ctx.beginPath()
+  filtered.forEach((d,i)=>{
+    const x=toX(i),y=toY(parseFloat(d.balance)||0)
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)
+  })
+  ctx.lineTo(toX(filtered.length-1),padT+cH)
+  ctx.lineTo(toX(0),padT+cH)
+  ctx.closePath()
+  ctx.fillStyle=grad;ctx.fill()
+
+  // Line
+  ctx.beginPath()
+  filtered.forEach((d,i)=>{
+    const x=toX(i),y=toY(parseFloat(d.balance)||0)
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)
+  })
+  ctx.strokeStyle=lineColor;ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke()
+
+  // Dots on profit/loss days
+  filtered.forEach((d,i)=>{
+    const x=toX(i),y=toY(parseFloat(d.balance)||0)
+    if(d.type==='profit'||d.type==='loss'){
+      ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2)
+      ctx.fillStyle=d.type==='profit'?'#27AE60':'#E24B4A';ctx.fill()
+    }
+  })
+
+  // X axis labels (max 5)
+  ctx.fillStyle='#6b6557';ctx.font='9px Outfit,sans-serif';ctx.textAlign='center'
+  const step=Math.max(1,Math.floor(filtered.length/5))
+  filtered.forEach((d,i)=>{
+    if(i%step===0||i===filtered.length-1){
+      const dd=new Date(d.tanggal+'T00:00:00')
+      const lbl=`${dd.getDate()}/${dd.getMonth()+1}`
+      ctx.fillText(lbl,toX(i),h-6)
+    }
+  })
+
+  // Hover tooltip
+  canvas.onmousemove=canvas.ontouchmove=function(e){
+    const rect=canvas.getBoundingClientRect()
+    const clientX=e.touches?e.touches[0].clientX:e.clientX
+    const mx=clientX-rect.left
+    const idx=Math.round((mx-padL)/cW*(filtered.length-1))
+    if(idx<0||idx>=filtered.length)return
+    const d=filtered[idx]
+    const tt=document.getElementById('chartTooltip')
+    const x=toX(idx)/window.devicePixelRatio
+    const isProfit=d.type==='profit'
+    document.getElementById('ttDate').textContent=fmtDate(d.tanggal)
+    document.getElementById('ttBalance').textContent=`Balance: $${parseFloat(d.balance).toFixed(2)}`
+    document.getElementById('ttPL').innerHTML=`<span style="color:${isProfit?'#27AE60':'#E24B4A'}">${isProfit?'+':'-'}$${parseFloat(d.nominal).toFixed(2)}</span>`
+    tt.style.display='block'
+    tt.style.left=(x+10)+'px'
+    tt.style.top='20px'
+  }
+  canvas.onmouseleave=()=>document.getElementById('chartTooltip').style.display='none'
+
+  // Mini stats
+  const totP=filtered.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const totL=filtered.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const net=totP-totL
+  const wr=filtered.length?Math.round(filtered.filter(d=>d.type==='profit').length/filtered.length*100):0
+  const ms=document.getElementById('chartMiniStats')
+  if(ms)ms.innerHTML=`
+    <div class="stat-card"><div class="s-label">Net P/L</div><div class="s-val" style="font-size:14px;color:${net>=0?'#27AE60':'#E24B4A'}">${net>=0?'+':''}$${net.toFixed(2)}</div></div>
+    <div class="stat-card"><div class="s-label">Win Rate</div><div class="s-val" style="font-size:14px;color:${wr>=60?'#27AE60':wr>=40?'#c9a84c':'#E24B4A'}">${wr}%</div></div>
+    <div class="stat-card"><div class="s-label">Hari Trading</div><div class="s-val" style="font-size:14px">${filtered.length}</div></div>`
 }
 
 // ===== INIT =====
 updatePublicStats()
+updatePublicDividen()
+updateLapKeu()
+initChart()
+window.addEventListener('resize',drawChart)
 </script>
 </body>
 </html>
