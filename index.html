@@ -367,6 +367,62 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
 
   <div class="container"><div class="divider"></div></div>
 
+  <!-- TARGET BULANAN -->
+  <section class="sec" id="target">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Target Bulan Ini</div><div class="sec-line"></div></div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text)" id="targetBulanLabel">—</div>
+            <div style="font-size:10px;color:var(--dim);margin-top:2px">Target profit 25% dari balance EA</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:var(--dim)">Target</div>
+            <div style="font-size:16px;font-weight:700;color:var(--gold)" id="targetNominal">$0.00</div>
+          </div>
+        </div>
+        <!-- Progress Bar -->
+        <div style="background:var(--bg3);border-radius:20px;height:14px;overflow:hidden;margin-bottom:8px;position:relative">
+          <div id="targetBar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,#27AE60,#c9a84c);transition:width .5s;width:0%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:11px;color:var(--muted)">Tercapai: <span id="targetTercapai" style="color:var(--green);font-weight:700">$0.00</span></div>
+          <div style="font-size:12px;font-weight:700" id="targetPct">0%</div>
+        </div>
+        <div id="targetStatus" style="margin-top:10px;text-align:center;font-size:11px;padding:7px;border-radius:8px;display:none"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KALENDER TRADING -->
+  <section class="sec" id="kalender">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Kalender Trading</div><div class="sec-line"></div></div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px">
+        <!-- Header kalender -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <button onclick="kalenderPrev()" style="background:var(--bg3);border:1px solid var(--border);color:var(--dim);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px">‹</button>
+          <div style="font-size:13px;font-weight:700;color:var(--gold)" id="kalenderTitle">—</div>
+          <button onclick="kalenderNext()" style="background:var(--bg3);border:1px solid var(--border);color:var(--dim);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px">›</button>
+        </div>
+        <!-- Hari -->
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px">
+          ${['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d=>`<div style="text-align:center;font-size:9px;color:var(--dim);padding:3px">${d}</div>`).join('')}
+        </div>
+        <div id="kalenderGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px"></div>
+        <!-- Legend -->
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:10px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)"><div style="width:12px;height:12px;border-radius:3px;background:#27AE60"></div>Profit</div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)"><div style="width:12px;height:12px;border-radius:3px;background:#E24B4A"></div>Loss</div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)"><div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>Tidak Trading</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container"><div class="divider"></div></div>
+
   <!-- GRAFIK PERTUMBUHAN -->
   <section class="sec" id="grafik">
     <div class="container">
@@ -501,6 +557,26 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
         <div class="step-card"><div class="step-num">02</div><div class="step-content"><h4>Transfer Modal</h4><p>Admin informasikan rekening tujuan. 50% EA, 50% masuk deposito BCA.</p></div></div>
         <div class="step-card"><div class="step-num">03</div><div class="step-content"><h4>Modal Terbagi Otomatis</h4><p>50% ke EA trading aktif, 50% disimpan di deposito BCA atas nama admin.</p></div></div>
         <div class="step-card"><div class="step-num">04</div><div class="step-content"><h4>Terima Dividen</h4><p>40% profit dibagikan proporsional sesuai keputusan rapat anggota secara transparan.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PORTOFOLIO NASABAH -->
+  <section class="sec" id="portofolio">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Portofolio Nasabah</div><div class="sec-line"></div></div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
+        <div style="text-align:center;margin-bottom:14px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Masukkan kode unik kamu untuk melihat portofolio</div>
+          <div style="display:flex;gap:8px;max-width:300px;margin:0 auto">
+            <input type="text" id="kodeNasabah" placeholder="Kode unik (contoh: ARIF01)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);font-family:Outfit,sans-serif;outline:none;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/>
+            <button onclick="cekPortofolio()" style="background:var(--gold);color:#0a0c0f;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif">Cek</button>
+          </div>
+        </div>
+        <div id="portofolioResult" style="display:none"></div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;margin-top:10px">
+          <div style="font-size:10px;color:var(--dim)">🔒 Kode unik diberikan admin saat bergabung · Data bersifat privat</div>
+        </div>
       </div>
     </div>
   </section>
@@ -706,6 +782,20 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <button class="btn btn-wa2" id="btnWA" style="display:none" onclick="kirimWA()">💬 Kirim ke Grup WA</button>
       <button class="btn btn-copy" id="btnCopy" style="display:none" onclick="copyMsg()">📋 Copy Pesan</button>
 
+      <!-- TARGET BULANAN -->
+      <div class="card" style="border-color:#c9a84c44;margin-top:4px">
+        <div class="card-title" style="color:var(--gold)">🎯 SET TARGET BULANAN</div>
+        <div style="background:var(--bg3);border-radius:8px;padding:9px;margin-bottom:10px;font-size:11px;color:var(--muted)">Target otomatis 25% dari balance EA. Bisa disesuaikan manual.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div class="field" style="margin-bottom:0"><label>Bulan</label><input type="month" id="targetBulan"/></div>
+          <div class="field" style="margin-bottom:0"><label>Balance EA ($)</label><input type="number" id="targetBalanceRef" placeholder="424.79" step="0.01" oninput="hitungTarget()"/></div>
+        </div>
+        <div class="field"><label>Target Profit ($) <span style="color:var(--dim);font-size:10px">— otomatis 25% balance</span></label>
+          <div class="nom-wrap"><span class="nom-prefix profit">+$</span><input type="number" id="targetNominalInp" class="nom-input" placeholder="106.20" step="0.01"/></div>
+        </div>
+        <button class="btn btn-gold" onclick="simpanTarget()">🎯 Set Target</button>
+      </div>
+
       <!-- BOX GENERATE KODE PUBLIK -->
       <div id="publikCodeBox" style="display:none;background:#27AE6012;border:1px solid #27AE6044;border-radius:12px;padding:12px;margin-bottom:10px">
         <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#27AE60;margin-bottom:8px">📢 DATA PUBLIK SIAP — COPY & UPDATE FILE</div>
@@ -856,6 +946,7 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <div class="card">
         <div class="card-title">➕ TAMBAH NASABAH BARU</div>
         <div class="field"><label>Nama Nasabah</label><input type="text" id="nasNama" placeholder="contoh: Budi"/></div>
+        <div class="field"><label>Kode Unik (untuk portofolio)</label><input type="text" id="nasKode" placeholder="contoh: BUDI01" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/></div>
         <div class="field"><label>Modal ($)</label><input type="number" id="nasModal" placeholder="contoh: 25" step="0.01"/></div>
         <div class="field"><label>No. Rekening (untuk transfer dividen)</label><input type="text" id="nasRek" placeholder="contoh: BCA 1234567890"/></div>
         <div class="field"><label>WhatsApp</label><input type="text" id="nasWA" placeholder="contoh: 08123456789"/></div>
@@ -1929,7 +2020,188 @@ function simpanProfitTertahan(){
   updatePublicDividen()
 }
 
-// ===== RENDER TABEL KINERJA OTOMATIS =====
+// ===== TARGET BULANAN =====
+function getTargets(){return JSON.parse(localStorage.getItem('baroto_targets')||'{}')}
+function saveTargets(t){localStorage.setItem('baroto_targets',JSON.stringify(t))}
+
+function hitungTarget(){
+  const bal=parseFloat(document.getElementById('targetBalanceRef').value)||0
+  if(bal>0)document.getElementById('targetNominalInp').value=(bal*0.25).toFixed(2)
+}
+
+function simpanTarget(){
+  const bulan=document.getElementById('targetBulan').value
+  const nominal=parseFloat(document.getElementById('targetNominalInp').value)||0
+  if(!bulan){alert('Pilih bulan!');return}
+  if(!nominal){alert('Isi target!');return}
+  const targets=getTargets()
+  targets[bulan]=nominal
+  saveTargets(targets)
+  showToast(`✅ Target ${fmtBulan(bulan)}: +$${nominal.toFixed(2)}`)
+  renderTargetPublik()
+}
+
+function renderTargetPublik(){
+  const now=new Date()
+  const bulanKey=`${now.getFullYear()}-${pad(now.getMonth()+1)}`
+  const targets=getTargets()
+  const target=targets[bulanKey]||PUBLIK_DATA.balance*0.25
+
+  // Hitung profit bulan ini dari data historis
+  const data=getLocal()
+  const profitBulanIni=data.filter(d=>{
+    const[y,m]=d.tanggal.split('-')
+    return y===String(now.getFullYear())&&m===pad(now.getMonth()+1)&&d.type==='profit'
+  }).reduce((s,d)=>s+(+d.nominal),0)
+  const lossBulanIni=data.filter(d=>{
+    const[y,m]=d.tanggal.split('-')
+    return y===String(now.getFullYear())&&m===pad(now.getMonth()+1)&&d.type==='loss'
+  }).reduce((s,d)=>s+(+d.nominal),0)
+  const netBulan=profitBulanIni-lossBulanIni
+  const pct=target>0?Math.min(100,Math.round(netBulan/target*100)):0
+
+  const lbl=document.getElementById('targetBulanLabel')
+  if(lbl)lbl.textContent=`Target ${MONTHS[now.getMonth()]} ${now.getFullYear()}`
+  const nom=document.getElementById('targetNominal')
+  if(nom)nom.textContent=`+$${target.toFixed(2)}`
+  const bar=document.getElementById('targetBar')
+  if(bar){bar.style.width=`${Math.max(0,pct)}%`;bar.style.background=pct>=100?'#27AE60':pct>=50?'linear-gradient(90deg,#27AE60,#c9a84c)':'linear-gradient(90deg,#c9a84c,#5ba3f5)'}
+  const terc=document.getElementById('targetTercapai')
+  if(terc){terc.textContent=`+$${Math.max(0,netBulan).toFixed(2)}`;terc.style.color=netBulan>=0?'var(--green)':'var(--red)'}
+  const pctEl=document.getElementById('targetPct')
+  if(pctEl){pctEl.textContent=`${pct}%`;pctEl.style.color=pct>=100?'#27AE60':pct>=50?'#c9a84c':'var(--dim)'}
+  const stEl=document.getElementById('targetStatus')
+  if(stEl){
+    if(pct>=100){stEl.style.display='block';stEl.style.background='#27AE6015';stEl.style.border='1px solid #27AE6033';stEl.style.color='#27AE60';stEl.textContent='🎉 Target bulan ini tercapai!'}
+    else if(pct>=75){stEl.style.display='block';stEl.style.background='var(--gold-dim)';stEl.style.border='1px solid var(--gold-mid)';stEl.style.color='var(--gold)';stEl.textContent='💪 Hampir tercapai — terus semangat!'}
+    else stEl.style.display='none'
+  }
+
+  // Set target input bulan ini di admin
+  const ti=document.getElementById('targetBulan');if(ti&&!ti.value)ti.value=bulanKey
+  const bi=document.getElementById('targetBalanceRef');if(bi&&!bi.value){bi.value=PUBLIK_DATA.balance;hitungTarget()}
+}
+
+// ===== KALENDER TRADING =====
+let kalenderTahun=new Date().getFullYear()
+let kalenderBulan=new Date().getMonth()
+
+function kalenderPrev(){kalenderBulan--;if(kalenderBulan<0){kalenderBulan=11;kalenderTahun--};renderKalender()}
+function kalenderNext(){kalenderBulan++;if(kalenderBulan>11){kalenderBulan=0;kalenderTahun++};renderKalender()}
+
+function renderKalender(){
+  const data=getLocal()
+  const dataMap={}
+  data.forEach(d=>dataMap[d.tanggal]=d.type)
+
+  const title=document.getElementById('kalenderTitle')
+  if(title)title.textContent=`${MONTHS[kalenderBulan]} ${kalenderTahun}`
+
+  const grid=document.getElementById('kalenderGrid')
+  if(!grid)return
+
+  const firstDay=new Date(kalenderTahun,kalenderBulan,1).getDay()
+  const daysInMonth=new Date(kalenderTahun,kalenderBulan+1,0).getDate()
+  const today=new Date()
+  const todayStr=`${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`
+
+  let html=''
+  // Empty cells
+  for(let i=0;i<firstDay;i++)html+=`<div></div>`
+  // Day cells
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${kalenderTahun}-${pad(kalenderBulan+1)}-${pad(d)}`
+    const type=dataMap[dateStr]
+    const isToday=dateStr===todayStr
+    const isFuture=new Date(dateStr)>today
+    let bg='var(--bg3)',color='var(--dim)',border='1px solid var(--border)'
+    if(type==='profit'){bg='#27AE6022';color='var(--green)';border='1px solid #27AE6044'}
+    else if(type==='loss'){bg='#E24B4A22';color='var(--red)';border='1px solid #E24B4A44'}
+    else if(isFuture){bg='transparent';color='var(--dimmer)';border='1px solid transparent'}
+    const todayRing=isToday?'box-shadow:0 0 0 2px var(--gold);':''
+    html+=`<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;background:${bg};border:${border};font-size:11px;font-weight:${type?'700':'400'};color:${color};${todayRing}cursor:default" title="${dateStr}${type?' — '+type:''}">${d}</div>`
+  }
+  grid.innerHTML=html
+}
+
+// ===== PORTOFOLIO NASABAH =====
+function tambahNasabah(){
+  const nama=document.getElementById('nasNama').value.trim()
+  const kode=document.getElementById('nasKode').value.trim().toUpperCase()
+  const modal=parseFloat(document.getElementById('nasModal').value)||0
+  const rek=document.getElementById('nasRek').value.trim()
+  const wa=document.getElementById('nasWA').value.trim()
+  const warna=document.getElementById('nasWarna').value
+  if(!nama){alert('Isi nama!');return}
+  if(!kode){alert('Isi kode unik!');return}
+  if(modal<=0){alert('Isi modal!');return}
+  const list=getNasabahList()
+  if(list.find(n=>n.nama.toLowerCase()===nama.toLowerCase())){alert('Nama nasabah sudah ada!');return}
+  if(list.find(n=>n.kode===kode)){alert('Kode unik sudah dipakai!');return}
+  list.push({nama,kode,modal,rek,wa,warna})
+  saveNasabahList(list)
+  document.getElementById('nasNama').value=''
+  document.getElementById('nasKode').value=''
+  document.getElementById('nasModal').value=''
+  document.getElementById('nasRek').value=''
+  document.getElementById('nasWA').value=''
+  populateTarikNas()
+  renderKelola()
+  showToast(`✅ ${nama} berhasil ditambahkan! Kode: ${kode}`)
+}
+
+function cekPortofolio(){
+  const kode=document.getElementById('kodeNasabah').value.trim().toUpperCase()
+  if(!kode){alert('Masukkan kode unik!');return}
+  const list=getNasabahList()
+  const nas=list.find(n=>n.kode===kode)
+  const result=document.getElementById('portofolioResult')
+  if(!nas){
+    result.style.display='block'
+    result.innerHTML=`<div style="background:#E24B4A12;border:1px solid #E24B4A33;border-radius:10px;padding:14px;text-align:center"><div style="font-size:24px;margin-bottom:6px">❌</div><div style="font-size:12px;color:#eb8585">Kode tidak ditemukan. Hubungi admin WA 0812-3016-198</div></div>`
+    return
+  }
+  const totModal=getNasabahList().reduce((s,n)=>s+n.modal,0)
+  const share=totModal>0?nas.modal/totModal:0
+  const divHistory=getDivHistory()
+  const divDiterima=divHistory.reduce((s,h)=>{const d=h.distribusi.find(x=>x.nama===nas.nama);return s+(d?d.dividen:share*h.divTotal)},0)
+  const tarikHistory=getTarikHistory()
+  const tarikNas=tarikHistory.filter(t=>t.nama===nas.nama).reduce((s,t)=>s+(+t.jumlah),0)
+  const saldoDeposito=Math.max(0,nas.modal*0.5-tarikHistory.filter(t=>t.nama===nas.nama&&(t.sumber==='deposito'||t.sumber==='keduanya')).reduce((s,t)=>s+(+t.jumlahDeposito||0),0))
+
+  result.style.display='block'
+  result.innerHTML=`
+    <div style="background:var(--bg3);border:1px solid var(--gold-mid);border-radius:12px;overflow:hidden;margin-bottom:0">
+      <div style="background:var(--gold-dim);padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
+        <div style="width:40px;height:40px;border-radius:50%;background:${nas.warna};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff">${nas.nama[0]}</div>
+        <div><div style="font-size:13px;font-weight:700;color:var(--gold)">${nas.nama}</div><div style="font-size:10px;color:var(--dim)">Kode: ${nas.kode} · Share ${(share*100).toFixed(1)}%</div></div>
+      </div>
+      <div style="padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:9px;color:var(--dim);margin-bottom:3px">Modal Awal</div>
+          <div style="font-size:14px;font-weight:700;color:var(--gold)">$${nas.modal.toFixed(2)}</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:9px;color:var(--dim);margin-bottom:3px">🏦 Dana Cadangan</div>
+          <div style="font-size:14px;font-weight:700;color:var(--blue)">$${saldoDeposito.toFixed(2)}</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:9px;color:var(--dim);margin-bottom:3px">Total Dividen</div>
+          <div style="font-size:14px;font-weight:700;color:var(--green)">+$${divDiterima.toFixed(4)}</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:9px;color:var(--dim);margin-bottom:3px">Total Tarik</div>
+          <div style="font-size:14px;font-weight:700;color:${tarikNas>0?'var(--red)':'var(--dim)'}">$${tarikNas.toFixed(2)}</div>
+        </div>
+      </div>
+      <div style="padding:0 14px 12px">
+        <div style="font-size:10px;color:var(--dim);text-align:center;margin-bottom:8px">${divHistory.length} kali distribusi dividen</div>
+        ${divHistory.length?`<div style="max-height:150px;overflow-y:auto">${divHistory.slice(0,5).map(h=>{const d=h.distribusi.find(x=>x.nama===nas.nama);const div=d?d.dividen:share*h.divTotal;return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px"><span style="color:var(--muted)">${h.label}</span><span style="color:var(--green);font-weight:600">+$${div.toFixed(4)}</span></div>`}).join('')}</div>`:''}
+      </div>
+    </div>`
+}
+
+// ===== MILESTONE BOARD =====
 function renderKinerja(){
   const data=getLocal()
   const tbody=document.getElementById('kinerjaBody')
@@ -2196,6 +2468,8 @@ updatePublicStats()
 updatePublicDividen()
 updateLapKeu()
 renderKinerja()
+renderTargetPublik()
+renderKalender()
 initChart()
 window.addEventListener('resize',drawChart)
 </script>
