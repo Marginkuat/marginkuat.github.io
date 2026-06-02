@@ -1009,10 +1009,10 @@ function saveNasabahList(l){localStorage.setItem('baroto_nasabah',JSON.stringify
 const PUBLIK_DATA = {
   balance: 424.79,
   netPL: 404.48,
-  hariTrading: 32,
-  hariProfit: 26,
-  hariLoss: 6,
-  winRate: 81,
+  hariTrading: 15,
+  hariProfit: 10,
+  hariLoss: 5,
+  winRate: 67,
   lastUpdate: '2026-06-02'
 }
 
@@ -1029,7 +1029,32 @@ async function writeDB(laporan){
   // Generate kode publik untuk di-copy admin
   generatePublikCode(laporan)
 }
-function getLocal(){return JSON.parse(localStorage.getItem('baroto_data')||'[]')}
+// ===== DATA HISTORIS (hardcode untuk grafik publik) =====
+const DATA_HISTORIS = [
+  {tanggal:'2025-12-01',type:'loss',nominal:66.05,balance:142.54,trade:'?',catatan:'Loss Des 2025'},
+  {tanggal:'2026-01-05',type:'profit',nominal:200.00,balance:280.00,trade:'?',catatan:'Profit Jan 2026'},
+  {tanggal:'2026-01-12',type:'profit',nominal:250.00,balance:380.00,trade:'?',catatan:'Profit Jan 2026'},
+  {tanggal:'2026-01-19',type:'profit',nominal:350.00,balance:580.00,trade:'?',catatan:'Profit Jan 2026'},
+  {tanggal:'2026-01-26',type:'profit',nominal:418.83,balance:850.00,trade:'?',catatan:'Profit Jan 2026 — rekor terbaik'},
+  {tanggal:'2026-02-07',type:'profit',nominal:100.00,balance:920.00,trade:'?',catatan:'Profit Feb 2026'},
+  {tanggal:'2026-02-14',type:'profit',nominal:150.00,balance:1020.00,trade:'?',catatan:'Profit Feb 2026'},
+  {tanggal:'2026-02-21',type:'profit',nominal:130.02,balance:1100.00,trade:'?',catatan:'Profit Feb 2026'},
+  {tanggal:'2026-04-05',type:'loss',nominal:1000.00,balance:800.00,trade:'?',catatan:'Loss Apr 2026'},
+  {tanggal:'2026-04-12',type:'loss',nominal:1200.00,balance:450.00,trade:'?',catatan:'Loss Apr 2026'},
+  {tanggal:'2026-04-19',type:'loss',nominal:1250.42,balance:200.00,trade:'?',catatan:'Loss besar Apr 2026'},
+  {tanggal:'2026-05-05',type:'profit',nominal:50.00,balance:230.00,trade:'?',catatan:'Profit Mei 2026'},
+  {tanggal:'2026-05-12',type:'profit',nominal:80.00,balance:290.00,trade:'?',catatan:'Profit Mei 2026'},
+  {tanggal:'2026-05-19',type:'profit',nominal:78.53,balance:376.00,trade:'?',catatan:'Profit Mei 2026'},
+  {tanggal:'2026-06-02',type:'profit',nominal:48.42,balance:424.79,trade:'3',catatan:'Profit Jun 2026 — P/L tertutup +48.42'},
+]
+
+function getLocal(){
+  const saved=JSON.parse(localStorage.getItem('baroto_data')||'[]')
+  // Gabungkan data historis + data lokal admin, hindari duplikat tanggal
+  const allDates=new Set(saved.map(d=>d.tanggal))
+  const historisFiltered=DATA_HISTORIS.filter(d=>!allDates.has(d.tanggal))
+  return [...saved,...historisFiltered].sort((a,b)=>b.tanggal.localeCompare(a.tanggal))
+}
 function saveLocal(d){localStorage.setItem('baroto_data',JSON.stringify(d))}
 function setStatus(t,m){document.getElementById('sdot').className='sdot '+t;document.getElementById('statusTxt').textContent=m}
 
