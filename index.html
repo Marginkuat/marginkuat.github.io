@@ -433,18 +433,11 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <div class="sec-head"><div class="sec-title">Rekam Jejak Kinerja EA</div><div class="sec-line"></div></div>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>Bulan</th><th>Profit/Loss</th><th>Dividen/Nas.</th><th>Status</th></tr></thead>
-          <tbody>
-            <tr><td class="td-m">Des 2025</td><td class="loss">−$66.05</td><td style="color:var(--red);font-size:11px">−</td><td><span class="tag tag-red">LOSS</span></td></tr>
-            <tr><td class="td-m">Jan 2026</td><td class="profit">+$1.218.83</td><td style="color:var(--green);font-size:11px;font-weight:600">+Proporsional</td><td><span class="tag tag-gold">TERBAIK ⭐</span></td></tr>
-            <tr><td class="td-m">Feb 2026</td><td class="profit">+$380.02</td><td style="color:var(--green);font-size:11px">+Proporsional</td><td><span class="tag tag-green">PROFIT</span></td></tr>
-            <tr><td class="td-m">Apr 2026</td><td class="loss">−$3.450.42</td><td style="color:var(--red);font-size:11px">−</td><td><span class="tag tag-red">LOSS BESAR</span></td></tr>
-            <tr><td class="td-m">Mei 2026</td><td class="profit">+$208.53</td><td style="color:var(--green);font-size:11px">+Proporsional</td><td><span class="tag tag-green">PROFIT</span></td></tr>
-            <tr><td class="td-m">Jun 2026</td><td class="profit">+$48.42</td><td style="color:var(--blue);font-size:11px">Menunggu Rapat</td><td><span class="tag tag-blue">BERJALAN 🔄</span></td></tr>
-          </tbody>
+          <thead><tr><th>Bulan</th><th>Profit/Loss</th><th>Balance</th><th>Status</th></tr></thead>
+          <tbody id="kinerjaBody"><tr><td colspan="4" style="text-align:center;color:var(--dim);padding:16px">Memuat...</td></tr></tbody>
         </table>
       </div>
-      <div style="background:#E24B4A10;border:1px solid #E24B4A33;border-radius:8px;padding:11px 14px;margin-top:10px;font-size:11px;color:#eb8585;line-height:1.7">⚠️ Data di atas termasuk kerugian besar April 2026. Trading tidak selalu profit. Risiko kerugian selalu ada.</div>
+      <div style="background:#E24B4A10;border:1px solid #E24B4A33;border-radius:8px;padding:11px 14px;margin-top:10px;font-size:11px;color:#eb8585;line-height:1.7">⚠️ Data real dari akun live FBS. Trading tidak selalu profit — risiko kerugian selalu ada.</div>
     </div>
   </section>
 
@@ -1027,6 +1020,7 @@ async function writeDB(laporan){
   saveLocal(laporan)
   setStatus('online','Tersimpan ✅')
   updatePublicStats()
+  renderKinerja()
   // Generate kode publik untuk di-copy admin
   generatePublikCode(laporan)
 }
@@ -1935,6 +1929,48 @@ function simpanProfitTertahan(){
   updatePublicDividen()
 }
 
+// ===== RENDER TABEL KINERJA OTOMATIS =====
+function renderKinerja(){
+  const data=getLocal()
+  const tbody=document.getElementById('kinerjaBody')
+  if(!tbody)return
+  if(!data.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--dim);padding:16px">Belum ada data</td></tr>';return}
+
+  // Kelompokkan per bulan
+  const byMonth={}
+  data.forEach(d=>{
+    const dt=new Date(d.tanggal+'T00:00:00')
+    const key=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`
+    if(!byMonth[key])byMonth[key]={profit:0,loss:0,lastBal:0,label:`${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`}
+    if(d.type==='profit')byMonth[key].profit+=(+d.nominal)
+    else byMonth[key].loss+=(+d.nominal)
+    if(d.balance)byMonth[key].lastBal=parseFloat(d.balance)
+  })
+
+  // Sort terlama dulu
+  const sorted=Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0]))
+  const currentMonth=`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`
+  const maxProfit=Math.max(...sorted.map(([,v])=>v.profit-v.loss))
+
+  tbody.innerHTML=sorted.map(([key,v])=>{
+    const net=v.profit-v.loss
+    const isProfit=net>=0
+    const isCurrent=key===currentMonth
+    const isMax=net===maxProfit&&net>0
+    let status,statusClass
+    if(isCurrent){status='🔄 Berjalan';statusClass='tag-blue'}
+    else if(isMax){status='⭐ Terbaik';statusClass='tag-gold'}
+    else if(net>=0){status='✅ Profit';statusClass='tag-green'}
+    else{status='❌ Loss';statusClass='tag-red'}
+    return `<tr>
+      <td class="td-m">${v.label}</td>
+      <td class="${isProfit?'profit':'loss'}">${isProfit?'+':'-'}$${Math.abs(net).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td style="font-size:11px;color:var(--muted)">$${v.lastBal.toFixed(2)}</td>
+      <td><span class="tag ${statusClass}">${status}</span></td>
+    </tr>`
+  }).reverse().join('') // tampilkan terbaru di atas
+}
+
 // ===== PUBLIC DIVIDEN =====
 function updatePublicDividen(){
   const history=getDivHistory()
@@ -2159,6 +2195,7 @@ function drawChart(){
 updatePublicStats()
 updatePublicDividen()
 updateLapKeu()
+renderKinerja()
 initChart()
 window.addEventListener('resize',drawChart)
 </script>
