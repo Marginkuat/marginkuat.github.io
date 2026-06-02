@@ -287,6 +287,15 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
 .toast.show{opacity:1}
 .section-sep{height:1px;background:var(--border);margin:14px 0}
 
+.lpk-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.lpk-row.coming{opacity:.5}
+.lpk-left{display:flex;align-items:flex-start;gap:8px;flex:1}
+.lpk-no{font-size:10px;color:var(--dim);width:16px;flex-shrink:0;margin-top:1px}
+.lpk-name{font-size:11px;color:var(--text);margin-bottom:1px}
+.lpk-sub{font-size:9px;color:var(--dim)}
+.lpk-val{font-size:12px;font-weight:700;white-space:nowrap;margin-left:8px}
+.lpk-val.gold{color:var(--gold)}.lpk-val.blue{color:var(--blue)}.lpk-val.green{color:var(--green)}.lpk-val.red{color:var(--red)}.lpk-val.dim{color:var(--dimmer)}
+
 @media(max-width:600px){.skema-grid{grid-template-columns:1fr 1fr}.container{padding:0 14px}.nav-inner{padding:12px 14px}.a-stats{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
@@ -327,7 +336,7 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
     <div class="hero-sub">XAUUSD · Robot Trading Emas · High Risk</div>
     <div class="hero-meta">
       Platform: <span>FBS Live Account</span> &nbsp;|&nbsp;
-      Balance: <strong id="pubBalance">$142.54 USD</strong> &nbsp;|&nbsp;
+      Balance: <strong id="pubBalance">Memuat... USD</strong> &nbsp;|&nbsp;
       Info via <span>WA Admin</span>
     </div>
     <div class="hero-btns">
@@ -346,7 +355,7 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
   <section class="stats-section">
     <div class="container">
       <div class="stats-grid">
-        <div class="stat-card"><div class="s-label">Balance EA</div><div class="s-val" id="pubBal2">$142.54</div><div class="s-sub blue">FBS Live</div></div>
+        <div class="stat-card"><div class="s-label">Balance EA</div><div class="s-val" id="pubBal2">—</div><div class="s-sub blue">FBS Live</div></div>
         <div class="stat-card"><div class="s-label">Net P/L</div><div class="s-val" id="pubNet">$0.00</div><div class="s-sub" id="pubNetSub">—</div></div>
         <div class="stat-card"><div class="s-label">Win Rate</div><div class="s-val" id="pubWinRate">—</div><div class="s-sub" id="pubWinRateSub">hari profit</div></div>
         <div class="stat-card"><div class="s-label">Risk Reward</div><div class="s-val">1:3</div><div class="s-sub">setiap posisi</div></div>
@@ -438,14 +447,6 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
     </div>
   </section>
 
-  <section class="sec">
-    <div class="container">
-      <div class="sec-head"><div class="sec-title">Partisipan Trading</div><div class="sec-line"></div></div>
-      <div class="nas-grid" id="pubNasabahGrid"></div>
-      <div style="background:var(--blue-dim);border:1px solid var(--blue-mid);border-radius:10px;padding:12px;text-align:center;font-size:11px;color:var(--blue);margin-top:10px">🔒 Identitas nasabah dirahasiakan sesuai kebijakan privasi Baroto Investasi</div>
-    </div>
-  </section>
-
   <!-- SECTION DIVIDEN PUBLIK -->
   <section class="sec" id="dividen-publik">
     <div class="container">
@@ -533,79 +534,78 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <div class="sec-head"><div class="sec-title">Laporan Posisi Keuangan</div><div class="sec-line"></div></div>
 
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden">
-        <!-- Header -->
+
+        <!-- HEADER -->
         <div style="background:linear-gradient(135deg,#c9a84c15,#5ba3f510);border-bottom:1px solid var(--border);padding:16px;text-align:center">
-          <div style="font-family:'Cinzel',serif;font-size:14px;font-weight:900;color:#f0e8d0;letter-spacing:2px">BAROTO INVESTASI</div>
+          <div style="font-family:'Cinzel',serif;font-size:15px;font-weight:900;color:#f0e8d0;letter-spacing:2px">BAROTO INVESTASI</div>
           <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-top:3px">Laporan Posisi Keuangan</div>
-          <div style="font-size:10px;color:var(--dim);margin-top:4px">EA Trading XAUUSD · FBS Live Account</div>
+          <div style="font-size:10px;color:var(--dim);margin-top:3px">EA Trading XAUUSD · FBS Live Account</div>
           <div style="font-size:10px;color:var(--dimmer);margin-top:3px" id="lpkTanggal">—</div>
         </div>
 
-        <!-- ASET -->
+        <!-- ===== ASET ===== -->
         <div style="padding:0 14px">
-          <div style="padding:10px 0 6px;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid var(--gold-dim)">ASET</div>
+          <div style="padding:10px 0 6px;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid var(--gold-dim);margin-bottom:2px">ASET</div>
 
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
-            <div><div style="font-size:11px;color:var(--text)">1. Dana Aktif EA XAUUSD</div><div style="font-size:9px;color:var(--dim);margin-top:1px">50% dari total modal nasabah</div></div>
-            <div style="font-size:12px;font-weight:700;color:var(--gold)" id="lpkEA">$0.00</div>
-          </div>
+          <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);padding:8px 0 4px">Aset Aktif</div>
 
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
-            <div><div style="font-size:11px;color:var(--text)">2. Dana Cadangan Likuiditas</div><div style="font-size:9px;color:var(--dim);margin-top:1px">50% dari total modal nasabah</div></div>
-            <div style="font-size:12px;font-weight:700;color:var(--blue)" id="lpkCadangan">$0.00</div>
-          </div>
+          <div class="lpk-row"><div class="lpk-left"><span class="lpk-no">1.</span><div><div class="lpk-name">Dana Aktif EA XAUUSD</div><div class="lpk-sub">50% modal anggota — diputar trading</div></div></div><div class="lpk-val gold" id="lpkEA">$0.00</div></div>
+          <div class="lpk-row"><div class="lpk-left"><span class="lpk-no">2.</span><div><div class="lpk-name">Dana Cadangan Likuiditas</div><div class="lpk-sub">50% modal anggota — cadangan pencairan</div></div></div><div class="lpk-val blue" id="lpkCadangan">$0.00</div></div>
+          <div class="lpk-row"><div class="lpk-left"><span class="lpk-no">3.</span><div><div class="lpk-name">Akumulasi Profit EA</div><div class="lpk-sub">Total hasil trading sejak berdiri</div></div></div><div class="lpk-val" id="lpkProfit">$0.00</div></div>
 
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
-            <div><div style="font-size:11px;color:var(--text)">3. Akumulasi Profit EA</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Total profit dari seluruh sesi trading</div></div>
-            <div style="font-size:12px;font-weight:700;" id="lpkProfit">$0.00</div>
-          </div>
+          <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);padding:10px 0 4px;border-top:1px solid var(--border);margin-top:4px">Pengembangan Aset <span style="background:#5ba3f522;color:var(--blue);border:1px solid var(--blue-mid);font-size:8px;padding:1px 6px;border-radius:4px;margin-left:4px">Segera Hadir</span></div>
 
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:2px solid var(--gold-dim)">
-            <div><div style="font-size:11px;color:var(--text)">4. Jumlah Anggota Aktif</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Partisipan trading aktif</div></div>
-            <div style="font-size:12px;font-weight:700;color:var(--text)" id="lpkNasabah">0 orang</div>
-          </div>
+          <div class="lpk-row coming"><div class="lpk-left"><span class="lpk-no">4.</span><div><div class="lpk-name">Portofolio Saham</div><div class="lpk-sub">Investasi pasar modal</div></div></div><div class="lpk-val dim">—</div></div>
+          <div class="lpk-row coming"><div class="lpk-left"><span class="lpk-no">5.</span><div><div class="lpk-name">Aset Properti</div><div class="lpk-sub">Investasi properti & tanah</div></div></div><div class="lpk-val dim">—</div></div>
+          <div class="lpk-row coming"><div class="lpk-left"><span class="lpk-no">6.</span><div><div class="lpk-name">Piutang Pinjaman Anggota</div><div class="lpk-sub">Pinjaman tunai, kendaraan & lainnya</div></div></div><div class="lpk-val dim">—</div></div>
+          <div class="lpk-row coming" style="border-bottom:none"><div class="lpk-left"><span class="lpk-no">7.</span><div><div class="lpk-name">Aset Lainnya</div><div class="lpk-sub">Pengembangan bisnis komunitas</div></div></div><div class="lpk-val dim">—</div></div>
 
           <!-- TOTAL ASET -->
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;background:var(--gold-dim);margin:0 -14px;padding-left:14px;padding-right:14px;border-bottom:1px solid var(--border)">
-            <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:1px">TOTAL ASET KELOLAAN</div>
-            <div style="font-family:'Cinzel',serif;font-size:16px;font-weight:900;color:var(--gold)" id="lpkTotalAset">$0.00</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;background:var(--gold-dim);margin:0 -14px;padding-left:14px;padding-right:14px;border-top:2px solid var(--gold-dim)">
+            <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px">TOTAL ASET</div>
+            <div style="font-family:'Cinzel',serif;font-size:15px;font-weight:900;color:var(--gold)" id="lpkTotalAset">$0.00</div>
           </div>
         </div>
 
-        <!-- DISTRIBUSI -->
-        <div style="padding:0 14px">
-          <div style="padding:10px 0 6px;font-size:10px;font-weight:700;color:var(--green);letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #27AE6033">DISTRIBUSI & KEWAJIBAN</div>
+        <!-- ===== LIABILITAS ===== -->
+        <div style="padding:0 14px;border-top:1px solid var(--border)">
+          <div style="padding:10px 0 6px;font-size:10px;font-weight:700;color:#eb8585;letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid #E24B4A22;margin-bottom:2px">LIABILITAS</div>
 
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
-            <div><div style="font-size:11px;color:var(--text)">5. Total Modal Nasabah</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Hak nasabah atas modal awal</div></div>
-            <div style="font-size:12px;font-weight:700;color:var(--text)" id="lpkModal">$0.00</div>
-          </div>
+          <div class="lpk-row"><div class="lpk-left"><span class="lpk-no">1.</span><div><div class="lpk-name">Total Modal Anggota</div><div class="lpk-sub">Hak anggota atas modal yang disetor</div></div></div><div class="lpk-val" id="lpkModal">$0.00</div></div>
+          <div class="lpk-row"><div class="lpk-left"><span class="lpk-no">2.</span><div><div class="lpk-name">Dividen Menunggu Rapat</div><div class="lpk-sub">Profit tertahan, belum didistribusikan</div></div></div><div class="lpk-val gold" id="lpkTertahan">$0.00</div></div>
+          <div class="lpk-row" style="border-bottom:none"><div class="lpk-left"><span class="lpk-no">3.</span><div><div class="lpk-name">Total Penarikan Modal</div><div class="lpk-sub">Modal yang sudah dicairkan anggota</div></div></div><div class="lpk-val red" id="lpkTarik">$0.00</div></div>
 
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
-            <div><div style="font-size:11px;color:var(--text)">6. Total Dividen Dibagikan</div><div style="font-size:9px;color:var(--dim);margin-top:1px">40% profit yang sudah didistribusikan</div></div>
-            <div style="font-size:12px;font-weight:700;color:var(--green)" id="lpkDividen">$0.00</div>
-          </div>
-
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
-            <div><div style="font-size:11px;color:var(--text)">7. Dividen Menunggu Rapat</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Profit tertahan, belum dibagikan</div></div>
-            <div style="font-size:12px;font-weight:700;color:var(--gold)" id="lpkTertahan">$0.00</div>
-          </div>
-
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:2px solid #27AE6033">
-            <div><div style="font-size:11px;color:var(--text)">8. Total Penarikan Modal</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Modal yang sudah dicairkan nasabah</div></div>
-            <div style="font-size:12px;font-weight:700;color:var(--red)" id="lpkTarik">$0.00</div>
-          </div>
-
-          <!-- NET -->
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;background:#27AE6012;margin:0 -14px;padding-left:14px;padding-right:14px;border-bottom:1px solid var(--border)">
-            <div style="font-size:12px;font-weight:700;color:var(--green);letter-spacing:1px">NET P/L EA</div>
-            <div style="font-family:'Cinzel',serif;font-size:16px;font-weight:900;" id="lpkNetPL">$0.00</div>
+          <!-- TOTAL LIABILITAS -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;background:#E24B4A10;margin:0 -14px;padding-left:14px;padding-right:14px;border-top:2px solid #E24B4A22">
+            <div style="font-size:11px;font-weight:700;color:#eb8585;letter-spacing:1px">TOTAL LIABILITAS</div>
+            <div style="font-family:'Cinzel',serif;font-size:15px;font-weight:900;color:#eb8585" id="lpkTotalLiab">$0.00</div>
           </div>
         </div>
 
-        <!-- FOOTER NOTE -->
-        <div style="padding:10px 14px;text-align:center">
-          <div style="font-size:9px;color:var(--dimmer);line-height:1.7">Data diperbarui secara realtime dari sistem admin · Dalam satuan USD<br>Laporan ini bersifat informatif dan tidak menggantikan laporan keuangan resmi</div>
+        <!-- ===== EKUITAS ===== -->
+        <div style="padding:0 14px;border-top:1px solid var(--border)">
+          <div style="padding:10px 0 6px;font-size:10px;font-weight:700;color:var(--green);letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid #27AE6022;margin-bottom:2px">EKUITAS</div>
+
+          <div class="lpk-row"><div class="lpk-left"><span class="lpk-no">1.</span><div><div class="lpk-name">Laba/Rugi Tahun Berjalan</div><div class="lpk-sub">Net P/L dari EA trading</div></div></div><div class="lpk-val" id="lpkNetPL">$0.00</div></div>
+          <div class="lpk-row"><div class="lpk-left"><span class="lpk-no">2.</span><div><div class="lpk-name">Dividen yang Dibayarkan</div><div class="lpk-sub">Total dividen yang sudah ditransfer</div></div></div><div class="lpk-val green" id="lpkDividen">$0.00</div></div>
+          <div class="lpk-row coming" style="border-bottom:none"><div class="lpk-left"><span class="lpk-no">3.</span><div><div class="lpk-name">Cadangan Umum</div><div class="lpk-sub">Dana cadangan pengembangan usaha</div></div></div><div class="lpk-val dim">—</div></div>
+
+          <!-- TOTAL EKUITAS -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;background:#27AE6012;margin:0 -14px;padding-left:14px;padding-right:14px;border-top:2px solid #27AE6022">
+            <div style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:1px">TOTAL EKUITAS</div>
+            <div style="font-family:'Cinzel',serif;font-size:15px;font-weight:900;color:var(--green)" id="lpkTotalEkuitas">$0.00</div>
+          </div>
+        </div>
+
+        <!-- TOTAL LIABILITAS & EKUITAS -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:linear-gradient(135deg,#c9a84c22,#27AE6022);border-top:2px solid var(--gold-mid)">
+          <div style="font-size:12px;font-weight:700;color:#f0e8d0;letter-spacing:1px">TOTAL LIABILITAS & EKUITAS</div>
+          <div style="font-family:'Cinzel',serif;font-size:17px;font-weight:900;color:#f0e8d0" id="lpkGrandTotal">$0.00</div>
+        </div>
+
+        <!-- FOOTER -->
+        <div style="padding:10px 14px;text-align:center;border-top:1px solid var(--border)">
+          <div style="font-size:9px;color:var(--dimmer);line-height:1.7">Data diperbarui realtime dari sistem admin · Dalam satuan USD<br>Laporan ini bersifat informatif untuk transparansi anggota</div>
         </div>
       </div>
     </div>
@@ -1055,29 +1055,42 @@ setInterval(tick,1000);tick()
 
 // ===== PUBLIC =====
 async function updatePublicStats(){
-  const data=await readDB()
+  // Ambil data langsung dari JSONBin (shared) agar semua HP lihat data sama
+  let data=[]
+  const binId=localStorage.getItem('baroto_bin_id')
+  if(binId){
+    try{
+      const r=await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`,{headers:{'X-Master-Key':API_KEY}})
+      if(r.ok){const d=await r.json();data=d.record?.laporan||[]}
+    }catch{}
+  }
+  // Fallback ke localStorage jika tidak ada koneksi
+  if(!data.length) data=getLocal()
   if(!data.length)return
+
   const totP=data.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
   const totL=data.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
   const net=totP-totL
-  const lastBal=data[0]?.balance||142.54
+  const lastBal=data[0]?.balance||0
   const hariProfit=data.filter(d=>d.type==='profit').length
   const hariLoss=data.filter(d=>d.type==='loss').length
   const winRate=data.length?Math.round(hariProfit/data.length*100):0
 
-  const bal=document.getElementById('pubBalance');if(bal)bal.textContent=`$${parseFloat(lastBal).toFixed(2)} USD`
-  const bal2=document.getElementById('pubBal2');if(bal2)bal2.textContent=`$${parseFloat(lastBal).toFixed(2)}`
+  if(lastBal>0){
+    const bal=document.getElementById('pubBalance');if(bal)bal.textContent=`$${parseFloat(lastBal).toFixed(2)} USD`
+    const bal2=document.getElementById('pubBal2');if(bal2)bal2.textContent=`$${parseFloat(lastBal).toFixed(2)}`
+  }
   const netEl=document.getElementById('pubNet');if(netEl){netEl.textContent=`${net>=0?'+':''}$${net.toFixed(2)}`;netEl.style.color=net>=0?'#27AE60':'#E24B4A'}
   const sub=document.getElementById('pubNetSub');if(sub)sub.textContent=`${data.length} hari trading`
-
-  // Win rate
   const wrEl=document.getElementById('pubWinRate')
-  if(wrEl){
-    wrEl.textContent=`${winRate}%`
-    wrEl.style.color=winRate>=60?'#27AE60':winRate>=40?'#c9a84c':'#E24B4A'
-  }
+  if(wrEl){wrEl.textContent=`${winRate}%`;wrEl.style.color=winRate>=60?'#27AE60':winRate>=40?'#c9a84c':'#E24B4A'}
   const wrSub=document.getElementById('pubWinRateSub')
   if(wrSub)wrSub.textContent=`${hariProfit} profit · ${hariLoss} loss`
+
+  // Update chart & lapkeu juga
+  chartData=[...data].reverse()
+  drawChart()
+  updateLapKeu()
 }
 function updatePublicNasabah(){
   const list=getNasabahList()
@@ -1958,21 +1971,21 @@ async function updateLapKeu(){
   const totTarik=tarikHistory.reduce((s,t)=>s+(+t.jumlah),0)
   const pt=getProfitTertahan()
   const totalAset=totModal+Math.max(0,netPL)
-
+  const totalLiab=totModal+pt.nominal+totTarik
+  const totalEkuitas=netPL+totDiv
   const set=(id,val,color)=>{const el=document.getElementById(id);if(el){el.textContent=val;if(color)el.style.color=color}}
-
   set('lpkEA',`$${(totModal*0.5).toFixed(2)}`)
   set('lpkCadangan',`$${(totModal*0.5).toFixed(2)}`)
   set('lpkProfit',`${netPL>=0?'+':''}$${netPL.toFixed(2)}`,netPL>=0?'var(--green)':'var(--red)')
-  set('lpkNasabah',`${nas.length} orang`)
   set('lpkTotalAset',`$${totalAset.toFixed(2)}`)
   set('lpkModal',`$${totModal.toFixed(2)}`)
-  set('lpkDividen',`$${totDiv.toFixed(2)}`)
   set('lpkTertahan',`$${pt.nominal.toFixed(2)}`)
   set('lpkTarik',`$${totTarik.toFixed(2)}`)
+  set('lpkTotalLiab',`$${totalLiab.toFixed(2)}`)
   set('lpkNetPL',`${netPL>=0?'+':''}$${netPL.toFixed(2)}`,netPL>=0?'var(--green)':'var(--red)')
-
-  // Tanggal update
+  set('lpkDividen',`$${totDiv.toFixed(2)}`)
+  set('lpkTotalEkuitas',`${totalEkuitas>=0?'+':''}$${totalEkuitas.toFixed(2)}`,totalEkuitas>=0?'var(--green)':'var(--red)')
+  set('lpkGrandTotal',`$${totalAset.toFixed(2)}`)
   const now=new Date()
   const tgl=document.getElementById('lpkTanggal')
   if(tgl)tgl.textContent=`Per tanggal ${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`
