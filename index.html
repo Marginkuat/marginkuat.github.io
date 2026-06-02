@@ -712,6 +712,14 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <button class="btn btn-wa2" id="btnWA" style="display:none" onclick="kirimWA()">💬 Kirim ke Grup WA</button>
       <button class="btn btn-copy" id="btnCopy" style="display:none" onclick="copyMsg()">📋 Copy Pesan</button>
 
+      <!-- BOX GENERATE KODE PUBLIK -->
+      <div id="publikCodeBox" style="display:none;background:#27AE6012;border:1px solid #27AE6044;border-radius:12px;padding:12px;margin-bottom:10px">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#27AE60;margin-bottom:8px">📢 DATA PUBLIK SIAP — COPY & UPDATE FILE</div>
+        <div style="font-size:10px;color:var(--dim);margin-bottom:8px;line-height:1.6">Ganti nilai <code style="color:var(--gold)">PUBLIK_DATA</code> di file index.html dengan kode ini, lalu upload ulang ke GitHub:</div>
+        <pre id="publikCode" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;color:var(--gold);overflow-x:auto;line-height:1.8;white-space:pre-wrap"></pre>
+        <button class="btn btn-copy btn-sm" style="margin-top:8px" onclick="navigator.clipboard.writeText(document.getElementById('publikCode').textContent).then(()=>showToast('✅ Kode disalin!'))">📋 Copy Kode</button>
+      </div>
+
       <!-- UPDATE PROFIT TERTAHAN -->
       <div class="card" style="border-color:#27AE6044;margin-top:4px">
         <div class="card-title" style="color:var(--green)">⏳ UPDATE PROFIT TERTAHAN (tampil di website)</div>
@@ -996,38 +1004,52 @@ const DEFAULT_NASABAH=[
 function getNasabahList(){const s=localStorage.getItem('baroto_nasabah');return s?JSON.parse(s):DEFAULT_NASABAH}
 function saveNasabahList(l){localStorage.setItem('baroto_nasabah',JSON.stringify(l));updatePublicNasabah()}
 
-// ===== DB (JSONBin) =====
-let BIN_ID=localStorage.getItem('baroto_bin_id')||null
+// ===== DATA PUBLIK (hardcode — update tiap upload GitHub) =====
+// Admin: setelah input data, klik "📢 Update Data Publik" untuk generate kode baru
+const PUBLIK_DATA = {
+  balance: 424.79,
+  netPL: 404.48,
+  hariTrading: 32,
+  hariProfit: 26,
+  hariLoss: 6,
+  winRate: 81,
+  lastUpdate: '2026-06-02'
+}
+
+// ===== DB (localStorage only) =====
 async function initDB(){
-  setStatus('loading','Menghubungkan database...')
-  try{
-    if(!BIN_ID){
-      const r=await fetch('https://api.jsonbin.io/v3/b',{method:'POST',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY,'X-Bin-Name':'baroto-v2','X-Bin-Private':'false'},body:JSON.stringify({laporan:[],lastUpdate:''})})
-      const d=await r.json()
-      if(d.metadata){BIN_ID=d.metadata.id;localStorage.setItem('baroto_bin_id',BIN_ID);setStatus('online','Database terhubung ✅')}
-      else throw new Error()
-    }else{
-      const r=await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':API_KEY}})
-      if(r.ok)setStatus('online','Database terhubung ✅')
-      else{BIN_ID=null;localStorage.removeItem('baroto_bin_id');await initDB()}
-    }
-    updatePublicStats()
-  }catch{setStatus('offline','Offline — data lokal')}
+  setStatus('online','Data lokal siap ✅')
+  updatePublicStats()
 }
-async function readDB(){
-  if(!BIN_ID)return getLocal()
-  try{const r=await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':API_KEY}});const d=await r.json();return d.record?.laporan||[]}
-  catch{return getLocal()}
-}
+async function readDB(){return getLocal()}
 async function writeDB(laporan){
   saveLocal(laporan)
-  if(!BIN_ID)return
-  try{await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},body:JSON.stringify({laporan,lastUpdate:new Date().toISOString()})});setStatus('online','Tersimpan ✅');updatePublicStats()}
-  catch{setStatus('offline','Gagal sync')}
+  setStatus('online','Tersimpan ✅')
+  updatePublicStats()
+  // Generate kode publik untuk di-copy admin
+  generatePublikCode(laporan)
 }
 function getLocal(){return JSON.parse(localStorage.getItem('baroto_data')||'[]')}
 function saveLocal(d){localStorage.setItem('baroto_data',JSON.stringify(d))}
 function setStatus(t,m){document.getElementById('sdot').className='sdot '+t;document.getElementById('statusTxt').textContent=m}
+
+function generatePublikCode(laporan){
+  if(!laporan.length)return
+  const totP=laporan.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const totL=laporan.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const net=totP-totL
+  const lastBal=parseFloat(laporan[0]?.balance)||0
+  const hP=laporan.filter(d=>d.type==='profit').length
+  const hL=laporan.filter(d=>d.type==='loss').length
+  const wr=laporan.length?Math.round(hP/laporan.length*100):0
+  const today=tglToday
+  const kode=`balance: ${lastBal},\n  netPL: ${net.toFixed(2)},\n  hariTrading: ${laporan.length},\n  hariProfit: ${hP},\n  hariLoss: ${hL},\n  winRate: ${wr},\n  lastUpdate: '${today}'`
+  // Simpan ke localStorage untuk ditampilkan di admin
+  localStorage.setItem('baroto_publik_code', kode)
+  // Tampilkan notif di admin
+  const el=document.getElementById('publikCodeBox')
+  if(el){el.style.display='block';document.getElementById('publikCode').textContent=kode}
+}
 
 // ===== DIVIDEN STORAGE (local) =====
 function getDivHistory(){return JSON.parse(localStorage.getItem('baroto_dividen')||'[]')}
@@ -1055,41 +1077,17 @@ setInterval(tick,1000);tick()
 
 // ===== PUBLIC =====
 async function updatePublicStats(){
-  // Ambil data langsung dari JSONBin (shared) agar semua HP lihat data sama
-  let data=[]
-  const binId=localStorage.getItem('baroto_bin_id')
-  if(binId){
-    try{
-      const r=await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`,{headers:{'X-Master-Key':API_KEY}})
-      if(r.ok){const d=await r.json();data=d.record?.laporan||[]}
-    }catch{}
-  }
-  // Fallback ke localStorage jika tidak ada koneksi
-  if(!data.length) data=getLocal()
-  if(!data.length)return
-
-  const totP=data.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
-  const totL=data.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
-  const net=totP-totL
-  const lastBal=data[0]?.balance||0
-  const hariProfit=data.filter(d=>d.type==='profit').length
-  const hariLoss=data.filter(d=>d.type==='loss').length
-  const winRate=data.length?Math.round(hariProfit/data.length*100):0
-
-  if(lastBal>0){
-    const bal=document.getElementById('pubBalance');if(bal)bal.textContent=`$${parseFloat(lastBal).toFixed(2)} USD`
-    const bal2=document.getElementById('pubBal2');if(bal2)bal2.textContent=`$${parseFloat(lastBal).toFixed(2)}`
-  }
-  const netEl=document.getElementById('pubNet');if(netEl){netEl.textContent=`${net>=0?'+':''}$${net.toFixed(2)}`;netEl.style.color=net>=0?'#27AE60':'#E24B4A'}
-  const sub=document.getElementById('pubNetSub');if(sub)sub.textContent=`${data.length} hari trading`
-  const wrEl=document.getElementById('pubWinRate')
-  if(wrEl){wrEl.textContent=`${winRate}%`;wrEl.style.color=winRate>=60?'#27AE60':winRate>=40?'#c9a84c':'#E24B4A'}
-  const wrSub=document.getElementById('pubWinRateSub')
-  if(wrSub)wrSub.textContent=`${hariProfit} profit · ${hariLoss} loss`
-
-  // Update chart & lapkeu juga
-  chartData=[...data].reverse()
-  drawChart()
+  // Gunakan data publik yang di-hardcode di file (sama untuk semua HP)
+  const d=PUBLIK_DATA
+  const bal=document.getElementById('pubBalance');if(bal)bal.textContent=`$${d.balance.toFixed(2)} USD`
+  const bal2=document.getElementById('pubBal2');if(bal2)bal2.textContent=`$${d.balance.toFixed(2)}`
+  const netEl=document.getElementById('pubNet');if(netEl){netEl.textContent=`${d.netPL>=0?'+':''}$${parseFloat(d.netPL).toFixed(2)}`;netEl.style.color=d.netPL>=0?'#27AE60':'#E24B4A'}
+  const sub=document.getElementById('pubNetSub');if(sub)sub.textContent=`${d.hariTrading} hari trading`
+  const wrEl=document.getElementById('pubWinRate');if(wrEl){wrEl.textContent=`${d.winRate}%`;wrEl.style.color=d.winRate>=60?'#27AE60':d.winRate>=40?'#c9a84c':'#E24B4A'}
+  const wrSub=document.getElementById('pubWinRateSub');if(wrSub)wrSub.textContent=`${d.hariProfit} profit · ${d.hariLoss} loss`
+  // Chart & lapkeu dari data lokal admin
+  const laporan=getLocal()
+  if(laporan.length){chartData=[...laporan].reverse();drawChart()}
   updateLapKeu()
 }
 function updatePublicNasabah(){
