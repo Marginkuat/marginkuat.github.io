@@ -1141,12 +1141,12 @@ function saveNasabahList(l){localStorage.setItem('baroto_nasabah',JSON.stringify
 // ===== DATA PUBLIK (hardcode — update tiap upload GitHub) =====
 // Admin: setelah input data, klik "📢 Update Data Publik" untuk generate kode baru
 const PUBLIK_DATA = {
-  balance: 272.51,
-  netPL: 252.20,
+  balance: 362.48,
+  netPL: 342.48,
   hariTrading: 16,
-  hariProfit: 10,
-  hariLoss: 6,
-  winRate: 63,
+  hariProfit: 11,
+  hariLoss: 5,
+  winRate: 69,
   lastUpdate: '2026-06-03'
 }
 
@@ -1180,15 +1180,16 @@ const DATA_HISTORIS = [
   {tanggal:'2026-05-05',type:'profit',nominal:50.00,balance:230.00,trade:'?',catatan:'Profit Mei 2026'},
   {tanggal:'2026-05-12',type:'profit',nominal:80.00,balance:290.00,trade:'?',catatan:'Profit Mei 2026'},
   {tanggal:'2026-05-19',type:'profit',nominal:78.53,balance:376.00,trade:'?',catatan:'Profit Mei 2026'},
-  {tanggal:'2026-06-02',type:'profit',nominal:48.42,balance:424.79,trade:'3',catatan:'Profit Jun 2026 — P/L tertutup +48.42'},
-  {tanggal:'2026-06-03',type:'loss',nominal:152.28,balance:272.51,trade:'3',catatan:'Loss Jun 2026 — SL gap/slip x3'},
+  {tanggal:'2026-06-02',type:'profit',nominal:48.42,balance:424.79,trade:'3',catatan:'Profit Jun 2026'},
+  {tanggal:'2026-06-03',type:'profit',nominal:89.97,balance:362.48,trade:'2',catatan:'Profit Jun 2026'},
 ]
 
 function getLocal(){
   const saved=JSON.parse(localStorage.getItem('baroto_data')||'[]')
-  // Gabungkan data historis + data lokal admin, hindari duplikat tanggal
+  const deleted=JSON.parse(localStorage.getItem('baroto_deleted')||'[]')
+  // Gabungkan data historis + data lokal admin, hindari duplikat & yang dihapus
   const allDates=new Set(saved.map(d=>d.tanggal))
-  const historisFiltered=DATA_HISTORIS.filter(d=>!allDates.has(d.tanggal))
+  const historisFiltered=DATA_HISTORIS.filter(d=>!allDates.has(d.tanggal)&&!deleted.includes(d.tanggal))
   return [...saved,...historisFiltered].sort((a,b)=>b.tanggal.localeCompare(a.tanggal))
 }
 function saveLocal(d){localStorage.setItem('baroto_data',JSON.stringify(d))}
@@ -1396,7 +1397,18 @@ async function renderRiwayat(){
     <button class="li-del" onclick="delEntry('${d.tanggal}')">✕</button>
   </div>`).join('')
 }
-async function delEntry(tgl){if(!confirm('Hapus data '+tgl+'?'))return;const data=(await readDB()).filter(x=>x.tanggal!==tgl);await writeDB(data);renderRiwayat();renderBuku();showToast('🗑️ Dihapus')}
+async function delEntry(tgl){
+  if(!confirm('Hapus data '+tgl+'?'))return
+  // Hapus dari localStorage
+  const data=(await readDB()).filter(x=>x.tanggal!==tgl)
+  saveLocal(data.filter(x=>!DATA_HISTORIS.find(h=>h.tanggal===x.tanggal)))
+  // Tandai sebagai deleted supaya tidak muncul dari DATA_HISTORIS
+  const deleted=JSON.parse(localStorage.getItem('baroto_deleted')||'[]')
+  if(!deleted.includes(tgl))deleted.push(tgl)
+  localStorage.setItem('baroto_deleted',JSON.stringify(deleted))
+  renderRiwayat();renderBuku();renderKinerja();renderKalender()
+  showToast('🗑️ Dihapus')
+}
 
 // ===== BUKU NASABAH =====
 async function renderBuku(){
@@ -2257,7 +2269,7 @@ function renderKalender(){
     else if(isFuture){bg='transparent';color='var(--dimmer)';border='1px solid transparent'}
     const todayRing=isToday?'box-shadow:0 0 0 2px var(--gold);':''
     // Format nominal singkat
-    const nomStr=nominal>=1000?'$'+(nominal/1000).toFixed(1)+'K':nominal>0?'$'+nominal.toFixed(0):''
+    const nomStr=nominal>0?'$'+nominal.toFixed(2):''
     const sign=type==='profit'?'+':type==='loss'?'-':''
     html+=`<div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;background:${bg};border:${border};${todayRing}cursor:default;padding:2px" title="${dateStr}${entry?' — '+(type==='profit'?'+':'-')+'$'+nominal.toFixed(2):''}">
       <span style="font-size:11px;font-weight:${type?'700':'400'};color:${color};line-height:1">${d}</span>
