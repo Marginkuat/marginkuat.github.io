@@ -357,6 +357,8 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
             <span style="color:var(--gold)">Kejujuran adalah fondasi kepercayaan kami.</span>
           </div>
         </div>
+
+        </div>
     </div>
   </section>
 
@@ -467,7 +469,13 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
         </div>
         <!-- Hari -->
         <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px">
-          ${['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d=>`<div style="text-align:center;font-size:9px;color:var(--dim);padding:3px">${d}</div>`).join('')}
+          <div style="text-align:center;font-size:9px;color:var(--dim);padding:3px">Min</div>
+          <div style="text-align:center;font-size:9px;color:var(--dim);padding:3px">Sen</div>
+          <div style="text-align:center;font-size:9px;color:var(--dim);padding:3px">Sel</div>
+          <div style="text-align:center;font-size:9px;color:var(--dim);padding:3px">Rab</div>
+          <div style="text-align:center;font-size:9px;color:var(--dim);padding:3px">Kam</div>
+          <div style="text-align:center;font-size:9px;color:var(--dim);padding:3px">Jum</div>
+          <div style="text-align:center;font-size:9px;color:var(--dim);padding:3px">Sab</div>
         </div>
         <div id="kalenderGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px"></div>
         <!-- Legend -->
@@ -2221,7 +2229,7 @@ function kalenderNext(){kalenderBulan++;if(kalenderBulan>11){kalenderBulan=0;kal
 function renderKalender(){
   const data=getLocal()
   const dataMap={}
-  data.forEach(d=>dataMap[d.tanggal]=d.type)
+  data.forEach(d=>dataMap[d.tanggal]=d)
 
   const title=document.getElementById('kalenderTitle')
   if(title)title.textContent=`${MONTHS[kalenderBulan]} ${kalenderTahun}`
@@ -2235,20 +2243,26 @@ function renderKalender(){
   const todayStr=`${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`
 
   let html=''
-  // Empty cells
   for(let i=0;i<firstDay;i++)html+=`<div></div>`
-  // Day cells
   for(let d=1;d<=daysInMonth;d++){
     const dateStr=`${kalenderTahun}-${pad(kalenderBulan+1)}-${pad(d)}`
-    const type=dataMap[dateStr]
+    const entry=dataMap[dateStr]
+    const type=entry?.type
+    const nominal=entry?parseFloat(entry.nominal)||0:0
     const isToday=dateStr===todayStr
-    const isFuture=new Date(dateStr)>today
+    const isFuture=new Date(dateStr+'T00:00:00')>today
     let bg='var(--bg3)',color='var(--dim)',border='1px solid var(--border)'
     if(type==='profit'){bg='#27AE6022';color='var(--green)';border='1px solid #27AE6044'}
     else if(type==='loss'){bg='#E24B4A22';color='var(--red)';border='1px solid #E24B4A44'}
     else if(isFuture){bg='transparent';color='var(--dimmer)';border='1px solid transparent'}
     const todayRing=isToday?'box-shadow:0 0 0 2px var(--gold);':''
-    html+=`<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;background:${bg};border:${border};font-size:11px;font-weight:${type?'700':'400'};color:${color};${todayRing}cursor:default" title="${dateStr}${type?' — '+type:''}">${d}</div>`
+    // Format nominal singkat
+    const nomStr=nominal>=1000?'$'+(nominal/1000).toFixed(1)+'K':nominal>0?'$'+nominal.toFixed(0):''
+    const sign=type==='profit'?'+':type==='loss'?'-':''
+    html+=`<div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;background:${bg};border:${border};${todayRing}cursor:default;padding:2px" title="${dateStr}${entry?' — '+(type==='profit'?'+':'-')+'$'+nominal.toFixed(2):''}">
+      <span style="font-size:11px;font-weight:${type?'700':'400'};color:${color};line-height:1">${d}</span>
+      ${nomStr?`<span style="font-size:7px;font-weight:700;color:${color};line-height:1;margin-top:1px">${sign}${nomStr}</span>`:''}
+    </div>`
   }
   grid.innerHTML=html
 }
@@ -2369,23 +2383,19 @@ function renderKinerja(){
   const tbody=document.getElementById('kinerjaBody')
   if(!tbody)return
   if(!data.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--dim);padding:16px">Belum ada data</td></tr>';return}
-
-  // Kelompokkan per bulan
   const byMonth={}
   data.forEach(d=>{
     const dt=new Date(d.tanggal+'T00:00:00')
     const key=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`
-    if(!byMonth[key])byMonth[key]={profit:0,loss:0,lastBal:0,label:`${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`}
+    if(!byMonth[key])byMonth[key]={profit:0,loss:0,lastBal:0,label:`${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`,hari:[]}
     if(d.type==='profit')byMonth[key].profit+=(+d.nominal)
     else byMonth[key].loss+=(+d.nominal)
     if(d.balance)byMonth[key].lastBal=parseFloat(d.balance)
+    byMonth[key].hari.push(d)
   })
-
-  // Sort terlama dulu
   const sorted=Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0]))
   const currentMonth=`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`
   const maxProfit=Math.max(...sorted.map(([,v])=>v.profit-v.loss))
-
   tbody.innerHTML=sorted.map(([key,v])=>{
     const net=v.profit-v.loss
     const isProfit=net>=0
@@ -2396,13 +2406,32 @@ function renderKinerja(){
     else if(isMax){status='⭐ Terbaik';statusClass='tag-gold'}
     else if(net>=0){status='✅ Profit';statusClass='tag-green'}
     else{status='❌ Loss';statusClass='tag-red'}
-    return `<tr>
-      <td class="td-m">${v.label}</td>
+    const hariSorted=[...v.hari].sort((a,b)=>a.tanggal.localeCompare(b.tanggal))
+    const detailRows=hariSorted.map(h=>{
+      const tgl=new Date(h.tanggal+'T00:00:00').getDate()
+      const isP=h.type==='profit'
+      return `<tr class="det-${key}" style="display:none;background:${isP?'#27AE6008':'#E24B4A08'}">
+        <td style="padding:5px 14px;font-size:10px;color:var(--dimmer);padding-left:28px">└ Tgl ${tgl}</td>
+        <td style="padding:5px 14px;font-size:11px;font-weight:700;color:${isP?'var(--green)':'var(--red)'}">${isP?'+':'-'}$${(+h.nominal).toFixed(2)}</td>
+        <td style="padding:5px 14px;font-size:10px;color:var(--dim)">$${parseFloat(h.balance).toFixed(2)}</td>
+        <td style="padding:5px 14px"><span class="tag ${isP?'tag-green':'tag-red'}" style="font-size:8px">${isP?'PROFIT':'LOSS'}</span></td>
+      </tr>`
+    }).join('')
+    return `<tr onclick="toggleKinerjaDetail('${key}')" style="cursor:pointer">
+      <td class="td-m"><span id="arr-${key}" style="font-size:9px;margin-right:4px;color:var(--dim)">▶</span>${v.label}</td>
       <td class="${isProfit?'profit':'loss'}">${isProfit?'+':'-'}$${Math.abs(net).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
       <td style="font-size:11px;color:var(--muted)">$${v.lastBal.toFixed(2)}</td>
       <td><span class="tag ${statusClass}">${status}</span></td>
-    </tr>`
-  }).reverse().join('') // tampilkan terbaru di atas
+    </tr>${detailRows}`
+  }).reverse().join('')
+}
+
+function toggleKinerjaDetail(key){
+  const rows=document.querySelectorAll('.det-'+key)
+  const arr=document.getElementById('arr-'+key)
+  const isOpen=rows[0]&&rows[0].style.display!=='none'
+  rows.forEach(r=>r.style.display=isOpen?'none':'table-row')
+  if(arr)arr.textContent=isOpen?'▶':'▼'
 }
 
 // ===== PUBLIC DIVIDEN =====
