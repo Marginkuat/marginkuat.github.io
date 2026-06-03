@@ -426,6 +426,7 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
           <div style="font-size:11px;color:var(--muted)">Tercapai: <span id="targetTercapai" style="color:var(--green);font-weight:700">$0.00</span></div>
           <div style="font-size:12px;font-weight:700" id="targetPct">0%</div>
         </div>
+        <div id="targetSubInfo" style="font-size:10px;color:var(--dimmer);margin-top:6px;text-align:center"></div>
         <div id="targetStatus" style="margin-top:10px;text-align:center;font-size:11px;padding:7px;border-radius:8px;display:none"></div>
       </div>
     </div>
@@ -533,13 +534,10 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
     </div>
   </section>
 
-  <!-- SECTION DIVIDEN PUBLIK -->
+  <!-- PROFIT TERTAHAN (menunggu rapat) -->
   <section class="sec" id="dividen-publik">
     <div class="container">
-      <div class="sec-head"><div class="sec-title">Riwayat Pembagian Dividen</div><div class="sec-line"></div></div>
-
-      <!-- PROFIT TERTAHAN (menunggu rapat) -->
-      <div id="pubProfitTertahanBox" style="background:#27AE6012;border:1px solid #27AE6044;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center;display:none">
+      <div id="pubProfitTertahanBox" style="background:#27AE6012;border:1px solid #27AE6044;border-radius:14px;padding:16px;text-align:center;display:none">
         <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#27AE60;margin-bottom:8px">⏳ PROFIT EA MENUNGGU RAPAT ANGGOTA</div>
         <div style="font-size:32px;font-weight:900;color:#27AE60;font-family:'Cinzel',serif" id="pubProfitTertahan">$0.00</div>
         <div style="font-size:11px;color:var(--muted);margin-top:6px">Profit ini akan dibagikan 40% ke anggota setelah rapat</div>
@@ -554,21 +552,6 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
           </div>
         </div>
         <div style="margin-top:8px;font-size:10px;color:var(--dimmer)" id="pubTerakhirUpdate"></div>
-      </div>
-
-      <!-- RINGKASAN -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
-        <div class="stat-card"><div class="s-label">Total Dibagikan</div><div class="s-val" id="pubDivTotal">$0.00</div><div class="s-sub">40% dari profit</div></div>
-        <div class="stat-card"><div class="s-label">Kali Bagi</div><div class="s-val" id="pubDivKali">0</div><div class="s-sub blue">rapat anggota</div></div>
-        <div class="stat-card"><div class="s-label">Terakhir</div><div class="s-val" id="pubDivTerakhir" style="font-size:12px">—</div><div class="s-sub" id="pubDivTerakhirSub">—</div></div>
-      </div>
-
-      <!-- RIWAYAT LIST -->
-      <div id="pubDivList"></div>
-
-      <div style="background:var(--gold-dim);border:1px solid var(--gold-mid);border-radius:10px;padding:11px 14px;margin-top:4px;font-size:11px;color:var(--gold);line-height:1.7;text-align:center">
-        💎 Nominal dividen per anggota bersifat privat · Dibagi proporsional sesuai besar modal<br>
-        Informasi lengkap hubungi admin WA <strong>0812-3016-198</strong>
       </div>
     </div>
   </section>
@@ -2127,18 +2110,22 @@ function renderTargetPublik(){
   const now=new Date()
   const bulanKey=`${now.getFullYear()}-${pad(now.getMonth()+1)}`
   const targets=getTargets()
-  const target=targets[bulanKey]||PUBLIK_DATA.balance*0.25
 
-  // Hitung profit bulan ini dari data historis
+  // Ambil balance akhir bulan lalu dari data historis
   const data=getLocal()
-  const profitBulanIni=data.filter(d=>{
-    const[y,m]=d.tanggal.split('-')
-    return y===String(now.getFullYear())&&m===pad(now.getMonth()+1)&&d.type==='profit'
-  }).reduce((s,d)=>s+(+d.nominal),0)
-  const lossBulanIni=data.filter(d=>{
-    const[y,m]=d.tanggal.split('-')
-    return y===String(now.getFullYear())&&m===pad(now.getMonth()+1)&&d.type==='loss'
-  }).reduce((s,d)=>s+(+d.nominal),0)
+  const bulanLalu=new Date(now.getFullYear(),now.getMonth()-1,1)
+  const bulanLaluKey=`${bulanLalu.getFullYear()}-${pad(bulanLalu.getMonth()+1)}`
+  // Cari data terakhir di bulan lalu
+  const databulanLalu=data.filter(d=>d.tanggal.startsWith(bulanLaluKey))
+  const balanceBulanLalu=databulanLalu.length>0?parseFloat(databulanLalu[0].balance)||0:PUBLIK_DATA.balance
+
+  // Target = manual jika sudah diset, atau otomatis 25% dari balance bulan lalu
+  const target=targets[bulanKey]||(balanceBulanLalu*0.25)
+
+  // Hitung profit/loss bulan ini
+  const dataBulanIni=data.filter(d=>d.tanggal.startsWith(bulanKey))
+  const profitBulanIni=dataBulanIni.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const lossBulanIni=dataBulanIni.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
   const netBulan=profitBulanIni-lossBulanIni
   const pct=target>0?Math.min(100,Math.round(netBulan/target*100)):0
 
@@ -2149,9 +2136,14 @@ function renderTargetPublik(){
   const bar=document.getElementById('targetBar')
   if(bar){bar.style.width=`${Math.max(0,pct)}%`;bar.style.background=pct>=100?'#27AE60':pct>=50?'linear-gradient(90deg,#27AE60,#c9a84c)':'linear-gradient(90deg,#c9a84c,#5ba3f5)'}
   const terc=document.getElementById('targetTercapai')
-  if(terc){terc.textContent=`+$${Math.max(0,netBulan).toFixed(2)}`;terc.style.color=netBulan>=0?'var(--green)':'var(--red)'}
+  if(terc){terc.textContent=`${netBulan>=0?'+':''}$${netBulan.toFixed(2)}`;terc.style.color=netBulan>=0?'var(--green)':'var(--red)'}
   const pctEl=document.getElementById('targetPct')
-  if(pctEl){pctEl.textContent=`${pct}%`;pctEl.style.color=pct>=100?'#27AE60':pct>=50?'#c9a84c':'var(--dim)'}
+  if(pctEl){pctEl.textContent=`${Math.max(0,pct)}%`;pctEl.style.color=pct>=100?'#27AE60':pct>=50?'#c9a84c':'var(--dim)'}
+
+  // Sub info balance bulan lalu
+  const subEl=document.getElementById('targetSubInfo')
+  if(subEl)subEl.textContent=`Dasar: 25% × $${balanceBulanLalu.toFixed(2)} (balance ${MONTHS[bulanLalu.getMonth()]} ${bulanLalu.getFullYear()})`
+
   const stEl=document.getElementById('targetStatus')
   if(stEl){
     if(pct>=100){stEl.style.display='block';stEl.style.background='#27AE6015';stEl.style.border='1px solid #27AE6033';stEl.style.color='#27AE60';stEl.textContent='🎉 Target bulan ini tercapai!'}
@@ -2159,9 +2151,9 @@ function renderTargetPublik(){
     else stEl.style.display='none'
   }
 
-  // Set target input bulan ini di admin
+  // Set default di admin
   const ti=document.getElementById('targetBulan');if(ti&&!ti.value)ti.value=bulanKey
-  const bi=document.getElementById('targetBalanceRef');if(bi&&!bi.value){bi.value=PUBLIK_DATA.balance;hitungTarget()}
+  const bi=document.getElementById('targetBalanceRef');if(bi&&!bi.value){bi.value=balanceBulanLalu.toFixed(2);hitungTarget()}
 }
 
 // ===== KALENDER TRADING =====
