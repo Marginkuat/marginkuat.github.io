@@ -408,26 +408,40 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
     <div class="container">
       <div class="sec-head"><div class="sec-title">Target Bulan Ini</div><div class="sec-line"></div></div>
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div>
-            <div style="font-size:12px;font-weight:700;color:var(--text)" id="targetBulanLabel">—</div>
-            <div style="font-size:10px;color:var(--dim);margin-top:2px">Target profit 25% dari balance EA</div>
+
+        <!-- Label bulan -->
+        <div style="text-align:center;margin-bottom:14px">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--dim)" id="targetBulanLabel">—</div>
+          <div style="font-size:10px;color:var(--dimmer);margin-top:3px" id="targetSubInfo">Target 50% dari balance bulan lalu</div>
+        </div>
+
+        <!-- FROM → TO -->
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:14px">
+          <div style="text-align:center;flex:1">
+            <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Balance Lalu</div>
+            <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:900;color:var(--muted)" id="targetDari">$0</div>
           </div>
-          <div style="text-align:right">
-            <div style="font-size:11px;color:var(--dim)">Target</div>
-            <div style="font-size:16px;font-weight:700;color:var(--gold)" id="targetNominal">$0.00</div>
+          <div style="font-size:20px;color:var(--gold)">→</div>
+          <div style="text-align:center;flex:1">
+            <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Target</div>
+            <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:900;color:var(--gold)" id="targetKe">$0</div>
           </div>
         </div>
-        <!-- Progress Bar -->
-        <div style="background:var(--bg3);border-radius:20px;height:14px;overflow:hidden;margin-bottom:8px;position:relative">
-          <div id="targetBar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,#27AE60,#c9a84c);transition:width .5s;width:0%"></div>
+
+        <!-- Progress bar -->
+        <div style="background:var(--bg3);border-radius:20px;height:16px;overflow:hidden;margin-bottom:8px;position:relative">
+          <div id="targetBar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,#27AE60,#c9a84c);transition:width .6s;width:0%;position:relative">
+            <div id="targetBarLabel" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;color:#0a0c0f;white-space:nowrap"></div>
+          </div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-size:11px;color:var(--muted)">Tercapai: <span id="targetTercapai" style="color:var(--green);font-weight:700">$0.00</span></div>
-          <div style="font-size:12px;font-weight:700" id="targetPct">0%</div>
+
+        <!-- Info bawah -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:11px;color:var(--muted)">Posisi sekarang: <span id="targetTercapai" style="font-weight:700">$0</span></div>
+          <div style="font-size:11px;font-weight:700" id="targetPct">0%</div>
         </div>
-        <div id="targetSubInfo" style="font-size:10px;color:var(--dimmer);margin-top:6px;text-align:center"></div>
-        <div id="targetStatus" style="margin-top:10px;text-align:center;font-size:11px;padding:7px;border-radius:8px;display:none"></div>
+
+        <div id="targetStatus" style="text-align:center;font-size:11px;padding:8px;border-radius:8px;display:none;margin-top:6px"></div>
       </div>
     </div>
   </section>
@@ -2116,68 +2130,77 @@ function renderTargetPublik(){
   const bulanLalu=new Date(now.getFullYear(),now.getMonth()-1,1)
   const bulanLaluKey=`${bulanLalu.getFullYear()}-${pad(bulanLalu.getMonth()+1)}`
   const dataBulanLalu=data.filter(d=>d.tanggal.startsWith(bulanLaluKey))
-  const balanceBulanLalu=dataBulanLalu.length>0?parseFloat(dataBulanLalu[0].balance)||0:PUBLIK_DATA.balance
-  const target=targets[bulanKey]||(balanceBulanLalu*0.25)
+  const balanceLalu=dataBulanLalu.length>0?parseFloat(dataBulanLalu[0].balance)||PUBLIK_DATA.balance:PUBLIK_DATA.balance
 
-  // Net P/L kumulatif bulan ini (profit - loss semua hari)
+  // Target = 50% dari balance bulan lalu
+  const targetProfit=targets[bulanKey]||(balanceLalu*0.5)
+  const targetAkhir=balanceLalu+targetProfit
+
+  // Net P/L kumulatif bulan ini
   const dataBulanIni=data.filter(d=>d.tanggal.startsWith(bulanKey))
-  const profitBulanIni=dataBulanIni.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
-  const lossBulanIni=dataBulanIni.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
-  const netBulan=profitBulanIni-lossBulanIni
+  const profitIni=dataBulanIni.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const lossIni=dataBulanIni.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const netBulan=profitIni-lossIni
+  const balanceSekarang=balanceLalu+netBulan
 
-  // Progress: dari -target sampai +target
-  // 0% = netBulan <= -target, 50% = netBulan = 0, 100% = netBulan >= target
-  const range=target*2 // total range dari -target ke +target
-  const posisi=netBulan+target // posisi dalam range (0 = bawah, range = atas)
-  const pct=Math.min(100,Math.max(0,Math.round(posisi/range*100)))
+  // Progress 0% = balance lalu, 100% = target
+  const pct=targetProfit>0?Math.min(100,Math.max(0,Math.round(netBulan/targetProfit*100))):0
 
+  // Update HTML
   const lbl=document.getElementById('targetBulanLabel')
-  if(lbl)lbl.textContent=`Target ${MONTHS[now.getMonth()]} ${now.getFullYear()}`
-  const nom=document.getElementById('targetNominal')
-  if(nom)nom.textContent=`+$${target.toFixed(2)}`
+  if(lbl)lbl.textContent=`TARGET ${MONTHS[now.getMonth()].toUpperCase()} ${now.getFullYear()}`
 
-  // Warna bar
+  const subEl=document.getElementById('targetSubInfo')
+  if(subEl)subEl.textContent=`50% dari balance ${MONTHS[bulanLalu.getMonth()]} ${bulanLalu.getFullYear()}`
+
+  const dari=document.getElementById('targetDari')
+  if(dari)dari.textContent=`$${balanceLalu.toFixed(0)}`
+
+  const ke=document.getElementById('targetKe')
+  if(ke)ke.textContent=`$${targetAkhir.toFixed(0)}`
+
   const bar=document.getElementById('targetBar')
   if(bar){
     bar.style.width=`${pct}%`
-    if(netBulan>=target)bar.style.background='#27AE60'
-    else if(netBulan>=0)bar.style.background='linear-gradient(90deg,#27AE60,#c9a84c)'
-    else if(netBulan>=-target*0.5)bar.style.background='linear-gradient(90deg,#c9a84c,#5ba3f5)'
-    else bar.style.background='#E24B4A'
+    bar.style.background=pct>=100?'#27AE60':netBulan>=0?'linear-gradient(90deg,#27AE60,#c9a84c)':'#E24B4A'
   }
+  const barLbl=document.getElementById('targetBarLabel')
+  if(barLbl&&pct>15)barLbl.textContent=`${pct}%`
 
   const terc=document.getElementById('targetTercapai')
   if(terc){
-    terc.textContent=`${netBulan>=0?'+':''}$${netBulan.toFixed(2)}`
-    terc.style.color=netBulan>=target?'#27AE60':netBulan>=0?'#c9a84c':'var(--red)'
-  }
-  const pctEl=document.getElementById('targetPct')
-  if(pctEl){
-    pctEl.textContent=`${netBulan>=0?'+':''}$${netBulan.toFixed(2)} / +$${target.toFixed(2)}`
-    pctEl.style.fontSize='10px'
-    pctEl.style.color=netBulan>=target?'#27AE60':netBulan>=0?'#c9a84c':'var(--red)'
+    terc.textContent=`$${balanceSekarang.toFixed(2)}`
+    terc.style.color=pct>=100?'#27AE60':netBulan>=0?'#c9a84c':'var(--red)'
   }
 
-  // Sub info
-  const subEl=document.getElementById('targetSubInfo')
-  if(subEl){
-    const sisa=target-netBulan
-    if(netBulan>=target) subEl.textContent=`🎉 Target tercapai! Surplus +$${(netBulan-target).toFixed(2)}`
-    else if(netBulan>=0) subEl.textContent=`Kurang $${sisa.toFixed(2)} lagi untuk capai target`
-    else subEl.textContent=`Rugi $${Math.abs(netBulan).toFixed(2)} + butuh $${target.toFixed(2)} = perlu +$${sisa.toFixed(2)} lagi`
+  const pctEl=document.getElementById('targetPct')
+  if(pctEl){
+    pctEl.textContent=`${pct}%`
+    pctEl.style.color=pct>=100?'#27AE60':pct>=50?'#c9a84c':'var(--dim)'
   }
 
   const stEl=document.getElementById('targetStatus')
   if(stEl){
-    if(netBulan>=target){stEl.style.display='block';stEl.style.background='#27AE6015';stEl.style.border='1px solid #27AE6033';stEl.style.color='#27AE60';stEl.textContent=`🎉 Target +$${target.toFixed(2)} tercapai! Net bulan ini: +$${netBulan.toFixed(2)}`}
-    else if(pct>=75){stEl.style.display='block';stEl.style.background='var(--gold-dim)';stEl.style.border='1px solid var(--gold-mid)';stEl.style.color='var(--gold)';stEl.textContent='💪 Hampir tercapai — terus semangat!'}
-    else if(netBulan<0){stEl.style.display='block';stEl.style.background='#E24B4A10';stEl.style.border='1px solid #E24B4A33';stEl.style.color='#eb8585';stEl.textContent=`⚠️ Posisi: ${netBulan.toFixed(2)} — butuh recovery +$${(target-netBulan).toFixed(2)}`}
-    else stEl.style.display='none'
+    if(pct>=100){
+      stEl.style.display='block';stEl.style.background='#27AE6015';stEl.style.border='1px solid #27AE6033';stEl.style.color='#27AE60'
+      stEl.textContent=`🎉 Target tercapai! $${balanceLalu.toFixed(0)} → $${balanceSekarang.toFixed(2)}`
+    }else if(pct>=50){
+      stEl.style.display='block';stEl.style.background='var(--gold-dim)';stEl.style.border='1px solid var(--gold-mid)';stEl.style.color='var(--gold)'
+      stEl.textContent=`💪 Sudah ${pct}% — butuh +$${(targetProfit-netBulan).toFixed(2)} lagi`
+    }else if(netBulan<0){
+      stEl.style.display='block';stEl.style.background='#E24B4A10';stEl.style.border='1px solid #E24B4A33';stEl.style.color='#eb8585'
+      stEl.textContent=`⚠️ Posisi $${balanceSekarang.toFixed(2)} — butuh +$${(targetAkhir-balanceSekarang).toFixed(2)} untuk capai target`
+    }else stEl.style.display='none'
   }
 
-  // Set default di admin
+  // Admin default
   const ti=document.getElementById('targetBulan');if(ti&&!ti.value)ti.value=bulanKey
-  const bi=document.getElementById('targetBalanceRef');if(bi&&!bi.value){bi.value=balanceBulanLalu.toFixed(2);hitungTarget()}
+  const bi=document.getElementById('targetBalanceRef');if(bi&&!bi.value){bi.value=balanceLalu.toFixed(2);hitungTarget()}
+}
+
+function hitungTarget(){
+  const bal=parseFloat(document.getElementById('targetBalanceRef').value)||0
+  if(bal>0)document.getElementById('targetNominalInp').value=(bal*0.5).toFixed(2)
 }
 
 // ===== KALENDER TRADING =====
