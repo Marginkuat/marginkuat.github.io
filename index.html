@@ -1452,9 +1452,14 @@ async function renderBuku(){
       <div class="nas-book-body">
         <div class="nas-row4">
           <div class="nas-box"><div class="nas-box-lbl">Modal Awal</div><div class="nas-box-val" style="color:var(--gold)">$${n.modal.toFixed(2)}</div></div>
-          <div class="nas-box"><div class="nas-box-lbl">🤖 Di EA</div><div class="nas-box-val" style="color:var(--gold)">$${(n.modal*0.5).toFixed(2)}</div></div>
+          <div class="nas-box"><div class="nas-box-lbl">🤖 Saldo EA</div><div class="nas-box-val" style="color:var(--gold)">$${PUBLIK_DATA.balance.toFixed(2)}</div></div>
           <div class="nas-box"><div class="nas-box-lbl">🏦 Deposito</div><div class="nas-box-val" style="color:var(--blue)">$${saldoDeposito.toFixed(2)}</div></div>
           <div class="nas-box"><div class="nas-box-lbl">💰 Tabungan</div><div class="nas-box-val" style="color:var(--green)">$${saldoTab.toFixed(4)}</div></div>
+        </div>
+        <div style="background:#c9a84c10;border:1px solid var(--gold-dim);border-radius:8px;padding:8px;margin-bottom:8px;font-size:10px;line-height:1.7">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Modal masuk EA</span><span style="color:var(--gold)">$${(n.modal*0.5).toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Profit menumpuk (belum dibagi)</span><span style="color:var(--green)">+$${Math.max(0,PUBLIK_DATA.balance-(n.modal*0.5/(getTotModal()||1)*PUBLIK_DATA.balance*0+n.modal*0.5)).toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);margin-top:4px;padding-top:4px"><span style="color:var(--muted);font-weight:600">Saldo EA Sekarang</span><span style="color:var(--gold);font-weight:700">$${PUBLIK_DATA.balance.toFixed(2)}</span></div>
         </div>
         <div style="background:var(--bg3);border:1px solid #27AE6033;border-radius:8px;padding:8px;margin-bottom:8px">
           <div style="font-size:9px;color:var(--dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Riwayat Tabungan Terakhir</div>
@@ -1469,7 +1474,7 @@ async function renderBuku(){
   }).join('')
 
   document.getElementById('bkTotModal').textContent=`$${totModal.toFixed(2)}`
-  document.getElementById('bkEA').textContent=`$${(totModal*0.5).toFixed(2)}`
+  document.getElementById('bkEA').textContent=`$${PUBLIK_DATA.balance.toFixed(2)}`
   document.getElementById('bkDeposito').textContent=`$${(totModal*0.5).toFixed(2)}`
   document.getElementById('bkProfitEA').textContent=`${totProfitEA>=0?'+':''}$${totProfitEA.toFixed(2)}`
   document.getElementById('bkDivDibagi').textContent=`$${totDivDibagi.toFixed(4)}`
