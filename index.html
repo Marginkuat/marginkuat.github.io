@@ -358,7 +358,7 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
         <div class="stat-card"><div class="s-label">Balance EA</div><div class="s-val" id="pubBal2">—</div><div class="s-sub blue">FBS Live</div></div>
         <div class="stat-card"><div class="s-label">Net P/L</div><div class="s-val" id="pubNet">$0.00</div><div class="s-sub" id="pubNetSub">—</div></div>
         <div class="stat-card"><div class="s-label">Win Rate</div><div class="s-val" id="pubWinRate">—</div><div class="s-sub" id="pubWinRateSub">hari profit</div></div>
-        <div class="stat-card"><div class="s-label">Risk Reward</div><div class="s-val">1:3</div><div class="s-sub">setiap posisi</div></div>
+        <div class="stat-card"><div class="s-label">Distribusi Dividen</div><div class="s-val" id="pubDivStat">$0.00</div><div class="s-sub green">total disalurkan</div></div>
         <div class="stat-card"><div class="s-label">Dana Cadangan</div><div class="s-val">50%</div><div class="s-sub blue">modal aman</div></div>
         <div class="stat-card"><div class="s-label">Dividen</div><div class="s-val">40%</div><div class="s-sub">dari profit</div></div>
       </div>
@@ -366,6 +366,42 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
   </section>
 
   <div class="container"><div class="divider"></div></div>
+
+  <!-- DANA KELOLAAN -->
+  <section class="sec" id="dana">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">Dana Kelolaan</div><div class="sec-line"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div style="background:var(--bg2);border:1px solid var(--gold-dim);border-radius:14px;padding:16px;text-align:center">
+          <div style="font-size:24px;margin-bottom:6px">⚡</div>
+          <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Dana Aktif EA</div>
+          <div style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;color:var(--gold)" id="danaEA">$0.00</div>
+          <div style="font-size:9px;color:var(--dim);margin-top:4px">50% modal anggota</div>
+          <div style="margin-top:8px;background:var(--gold-dim);border-radius:6px;padding:5px;font-size:10px;color:var(--gold)">🤖 Trading XAUUSD</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--blue-mid);border-radius:14px;padding:16px;text-align:center">
+          <div style="font-size:24px;margin-bottom:6px">🛡️</div>
+          <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Dana Tabungan</div>
+          <div style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;color:var(--blue)" id="danaTabungan">$0.00</div>
+          <div style="font-size:9px;color:var(--dim);margin-top:4px">50% modal anggota</div>
+          <div style="margin-top:8px;background:var(--blue-dim);border-radius:6px;padding:5px;font-size:10px;color:var(--blue)">🏦 Cadangan Likuiditas</div>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:8px">Total Dana Kelolaan</div>
+        <div style="font-family:'Cinzel',serif;font-size:26px;font-weight:900;color:#f0e8d0" id="danaTotalKelola">$0.00</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:4px" id="danaAnggota">— anggota aktif</div>
+        <div style="margin-top:10px;border-radius:20px;overflow:hidden;height:8px;display:flex;gap:2px">
+          <div style="width:50%;background:var(--gold);border-radius:4px 0 0 4px"></div>
+          <div style="width:50%;background:var(--blue);border-radius:0 4px 4px 0"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <div style="font-size:9px;color:var(--gold)">⚡ EA 50%</div>
+          <div style="font-size:9px;color:var(--blue)">🛡️ Tabungan 50%</div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- TARGET BULANAN -->
   <section class="sec" id="target">
@@ -1197,6 +1233,16 @@ async function updatePublicStats(){
   const sub=document.getElementById('pubNetSub');if(sub)sub.textContent=`${d.hariTrading} hari trading`
   const wrEl=document.getElementById('pubWinRate');if(wrEl){wrEl.textContent=`${d.winRate}%`;wrEl.style.color=d.winRate>=60?'#27AE60':d.winRate>=40?'#c9a84c':'#E24B4A'}
   const wrSub=document.getElementById('pubWinRateSub');if(wrSub)wrSub.textContent=`${d.hariProfit} profit · ${d.hariLoss} loss`
+  // Total dividen disalurkan
+  const totDiv=getDivHistory().reduce((s,h)=>s+h.divTotal,0)
+  const divStat=document.getElementById('pubDivStat');if(divStat)divStat.textContent=`$${totDiv.toFixed(2)}`
+  // Dana kelolaan
+  const nas=getNasabahList()
+  const totModal=nas.reduce((s,n)=>s+n.modal,0)
+  const eaEl=document.getElementById('danaEA');if(eaEl)eaEl.textContent=`$${(totModal*0.5).toFixed(2)}`
+  const tabEl=document.getElementById('danaTabungan');if(tabEl)tabEl.textContent=`$${(totModal*0.5).toFixed(2)}`
+  const totEl=document.getElementById('danaTotalKelola');if(totEl)totEl.textContent=`$${totModal.toFixed(2)}`
+  const angEl=document.getElementById('danaAnggota');if(angEl)angEl.textContent=`${nas.length} anggota aktif`
   // Chart & lapkeu dari data lokal admin
   const laporan=getLocal()
   if(laporan.length){chartData=[...laporan].reverse();drawChart()}
@@ -1360,10 +1406,11 @@ async function renderBuku(){
   // Per nasabah card
   document.getElementById('bukuCards').innerHTML=nas.map((n,i)=>{
     const share=totModal>0?n.modal/totModal:1/nas.length
-    const divDiterima=divHistory.reduce((s,h)=>{const d=h.distribusi.find(x=>x.nama===n.nama);return s+(d?d.dividen:share*h.divTotal)},0)
+    const tabungan=getSaldoTabungan(n.nama)
+    const saldoTab=tabungan.saldo||0
     const tarikNas=tarikHistory.filter(t=>t.nama===n.nama).reduce((s,t)=>s+(+t.jumlah),0)
-    const saldoEA=n.modal*0.5
-    const deposito=n.modal*0.5-tarikHistory.filter(t=>t.nama===n.nama&&t.sumber==='deposito').reduce((s,t)=>s+(+t.jumlah),0)
+    const saldoDeposito=Math.max(0,n.modal*0.5-tarikHistory.filter(t=>t.nama===n.nama&&t.sumber==='deposito').reduce((s,t)=>s+(+t.jumlah),0))
+    const divDiterima=divHistory.reduce((s,h)=>{const d=h.distribusi.find(x=>x.nama===n.nama);return s+(d?d.dividen:share*h.divTotal)},0)
     return `<div class="nas-book">
       <div class="nas-book-head">
         <div class="nas-av" style="background:${n.warna}">${n.nama[0]}</div>
@@ -1373,19 +1420,23 @@ async function renderBuku(){
           ${n.rek?`<div class="nas-book-sub" style="color:var(--blue);margin-top:1px">🏦 ${n.rek}</div>`:''}
         </div>
         <div class="nas-book-saldo">
-          <div class="nas-book-saldo-val">+$${divDiterima.toFixed(4)}</div>
-          <div class="nas-book-saldo-lbl">Total Dividen</div>
+          <div class="nas-book-saldo-val">$${saldoTab.toFixed(4)}</div>
+          <div class="nas-book-saldo-lbl">Saldo Tabungan</div>
         </div>
       </div>
       <div class="nas-book-body">
         <div class="nas-row4">
           <div class="nas-box"><div class="nas-box-lbl">Modal Awal</div><div class="nas-box-val" style="color:var(--gold)">$${n.modal.toFixed(2)}</div></div>
-          <div class="nas-box"><div class="nas-box-lbl">🤖 Di EA</div><div class="nas-box-val" style="color:var(--gold)">$${saldoEA.toFixed(2)}</div></div>
-          <div class="nas-box"><div class="nas-box-lbl">🏦 Deposito</div><div class="nas-box-val" style="color:var(--blue)">$${Math.max(0,deposito).toFixed(2)}</div></div>
-          <div class="nas-box"><div class="nas-box-lbl">Ditarik</div><div class="nas-box-val" style="color:${tarikNas>0?'var(--red)':'var(--dim)'}">$${tarikNas.toFixed(2)}</div></div>
+          <div class="nas-box"><div class="nas-box-lbl">🤖 Di EA</div><div class="nas-box-val" style="color:var(--gold)">$${(n.modal*0.5).toFixed(2)}</div></div>
+          <div class="nas-box"><div class="nas-box-lbl">🏦 Deposito</div><div class="nas-box-val" style="color:var(--blue)">$${saldoDeposito.toFixed(2)}</div></div>
+          <div class="nas-box"><div class="nas-box-lbl">💰 Tabungan</div><div class="nas-box-val" style="color:var(--green)">$${saldoTab.toFixed(4)}</div></div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid #27AE6033;border-radius:8px;padding:8px;margin-bottom:8px">
+          <div style="font-size:9px;color:var(--dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Riwayat Tabungan Terakhir</div>
+          ${tabungan.riwayat?.slice(0,3).map(r=>`<div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid #1a1e2422"><span style="color:var(--muted)">${r.keterangan}</span><span style="color:${r.type==='masuk'?'var(--green)':'var(--red)'}">${r.type==='masuk'?'+':'-'}$${r.jumlah.toFixed(4)}</span></div>`).join('')||'<div style="font-size:10px;color:var(--dim)">Belum ada riwayat</div>'}
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-          <div style="flex:1;font-size:10px;color:var(--dim)">Dividen ${divHistory.filter(h=>h.distribusi.find(x=>x.nama===n.nama)||true).length} minggu · Total +$${divDiterima.toFixed(4)}</div>
+          <div style="flex:1;font-size:10px;color:var(--dim)">Total dividen masuk: +$${divDiterima.toFixed(4)}</div>
           ${n.wa?`<a href="https://wa.me/62${n.wa.replace(/^0/,'')}" target="_blank" style="background:var(--wa);color:#0a0c0f;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;text-decoration:none;white-space:nowrap">💬 WA</a>`:''}
         </div>
       </div>
@@ -1429,6 +1480,31 @@ function hitungDivPreview(){
   }).join('')
 }
 
+// ===== TABUNGAN VIRTUAL NASABAH =====
+function getTabungan(){return JSON.parse(localStorage.getItem('baroto_tabungan')||'{}')}
+function saveTabungan(t){localStorage.setItem('baroto_tabungan',JSON.stringify(t))}
+
+function getSaldoTabungan(nama){
+  const t=getTabungan()
+  return t[nama]||{saldo:0,riwayat:[]}
+}
+
+function tambahTabungan(nama,jumlah,keterangan,tgl){
+  const t=getTabungan()
+  if(!t[nama])t[nama]={saldo:0,riwayat:[]}
+  t[nama].saldo+=jumlah
+  t[nama].riwayat.unshift({type:'masuk',jumlah,keterangan,tgl,ts:new Date().toISOString()})
+  saveTabungan(t)
+}
+
+function tarikTabungan(nama,jumlah,keterangan,tgl){
+  const t=getTabungan()
+  if(!t[nama])t[nama]={saldo:0,riwayat:[]}
+  t[nama].saldo=Math.max(0,t[nama].saldo-jumlah)
+  t[nama].riwayat.unshift({type:'keluar',jumlah,keterangan,tgl,ts:new Date().toISOString()})
+  saveTabungan(t)
+}
+
 function simpanDividen(){
   const minggu=document.getElementById('divMinggu').value
   const bulan=document.getElementById('divBulan').value
@@ -1446,7 +1522,10 @@ function simpanDividen(){
   const ops=profit*PCT_OPS
   const distribusi=nas.map(n=>{
     const share=totModal>0?n.modal/totModal:1/nas.length
-    return{nama:n.nama,warna:n.warna,rek:n.rek||'',wa:n.wa||'',modal:n.modal,share,dividen:divTotal*share,sudahTransfer:false}
+    const dividen=divTotal*share
+    // Otomatis masuk tabungan virtual
+    tambahTabungan(n.nama,dividen,`Dividen Minggu ke-${minggu} ${fmtBulan(bulan)}`,tgl)
+    return{nama:n.nama,warna:n.warna,rek:n.rek||'',wa:n.wa||'',modal:n.modal,share,dividen,sudahMasukTabungan:true,sudahTransfer:false}
   })
   const id=Date.now()
   const label=`Minggu ke-${minggu} ${fmtBulan(bulan)}`
@@ -1461,11 +1540,10 @@ function simpanDividen(){
   document.getElementById('divBalance').value=''
   document.getElementById('divCatatan').value=''
   document.getElementById('divPreviewBox').style.display='none'
-  showToast('✅ Distribusi disimpan!')
+  showToast('✅ Dividen masuk tabungan anggota!')
   renderDividen()
   renderBuku()
   updatePublicDividen()
-  // Buka modal WA
   bukaWaDiv(id)
 }
 
@@ -1473,7 +1551,7 @@ function bukaWaDiv(id){
   const history=getDivHistory()
   const h=history.find(x=>x.id===id)
   if(!h)return
-  const msg=`💎 *LAPORAN DIVIDEN — BAROTO INVESTASI*\n📅 ${fmtDate(h.tgl)}\n📌 ${h.label}\n━━━━━━━━━━━━━━━━━━━━━━\n💰 Profit EA: +$${h.profit.toFixed(2)}\n🏦 Balance EA: $${h.balance?h.balance.toFixed(2):'?'}\n━━━━━━━━━━━━━━━━━━━━━━\n🔧 60% Operasional: $${h.ops.toFixed(2)}\n💎 40% Dividen: $${h.divTotal.toFixed(4)}\n━━━━━━━━━━━━━━━━━━━━━━\n*TRANSFER DIVIDEN PER NASABAH:*\n${h.distribusi.map(d=>`👤 ${d.nama.padEnd(8)}: +$${d.dividen.toFixed(4)}\n   🏦 ${d.rek||'(rekening belum diisi)'}`).join('\n')}\n━━━━━━━━━━━━━━━━━━━━━━${h.catatan?'\n📝 '+h.catatan+'\n━━━━━━━━━━━━━━━━━━━━━━':''}\n⚠️ High Risk Trading\n_WA: 0812-3016-198_`
+  const msg=`💎 *LAPORAN DIVIDEN — BAROTO INVESTASI*\n📅 ${fmtDate(h.tgl)}\n📌 ${h.label}\n━━━━━━━━━━━━━━━━━━━━━━\n💰 Profit EA: +$${h.profit.toFixed(2)}\n🏦 Balance EA: $${h.balance?h.balance.toFixed(2):'?'}\n━━━━━━━━━━━━━━━━━━━━━━\n🔧 60% Operasional: $${h.ops.toFixed(2)}\n💎 40% Dividen: $${h.divTotal.toFixed(4)}\n━━━━━━━━━━━━━━━━━━━━━━\n*DIVIDEN MASUK TABUNGAN ANGGOTA:*\n${h.distribusi.map(d=>`💰 ${d.nama.padEnd(8)}: +$${d.dividen.toFixed(4)} → Tabungan`).join('\n')}\n━━━━━━━━━━━━━━━━━━━━━━\n📌 Dividen tersimpan di tabungan virtual\nAnggota dapat tarik kapan saja via admin${h.catatan?'\n📝 '+h.catatan:''}\n━━━━━━━━━━━━━━━━━━━━━━\n⚠️ High Risk Trading\n_WA: 0812-3016-198_`
   document.getElementById('divWaMsg').textContent=msg
   document.getElementById('divWaModal').classList.add('open')
   window._divWaMsg=msg
@@ -1609,6 +1687,9 @@ function simpanTarik(){
   const history=getTarikHistory()
   history.unshift(entry)
   saveTarikHistory(history)
+  // Kurangi saldo tabungan jika tarik dari profit/dividen
+  if(sumberTarik==='profit')tarikTabungan(nasNama,jml,'Penarikan tunai',tgl)
+  else if(sumberTarik==='keduanya')tarikTabungan(nasNama,jml*0.5,'Penarikan (bagian profit)',tgl)
   // Reset
   document.getElementById('tarikJml').value=''
   document.getElementById('tarikRek').value=''
@@ -2164,11 +2245,44 @@ function cekPortofolio(){
   }
   const totModal=getNasabahList().reduce((s,n)=>s+n.modal,0)
   const share=totModal>0?nas.modal/totModal:0
+  const tabungan=getSaldoTabungan(nas.nama)
+  const saldoTab=tabungan.saldo||0
   const divHistory=getDivHistory()
   const divDiterima=divHistory.reduce((s,h)=>{const d=h.distribusi.find(x=>x.nama===nas.nama);return s+(d?d.dividen:share*h.divTotal)},0)
   const tarikHistory=getTarikHistory()
   const tarikNas=tarikHistory.filter(t=>t.nama===nas.nama).reduce((s,t)=>s+(+t.jumlah),0)
   const saldoDeposito=Math.max(0,nas.modal*0.5-tarikHistory.filter(t=>t.nama===nas.nama&&(t.sumber==='deposito'||t.sumber==='keduanya')).reduce((s,t)=>s+(+t.jumlahDeposito||0),0))
+
+  result.style.display='block'
+  result.innerHTML=`
+    <div style="background:var(--bg3);border:1px solid var(--gold-mid);border-radius:12px;overflow:hidden">
+      <div style="background:var(--gold-dim);padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
+        <div style="width:40px;height:40px;border-radius:50%;background:${nas.warna};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff">${nas.nama[0]}</div>
+        <div><div style="font-size:13px;font-weight:700;color:var(--gold)">${nas.nama}</div><div style="font-size:10px;color:var(--dim)">Share ${(share*100).toFixed(1)}% · ${divHistory.length} kali distribusi</div></div>
+      </div>
+      <div style="padding:12px 14px">
+        <!-- Saldo Tabungan highlight -->
+        <div style="background:linear-gradient(135deg,#27AE6015,#27AE6005);border:1px solid #27AE6033;border-radius:10px;padding:12px;text-align:center;margin-bottom:10px">
+          <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#27AE60;margin-bottom:4px">💰 Saldo Tabungan Kamu</div>
+          <div style="font-family:'Cinzel',serif;font-size:24px;font-weight:900;color:#27AE60">$${saldoTab.toFixed(4)}</div>
+          <div style="font-size:10px;color:var(--dim);margin-top:3px">Dividen terakumulasi — bisa ditarik kapan saja</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px;text-align:center">
+            <div style="font-size:9px;color:var(--dim);margin-bottom:2px">Modal Awal</div>
+            <div style="font-size:13px;font-weight:700;color:var(--gold)">$${nas.modal.toFixed(2)}</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px;text-align:center">
+            <div style="font-size:9px;color:var(--dim);margin-bottom:2px">🏦 Dana Cadangan</div>
+            <div style="font-size:13px;font-weight:700;color:var(--blue)">$${saldoDeposito.toFixed(2)}</div>
+          </div>
+        </div>
+        <!-- Riwayat tabungan -->
+        ${tabungan.riwayat?.length?`<div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Riwayat Tabungan</div>
+        <div style="max-height:160px;overflow-y:auto">${tabungan.riwayat.slice(0,8).map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:11px;color:var(--muted)">${r.keterangan}</div><div style="font-size:9px;color:var(--dim)">${r.tgl}</div></div><span style="font-size:12px;font-weight:700;color:${r.type==='masuk'?'var(--green)':'var(--red)'}">${r.type==='masuk'?'+':'-'}$${r.jumlah.toFixed(4)}</span></div>`).join('')}</div>`:'<div style="text-align:center;font-size:11px;color:var(--dim);padding:10px">Belum ada riwayat tabungan</div>'}
+        <div style="margin-top:10px;padding:8px;background:var(--bg2);border-radius:8px;font-size:10px;color:var(--dim);text-align:center">Untuk tarik saldo, hubungi admin WA <strong style="color:var(--wa)">0812-3016-198</strong></div>
+      </div>
+    </div>`
 
   result.style.display='block'
   result.innerHTML=`
