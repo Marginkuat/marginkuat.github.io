@@ -2111,43 +2111,67 @@ function renderTargetPublik(){
   const bulanKey=`${now.getFullYear()}-${pad(now.getMonth()+1)}`
   const targets=getTargets()
 
-  // Ambil balance akhir bulan lalu dari data historis
+  // Balance akhir bulan lalu
   const data=getLocal()
   const bulanLalu=new Date(now.getFullYear(),now.getMonth()-1,1)
   const bulanLaluKey=`${bulanLalu.getFullYear()}-${pad(bulanLalu.getMonth()+1)}`
-  // Cari data terakhir di bulan lalu
-  const databulanLalu=data.filter(d=>d.tanggal.startsWith(bulanLaluKey))
-  const balanceBulanLalu=databulanLalu.length>0?parseFloat(databulanLalu[0].balance)||0:PUBLIK_DATA.balance
-
-  // Target = manual jika sudah diset, atau otomatis 25% dari balance bulan lalu
+  const dataBulanLalu=data.filter(d=>d.tanggal.startsWith(bulanLaluKey))
+  const balanceBulanLalu=dataBulanLalu.length>0?parseFloat(dataBulanLalu[0].balance)||0:PUBLIK_DATA.balance
   const target=targets[bulanKey]||(balanceBulanLalu*0.25)
 
-  // Hitung profit/loss bulan ini
+  // Net P/L kumulatif bulan ini (profit - loss semua hari)
   const dataBulanIni=data.filter(d=>d.tanggal.startsWith(bulanKey))
   const profitBulanIni=dataBulanIni.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
   const lossBulanIni=dataBulanIni.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
   const netBulan=profitBulanIni-lossBulanIni
-  const pct=target>0?Math.min(100,Math.round(netBulan/target*100)):0
+
+  // Progress: dari -target sampai +target
+  // 0% = netBulan <= -target, 50% = netBulan = 0, 100% = netBulan >= target
+  const range=target*2 // total range dari -target ke +target
+  const posisi=netBulan+target // posisi dalam range (0 = bawah, range = atas)
+  const pct=Math.min(100,Math.max(0,Math.round(posisi/range*100)))
 
   const lbl=document.getElementById('targetBulanLabel')
   if(lbl)lbl.textContent=`Target ${MONTHS[now.getMonth()]} ${now.getFullYear()}`
   const nom=document.getElementById('targetNominal')
   if(nom)nom.textContent=`+$${target.toFixed(2)}`
-  const bar=document.getElementById('targetBar')
-  if(bar){bar.style.width=`${Math.max(0,pct)}%`;bar.style.background=pct>=100?'#27AE60':pct>=50?'linear-gradient(90deg,#27AE60,#c9a84c)':'linear-gradient(90deg,#c9a84c,#5ba3f5)'}
-  const terc=document.getElementById('targetTercapai')
-  if(terc){terc.textContent=`${netBulan>=0?'+':''}$${netBulan.toFixed(2)}`;terc.style.color=netBulan>=0?'var(--green)':'var(--red)'}
-  const pctEl=document.getElementById('targetPct')
-  if(pctEl){pctEl.textContent=`${Math.max(0,pct)}%`;pctEl.style.color=pct>=100?'#27AE60':pct>=50?'#c9a84c':'var(--dim)'}
 
-  // Sub info balance bulan lalu
+  // Warna bar
+  const bar=document.getElementById('targetBar')
+  if(bar){
+    bar.style.width=`${pct}%`
+    if(netBulan>=target)bar.style.background='#27AE60'
+    else if(netBulan>=0)bar.style.background='linear-gradient(90deg,#27AE60,#c9a84c)'
+    else if(netBulan>=-target*0.5)bar.style.background='linear-gradient(90deg,#c9a84c,#5ba3f5)'
+    else bar.style.background='#E24B4A'
+  }
+
+  const terc=document.getElementById('targetTercapai')
+  if(terc){
+    terc.textContent=`${netBulan>=0?'+':''}$${netBulan.toFixed(2)}`
+    terc.style.color=netBulan>=target?'#27AE60':netBulan>=0?'#c9a84c':'var(--red)'
+  }
+  const pctEl=document.getElementById('targetPct')
+  if(pctEl){
+    pctEl.textContent=`${netBulan>=0?'+':''}$${netBulan.toFixed(2)} / +$${target.toFixed(2)}`
+    pctEl.style.fontSize='10px'
+    pctEl.style.color=netBulan>=target?'#27AE60':netBulan>=0?'#c9a84c':'var(--red)'
+  }
+
+  // Sub info
   const subEl=document.getElementById('targetSubInfo')
-  if(subEl)subEl.textContent=`Dasar: 25% × $${balanceBulanLalu.toFixed(2)} (balance ${MONTHS[bulanLalu.getMonth()]} ${bulanLalu.getFullYear()})`
+  if(subEl){
+    const sisa=target-netBulan
+    if(netBulan>=target) subEl.textContent=`🎉 Target tercapai! Surplus +$${(netBulan-target).toFixed(2)}`
+    else if(netBulan>=0) subEl.textContent=`Kurang $${sisa.toFixed(2)} lagi untuk capai target`
+    else subEl.textContent=`Rugi $${Math.abs(netBulan).toFixed(2)} + butuh $${target.toFixed(2)} = perlu +$${sisa.toFixed(2)} lagi`
+  }
 
   const stEl=document.getElementById('targetStatus')
   if(stEl){
-    if(pct>=100){stEl.style.display='block';stEl.style.background='#27AE6015';stEl.style.border='1px solid #27AE6033';stEl.style.color='#27AE60';stEl.textContent='🎉 Target bulan ini tercapai!'}
+    if(netBulan>=target){stEl.style.display='block';stEl.style.background='#27AE6015';stEl.style.border='1px solid #27AE6033';stEl.style.color='#27AE60';stEl.textContent=`🎉 Target +$${target.toFixed(2)} tercapai! Net bulan ini: +$${netBulan.toFixed(2)}`}
     else if(pct>=75){stEl.style.display='block';stEl.style.background='var(--gold-dim)';stEl.style.border='1px solid var(--gold-mid)';stEl.style.color='var(--gold)';stEl.textContent='💪 Hampir tercapai — terus semangat!'}
+    else if(netBulan<0){stEl.style.display='block';stEl.style.background='#E24B4A10';stEl.style.border='1px solid #E24B4A33';stEl.style.color='#eb8585';stEl.textContent=`⚠️ Posisi: ${netBulan.toFixed(2)} — butuh recovery +$${(target-netBulan).toFixed(2)}`}
     else stEl.style.display='none'
   }
 
