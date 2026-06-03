@@ -1092,13 +1092,13 @@ function saveNasabahList(l){localStorage.setItem('baroto_nasabah',JSON.stringify
 // ===== DATA PUBLIK (hardcode — update tiap upload GitHub) =====
 // Admin: setelah input data, klik "📢 Update Data Publik" untuk generate kode baru
 const PUBLIK_DATA = {
-  balance: 424.79,
-  netPL: 404.48,
-  hariTrading: 15,
+  balance: 272.51,
+  netPL: 252.20,
+  hariTrading: 16,
   hariProfit: 10,
-  hariLoss: 5,
-  winRate: 67,
-  lastUpdate: '2026-06-02'
+  hariLoss: 6,
+  winRate: 63,
+  lastUpdate: '2026-06-03'
 }
 
 // ===== DB (localStorage only) =====
@@ -1132,6 +1132,7 @@ const DATA_HISTORIS = [
   {tanggal:'2026-05-12',type:'profit',nominal:80.00,balance:290.00,trade:'?',catatan:'Profit Mei 2026'},
   {tanggal:'2026-05-19',type:'profit',nominal:78.53,balance:376.00,trade:'?',catatan:'Profit Mei 2026'},
   {tanggal:'2026-06-02',type:'profit',nominal:48.42,balance:424.79,trade:'3',catatan:'Profit Jun 2026 — P/L tertutup +48.42'},
+  {tanggal:'2026-06-03',type:'loss',nominal:152.28,balance:272.51,trade:'3',catatan:'Loss Jun 2026 — SL gap/slip x3'},
 ]
 
 function getLocal(){
