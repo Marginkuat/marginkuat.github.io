@@ -348,7 +348,41 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <a href="https://tiktok.com/@datuk_eurusd" class="btn-ghost" target="_blank">📊 Lihat Kinerja ↓</a>
     </div>
     <div class="container">
-      <div style="background:#1a1e2488;border:1px solid var(--gold-mid);border-radius:12px;padding:14px 16px;margin:20px auto 0;max-width:560px;line-height:1.8">
+      <!-- TARGET BULANAN -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin:16px auto 10px;max-width:560px">
+        <div style="text-align:center;margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--text)" id="targetBulanLabel">—</div>
+          <div style="font-size:10px;color:var(--dim);margin-top:2px" id="targetSubInfo">Target 100% dari balance bulan lalu</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px" id="targetRingkasan">—</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px">
+          <div style="text-align:center;flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px">
+            <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:3px">Balance Lalu</div>
+            <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:900;color:var(--muted)" id="targetDari">$0</div>
+          </div>
+          <div style="font-size:22px;color:var(--gold)">→</div>
+          <div style="text-align:center;flex:1;background:var(--gold-dim);border:1px solid var(--gold-mid);border-radius:10px;padding:10px">
+            <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:3px">Target</div>
+            <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:900;color:var(--gold)" id="targetKe">$0</div>
+          </div>
+        </div>
+        <div style="background:var(--bg3);border-radius:20px;height:16px;overflow:hidden;margin-bottom:7px;position:relative">
+          <div id="targetBar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,#27AE60,#c9a84c);transition:width .6s;width:0%;position:relative">
+            <div id="targetBarLabel" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:#0a0c0f;white-space:nowrap"></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:11px;color:var(--muted)">Posisi: <span id="targetTercapai" style="font-weight:700">$0</span></div>
+          <div style="font-size:12px;font-weight:700" id="targetPct">0%</div>
+        </div>
+        <div id="targetStatus" style="text-align:center;font-size:11px;padding:7px;border-radius:8px;display:none;margin-bottom:8px"></div>
+        <div style="background:#E24B4A10;border:1px solid #E24B4A33;border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:10px;color:#eb8585;line-height:1.7">⚠️ <strong>HIGH RISK</strong> — Target tidak menjamin keuntungan<br>Profit & rugi ditanggung bersama secara proporsional</div>
+        </div>
+      </div>
+
+      <!-- KOMITMEN -->
+      <div style="background:#1a1e2488;border:1px solid var(--gold-mid);border-radius:12px;padding:14px 16px;margin:0 auto 0;max-width:560px;line-height:1.8">
           <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px;text-align:center">📜 KOMITMEN BAROTO INVESTASI</div>
           <div style="font-size:11px;color:var(--muted);text-align:center">
             Kami tidak menjanjikan keuntungan pasti.<br>
@@ -408,54 +442,6 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
         <div style="display:flex;justify-content:space-between;margin-top:4px">
           <div style="font-size:9px;color:var(--gold)">⚡ EA 50%</div>
           <div style="font-size:9px;color:var(--blue)">🛡️ Tabungan 50%</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- TARGET BULANAN -->
-  <section class="sec" id="target">
-    <div class="container">
-      <div class="sec-head"><div class="sec-title">Target Bulan Ini</div><div class="sec-line"></div></div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
-
-        <!-- Label bulan -->
-        <div style="text-align:center;margin-bottom:14px">
-          <div style="font-size:11px;font-weight:700;color:var(--text)" id="targetBulanLabel">—</div>
-          <div style="font-size:10px;color:var(--dim);margin-top:3px" id="targetSubInfo">Target 100% dari balance bulan lalu</div>
-        </div>
-
-        <!-- FROM → TO -->
-        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:14px">
-          <div style="text-align:center;flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
-            <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Balance Lalu</div>
-            <div style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;color:var(--muted)" id="targetDari">$0</div>
-          </div>
-          <div style="font-size:24px;color:var(--gold)">→</div>
-          <div style="text-align:center;flex:1;background:var(--gold-dim);border:1px solid var(--gold-mid);border-radius:10px;padding:12px">
-            <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:4px">Target</div>
-            <div style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;color:var(--gold)" id="targetKe">$0</div>
-          </div>
-        </div>
-
-        <!-- Progress bar -->
-        <div style="background:var(--bg3);border-radius:20px;height:18px;overflow:hidden;margin-bottom:8px;position:relative">
-          <div id="targetBar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,#27AE60,#c9a84c);transition:width .6s;width:0%;position:relative">
-            <div id="targetBarLabel" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:#0a0c0f;white-space:nowrap"></div>
-          </div>
-        </div>
-
-        <!-- Info -->
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div style="font-size:11px;color:var(--muted)">Posisi: <span id="targetTercapai" style="font-weight:700">$0</span></div>
-          <div style="font-size:12px;font-weight:700" id="targetPct">0%</div>
-        </div>
-
-        <div id="targetStatus" style="text-align:center;font-size:11px;padding:8px;border-radius:8px;display:none;margin-bottom:10px"></div>
-
-        <!-- WARNING -->
-        <div style="background:#E24B4A10;border:1px solid #E24B4A33;border-radius:8px;padding:10px;text-align:center">
-          <div style="font-size:10px;color:#eb8585;line-height:1.7">⚠️ <strong>HIGH RISK</strong> — Target tidak menjamin keuntungan<br>Profit & rugi ditanggung bersama secara proporsional</div>
         </div>
       </div>
     </div>
@@ -2190,7 +2176,10 @@ function renderTargetPublik(){
   if(lbl)lbl.textContent=`TARGET ${MONTHS[now.getMonth()].toUpperCase()} ${now.getFullYear()}`
 
   const subEl=document.getElementById('targetSubInfo')
-  if(subEl)subEl.textContent=`50% dari balance ${MONTHS[bulanLalu.getMonth()]} ${bulanLalu.getFullYear()}`
+  if(subEl)subEl.textContent=`Target 100% dari balance ${MONTHS[bulanLalu.getMonth()]} ${bulanLalu.getFullYear()}`
+
+  const ringEl=document.getElementById('targetRingkasan')
+  if(ringEl)ringEl.innerHTML=`Balance ${MONTHS[bulanLalu.getMonth()]}: <strong style="color:var(--gold)">$${balanceLalu.toFixed(2)}</strong> &nbsp;·&nbsp; Target profit: <strong style="color:var(--green)">+$${targetProfit.toFixed(2)}</strong>`
 
   const dari=document.getElementById('targetDari')
   if(dari)dari.textContent=`$${balanceLalu.toFixed(0)}`
