@@ -1134,19 +1134,95 @@ const PUBLIK_DATA = {
   lastUpdate: '2026-06-03'
 }
 
-// ===== DB (localStorage only) =====
+// ===== SUPABASE CONFIG =====
+const SB_URL='https://tnucvqhlyngjxzpxpnsv.supabase.co'
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRudWN2cWhseW5nanh6cHhwbnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NzY1NzUsImV4cCI6MjA5NjE1MjU3NX0.f-Jtqb6F38ypJr7VNy0Kki1ME3Y0Qe1OrvjMqrb5pDk'
+const SB_HEADERS={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+
+// ===== DB (Supabase) =====
 async function initDB(){
-  setStatus('online','Data lokal siap ✅')
-  updatePublicStats()
+  setStatus('loading','Menghubungkan Supabase...')
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/laporan?select=count`,{headers:SB_HEADERS})
+    if(r.ok){
+      setStatus('online','Database terhubung ✅')
+      // Sync data historis ke Supabase jika belum ada
+      await syncHistorisToSupabase()
+      updatePublicStats()
+    }else throw new Error()
+  }catch{
+    setStatus('offline','Offline — data lokal')
+    updatePublicStats()
+  }
 }
-async function readDB(){return getLocal()}
+
+async function syncHistorisToSupabase(){
+  try{
+    // Cek data yang sudah ada
+    const r=await fetch(`${SB_URL}/rest/v1/laporan?select=tanggal`,{headers:SB_HEADERS})
+    if(!r.ok)return
+    const existing=await r.json()
+    const existDates=new Set(existing.map(x=>x.tanggal))
+    // Upload data historis yang belum ada
+    const toUpload=DATA_HISTORIS.filter(d=>!existDates.has(d.tanggal))
+    if(toUpload.length){
+      await fetch(`${SB_URL}/rest/v1/laporan`,{
+        method:'POST',
+        headers:{...SB_HEADERS,'Prefer':'resolution=ignore-duplicates'},
+        body:JSON.stringify(toUpload)
+      })
+    }
+  }catch(e){console.log('Sync historis gagal',e)}
+}
+
+async function readDB(){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/laporan?select=*&order=tanggal.desc`,{headers:SB_HEADERS})
+    if(r.ok){
+      const data=await r.json()
+      if(data.length){saveLocal(data);return data}
+    }
+  }catch{}
+  return getLocal()
+}
+
 async function writeDB(laporan){
   saveLocal(laporan)
-  setStatus('online','Tersimpan ✅')
+  // Upsert ke Supabase
+  try{
+    const entry=laporan[0] // entry terbaru
+    const r=await fetch(`${SB_URL}/rest/v1/laporan`,{
+      method:'POST',
+      headers:{...SB_HEADERS,'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({
+        tanggal:entry.tanggal,
+        type:entry.type,
+        nominal:entry.nominal,
+        balance:entry.balance,
+        trade:entry.trade||'',
+        catatan:entry.catatan||''
+      })
+    })
+    if(r.ok){
+      setStatus('online','Tersimpan ke Supabase ✅')
+    }else{
+      setStatus('offline','Gagal sync — tersimpan lokal')
+    }
+  }catch{
+    setStatus('offline','Offline — tersimpan lokal')
+  }
   updatePublicStats()
   renderKinerja()
-  // Generate kode publik untuk di-copy admin
   generatePublikCode(laporan)
+}
+
+async function deleteFromDB(tgl){
+  try{
+    await fetch(`${SB_URL}/rest/v1/laporan?tanggal=eq.${tgl}`,{
+      method:'DELETE',
+      headers:SB_HEADERS
+    })
+  }catch(e){console.log('Delete gagal',e)}
 }
 // ===== DATA HISTORIS (hardcode untuk grafik publik) =====
 const DATA_HISTORIS = [
@@ -1224,28 +1300,46 @@ setInterval(tick,1000);tick()
 
 // ===== PUBLIC =====
 async function updatePublicStats(){
-  // Gunakan data publik yang di-hardcode di file (sama untuk semua HP)
-  const d=PUBLIK_DATA
-  const bal=document.getElementById('pubBalance');if(bal)bal.textContent=`$${d.balance.toFixed(2)} USD`
-  const bal2=document.getElementById('pubBal2');if(bal2)bal2.textContent=`$${d.balance.toFixed(2)}`
-  const netEl=document.getElementById('pubNet');if(netEl){netEl.textContent=`${d.netPL>=0?'+':''}$${parseFloat(d.netPL).toFixed(2)}`;netEl.style.color=d.netPL>=0?'#27AE60':'#E24B4A'}
-  const sub=document.getElementById('pubNetSub');if(sub)sub.textContent=`${d.hariTrading} hari trading`
-  const wrEl=document.getElementById('pubWinRate');if(wrEl){wrEl.textContent=`${d.winRate}%`;wrEl.style.color=d.winRate>=60?'#27AE60':d.winRate>=40?'#c9a84c':'#E24B4A'}
-  const wrSub=document.getElementById('pubWinRateSub');if(wrSub)wrSub.textContent=`${d.hariProfit} profit · ${d.hariLoss} loss`
-  // Total dividen disalurkan
+  // Ambil dari Supabase dulu (realtime untuk semua HP)
+  let data=[]
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/laporan?select=*&order=tanggal.desc`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}})
+    if(r.ok)data=await r.json()
+  }catch{}
+  // Fallback ke data lokal + historis
+  if(!data.length)data=getLocal()
+  if(!data.length)data=DATA_HISTORIS.sort((a,b)=>b.tanggal.localeCompare(a.tanggal))
+
+  const totP=data.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const totL=data.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const net=totP-totL
+  const lastBal=parseFloat(data[0]?.balance)||PUBLIK_DATA.balance
+  const hariProfit=data.filter(d=>d.type==='profit').length
+  const hariLoss=data.filter(d=>d.type==='loss').length
+  const winRate=data.length?Math.round(hariProfit/data.length*100):0
+
+  const bal=document.getElementById('pubBalance');if(bal)bal.textContent=`$${lastBal.toFixed(2)} USD`
+  const bal2=document.getElementById('pubBal2');if(bal2)bal2.textContent=`$${lastBal.toFixed(2)}`
+  const netEl=document.getElementById('pubNet');if(netEl){netEl.textContent=`${net>=0?'+':''}$${net.toFixed(2)}`;netEl.style.color=net>=0?'#27AE60':'#E24B4A'}
+  const sub=document.getElementById('pubNetSub');if(sub)sub.textContent=`${data.length} hari trading`
+  const wrEl=document.getElementById('pubWinRate');if(wrEl){wrEl.textContent=`${winRate}%`;wrEl.style.color=winRate>=60?'#27AE60':winRate>=40?'#c9a84c':'#E24B4A'}
+  const wrSub=document.getElementById('pubWinRateSub');if(wrSub)wrSub.textContent=`${hariProfit} profit · ${hariLoss} loss`
   const totDiv=getDivHistory().reduce((s,h)=>s+h.divTotal,0)
   const divStat=document.getElementById('pubDivStat');if(divStat)divStat.textContent=`$${totDiv.toFixed(2)}`
-  // Dana kelolaan
   const nas=getNasabahList()
   const totModal=nas.reduce((s,n)=>s+n.modal,0)
   const eaEl=document.getElementById('danaEA');if(eaEl)eaEl.textContent=`$${(totModal*0.5).toFixed(2)}`
   const tabEl=document.getElementById('danaTabungan');if(tabEl)tabEl.textContent=`$${(totModal*0.5).toFixed(2)}`
   const totEl=document.getElementById('danaTotalKelola');if(totEl)totEl.textContent=`$${totModal.toFixed(2)}`
   const angEl=document.getElementById('danaAnggota');if(angEl)angEl.textContent=`${nas.length} anggota aktif`
-  // Chart & lapkeu dari data lokal admin
-  const laporan=getLocal()
-  if(laporan.length){chartData=[...laporan].reverse();drawChart()}
+
+  // Update chart & kalender pakai data Supabase
+  chartData=[...data].reverse()
+  drawChart()
+  renderKinerja()
+  renderKalender()
   updateLapKeu()
+  renderTargetPublik()
 }
 function updatePublicNasabah(){
   const list=getNasabahList()
@@ -1384,10 +1478,11 @@ async function renderRiwayat(){
 }
 async function delEntry(tgl){
   if(!confirm('Hapus data '+tgl+'?'))return
+  // Hapus dari Supabase
+  await deleteFromDB(tgl)
   // Hapus dari localStorage
-  const data=(await readDB()).filter(x=>x.tanggal!==tgl)
+  const data=getLocal().filter(x=>x.tanggal!==tgl)
   saveLocal(data.filter(x=>!DATA_HISTORIS.find(h=>h.tanggal===x.tanggal)))
-  // Tandai sebagai deleted supaya tidak muncul dari DATA_HISTORIS
   const deleted=JSON.parse(localStorage.getItem('baroto_deleted')||'[]')
   if(!deleted.includes(tgl))deleted.push(tgl)
   localStorage.setItem('baroto_deleted',JSON.stringify(deleted))
