@@ -2788,15 +2788,16 @@ const MILESTONES=[
 
 async function renderMilestone(){
   const data=await readDB()
-  const maxBal=data.length?Math.max(...data.map(d=>parseFloat(d.balance)||0)):0
+  const allBal=data.map(d=>parseFloat(d.balance)||0).filter(b=>b>0)
+  const maxBal=allBal.length>0?Math.max.apply(null,allBal):0
   const el=document.getElementById('milestoneGrid')
   if(!el)return
   el.innerHTML=MILESTONES.map(m=>{
     const done=maxBal>=m.val
-    return `<div style="background:${done?'var(--gold-dim)':'var(--bg3)'};border:1px solid ${done?'var(--gold-mid)':'var(--border)'};border-radius:10px;padding:10px;text-align:center;transition:all .3s">
+    return `<div style="background:${done?'var(--gold-dim)':'var(--bg3)'};border:1px solid ${done?'var(--gold-mid)':'var(--border)'};border-radius:10px;padding:10px;text-align:center">
       <div style="font-size:20px;margin-bottom:4px;filter:${done?'none':'grayscale(1) opacity(.3)'}">${m.icon}</div>
       <div style="font-size:11px;font-weight:700;color:${done?'var(--gold)':'var(--dim)'}">${m.label}</div>
-      <div style="font-size:9px;color:${done?'#27AE60':'var(--dimmer)'};margin-top:2px">${done?'✅ Tercapai':'—'}</div>
+      <div style="font-size:9px;color:${done?'#27AE60':'var(--dimmer)'};margin-top:2px">${done?'✅ Tercapai':'⏳ Belum'}</div>
     </div>`
   }).join('')
 }
