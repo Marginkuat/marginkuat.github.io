@@ -714,6 +714,17 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
     </div>
   </section>
 
+  <!-- MILESTONE BOARD -->
+  <section class="sec" id="milestone">
+    <div class="container">
+      <div class="sec-head"><div class="sec-title">🏆 Milestone Board</div><div class="sec-line"></div></div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px">
+        <div style="font-size:10px;color:var(--dim);text-align:center;margin-bottom:12px">Pencapaian balance EA sejak berdiri</div>
+        <div id="milestoneGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+      </div>
+    </div>
+  </section>
+
   <section class="cta-section">
     <div class="container">
       <div class="cta-brand">BAROTO INVESTASI</div>
@@ -812,8 +823,15 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
 
       <button class="btn btn-gold" id="btnSimpan" onclick="simpanData()">💾 Simpan & Generate Laporan WA</button>
       <div class="preview-box" id="previewBox"><div class="preview-label">👁 PREVIEW LAPORAN WA</div><div class="preview-msg" id="previewMsg"></div></div>
-      <button class="btn btn-wa2" id="btnWA" style="display:none" onclick="kirimWA()">💬 Kirim ke Grup WA</button>
+      <button class="btn btn-wa2" id="btnWA" style="display:none" onclick="kirimWA()">💬 Kirim WA Otomatis</button>
       <button class="btn btn-copy" id="btnCopy" style="display:none" onclick="copyMsg()">📋 Copy Pesan</button>
+
+      <!-- LAPORAN PDF -->
+      <div class="card" style="border-color:#9B59B644;margin-top:4px">
+        <div class="card-title" style="color:#9B59B6">📊 LAPORAN BULANAN PDF</div>
+        <div class="field"><label>Pilih Bulan</label><input type="month" id="pdfBulan"/></div>
+        <button class="btn" style="background:#9B59B622;color:#9B59B6;border:1px solid #9B59B644" onclick="generatePDF()">📄 Generate & Download PDF</button>
+      </div>
 
       <!-- TARGET BULANAN -->
       <div class="card" style="border-color:#c9a84c44;margin-top:4px">
@@ -1360,6 +1378,7 @@ function doLogin(){
     document.getElementById('galTgl').value=tglToday
     const mo=`${now.getFullYear()}-${pad(now.getMonth()+1)}`
     document.getElementById('divBulan').value=mo
+    document.getElementById('pdfBulan').value=mo
     initDB()
     renderAll()
     populateTarikNas()
@@ -1387,7 +1406,7 @@ function showAPage(id,el){
   if(renders[id])renders[id]()
 }
 
-function renderAll(){renderRiwayat();renderBuku();renderDividen();renderTarik();renderKelola();renderGaleri()}
+function renderAll(){renderRiwayat();renderBuku();renderDividen();renderTarik();renderKelola();renderGaleri();renderMilestone()}
 
 // ===== TYPE PROFIT/LOSS =====
 let cType=null
@@ -2754,6 +2773,133 @@ function drawChart(){
     <div class="stat-card"><div class="s-label">Hari Trading</div><div class="s-val" style="font-size:14px">${filtered.length}</div></div>`
 }
 
+// ===== MILESTONE BOARD =====
+const MILESTONES=[
+  {val:100,label:'$100',icon:'🌱'},
+  {val:200,label:'$200',icon:'🌿'},
+  {val:300,label:'$300',icon:'🌳'},
+  {val:500,label:'$500',icon:'⭐'},
+  {val:750,label:'$750',icon:'💫'},
+  {val:1000,label:'$1.000',icon:'🏆'},
+  {val:1500,label:'$1.500',icon:'💎'},
+  {val:2000,label:'$2.000',icon:'👑'},
+  {val:5000,label:'$5.000',icon:'🚀'},
+]
+
+async function renderMilestone(){
+  const data=await readDB()
+  const maxBal=data.length?Math.max(...data.map(d=>parseFloat(d.balance)||0)):0
+  const el=document.getElementById('milestoneGrid')
+  if(!el)return
+  el.innerHTML=MILESTONES.map(m=>{
+    const done=maxBal>=m.val
+    return `<div style="background:${done?'var(--gold-dim)':'var(--bg3)'};border:1px solid ${done?'var(--gold-mid)':'var(--border)'};border-radius:10px;padding:10px;text-align:center;transition:all .3s">
+      <div style="font-size:20px;margin-bottom:4px;filter:${done?'none':'grayscale(1) opacity(.3)'}">${m.icon}</div>
+      <div style="font-size:11px;font-weight:700;color:${done?'var(--gold)':'var(--dim)'}">${m.label}</div>
+      <div style="font-size:9px;color:${done?'#27AE60':'var(--dimmer)'};margin-top:2px">${done?'✅ Tercapai':'—'}</div>
+    </div>`
+  }).join('')
+}
+
+// ===== LAPORAN PDF =====
+async function generatePDF(){
+  const bulan=document.getElementById('pdfBulan').value
+  if(!bulan){alert('Pilih bulan dulu!');return}
+  const [y,m]=bulan.split('-')
+  const bulanLabel=`${MONTHS[parseInt(m)-1]} ${y}`
+  const data=await readDB()
+  const databulan=data.filter(d=>d.tanggal.startsWith(bulan))
+  if(!databulan.length){alert('Tidak ada data untuk bulan ini!');return}
+
+  const totP=databulan.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
+  const totL=databulan.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const net=totP-totL
+  const lastBal=parseFloat(databulan[0]?.balance)||0
+  const wr=databulan.length?Math.round(databulan.filter(d=>d.type==='profit').length/databulan.length*100):0
+  const nas=getNasabahList()
+  const totModal=getTotModal()
+  const divHistory=getDivHistory().filter(h=>h.bulan===bulan)
+  const totDiv=divHistory.reduce((s,h)=>s+h.divTotal,0)
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <style>
+    body{font-family:Arial,sans-serif;color:#1a1a1a;padding:30px;max-width:700px;margin:0 auto}
+    .header{text-align:center;border-bottom:3px solid #c9a84c;padding-bottom:16px;margin-bottom:20px}
+    .title{font-size:22px;font-weight:900;color:#c9a84c;letter-spacing:2px}
+    .sub{font-size:11px;color:#666;margin-top:4px}
+    .section{margin-bottom:20px}
+    .sec-title{font-size:12px;font-weight:700;color:#c9a84c;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #c9a84c33;padding-bottom:6px;margin-bottom:10px}
+    .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:12px}
+    .row:last-child{border-bottom:none}
+    .lbl{color:#666}.val{font-weight:700}
+    .profit{color:#27AE60}.loss{color:#E24B4A}
+    .total-row{background:#f9f3e3;padding:10px;border-radius:6px;display:flex;justify-content:space-between;font-weight:700;margin-top:8px}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{background:#c9a84c;color:#fff;padding:8px;text-align:left}
+    td{padding:7px 8px;border-bottom:1px solid #f0f0f0}
+    tr:nth-child(even)td{background:#fafafa}
+    .footer{text-align:center;font-size:10px;color:#999;margin-top:30px;padding-top:16px;border-top:1px solid #eee}
+    .warning{background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px;font-size:10px;color:#856404;margin-top:16px}
+  </style></head><body>
+  <div class="header">
+    <div class="title">BAROTO INVESTASI</div>
+    <div class="sub">Laporan Bulanan EA Trading XAUUSD</div>
+    <div class="sub"><strong>${bulanLabel}</strong> · Dicetak: ${new Date().toLocaleDateString('id-ID')}</div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">Ringkasan Kinerja</div>
+    <div class="row"><span class="lbl">Total Hari Trading</span><span class="val">${databulan.length} hari</span></div>
+    <div class="row"><span class="lbl">Total Profit</span><span class="val profit">+$${totP.toFixed(2)}</span></div>
+    <div class="row"><span class="lbl">Total Loss</span><span class="val loss">-$${totL.toFixed(2)}</span></div>
+    <div class="row"><span class="lbl">Win Rate</span><span class="val">${wr}%</span></div>
+    <div class="row"><span class="lbl">Balance Akhir</span><span class="val">$${lastBal.toFixed(2)}</span></div>
+    <div class="total-row"><span>Net P/L Bulan Ini</span><span class="${net>=0?'profit':'loss'}">${net>=0?'+':''}$${net.toFixed(2)}</span></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">Detail Harian</div>
+    <table><thead><tr><th>Tanggal</th><th>Hasil</th><th>P/L</th><th>Balance</th><th>Trade</th></tr></thead>
+    <tbody>${[...databulan].sort((a,b)=>a.tanggal.localeCompare(b.tanggal)).map(d=>`<tr>
+      <td>${fmtDate(d.tanggal)}</td>
+      <td style="color:${d.type==='profit'?'#27AE60':'#E24B4A'};font-weight:700">${d.type==='profit'?'PROFIT':'LOSS'}</td>
+      <td style="color:${d.type==='profit'?'#27AE60':'#E24B4A'};font-weight:700">${d.type==='profit'?'+':'-'}$${(+d.nominal).toFixed(2)}</td>
+      <td>$${parseFloat(d.balance).toFixed(2)}</td>
+      <td>${d.trade||'—'}</td>
+    </tr>`).join('')}</tbody></table>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">Distribusi Dividen</div>
+    ${totDiv>0?`
+    <div class="row"><span class="lbl">Total Profit EA</span><span class="val profit">+$${net.toFixed(2)}</span></div>
+    <div class="row"><span class="lbl">60% Operasional</span><span class="val loss">$${(net*0.6).toFixed(2)}</span></div>
+    <div class="row"><span class="lbl">40% Dividen Anggota</span><span class="val profit">$${totDiv.toFixed(2)}</span></div>
+    <div class="total-row"><span>Total Dividen Dibagikan</span><span class="profit">$${totDiv.toFixed(2)}</span></div>`
+    :'<div style="color:#999;font-size:12px;padding:10px 0">Belum ada distribusi dividen bulan ini</div>'}
+  </div>
+
+  <div class="section">
+    <div class="sec-title">Data Anggota</div>
+    <table><thead><tr><th>Nama</th><th>Modal</th><th>Share</th><th>Deposito</th></tr></thead>
+    <tbody>${nas.map(n=>`<tr>
+      <td>${n.nama}</td><td>$${n.modal.toFixed(2)}</td>
+      <td>${(n.modal/totModal*100).toFixed(1)}%</td>
+      <td>$${(n.modal*0.5).toFixed(2)}</td>
+    </tr>`).join('')}</tbody></table>
+  </div>
+
+  <div class="warning">⚠️ <strong>HIGH RISK:</strong> Trading forex/emas mengandung risiko tinggi. Kinerja masa lalu tidak menjamin hasil masa depan. Laporan ini bersifat informatif untuk transparansi anggota Baroto Investasi.</div>
+  <div class="footer">Baroto Investasi · EA Trading XAUUSD · marginkuat.github.io · WA: 0812-3016-198<br>Modal Kecil, Peluang Besar, Risiko Terbagi · "Meraih Hidup Sejahtera, Bersama dalam Satu EA"</div>
+  </body></html>`
+
+  const w=window.open('','_blank')
+  w.document.write(html)
+  w.document.close()
+  setTimeout(()=>w.print(),500)
+  showToast('📄 PDF siap dicetak/disimpan!')
+}
+
 // ===== INIT =====
 updatePublicStats()
 updatePublicDividen()
@@ -2761,6 +2907,7 @@ updateLapKeu()
 renderKinerja()
 renderTargetPublik()
 renderKalender()
+renderMilestone()
 initChart()
 window.addEventListener('resize',drawChart)
 </script>
