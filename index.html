@@ -421,37 +421,42 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
 
         <!-- Label bulan -->
         <div style="text-align:center;margin-bottom:14px">
-          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--dim)" id="targetBulanLabel">—</div>
-          <div style="font-size:10px;color:var(--dimmer);margin-top:3px" id="targetSubInfo">Target 50% dari balance bulan lalu</div>
+          <div style="font-size:11px;font-weight:700;color:var(--text)" id="targetBulanLabel">—</div>
+          <div style="font-size:10px;color:var(--dim);margin-top:3px" id="targetSubInfo">Target 100% dari balance bulan lalu</div>
         </div>
 
         <!-- FROM → TO -->
         <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:14px">
-          <div style="text-align:center;flex:1">
+          <div style="text-align:center;flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
             <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Balance Lalu</div>
-            <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:900;color:var(--muted)" id="targetDari">$0</div>
+            <div style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;color:var(--muted)" id="targetDari">$0</div>
           </div>
-          <div style="font-size:20px;color:var(--gold)">→</div>
-          <div style="text-align:center;flex:1">
-            <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Target</div>
-            <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:900;color:var(--gold)" id="targetKe">$0</div>
+          <div style="font-size:24px;color:var(--gold)">→</div>
+          <div style="text-align:center;flex:1;background:var(--gold-dim);border:1px solid var(--gold-mid);border-radius:10px;padding:12px">
+            <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:4px">Target</div>
+            <div style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;color:var(--gold)" id="targetKe">$0</div>
           </div>
         </div>
 
         <!-- Progress bar -->
-        <div style="background:var(--bg3);border-radius:20px;height:16px;overflow:hidden;margin-bottom:8px;position:relative">
+        <div style="background:var(--bg3);border-radius:20px;height:18px;overflow:hidden;margin-bottom:8px;position:relative">
           <div id="targetBar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,#27AE60,#c9a84c);transition:width .6s;width:0%;position:relative">
-            <div id="targetBarLabel" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;color:#0a0c0f;white-space:nowrap"></div>
+            <div id="targetBarLabel" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:#0a0c0f;white-space:nowrap"></div>
           </div>
         </div>
 
-        <!-- Info bawah -->
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div style="font-size:11px;color:var(--muted)">Posisi sekarang: <span id="targetTercapai" style="font-weight:700">$0</span></div>
-          <div style="font-size:11px;font-weight:700" id="targetPct">0%</div>
+        <!-- Info -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:11px;color:var(--muted)">Posisi: <span id="targetTercapai" style="font-weight:700">$0</span></div>
+          <div style="font-size:12px;font-weight:700" id="targetPct">0%</div>
         </div>
 
-        <div id="targetStatus" style="text-align:center;font-size:11px;padding:8px;border-radius:8px;display:none;margin-top:6px"></div>
+        <div id="targetStatus" style="text-align:center;font-size:11px;padding:8px;border-radius:8px;display:none;margin-bottom:10px"></div>
+
+        <!-- WARNING -->
+        <div style="background:#E24B4A10;border:1px solid #E24B4A33;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:#eb8585;line-height:1.7">⚠️ <strong>HIGH RISK</strong> — Target tidak menjamin keuntungan<br>Profit & rugi ditanggung bersama secara proporsional</div>
+        </div>
       </div>
     </div>
   </section>
@@ -2167,7 +2172,7 @@ function renderTargetPublik(){
   const balanceLalu=dataBulanLalu.length>0?parseFloat(dataBulanLalu[0].balance)||PUBLIK_DATA.balance:PUBLIK_DATA.balance
 
   // Target = 50% dari balance bulan lalu
-  const targetProfit=targets[bulanKey]||(balanceLalu*0.5)
+  const targetProfit=targets[bulanKey]||(balanceLalu*1.0)
   const targetAkhir=balanceLalu+targetProfit
 
   // Net P/L kumulatif bulan ini
@@ -2234,7 +2239,7 @@ function renderTargetPublik(){
 
 function hitungTarget(){
   const bal=parseFloat(document.getElementById('targetBalanceRef').value)||0
-  if(bal>0)document.getElementById('targetNominalInp').value=(bal*0.5).toFixed(2)
+  if(bal>0)document.getElementById("targetNominalInp").value=(bal*1.0).toFixed(2)
 }
 
 // ===== KALENDER TRADING =====
