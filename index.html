@@ -1129,10 +1129,11 @@ function showPublic(){window.location.hash='';document.getElementById('publicSit
 
 // ===== NASABAH STORAGE =====
 const DEFAULT_NASABAH=[
-  {nama:'Arif',modal:25,rek:'BCA 1234567890',wa:'08123456789',warna:'#E74C3C'},
-  {nama:'Inul',modal:25,rek:'BNI 0987654321',wa:'08234567890',warna:'#9B59B6'},
-  {nama:'Rapel',modal:25,rek:'Mandiri 1122334455',wa:'08345678901',warna:'#2980B9'},
-  {nama:'Aci',modal:25,rek:'BCA 5566778899',wa:'08456789012',warna:'#27AE60'},
+  {nama:'Arif',modal:25,rek:'BCA 1234567890',wa:'08123456789',warna:'#E74C3C',kode:'ARIF01'},
+  {nama:'Inul',modal:25,rek:'BNI 0987654321',wa:'08234567890',warna:'#9B59B6',kode:'INUL01'},
+  {nama:'Rapel',modal:25,rek:'Mandiri 1122334455',wa:'08345678901',warna:'#2980B9',kode:'RAPEL01'},
+  {nama:'Aci',modal:25,rek:'BCA 5566778899',wa:'08456789012',warna:'#27AE60',kode:'ACI01'},
+  {nama:'Dwi Wahyuningsih',modal:328,rek:'',wa:'',warna:'#E91E63',kode:'DWI01'},
 ]
 function getNasabahList(){const s=localStorage.getItem('baroto_nasabah');return s?JSON.parse(s):DEFAULT_NASABAH}
 function saveNasabahList(l){localStorage.setItem('baroto_nasabah',JSON.stringify(l));updatePublicNasabah()}
@@ -1315,13 +1316,15 @@ setInterval(tick,1000);tick()
 
 // ===== PUBLIC =====
 async function updatePublicStats(){
-  // Ambil dari Supabase dulu (realtime untuk semua HP)
+  // Ambil dari Supabase realtime (tambah timestamp untuk hindari cache)
   let data=[]
   try{
-    const r=await fetch(`${SB_URL}/rest/v1/laporan?select=*&order=tanggal.desc`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}})
+    const ts=Date.now()
+    const r=await fetch(`${SB_URL}/rest/v1/laporan?select=*&order=tanggal.desc&_=${ts}`,{
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Cache-Control':'no-cache'}
+    })
     if(r.ok)data=await r.json()
   }catch{}
-  // Fallback ke data lokal + historis
   if(!data.length)data=getLocal()
   if(!data.length)data=DATA_HISTORIS.sort((a,b)=>b.tanggal.localeCompare(a.tanggal))
 
