@@ -1153,20 +1153,32 @@ const PUBLIK_DATA = {
 // ===== SUPABASE CONFIG =====
 const SB_URL='https://tnucvqhlyngjxzpxpnsv.supabase.co'
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRudWN2cWhseW5nanh6cHhwbnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NzY1NzUsImV4cCI6MjA5NjE1MjU3NX0.f-Jtqb6F38ypJr7VNy0Kki1ME3Y0Qe1OrvjMqrb5pDk'
-const SB_HEADERS={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+const SB_HEADERS={
+  'Content-Type':'application/json',
+  'apikey':SB_KEY,
+  'Authorization':'Bearer '+SB_KEY,
+  'Prefer':'return=minimal'
+}
 
 // ===== DB (Supabase) =====
 async function initDB(){
   setStatus('loading','Menghubungkan Supabase...')
   try{
-    const r=await fetch(`${SB_URL}/rest/v1/laporan?select=count`,{headers:SB_HEADERS})
-    if(r.ok){
+    const r=await fetch(`${SB_URL}/rest/v1/laporan?select=id&limit=1`,{
+      headers:{
+        'apikey':SB_KEY,
+        'Authorization':'Bearer '+SB_KEY
+      }
+    })
+    if(r.ok||r.status===200){
       setStatus('online','Database terhubung ✅')
-      // Sync data historis ke Supabase jika belum ada
       await syncHistorisToSupabase()
       updatePublicStats()
-    }else throw new Error()
-  }catch{
+    }else{
+      throw new Error('Status: '+r.status)
+    }
+  }catch(e){
+    console.error('initDB error:',e)
     setStatus('offline','Offline — data lokal')
     updatePublicStats()
   }
@@ -1204,27 +1216,35 @@ async function readDB(){
 
 async function writeDB(laporan){
   saveLocal(laporan)
-  // Upsert ke Supabase
   try{
-    const entry=laporan[0] // entry terbaru
+    const entry=laporan[0]
+    const body={
+      tanggal:entry.tanggal,
+      type:entry.type,
+      nominal:parseFloat(entry.nominal),
+      balance:parseFloat(entry.balance),
+      trade:entry.trade||'',
+      catatan:entry.catatan||''
+    }
     const r=await fetch(`${SB_URL}/rest/v1/laporan`,{
       method:'POST',
-      headers:{...SB_HEADERS,'Prefer':'resolution=merge-duplicates'},
-      body:JSON.stringify({
-        tanggal:entry.tanggal,
-        type:entry.type,
-        nominal:entry.nominal,
-        balance:entry.balance,
-        trade:entry.trade||'',
-        catatan:entry.catatan||''
-      })
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':SB_KEY,
+        'Authorization':'Bearer '+SB_KEY,
+        'Prefer':'resolution=merge-duplicates,return=minimal'
+      },
+      body:JSON.stringify(body)
     })
-    if(r.ok){
+    if(r.ok||r.status===201||r.status===200||r.status===204){
       setStatus('online','Tersimpan ke Supabase ✅')
     }else{
-      setStatus('offline','Gagal sync — tersimpan lokal')
+      const err=await r.text()
+      console.error('Supabase error:',r.status,err)
+      setStatus('offline','Gagal sync ('+r.status+') — tersimpan lokal')
     }
-  }catch{
+  }catch(e){
+    console.error('writeDB error:',e)
     setStatus('offline','Offline — tersimpan lokal')
   }
   updatePublicStats()
