@@ -1024,7 +1024,10 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
       <!-- FORM INPUT MUTASI -->
       <div class="card" style="border-color:#5ba3f544">
         <div class="card-title" style="color:var(--blue)">💳 CATAT MUTASI SALDO</div>
-        <div class="field"><label>Tanggal</label><input type="date" id="mutTgl"/></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="field"><label>Tanggal</label><input type="date" id="mutTgl"/></div>
+          <div class="field"><label>Pukul</label><input type="time" id="mutJam"/></div>
+        </div>
         <div class="field"><label>Jenis</label>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:0">
             <button class="toggle-btn" id="mutJ1" onclick="setMutJenis('ea-masuk')">➕ Deposit EA</button>
@@ -1430,13 +1433,15 @@ async function updatePublicStats(){
   if(!data.length)data=getLocal()
   if(!data.length)data=DATA_HISTORIS.sort((a,b)=>b.tanggal.localeCompare(a.tanggal))
 
-  const totP=data.filter(d=>d.type==='profit').reduce((s,d)=>s+(+d.nominal),0)
-  const totL=data.filter(d=>d.type==='loss').reduce((s,d)=>s+(+d.nominal),0)
+  const totP=data.filter(d=>d.type==='profit'&&parseFloat(d.nominal)>0).reduce((s,d)=>s+(+d.nominal),0)
+  const totL=data.filter(d=>d.type==='loss'&&parseFloat(d.nominal)>0).reduce((s,d)=>s+(+d.nominal),0)
   const net=totP-totL
-  const lastBal=parseFloat(data[0]?.balance)||PUBLIK_DATA.balance
-  const hariProfit=data.filter(d=>d.type==='profit').length
-  const hariLoss=data.filter(d=>d.type==='loss').length
-  const winRate=data.length?Math.round(hariProfit/data.length*100):0
+  // Ambil balance terbaru (entry pertama yang ada balance > 0)
+  const entryTerbaru=data.find(d=>parseFloat(d.balance)>0)
+  const lastBal=parseFloat(entryTerbaru?.balance)||PUBLIK_DATA.balance
+  const hariProfit=data.filter(d=>d.type==='profit'&&parseFloat(d.nominal)>0).length
+  const hariLoss=data.filter(d=>d.type==='loss'&&parseFloat(d.nominal)>0).length
+  const winRate=(hariProfit+hariLoss)>0?Math.round(hariProfit/(hariProfit+hariLoss)*100):0
 
   const bal=document.getElementById('pubBalance');if(bal)bal.textContent=`$${lastBal.toFixed(2)} USD`
   const bal2=document.getElementById('pubBal2');if(bal2)bal2.textContent=`$${lastBal.toFixed(2)}`
@@ -1478,6 +1483,7 @@ function doLogin(){
     document.getElementById('divTgl').value=tglToday
     document.getElementById('tarikTgl').value=tglToday
     document.getElementById('mutTgl').value=tglToday
+    if(document.getElementById('mutJam'))document.getElementById('mutJam').value=`${pad(now.getHours())}:${pad(now.getMinutes())}`
     const mo=`${now.getFullYear()}-${pad(now.getMonth()+1)}`
     document.getElementById('divBulan').value=mo
     document.getElementById('pdfBulan').value=mo
@@ -2957,6 +2963,7 @@ function setMutJenis(j){
 
 async function simpanMutasi(){
   const tgl=document.getElementById('mutTgl').value
+  const jam=document.getElementById('mutJam')?.value||'00:00'
   const nominal=parseFloat(document.getElementById('mutNominal').value)||0
   const saldoAkhir=parseFloat(document.getElementById('mutSaldoAkhir').value)||0
   const ket=document.getElementById('mutKet').value.trim()
@@ -2965,37 +2972,38 @@ async function simpanMutasi(){
   if(!nominal){alert('Isi nominal!');return}
   if(!saldoAkhir){alert('Isi saldo setelah mutasi!');return}
 
+  const id=Date.now()
   const list=getMutasi()
-  list.unshift({id:Date.now(),tgl,jenis:mutJenis,nominal,saldoAkhir,keterangan:ket,ts:new Date().toISOString()})
+  list.unshift({id,tgl,jam,jenis:mutJenis,nominal,saldoAkhir,keterangan:ket,ts:new Date().toISOString()})
   saveMutasi(list)
 
-  // Otomatis update balance di Supabase jika mutasi EA
   if(mutJenis==='ea-masuk'||mutJenis==='ea-keluar'){
     const jenisLabel=mutJenis==='ea-masuk'?'Deposit EA':'WD EA'
-    const ket2=ket||jenisLabel+` $${nominal.toFixed(2)}`
-    // Simpan ke tabel laporan sebagai entry khusus
+    const ket2=ket||`${jenisLabel} $${nominal.toFixed(2)} pukul ${jam}`
+    // Gunakan tanggal+timestamp unik supaya tidak konflik dengan input harian
+    const tglUnik=`${tgl}-mut-${id}`
     try{
-      await fetch(`${SB_URL}/rest/v1/laporan?tanggal=eq.${tgl}`,{
-        method:'DELETE',
-        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
-      })
-      await fetch(`${SB_URL}/rest/v1/laporan`,{
+      const r=await fetch(`${SB_URL}/rest/v1/laporan`,{
         method:'POST',
         headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'},
         body:JSON.stringify({
-          tanggal:tgl,
+          tanggal:tglUnik,
           jenis:mutJenis==='ea-masuk'?'profit':'loss',
           nominal:0,
           balance:saldoAkhir,
-          trade:'0',
+          trade:'mutasi',
           catatan:ket2
         })
       })
-      showToast('✅ Mutasi & balance EA diupdate!')
+      if(r.ok||r.status===201||r.status===204){
+        setStatus('online','✅ Mutasi tersimpan & balance update!')
+        showToast('✅ Balance EA otomatis update ke $'+saldoAkhir.toFixed(2))
+      }else{
+        showToast('⚠️ Mutasi lokal OK — sync gagal')
+      }
     }catch{
-      showToast('✅ Mutasi disimpan — sync balance gagal')
+      showToast('⚠️ Mutasi lokal OK — offline')
     }
-    // Update PUBLIK_DATA balance
     updatePublicStats()
   }else{
     showToast('✅ Mutasi dana darurat disimpan!')
@@ -3005,6 +3013,7 @@ async function simpanMutasi(){
   document.getElementById('mutNominal').value=''
   document.getElementById('mutSaldoAkhir').value=''
   document.getElementById('mutKet').value=''
+  if(document.getElementById('mutJam'))document.getElementById('mutJam').value=pad(new Date().getHours())+':'+pad(new Date().getMinutes())
   mutJenis=null
   ;['mutJ1','mutJ2','mutJ3','mutJ4'].forEach(id=>document.getElementById(id).className='toggle-btn')
   renderMutasi()
@@ -3062,7 +3071,7 @@ function renderMutasi(){
       <div class="li-date">${fmtShort(m.tgl)}</div>
       <div class="li-info">
         <div class="li-title" style="color:${JENIS_COLOR[m.jenis]};font-weight:700">${JENIS_LABEL[m.jenis]}</div>
-        <div class="li-sub">Saldo akhir: $${m.saldoAkhir.toFixed(2)}${m.keterangan?' · '+m.keterangan:''}</div>
+        <div class="li-sub">${fmtDate(m.tgl)}${m.jam?' pukul '+m.jam:''} · Saldo: $${m.saldoAkhir.toFixed(2)}${m.keterangan?' · '+m.keterangan:''}</div>
       </div>
       <div class="li-amount" style="color:${JENIS_COLOR[m.jenis]}">${m.jenis.includes('masuk')?'+':'-'}$${m.nominal.toFixed(2)}</div>
       <button class="li-del" onclick="hapusMutasi(${m.id})">🗑️</button>
