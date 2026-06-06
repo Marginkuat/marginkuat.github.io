@@ -1278,7 +1278,9 @@ async function readDB(){
     const r=await fetch(`${SB_URL}/rest/v1/laporan?select=*&order=tanggal.desc`,{headers:SB_HEADERS})
     if(r.ok){
       const data=await r.json()
-      if(data.length){saveLocal(data);return data}
+      // Normalize: kolom Supabase pakai 'jenis', kode pakai 'type'
+      const normalized=data.map(d=>({...d,type:d.jenis||d.type||'profit'}))
+      if(normalized.length){saveLocal(normalized);return normalized}
     }
   }catch{}
   return getLocal()
@@ -1294,7 +1296,7 @@ async function writeDB(laporan){
     if(tgl.includes('/')){const[d,m,y]=tgl.split('/');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
     const body={
       tanggal:tgl,
-      type:String(entry.type),
+      jenis:String(entry.type),
       nominal:parseFloat(entry.nominal)||0,
       balance:parseFloat(entry.balance)||0,
       trade:String(entry.trade||''),
@@ -1423,7 +1425,10 @@ async function updatePublicStats(){
     const r=await fetch(`${SB_URL}/rest/v1/laporan?select=*&order=tanggal.desc&_=${ts}`,{
       headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Cache-Control':'no-cache'}
     })
-    if(r.ok)data=await r.json()
+    if(r.ok){
+      const raw=await r.json()
+      data=raw.map(d=>({...d,type:d.jenis||d.type||'profit'}))
+    }
   }catch{}
   if(!data.length)data=getLocal()
   if(!data.length)data=DATA_HISTORIS.sort((a,b)=>b.tanggal.localeCompare(a.tanggal))
