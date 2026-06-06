@@ -1288,33 +1288,43 @@ async function writeDB(laporan){
   saveLocal(laporan)
   try{
     const entry=laporan[0]
+    // Pastikan tanggal format YYYY-MM-DD
+    let tgl=String(entry.tanggal).trim()
+    // Kalau format DD/MM/YYYY ubah ke YYYY-MM-DD
+    if(tgl.includes('/')){const[d,m,y]=tgl.split('/');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
     const body={
-      tanggal:entry.tanggal,
-      type:entry.type,
-      nominal:parseFloat(entry.nominal),
-      balance:parseFloat(entry.balance),
-      trade:entry.trade||'',
-      catatan:entry.catatan||''
+      tanggal:tgl,
+      type:String(entry.type),
+      nominal:parseFloat(entry.nominal)||0,
+      balance:parseFloat(entry.balance)||0,
+      trade:String(entry.trade||''),
+      catatan:String(entry.catatan||'')
     }
+    console.log('Sending to Supabase:',JSON.stringify(body))
+    // Delete dulu kalau ada data tanggal sama
+    await fetch(`${SB_URL}/rest/v1/laporan?tanggal=eq.${tgl}`,{
+      method:'DELETE',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    })
     const r=await fetch(`${SB_URL}/rest/v1/laporan`,{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
         'apikey':SB_KEY,
         'Authorization':'Bearer '+SB_KEY,
-        'Prefer':'resolution=merge-duplicates,return=minimal'
+        'Prefer':'return=minimal'
       },
       body:JSON.stringify(body)
     })
     if(r.ok||r.status===201||r.status===200||r.status===204){
-      setStatus('online','Tersimpan ke Supabase ✅')
+      setStatus('online','✅ Tersimpan & Sync ke Supabase')
     }else{
       const err=await r.text()
-      console.error('Supabase error:',r.status,err)
-      setStatus('offline','Gagal sync ('+r.status+') — tersimpan lokal')
+      console.error('Supabase 400 error detail:',err)
+      setStatus('offline','Gagal sync ('+r.status+') — cek console')
     }
   }catch(e){
-    console.error('writeDB error:',e)
+    console.error('writeDB catch error:',e)
     setStatus('offline','Offline — tersimpan lokal')
   }
   updatePublicStats()
