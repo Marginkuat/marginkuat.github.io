@@ -2899,27 +2899,6 @@ function setMutJenis(j){
   Object.keys(map).forEach(k=>{document.getElementById(map[k]).className='toggle-btn btn-sm'+(k===j?' ap':'')})
 }
 
-function simpanMutasi(){
-  const tgl=document.getElementById('mutTgl').value
-  const nominal=parseFloat(document.getElementById('mutNominal').value)||0
-  const saldoAkhir=parseFloat(document.getElementById('mutSaldoAkhir').value)||0
-  const ket=document.getElementById('mutKet').value.trim()
-  if(!tgl){alert('Isi tanggal!');return}
-  if(!mutJenis){alert('Pilih jenis mutasi!');return}
-  if(!nominal){alert('Isi nominal!');return}
-  if(!saldoAkhir){alert('Isi saldo setelah mutasi!');return}
-  const list=getMutasi()
-  list.unshift({id:Date.now(),tgl,jenis:mutJenis,nominal,saldoAkhir,keterangan:ket,ts:new Date().toISOString()})
-  saveMutasi(list)
-  document.getElementById('mutNominal').value=''
-  document.getElementById('mutSaldoAkhir').value=''
-  document.getElementById('mutKet').value=''
-  mutJenis=null
-  ;['mutJ1','mutJ2','mutJ3','mutJ4'].forEach(id=>{const e=document.getElementById(id);if(e)e.className='toggle-btn btn-sm'})
-  renderMutasi();updateLapKeu()
-  showToast('✅ Mutasi tersimpan!')
-}
-
 function filterMutasi(f){
   mutFilter=f
   ;['semua','ea','darurat'].forEach(x=>{const el=document.getElementById('mutF-'+x);if(el)el.className='toggle-btn btn-sm'+(x===f?' ab':'')})
@@ -2976,7 +2955,7 @@ function setMutJenis(j){
   document.getElementById(map[j]).className='toggle-btn '+colors[j]
 }
 
-function simpanMutasi(){
+async function simpanMutasi(){
   const tgl=document.getElementById('mutTgl').value
   const nominal=parseFloat(document.getElementById('mutNominal').value)||0
   const saldoAkhir=parseFloat(document.getElementById('mutSaldoAkhir').value)||0
@@ -2985,18 +2964,53 @@ function simpanMutasi(){
   if(!mutJenis){alert('Pilih jenis mutasi!');return}
   if(!nominal){alert('Isi nominal!');return}
   if(!saldoAkhir){alert('Isi saldo setelah mutasi!');return}
+
   const list=getMutasi()
   list.unshift({id:Date.now(),tgl,jenis:mutJenis,nominal,saldoAkhir,keterangan:ket,ts:new Date().toISOString()})
   saveMutasi(list)
-  // Reset
+
+  // Otomatis update balance di Supabase jika mutasi EA
+  if(mutJenis==='ea-masuk'||mutJenis==='ea-keluar'){
+    const jenisLabel=mutJenis==='ea-masuk'?'Deposit EA':'WD EA'
+    const ket2=ket||jenisLabel+` $${nominal.toFixed(2)}`
+    // Simpan ke tabel laporan sebagai entry khusus
+    try{
+      await fetch(`${SB_URL}/rest/v1/laporan?tanggal=eq.${tgl}`,{
+        method:'DELETE',
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+      })
+      await fetch(`${SB_URL}/rest/v1/laporan`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'},
+        body:JSON.stringify({
+          tanggal:tgl,
+          jenis:mutJenis==='ea-masuk'?'profit':'loss',
+          nominal:0,
+          balance:saldoAkhir,
+          trade:'0',
+          catatan:ket2
+        })
+      })
+      showToast('✅ Mutasi & balance EA diupdate!')
+    }catch{
+      showToast('✅ Mutasi disimpan — sync balance gagal')
+    }
+    // Update PUBLIK_DATA balance
+    updatePublicStats()
+  }else{
+    showToast('✅ Mutasi dana darurat disimpan!')
+  }
+
+  // Reset form
   document.getElementById('mutNominal').value=''
   document.getElementById('mutSaldoAkhir').value=''
   document.getElementById('mutKet').value=''
   mutJenis=null
   ;['mutJ1','mutJ2','mutJ3','mutJ4'].forEach(id=>document.getElementById(id).className='toggle-btn')
-  showToast('✅ Mutasi disimpan!')
   renderMutasi()
   renderMutasiPublik()
+  renderRiwayat()
+  renderBuku()
 }
 
 function filterMutasi(f){
