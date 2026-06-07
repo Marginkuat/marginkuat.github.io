@@ -1292,8 +1292,9 @@ async function writeDB(laporan){
     const entry=laporan[0]
     // Pastikan tanggal format YYYY-MM-DD
     let tgl=String(entry.tanggal).trim()
-    // Kalau format DD/MM/YYYY ubah ke YYYY-MM-DD
-    if(tgl.includes('/')){const[d,m,y]=tgl.split('/');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
+    if(tgl.includes('/')){const p=tgl.split('/');tgl=p[2].length===4?`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`:tgl}
+    if(tgl.includes('.')){const p=tgl.split('.');tgl=p[2]&&p[2].length===4?`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`:tgl}
+    console.log('Tanggal ke Supabase:',tgl)
     const body={
       tanggal:tgl,
       jenis:String(entry.type),
@@ -1302,7 +1303,6 @@ async function writeDB(laporan){
       trade:String(entry.trade||''),
       catatan:String(entry.catatan||'')
     }
-    console.log('Sending to Supabase:',JSON.stringify(body))
     // Delete dulu kalau ada data tanggal sama
     await fetch(`${SB_URL}/rest/v1/laporan?tanggal=eq.${tgl}`,{
       method:'DELETE',
@@ -2182,19 +2182,118 @@ function bukaGalModal(id){
 }
 function tutupGalModal(){document.getElementById('galModal').classList.remove('open');document.querySelectorAll('#galModalMedia video').forEach(v=>v.pause())}
 
-// ===== SCAN FBS (Baca Lokal) =====
+// ===== SCAN FBS (AI) =====
 let scanImageBase64='',scanImageType=''
 function scanFBS(input){
   const file=input.files[0];if(!file)return
   const reader=new FileReader()
   reader.onload=function(e){
-    scanImageBase64=e.target.result.split(',')[1];scanImageType=file.type
+    scanImageBase64=e.target.result.split(',')[1]
+    scanImageType=file.type
     document.getElementById('scanImg').src=e.target.result
     document.getElementById('scanPreview').style.display='block'
     document.getElementById('btnScanProses').style.display='flex'
     document.getElementById('scanStatus').style.display='none'
   }
   reader.readAsDataURL(file)
+}
+
+async function prosesScan(){
+  if(!scanImageBase64)return
+  const btn=document.getElementById('btnScanProses')
+  const status=document.getElementById('scanStatus')
+  btn.disabled=true;btn.textContent='⏳ Membaca...'
+  status.style.display='block'
+  status.style.color='var(--blue)'
+  status.textContent='🤖 AI membaca laporan FBS...'
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true',
+        'x-api-key':'sk-ant-api03-placeholder'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:500,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:scanImageType,data:scanImageBase64}},
+          {type:'text',text:'Baca laporan FBS/MT4 ini. Balas HANYA JSON tanpa teks lain:\n{"tanggal":"YYYY-MM-DD","saldo":0.00,"pl_tertutup":0.00,"jumlah_trade":0,"jenis":"profit"}\njenis = profit jika PL positif, loss jika negatif. Format tanggal dari kolom Tanggal akun.'}
+        ]}]
+      })
+    })
+    if(!res.ok)throw new Error('API error '+res.status)
+    const d=await res.json()
+    const raw=d.content?.[0]?.text||''
+    const clean=raw.replace(/```json|```/g,'').trim()
+    const hasil=JSON.parse(clean)
+    isiFormDariScan(hasil)
+    status.style.color='#27AE60'
+    status.innerHTML=`✅ <strong>Berhasil!</strong> Tanggal: ${hasil.tanggal} · P/L: $${hasil.pl_tertutup} · Saldo: $${hasil.saldo}<br><span style="color:var(--gold)">Cek form → klik Simpan!</span>`
+    showToast('✅ Data terisi otomatis!')
+  }catch(err){
+    // Fallback: form manual cepat
+    status.style.color='var(--gold)'
+    status.innerHTML=`⚠️ <strong>Isi manual dari foto di atas:</strong><br>
+      <div style="margin-top:8px;display:grid;gap:6px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="color:var(--dim);font-size:10px;width:100px">Tanggal</span>
+          <input type="text" id="scanTgl" placeholder="DD.MM.YYYY" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:Outfit,sans-serif"/>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="color:var(--dim);font-size:10px;width:100px">Saldo ($)</span>
+          <input type="number" id="scanSaldo" placeholder="contoh: 584.90" step="0.01" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:Outfit,sans-serif"/>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="color:var(--dim);font-size:10px;width:100px">P/L Tertutup</span>
+          <input type="number" id="scanPL" placeholder="contoh: 42.72" step="0.01" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:Outfit,sans-serif"/>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="color:var(--dim);font-size:10px;width:100px">Jumlah Trade</span>
+          <input type="number" id="scanTrade" placeholder="contoh: 3" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:Outfit,sans-serif"/>
+        </div>
+        <button onclick="isiDariInput()" style="background:var(--gold);color:#0a0c0f;border:none;border-radius:8px;padding:9px;font-weight:700;font-size:12px;cursor:pointer;font-family:Outfit,sans-serif">✅ Isi ke Form</button>
+      </div>`
+  }
+  btn.disabled=false;btn.textContent='🤖 Proses dengan AI → Isi Otomatis'
+}
+
+function isiFormDariScan(hasil){
+  if(hasil.tanggal){
+    let tgl=hasil.tanggal
+    if(tgl.includes('.')){const[d,m,y]=tgl.split('.');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
+    if(tgl.includes('/')){const[d,m,y]=tgl.split('/');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
+    document.getElementById('inpTgl').value=tgl
+  }
+  if(hasil.saldo)document.getElementById('inpBal').value=Math.abs(hasil.saldo)
+  if(hasil.pl_tertutup!==undefined){
+    document.getElementById('inpNom').value=Math.abs(hasil.pl_tertutup)
+    setType(parseFloat(hasil.pl_tertutup)>=0?'profit':'loss')
+  }
+  if(hasil.jumlah_trade)document.getElementById('inpTrade').value=hasil.jumlah_trade
+  updateInputPreview()
+}
+
+function isiDariInput(){
+  const tglRaw=document.getElementById('scanTgl')?.value||''
+  const saldo=document.getElementById('scanSaldo')?.value||''
+  const pl=document.getElementById('scanPL')?.value||''
+  const trade=document.getElementById('scanTrade')?.value||''
+  if(tglRaw){
+    let tgl=tglRaw.trim()
+    if(tgl.includes('.')){const[d,m,y]=tgl.split('.');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
+    else if(tgl.includes('/')){const[d,m,y]=tgl.split('/');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
+    document.getElementById('inpTgl').value=tgl
+  }
+  if(saldo)document.getElementById('inpBal').value=Math.abs(parseFloat(saldo))
+  if(pl){document.getElementById('inpNom').value=Math.abs(parseFloat(pl));setType(parseFloat(pl)>=0?'profit':'loss')}
+  if(trade)document.getElementById('inpTrade').value=trade
+  document.getElementById('scanStatus').style.color='#27AE60'
+  document.getElementById('scanStatus').innerHTML='✅ <strong>Form terisi!</strong> Scroll ke bawah → cek → klik Simpan.'
+  showToast('✅ Data terisi ke form!')
+  updateInputPreview()
 }
 
 async function prosesScan(){
