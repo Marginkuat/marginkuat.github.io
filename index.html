@@ -466,14 +466,16 @@ footer{text-align:center;padding:20px;border-top:1px solid var(--border)}
         <div style="font-family:'Cinzel',serif;font-size:26px;font-weight:900;color:#f0e8d0" id="danaTotalKelola">$0.00</div>
         <div style="font-size:10px;color:var(--dim);margin-top:4px" id="danaAnggota">— anggota aktif</div>
         <div style="margin-top:10px;border-radius:20px;overflow:hidden;height:8px;display:flex;gap:2px">
-          <div style="width:50%;background:var(--gold);border-radius:4px 0 0 4px"></div>
-          <div style="width:50%;background:var(--blue);border-radius:0 4px 4px 0"></div>
+          <div id="danaBarEA" style="width:50%;background:var(--gold);border-radius:4px 0 0 4px;transition:width .5s"></div>
+          <div id="danaBarDar" style="width:50%;background:var(--blue);border-radius:0 4px 4px 0;transition:width .5s"></div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:4px">
-          <div style="font-size:9px;color:var(--gold)">⚡ EA 50%</div>
-          <div style="font-size:9px;color:var(--blue)">🛡️ Tabungan 50%</div>
+          <div style="font-size:9px;color:var(--gold)" id="danaLblEA">⚡ EA 50%</div>
+          <div style="font-size:9px;color:var(--blue)" id="danaLblDar">🛡️ Darurat 50%</div>
         </div>
-      </div>
+        <div style="margin-top:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:10px;color:var(--dim);line-height:1.7">
+          📌 Alokasi berdasarkan mutasi aktual.<br>Jika tidak 50:50, berarti ada penyesuaian dana yang dicatat admin.
+        </div>
     </div>
   </section>
 
@@ -1459,10 +1461,25 @@ async function updatePublicStats(){
   const divStat=document.getElementById('pubDivStat');if(divStat)divStat.textContent=`$${totDiv.toFixed(2)}`
   const nas=getNasabahList()
   const totModal=nas.reduce((s,n)=>s+n.modal,0)
-  const eaEl=document.getElementById('danaEA');if(eaEl)eaEl.textContent=`$${(totModal*0.5).toFixed(2)}`
-  const tabEl=document.getElementById('danaTabungan');if(tabEl)tabEl.textContent=`$${(totModal*0.5).toFixed(2)}`
+  // Hitung dari mutasi aktual
+  const mutasi=getMutasi()
+  const totDepEA=mutasi.filter(m=>m.jenis==='ea-masuk').reduce((s,m)=>s+m.nominal,0)
+  const totWdEA=mutasi.filter(m=>m.jenis==='ea-keluar').reduce((s,m)=>s+m.nominal,0)
+  const totDepDar=mutasi.filter(m=>m.jenis==='darurat-masuk').reduce((s,m)=>s+m.nominal,0)
+  const totWdDar=mutasi.filter(m=>m.jenis==='darurat-keluar').reduce((s,m)=>s+m.nominal,0)
+  const adaMutasi=mutasi.length>0
+  const saldoEA=adaMutasi?Math.max(0,totDepEA-totWdEA):totModal*0.5
+  const saldoDar=adaMutasi?Math.max(0,totDepDar-totWdDar):totModal*0.5
+  const pctEA=saldoEA+saldoDar>0?Math.round(saldoEA/(saldoEA+saldoDar)*100):50
+  const pctDar=100-pctEA
+  const eaEl=document.getElementById('danaEA');if(eaEl)eaEl.textContent=`$${saldoEA.toFixed(2)}`
+  const tabEl=document.getElementById('danaTabungan');if(tabEl)tabEl.textContent=`$${saldoDar.toFixed(2)}`
   const totEl=document.getElementById('danaTotalKelola');if(totEl)totEl.textContent=`$${totModal.toFixed(2)}`
   const angEl=document.getElementById('danaAnggota');if(angEl)angEl.textContent=`${nas.length} anggota aktif`
+  const lblEA=document.getElementById('danaLblEA');if(lblEA)lblEA.textContent=`⚡ EA ${pctEA}%`
+  const lblDar=document.getElementById('danaLblDar');if(lblDar)lblDar.textContent=`🛡️ Darurat ${pctDar}%`
+  const barEA=document.getElementById('danaBarEA');if(barEA)barEA.style.width=pctEA+'%'
+  const barDar=document.getElementById('danaBarDar');if(barDar)barDar.style.width=pctDar+'%'
 
   // Update chart & kalender pakai data Supabase
   chartData=[...data].reverse()
