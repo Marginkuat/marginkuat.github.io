@@ -1533,7 +1533,15 @@ function cekTanggalInput(el){
   w.textContent=`⚠️ Tanggal dipilih: ${fmtDate(val)} — pastikan sesuai laporan FBS!`
 }
 
-// ===== TYPE PROFIT/LOSS =====
+function cekTanggalInput(el){
+  const val=el.value
+  if(val){
+    // Tampilkan tanggal yang dipilih dalam format readable
+    const d=new Date(val+'T00:00:00')
+    const label=`${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+    document.getElementById('adminH2').textContent=`Input: ${label}`
+  }
+}
 let cType=null
 function setType(t){
   cType=t
@@ -1563,7 +1571,12 @@ function updateInputPreview(){
 // ===== SIMPAN INPUT HARIAN =====
 let pesanFinal=''
 async function simpanData(){
-  const tgl=document.getElementById('inpTgl').value
+  let tgl=document.getElementById('inpTgl').value
+  // Konversi DD/MM/YYYY atau DD.MM.YYYY ke YYYY-MM-DD
+  if(tgl.includes('/')){const p=tgl.split('/');if(p[2]&&p[2].length===4)tgl=`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`}
+  if(tgl.includes('.')){const p=tgl.split('.');if(p[2]&&p[2].length===4)tgl=`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`}
+  // Validasi format akhir YYYY-MM-DD
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(tgl)){alert('Format tanggal salah! Pastikan pilih dari kalender.');return}
   const nom=parseFloat(document.getElementById('inpNom').value)||0
   const trade=document.getElementById('inpTrade').value||'?'
   const bal=parseFloat(document.getElementById('inpBal').value)||0
@@ -2299,18 +2312,38 @@ function isiDariInput(){
   const saldo=document.getElementById('scanSaldo')?.value||''
   const pl=document.getElementById('scanPL')?.value||''
   const trade=document.getElementById('scanTrade')?.value||''
+
+  // Konversi tanggal
   if(tglRaw){
     let tgl=tglRaw.trim()
     if(tgl.includes('.')){const[d,m,y]=tgl.split('.');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
     else if(tgl.includes('/')){const[d,m,y]=tgl.split('/');tgl=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
     document.getElementById('inpTgl').value=tgl
   }
-  if(saldo)document.getElementById('inpBal').value=Math.abs(parseFloat(saldo))
-  if(pl){document.getElementById('inpNom').value=Math.abs(parseFloat(pl));setType(parseFloat(pl)>=0?'profit':'loss')}
-  if(trade)document.getElementById('inpTrade').value=trade
+
+  // Isi balance EA
+  if(saldo){
+    const balEl=document.getElementById('inpBal')
+    if(balEl)balEl.value=Math.abs(parseFloat(saldo)).toFixed(2)
+  }
+
+  // Isi nominal & set profit/loss
+  if(pl){
+    const plVal=parseFloat(pl)
+    const nomEl=document.getElementById('inpNom')
+    if(nomEl)nomEl.value=Math.abs(plVal).toFixed(2)
+    setType(plVal>=0?'profit':'loss')
+  }
+
+  // Isi jumlah trade
+  if(trade){
+    const trEl=document.getElementById('inpTrade')
+    if(trEl)trEl.value=trade
+  }
+
   document.getElementById('scanStatus').style.color='#27AE60'
-  document.getElementById('scanStatus').innerHTML='✅ <strong>Form terisi!</strong> Scroll ke bawah → cek → klik Simpan.'
-  showToast('✅ Data terisi ke form!')
+  document.getElementById('scanStatus').innerHTML='✅ <strong>Semua terisi!</strong> Scroll ke bawah → cek → klik <strong>💾 Simpan</strong>.'
+  showToast('✅ Form terisi lengkap!')
   updateInputPreview()
 }
 
