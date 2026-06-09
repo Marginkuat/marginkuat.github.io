@@ -3145,31 +3145,40 @@ async function simpanMutasi(){
   saveMutasi(list)
 
   if(mutJenis==='ea-masuk'||mutJenis==='ea-keluar'){
-    const jenisLabel=mutJenis==='ea-masuk'?'Deposit EA':'WD EA'
-    const ket2=ket||`${jenisLabel} $${nominal.toFixed(2)} pukul ${jam}`
-    // Gunakan tanggal+timestamp unik supaya tidak konflik dengan input harian
-    const tglUnik=`${tgl}-mut-${id}`
+    // Gunakan tanggal bersih + update balance entry di Supabase
+    const ket2=ket||`${mutJenis==='ea-masuk'?'Deposit':'WD'} EA $${nominal.toFixed(2)} pukul ${jam}`
     try{
-      const r=await fetch(`${SB_URL}/rest/v1/laporan`,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'},
-        body:JSON.stringify({
-          tanggal:tglUnik,
-          jenis:mutJenis==='ea-masuk'?'profit':'loss',
-          nominal:0,
-          balance:saldoAkhir,
-          trade:'mutasi',
-          catatan:ket2
-        })
+      // Cek apakah sudah ada entry untuk tanggal ini
+      const cek=await fetch(`${SB_URL}/rest/v1/laporan?tanggal=eq.${tgl}&select=id,balance`,{
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
       })
-      if(r.ok||r.status===201||r.status===204){
-        setStatus('online','✅ Mutasi tersimpan & balance update!')
-        showToast('✅ Balance EA otomatis update ke $'+saldoAkhir.toFixed(2))
+      const existing=cek.ok?await cek.json():[]
+      if(existing.length>0){
+        // Update balance di entry yang sudah ada
+        await fetch(`${SB_URL}/rest/v1/laporan?tanggal=eq.${tgl}`,{
+          method:'PATCH',
+          headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'},
+          body:JSON.stringify({balance:saldoAkhir,catatan:ket2})
+        })
       }else{
-        showToast('⚠️ Mutasi lokal OK — sync gagal')
+        // Insert entry baru untuk tanggal ini
+        await fetch(`${SB_URL}/rest/v1/laporan`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'},
+          body:JSON.stringify({
+            tanggal:tgl,
+            jenis:'profit',
+            nominal:0,
+            balance:saldoAkhir,
+            trade:'mutasi',
+            catatan:ket2
+          })
+        })
       }
+      setStatus('online','✅ Mutasi & balance update!')
+      showToast('✅ Balance EA otomatis update ke $'+saldoAkhir.toFixed(2))
     }catch{
-      showToast('⚠️ Mutasi lokal OK — offline')
+      showToast('⚠️ Mutasi lokal OK — sync gagal')
     }
     updatePublicStats()
   }else{
