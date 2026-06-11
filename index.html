@@ -4,14 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="theme-color" content="#B8860B">
-<meta name="description" content="ARISAN EA — Gold Investment Management">
 <title>ARISAN EA — Gold Investment</title>
 <link rel="manifest" href="manifest.json">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 :root {
-  --bg:#F5F6FA;--surface:#FFFFFF;--border:#E4E8F0;
-  --gold:#B8860B;--gold2:#D4A017;--gold3:#FFD700;--gold-pale:#FDF8EC;--gold-border:#E8D5A0;
+  --bg:#F5F6FA;--surface:#FFF;--border:#E4E8F0;
+  --gold:#B8860B;--gold2:#D4A017;--gold-pale:#FDF8EC;--gold-border:#E8D5A0;
   --green:#0B7A55;--green-bg:#E8F5F0;--red:#C0392B;--red-bg:#FDECEA;
   --blue:#1A56DB;--blue-bg:#EEF4FF;
   --text:#111827;--text2:#4B5563;--text3:#9CA3AF;
@@ -21,7 +20,7 @@
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
 /* LOGIN */
-#loginScreen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#FDF8EC 0%,#F0F4FF 100%)}
+#loginScreen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#FDF8EC,#F0F4FF)}
 .login-logo{width:72px;height:72px;background:linear-gradient(135deg,#B8860B,#FFD700);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:12px;box-shadow:0 8px 24px rgba(184,134,11,0.3)}
 .login-title{font-size:26px;font-weight:800;margin-bottom:4px}
 .login-title span{color:var(--gold)}
@@ -33,8 +32,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .lbl{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;display:block}
 .inp{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;color:var(--text);background:var(--bg);outline:none;transition:border-color 0.15s;margin-bottom:12px}
 .inp:focus{border-color:var(--gold);background:white}
-.btn-gold{background:linear-gradient(135deg,#B8860B,#D4A017);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;padding:13px}
+.btn-gold{background:linear-gradient(135deg,#B8860B,#D4A017);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;padding:13px;margin-bottom:6px}
 .btn-gold:active{transform:scale(0.98)}
+.btn-ghost{background:var(--bg);color:var(--text2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;padding:12px;margin-bottom:6px}
+.btn-red{background:var(--red);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;padding:12px;margin-bottom:6px}
 .login-hint{font-size:11px;color:var(--text3);text-align:center;margin-top:14px;line-height:1.6}
 .login-hint b{color:var(--text2)}
 
@@ -59,6 +60,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .page{display:none}
 .page.active{display:block}
 
+/* CURRENCY BADGE — 3 nilai */
+.cur3{display:flex;flex-direction:column;gap:1px;text-align:right}
+.cur-cent{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--gold)}
+.cur-usd{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2)}
+.cur-rp{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3)}
+
 /* CARDS */
 .card{background:white;border-radius:16px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
 .card-hdr{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
@@ -66,14 +73,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .card-body{padding:14px}
 
 /* HERO */
-.hero{background:linear-gradient(135deg,#1A1D2E 0%,#2D3250 100%);border-radius:20px;padding:20px;margin-bottom:12px;color:white;position:relative;overflow:hidden}
+.hero{background:linear-gradient(135deg,#1A1D2E,#2D3250);border-radius:20px;padding:20px;margin-bottom:12px;color:white;position:relative;overflow:hidden}
 .hero::before{content:'✦';position:absolute;top:-10px;right:-10px;font-size:100px;color:rgba(255,215,0,0.06)}
 .hero-lbl{font-size:10px;font-weight:500;opacity:0.6;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px}
-.hero-amt{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;letter-spacing:-1px;margin-bottom:2px}
-.hero-sub{font-size:11px;opacity:0.5;margin-bottom:16px}
+.hero-cent{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;letter-spacing:-1px;color:#FFD700}
+.hero-usd{font-family:'JetBrains Mono',monospace;font-size:14px;opacity:0.7;margin-top:1px}
+.hero-rp{font-family:'JetBrains Mono',monospace;font-size:12px;opacity:0.5;margin-bottom:14px}
 .hero-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .hero-stat{background:rgba(255,255,255,0.08);border-radius:10px;padding:10px 8px;text-align:center}
-.hero-stat-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
+.hero-stat-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
 .hero-stat-lbl{font-size:9px;opacity:0.55;margin-top:2px;text-transform:uppercase}
 .c-green{color:#4ADE80}.c-red{color:#F87171}.c-gold{color:#FFD700}
 
@@ -86,39 +94,33 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .sum-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--text)}
 .val-green{color:var(--green)}.val-red{color:var(--red)}.val-gold{color:var(--gold)}
 
-/* EA STATUS */
+/* EA BAR */
 .ea-bar{background:linear-gradient(135deg,#1A1D2E,#2D3250);border-radius:16px;padding:12px 14px;color:white;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.ea-left{display:flex;align-items:center;gap:8px}
 .ea-dot{width:8px;height:8px;background:#4ADE80;border-radius:50%;animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 .ea-name{font-size:13px;font-weight:700}
 .ea-sub{font-size:10px;opacity:0.5;margin-top:1px}
-.ea-price{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#FFD700;text-align:right}
-.ea-chg{font-size:10px;color:#4ADE80;text-align:right}
 
 /* NASABAH LIST */
-.nasabah-item{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:pointer}
-.nasabah-item:last-child{border-bottom:none}
-.nasabah-item:active{background:var(--bg)}
-.nav-avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#B8860B,#FFD700);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0}
-.nav-info{flex:1}
-.nav-name{font-size:13px;font-weight:600}
-.nav-id{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
-.nav-right{text-align:right}
-.nav-modal{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
-.nav-profit{font-size:10px;font-weight:600}
+.ns-item{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:pointer}
+.ns-item:last-child{border-bottom:none}
+.ns-item:active{background:var(--bg)}
+.ns-avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#B8860B,#FFD700);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0}
+.ns-avatar.suspended{background:linear-gradient(135deg,#9CA3AF,#D1D5DB)}
+.ns-info{flex:1;min-width:0}
+.ns-name{font-size:13px;font-weight:600}
+.ns-id{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
 
 /* HISTORY */
 .hist-item{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
 .hist-item:last-child{border-bottom:none}
 .hist-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
 .h-topup{background:var(--green-bg)}.h-profit{background:var(--gold-pale)}.h-pending{background:#F3F4F6}
-.hist-info{flex:1}
 .hist-desc{font-size:12px;font-weight:500}
 .hist-date{font-size:10px;color:var(--text3);margin-top:1px}
 .hist-amt{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
 
-/* TOPUP FORM */
+/* TOPUP */
 .amt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
 .amt-chip{padding:8px 4px;text-align:center;border:1.5px solid var(--border);border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text2);background:white;transition:all 0.15s}
 .amt-chip.active{border-color:var(--gold);background:var(--gold-pale);color:var(--gold)}
@@ -129,10 +131,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .ti-row span:last-child{font-weight:600}
 .info-box{background:var(--blue-bg);border:1px solid #BFDBFE;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#1E40AF;line-height:1.5}
 .warn-box{background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#9A3412;line-height:1.5}
-.btn-ghost{background:var(--bg);color:var(--text2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;padding:12px}
-.btn-ghost:active{transform:scale(0.98)}
 .status-pill{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
 .pill-active{background:var(--green-bg);color:var(--green)}
+.pill-suspend{background:var(--red-bg);color:var(--red)}
 .pill-pending{background:#FEF9C3;color:#854D0E}
 .pill-reject{background:var(--red-bg);color:var(--red)}
 
@@ -146,33 +147,25 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 /* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:flex-end;justify-content:center}
 .modal-overlay.open{display:flex}
-.modal-sheet{background:white;width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px;max-height:85vh;overflow-y:auto}
+.modal-sheet{background:white;width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px;max-height:88vh;overflow-y:auto}
 .modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
 .modal-title{font-size:16px;font-weight:700;margin-bottom:16px}
-.nd-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);align-items:center}
+.nd-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);align-items:flex-start}
 .nd-row:last-child{border-bottom:none}
-.nd-key{font-size:12px;color:var(--text2)}
-.nd-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
+.nd-key{font-size:12px;color:var(--text2);flex-shrink:0;margin-right:8px}
+.nd-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-align:right}
 
 /* TOAST */
-.toast{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-10px);background:var(--text);color:white;padding:10px 18px;border-radius:10px;font-size:12px;font-weight:500;opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw}
+.toast{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-10px);background:var(--text);color:white;padding:10px 18px;border-radius:10px;font-size:12px;font-weight:500;opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* EMPTY STATE */
 .empty-state{padding:32px;text-align:center;color:var(--text3)}
 .empty-state .e-ico{font-size:36px;margin-bottom:8px}
-.empty-state .e-txt{font-size:13px}
-
-/* PROFIT BAR */
-.pbar-wrap{margin:8px 0 4px}
-.pbar-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:5px}
-.pbar-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.pbar-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:6px}
 .pbar-fill{height:100%;border-radius:3px;transition:width 1s}
 </style>
 </head>
 <body>
 
-<!-- LOADING -->
 <div id="loadingScreen" style="display:flex">
   <div class="spinner"></div>
   <div class="loading-text">Menghubungkan ke server...</div>
@@ -182,22 +175,22 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <div id="loginScreen" style="display:none">
   <div class="login-logo">✦</div>
   <div class="login-title">ARISAN <span>EA</span></div>
-  <div class="login-sub">Gold Investment Management</div>
+  <div class="login-sub">Gold Investment · FBS Cent Account</div>
   <div class="login-card">
     <div class="role-tabs">
       <button class="role-tab active" id="roleTabAdmin" onclick="setRole('admin')">👑 Admin</button>
-      <button class="role-tab" id="roleTabNasabah" onclick="setRole('nasabah')">👤 Nasabah</button>
+      <button class="role-tab" id="roleTabNasabah" onclick="setRole('nasabah')">👤 Anggota</button>
     </div>
-    <label class="lbl">ID / Username</label>
-    <input class="inp" id="loginUser" placeholder="Username anda" value="admin">
+    <label class="lbl">Username</label>
+    <input class="inp" id="loginUser" placeholder="Username" value="admin">
     <label class="lbl">PIN</label>
     <input class="inp" type="password" id="loginPass" placeholder="••••••" value="1234">
     <button class="btn-gold" onclick="doLogin()">Masuk →</button>
-    <div class="login-hint">Admin: <b>admin / 1234</b> &nbsp;|&nbsp; Nasabah: <b>nasabah1 / 1234</b></div>
+    <div class="login-hint">Admin: <b>admin / 1234</b></div>
   </div>
 </div>
 
-<!-- APP SHELL -->
+<!-- APP -->
 <div id="appShell">
   <div class="app-header">
     <div class="hlogo">
@@ -205,228 +198,205 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <div class="hlogo-name">ARISAN <span>EA</span></div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <div class="role-badge" id="roleBadge">ADMIN</div>
+      <div style="text-align:right">
+        <div class="role-badge" id="roleBadge">ADMIN</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px" id="headerKurs">$1=Rp16.200 · ¢100=$1</div>
+      </div>
       <button class="logout-btn" onclick="doLogout()">↩</button>
     </div>
   </div>
 
-  <div class="app-content" id="appContent">
+  <div class="app-content">
 
-    <!-- ═══ ADMIN PAGES ═══ -->
-
-    <!-- ADMIN HOME -->
+    <!-- ══ ADMIN HOME ══ -->
     <div id="pg_adminHome" class="page">
       <div class="ea-bar">
-        <div class="ea-left">
+        <div style="display:flex;align-items:center;gap:8px">
           <div class="ea-dot"></div>
-          <div><div class="ea-name">🤖 ARISAN EA — Aktif</div><div class="ea-sub">Scalping XAUUSD · Auto-Running</div></div>
+          <div><div class="ea-name">🤖 ARISAN EA — Aktif</div><div class="ea-sub">XAUUSD · FBS Cent Account</div></div>
         </div>
-        <div><div class="ea-price" id="eaPrice1">3,324.80</div><div class="ea-chg" id="eaChg1">▲ +0.38%</div></div>
+        <div style="text-align:right">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#FFD700" id="eaPrice1">3,324.80</div>
+          <div style="font-size:10px;color:#4ADE80">XAU/USD Live</div>
+        </div>
       </div>
-      <div class="hero" id="adminHero">
-        <div class="hero-lbl">Total Dana Kelola</div>
-        <div class="hero-amt" id="adminTotalDana">Rp 0</div>
-        <div class="hero-sub" id="adminSubInfo">Memuat data...</div>
+      <div class="hero">
+        <div class="hero-lbl">Total Dana EA (FBS Cent)</div>
+        <div class="hero-cent" id="adminCent">¢0</div>
+        <div class="hero-usd" id="adminUSD">= $0.00 USD</div>
+        <div class="hero-rp" id="adminRp">≈ Rp 0</div>
         <div class="hero-grid">
-          <div class="hero-stat"><div class="hero-stat-val c-green" id="adminWinRate">78.3%</div><div class="hero-stat-lbl">Win Rate</div></div>
-          <div class="hero-stat"><div class="hero-stat-val c-gold" id="adminTotalNasabah">0</div><div class="hero-stat-lbl">Nasabah</div></div>
-          <div class="hero-stat"><div class="hero-stat-val c-green" id="adminTotalProfit">Rp 0</div><div class="hero-stat-lbl">Total Profit</div></div>
+          <div class="hero-stat"><div class="hero-stat-val c-gold" id="adminJmlNasabah">0</div><div class="hero-stat-lbl">Anggota</div></div>
+          <div class="hero-stat"><div class="hero-stat-val c-green" id="adminTotalProfit">¢0</div><div class="hero-stat-lbl">Total Profit</div></div>
+          <div class="hero-stat"><div class="hero-stat-val" id="adminWinRate">78.3%</div><div class="hero-stat-lbl">Win Rate</div></div>
         </div>
       </div>
-
-      <!-- Alokasi Dana -->
       <div class="sec-lbl">Alokasi Dana</div>
       <div class="card">
-        <div class="card-hdr"><span class="card-title">Distribusi Dana</span></div>
         <div class="card-body">
-          <div class="sum-row"><span class="sum-key">Total Modal Nasabah</span><span class="sum-val" id="adminModalTotal">Rp 0</span></div>
-          <div class="sum-row"><span class="sum-key">Saldo EA Trading (50%)</span><span class="sum-val val-gold" id="adminSaldoEA">Rp 0</span></div>
-          <div class="sum-row"><span class="sum-key">Saldo Darurat (50%)</span><span class="sum-val" style="color:var(--blue)" id="adminSaldoDarurat">Rp 0</span></div>
-          <div class="sum-row"><span class="sum-key">Total Profit Terbagi</span><span class="sum-val val-green" id="adminProfitTotal">Rp 0</span></div>
+          <div class="sum-row"><span class="sum-key">Saldo EA Trading (50%)</span><span class="sum-val val-gold" id="adminSaldoEA">¢0</span></div>
+          <div class="sum-row"><span class="sum-key">Saldo Darurat (50%)</span><span class="sum-val" style="color:var(--blue)" id="adminSaldoDarurat">¢0</span></div>
+          <div class="sum-row"><span class="sum-key">Profit Terbagi ke Anggota</span><span class="sum-val val-green" id="adminProfitTotal">¢0</span></div>
         </div>
       </div>
-
-      <!-- Info Bagi Hasil -->
-      <div class="info-box">💡 <b>Sistem Bagi Hasil:</b> 40% profit → Nasabah (proporsional modal) · 60% → Operasional EA. Topup masuk: 50% Saldo EA + 50% Saldo Darurat.</div>
-
-      <!-- Pending Topup -->
+      <div class="info-box">💡 <b>Bagi Hasil:</b> 40% profit → Anggota (proporsional modal) · 60% → Operasional. Topup: 50% EA + 50% Darurat.</div>
       <div class="sec-lbl">Request Topup Pending</div>
-      <div class="card" id="pendingCard">
-        <div id="pendingList"><div class="empty-state"><div class="e-ico">📭</div><div class="e-txt">Tidak ada request pending</div></div></div>
-      </div>
+      <div class="card"><div id="pendingList"><div class="empty-state"><div class="e-ico">📭</div><div class="e-txt">Tidak ada request pending</div></div></div></div>
     </div>
 
-    <!-- ADMIN NASABAH -->
-    <div id="pg_adminNasabah" class="page">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div class="sec-lbl" style="padding:0">Daftar Nasabah</div>
-        <button onclick="openTambahNasabah()" style="padding:7px 14px;background:linear-gradient(135deg,#B8860B,#D4A017);color:white;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ Tambah Nasabah</button>
+    <!-- ══ ADMIN ANGGOTA ══ -->
+    <div id="pg_adminAnggota" class="page">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="sec-lbl" style="padding:0">Daftar Anggota</div>
+        <button onclick="openModal('modalTambahAnggota')" style="padding:7px 14px;background:linear-gradient(135deg,#B8860B,#D4A017);color:white;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ Tambah</button>
       </div>
-      <div class="card"><div id="nasabahList"><div class="empty-state"><div class="e-ico">⏳</div><div class="e-txt">Memuat data nasabah...</div></div></div></div>
+      <div class="card"><div id="anggotaList"><div class="empty-state"><div class="e-ico">⏳</div><div class="e-txt">Memuat...</div></div></div></div>
     </div>
 
-    <!-- ADMIN LAPORAN -->
+    <!-- ══ ADMIN LAPORAN ══ -->
     <div id="pg_adminLaporan" class="page">
       <div class="sec-lbl">Laporan Keuangan</div>
       <div class="hero" style="background:linear-gradient(135deg,#0B4F2D,#166534)">
-        <div class="hero-lbl">Ringkasan Dana Kelola</div>
-        <div class="hero-amt" id="laporanTotal">Rp 0</div>
-        <div class="hero-sub">Semua nasabah aktif</div>
+        <div class="hero-lbl">Total Profit EA</div>
+        <div class="hero-cent" id="laporanCent">¢0</div>
+        <div class="hero-usd" id="laporanUSD">= $0.00</div>
+        <div class="hero-rp" id="laporanRp">≈ Rp 0</div>
         <div class="hero-grid">
-          <div class="hero-stat"><div class="hero-stat-val c-green" id="laporanProfitNasabah">Rp 0</div><div class="hero-stat-lbl">Ke Nasabah 40%</div></div>
-          <div class="hero-stat"><div class="hero-stat-val c-gold" id="laporanOps">Rp 0</div><div class="hero-stat-lbl">Operasional 60%</div></div>
-          <div class="hero-stat"><div class="hero-stat-val" id="laporanDarurat">Rp 0</div><div class="hero-stat-lbl">Dana Darurat</div></div>
+          <div class="hero-stat"><div class="hero-stat-val c-green" id="laporanNasabah">¢0</div><div class="hero-stat-lbl">Ke Anggota 40%</div></div>
+          <div class="hero-stat"><div class="hero-stat-val c-gold" id="laporanOps">¢0</div><div class="hero-stat-lbl">Operasional 60%</div></div>
+          <div class="hero-stat"><div class="hero-stat-val" id="laporanDarurat">¢0</div><div class="hero-stat-lbl">Saldo Darurat</div></div>
         </div>
       </div>
       <div class="sec-lbl">Riwayat Transaksi</div>
-      <div class="card"><div id="laporanHistory"><div class="empty-state"><div class="e-ico">⏳</div><div class="e-txt">Memuat riwayat...</div></div></div></div>
+      <div class="card"><div id="laporanHistory"><div class="empty-state"><div class="e-ico">⏳</div><div class="e-txt">Memuat...</div></div></div></div>
     </div>
 
-    <!-- ADMIN SETELAN -->
+    <!-- ══ ADMIN SETELAN ══ -->
     <div id="pg_adminSetelan" class="page">
-      <div class="sec-lbl">Pengaturan Sistem</div>
-      <div class="warn-box">🔒 <b>Strategi EA bersifat RAHASIA.</b> Parameter, lot size, dan logika robot tidak ditampilkan ke nasabah.</div>
-      <div class="card">
-        <div class="card-hdr"><span class="card-title">⚙️ Konfigurasi EA (Private)</span></div>
-        <div class="card-body">
-          <div class="sum-row"><span class="sum-key">Strategi</span><span class="sum-val">🔒 Rahasia</span></div>
-          <div class="sum-row"><span class="sum-key">Instrumen</span><span class="sum-val">XAU/USD</span></div>
-          <div class="sum-row"><span class="sum-key">Lot Size</span><span class="sum-val">🔒 Rahasia</span></div>
-          <div class="sum-row"><span class="sum-key">Stop Loss</span><span class="sum-val">🔒 Rahasia</span></div>
-          <div class="sum-row"><span class="sum-key">Take Profit</span><span class="sum-val">🔒 Rahasia</span></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-hdr"><span class="card-title">💱 Kurs USD / Rupiah</span></div>
-        <div class="card-body">
-          <div class="sum-row"><span class="sum-key">Kurs Aktif</span><span class="sum-val val-gold" id="kursInfo">$1 = Rp 16.200</span></div>
-          <div class="sum-row"><span class="sum-key">Sumber FBS</span><span class="sum-val">Akun Cent / Mikro</span></div>
-          <button class="btn-gold" style="margin-top:10px" onclick="document.getElementById('modalKurs').classList.add('open')">💱 Update Kurs Hari Ini</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-hdr"><span class="card-title">Sistem Bagi Hasil</span></div>
-        <div class="card-body">
-          <div class="sum-row"><span class="sum-key">Keuntungan Nasabah</span><span class="sum-val val-green">40%</span></div>
-          <div class="sum-row"><span class="sum-key">Biaya Operasional</span><span class="sum-val val-gold">60%</span></div>
-          <div class="sum-row"><span class="sum-key">Topup → Saldo EA</span><span class="sum-val">50%</span></div>
-          <div class="sum-row"><span class="sum-key">Topup → Saldo Darurat</span><span class="sum-val">50%</span></div>
-          <div class="pbar-wrap"><div class="pbar-lbl"><span style="color:var(--green)">■ Nasabah 40%</span><span style="color:var(--gold)">■ Operasional 60%</span></div><div class="pbar-track"><div class="pbar-fill" style="width:40%;background:linear-gradient(90deg,#0B7A55,#4ADE80)"></div></div></div>
-        </div>
-      </div>
+      <div class="sec-lbl">Pengaturan</div>
 
-      <!-- Catat Profit EA -->
-      <div class="sec-lbl">Catat Profit EA</div>
+      <!-- Catat Profit -->
       <div class="card">
-        <div class="card-hdr"><span class="card-title">💰 Input Profit Harian / Bulanan</span></div>
+        <div class="card-hdr"><span class="card-title">💰 Catat Profit EA</span></div>
         <div class="card-body">
           <label class="lbl">Periode</label>
-          <input class="inp" id="profitPeriode" placeholder="Contoh: Juni 2025" style="margin-bottom:8px">
-          <label class="lbl">Total Profit EA (Rp)</label>
-          <input class="inp" type="number" id="profitJumlah" placeholder="Contoh: 2500000" style="margin-bottom:8px">
-          <label class="lbl">Catatan</label>
-          <input class="inp" id="profitCatatan" placeholder="Opsional" style="margin-bottom:10px">
+          <input class="inp" id="profitPeriode" placeholder="Contoh: Juni 2025">
+          <label class="lbl">Profit EA (dalam USD — sesuai MT4)</label>
+          <input class="inp" type="number" id="profitJumlah" placeholder="Contoh: 12.50" step="0.01" oninput="calcProfit()">
           <div class="topup-info" id="profitCalcBox" style="display:none">
             <div class="topup-info-title">📊 Simulasi Bagi Hasil</div>
-            <div class="ti-row"><span>Total Profit</span><span id="pcTotal">-</span></div>
-            <div class="ti-row"><span>→ Nasabah (40%)</span><span id="pcNasabah" style="color:var(--green)">-</span></div>
-            <div class="ti-row"><span>→ Operasional (60%)</span><span id="pcOps" style="color:var(--gold)">-</span></div>
+            <div class="ti-row"><span>Total Profit MT4</span><span id="pcUSD">-</span></div>
+            <div class="ti-row"><span>Dalam Cent FBS</span><span id="pcCent" style="color:var(--gold)">-</span></div>
+            <div class="ti-row"><span>→ Anggota (40%)</span><span id="pcNasabah" style="color:var(--green)">-</span></div>
+            <div class="ti-row"><span>→ Operasional (60%)</span><span id="pcOps" style="color:#B8860B">-</span></div>
+            <div class="ti-row"><span>Dalam Rupiah</span><span id="pcRp" style="color:var(--text2)">-</span></div>
           </div>
           <button class="btn-gold" onclick="catatProfit()">💾 Simpan & Bagi Hasil</button>
         </div>
       </div>
+
+      <!-- Kurs -->
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">💱 Kurs USD / Rupiah</span></div>
+        <div class="card-body">
+          <div class="sum-row"><span class="sum-key">Kurs Aktif</span><span class="sum-val val-gold" id="kursDisplay">$1 = Rp 16.200</span></div>
+          <div class="sum-row"><span class="sum-key">¢100 Cent FBS</span><span class="sum-val">= $1 USD</span></div>
+          <div class="sum-row"><span class="sum-key">¢100 Cent FBS</span><span class="sum-val" id="kursRpPer100">= Rp 16.200</span></div>
+          <label class="lbl" style="margin-top:10px">Update Kurs ($1 = Rp)</label>
+          <input class="inp" type="number" id="kursInput" value="16200">
+          <button class="btn-gold" onclick="updateKurs()">💾 Simpan Kurs</button>
+        </div>
+      </div>
+
+      <!-- Ganti PIN Admin -->
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">🔑 Ganti PIN Admin</span></div>
+        <div class="card-body">
+          <label class="lbl">PIN Lama</label>
+          <input class="inp" type="password" id="pinLama" placeholder="PIN saat ini">
+          <label class="lbl">PIN Baru</label>
+          <input class="inp" type="password" id="pinBaru" placeholder="Min. 4 digit">
+          <label class="lbl">Konfirmasi PIN Baru</label>
+          <input class="inp" type="password" id="pinKonfirm" placeholder="Ulangi PIN baru">
+          <button class="btn-gold" onclick="gantiPinAdmin()">🔑 Ganti PIN</button>
+        </div>
+      </div>
+
+      <!-- EA Config -->
+      <div class="warn-box">🔒 <b>Strategi EA Rahasia.</b> Parameter dan logika robot tidak ditampilkan ke anggota.</div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">⚙️ Konfigurasi EA (Private)</span></div>
+        <div class="card-body">
+          <div class="sum-row"><span class="sum-key">Broker</span><span class="sum-val">FBS</span></div>
+          <div class="sum-row"><span class="sum-key">Tipe Akun</span><span class="sum-val">Cent Account</span></div>
+          <div class="sum-row"><span class="sum-key">Instrumen</span><span class="sum-val">XAU/USD</span></div>
+          <div class="sum-row"><span class="sum-key">Strategi</span><span class="sum-val">🔒 Rahasia</span></div>
+          <div class="sum-row"><span class="sum-key">Lot Size</span><span class="sum-val">🔒 Rahasia</span></div>
+        </div>
+      </div>
     </div>
 
-    <!-- ═══ NASABAH PAGES ═══ -->
-
-    <!-- NASABAH HOME -->
+    <!-- ══ NASABAH HOME ══ -->
     <div id="pg_nasabahHome" class="page">
       <div class="ea-bar">
-        <div class="ea-left">
+        <div style="display:flex;align-items:center;gap:8px">
           <div class="ea-dot"></div>
-          <div><div class="ea-name">🤖 ARISAN EA — Aktif</div><div class="ea-sub">Trading XAUUSD · Berjalan Otomatis</div></div>
+          <div><div class="ea-name">🤖 ARISAN EA — Aktif</div><div class="ea-sub">Trading XAUUSD · FBS Cent</div></div>
         </div>
-        <div><div class="ea-price" id="eaPrice2">3,324.80</div><div class="ea-chg">▲ +0.38%</div></div>
+        <div style="text-align:right">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#FFD700" id="eaPrice2">3,324.80</div>
+          <div style="font-size:10px;color:#4ADE80">XAU/USD Live</div>
+        </div>
       </div>
       <div class="hero">
         <div class="hero-lbl">Saldo Investasi Anda</div>
-        <div class="hero-amt" id="nsBalance">Rp 0</div>
-        <div class="hero-sub" id="nsSubInfo">Memuat data...</div>
+        <div class="hero-cent" id="nsCent">¢0</div>
+        <div class="hero-usd" id="nsUSD">= $0.00 USD</div>
+        <div class="hero-rp" id="nsRp">≈ Rp 0</div>
         <div class="hero-grid">
-          <div class="hero-stat"><div class="hero-stat-val c-green" id="nsProfit">+Rp 0</div><div class="hero-stat-lbl">Total Profit</div></div>
+          <div class="hero-stat"><div class="hero-stat-val c-green" id="nsProfit">¢0</div><div class="hero-stat-lbl">Total Profit</div></div>
           <div class="hero-stat"><div class="hero-stat-val c-gold" id="nsReturn">0%</div><div class="hero-stat-lbl">Return</div></div>
           <div class="hero-stat"><div class="hero-stat-val">40%</div><div class="hero-stat-lbl">Bagi Hasil</div></div>
         </div>
       </div>
-      <div class="info-box">📌 <b>Mode Pantau.</b> Anda hanya memantau perkembangan dana. EA bekerja otomatis. Bagi hasil diterima setiap periode sesuai keputusan Admin.</div>
+      <div class="info-box">📌 <b>Mode Pantau.</b> Anda hanya memantau saldo. EA bekerja otomatis. Tidak bisa open posisi.</div>
       <div class="sec-lbl">Detail Saldo</div>
       <div class="card">
         <div class="card-body">
-          <div class="sum-row"><span class="sum-key">Modal Disetor</span><span class="sum-val" id="nsModal">Rp 0</span></div>
-          <div class="sum-row"><span class="sum-key">Dana di EA Trading (50%)</span><span class="sum-val val-gold" id="nsSaldoEA">Rp 0</span></div>
-          <div class="sum-row"><span class="sum-key">Dana Darurat (50%)</span><span class="sum-val" style="color:var(--blue)" id="nsSaldoDarurat">Rp 0</span></div>
-          <div class="sum-row"><span class="sum-key">Profit Diterima</span><span class="sum-val val-green" id="nsProfitTotal">+Rp 0</span></div>
-          <div class="sum-row"><span class="sum-key">Total Saldo</span><span class="sum-val val-green" id="nsTotalSaldo">Rp 0</span></div>
+          <div class="sum-row"><span class="sum-key">Modal Disetor</span>
+            <div class="cur3"><span class="cur-cent" id="nsModalCent">¢0</span><span class="cur-usd" id="nsModalUSD">$0.00</span><span class="cur-rp" id="nsModalRp">Rp 0</span></div>
+          </div>
+          <div class="sum-row"><span class="sum-key">Dana EA Trading (50%)</span>
+            <div class="cur3"><span class="cur-cent" id="nsSaldoEACent">¢0</span><span class="cur-usd" id="nsSaldoEAUSD">$0.00</span><span class="cur-rp" id="nsSaldoEARp">Rp 0</span></div>
+          </div>
+          <div class="sum-row"><span class="sum-key">Dana Darurat (50%)</span>
+            <div class="cur3"><span class="cur-cent" id="nsDaruratCent">¢0</span><span class="cur-usd" id="nsDaruratUSD">$0.00</span><span class="cur-rp" id="nsDaruratRp">Rp 0</span></div>
+          </div>
+          <div class="sum-row"><span class="sum-key">Profit Diterima (40%)</span>
+            <div class="cur3"><span class="cur-cent val-green" id="nsProfitCent">¢0</span><span class="cur-usd" id="nsProfitUSD">$0.00</span><span class="cur-rp" id="nsProfitRp">Rp 0</span></div>
+          </div>
         </div>
       </div>
       <div class="sec-lbl">Info EA</div>
       <div class="card">
         <div class="card-body">
           <div class="sum-row"><span class="sum-key">Status EA</span><span class="sum-val"><span class="status-pill pill-active">● Aktif</span></span></div>
+          <div class="sum-row"><span class="sum-key">Broker</span><span class="sum-val">FBS Cent Account</span></div>
           <div class="sum-row"><span class="sum-key">Instrumen</span><span class="sum-val">XAU/USD (Gold)</span></div>
           <div class="sum-row"><span class="sum-key">Win Rate</span><span class="sum-val val-green">78.3%</span></div>
           <div class="sum-row"><span class="sum-key">Strategi</span><span class="sum-val">🔒 Rahasia</span></div>
-          <div class="sum-row"><span class="sum-key">Bagi Hasil Anda</span><span class="sum-val val-green">40% dari profit</span></div>
+          <div class="sum-row"><span class="sum-key">Bagi Hasil</span><span class="sum-val val-green">40% dari profit</span></div>
         </div>
       </div>
     </div>
 
-    <!-- NASABAH TOPUP -->
-    <div id="pg_nasabahTopup" class="page">
-      <div class="sec-lbl">Tambah Modal</div>
-      <div class="warn-box">⚠️ Request akan diverifikasi Admin. Setelah disetujui: <b>50% → Saldo EA Trading</b> dan <b>50% → Saldo Darurat</b>.</div>
-      <div class="card">
-        <div class="card-hdr"><span class="card-title">💰 Form Tambah Modal</span></div>
-        <div class="card-body">
-          <label class="lbl">Pilih Nominal</label>
-          <div class="amt-grid">
-            <div class="amt-chip" onclick="selectAmt(this,'162000')">$10</div>
-            <div class="amt-chip active" onclick="selectAmt(this,'810000')">$50</div>
-            <div class="amt-chip" onclick="selectAmt(this,'1620000')">$100</div>
-            <div class="amt-chip" onclick="selectAmt(this,'4050000')">$250</div>
-            <div class="amt-chip" onclick="selectAmt(this,'8100000')">$500</div>
-            <div class="amt-chip" onclick="selectAmt(this,'custom')">Lainnya</div>
-          </div>
-          <input class="inp" type="number" id="topupAmt" value="1000000" placeholder="Nominal (Rp)" oninput="calcTopup()">
-          <div class="topup-info">
-            <div class="topup-info-title">📊 Simulasi Alokasi</div>
-            <div class="ti-row"><span>Jumlah Setoran</span><span id="tcTotal">Rp 1.000.000</span></div>
-            <div class="ti-row"><span>→ Saldo EA (50%)</span><span id="tcEA" style="color:var(--gold)">Rp 500.000</span></div>
-            <div class="ti-row"><span>→ Saldo Darurat (50%)</span><span id="tcDarurat" style="color:var(--blue)">Rp 500.000</span></div>
-          </div>
-          <label class="lbl">Rekening Tujuan Transfer</label>
-          <div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:10px">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Transfer ke rekening:</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700">BCA · 1234567890</div>
-            <div style="font-size:12px;color:var(--text2);margin-top:2px">a.n. ARISAN EA Management</div>
-          </div>
-          <label class="lbl">Catatan</label>
-          <input class="inp" id="topupNote" placeholder="Contoh: Topup Juni 2025">
-          <button class="btn-gold" onclick="submitTopup()">📤 Kirim Request Topup</button>
-        </div>
-      </div>
-      <!-- Riwayat Request -->
-      <div class="sec-lbl">Request Saya</div>
-      <div class="card"><div id="myRequestList"><div class="empty-state"><div class="e-ico">⏳</div><div class="e-txt">Memuat...</div></div></div></div>
-    </div>
-
-    <!-- NASABAH RIWAYAT -->
+    <!-- ══ NASABAH RIWAYAT ══ -->
     <div id="pg_nasabahRiwayat" class="page">
       <div class="sec-lbl">Riwayat Transaksi</div>
-      <div class="card"><div id="nasabahHistory"><div class="empty-state"><div class="e-ico">⏳</div><div class="e-txt">Memuat riwayat...</div></div></div></div>
+      <div class="card"><div id="nasabahHistory"><div class="empty-state"><div class="e-ico">⏳</div><div class="e-txt">Memuat...</div></div></div></div>
     </div>
 
-    <!-- NASABAH PROFIL -->
+    <!-- ══ NASABAH PROFIL ══ -->
     <div id="pg_nasabahProfil" class="page">
       <div class="sec-lbl">Profil Saya</div>
       <div class="card">
@@ -434,7 +404,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
           <div id="profilAvatar" style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#B8860B,#FFD700);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;margin:0 auto 12px">?</div>
           <div style="font-size:16px;font-weight:700" id="profilNama">-</div>
           <div style="font-size:12px;color:var(--text3);font-family:'JetBrains Mono',monospace" id="profilKode">-</div>
-          <div style="margin-top:6px"><span class="status-pill pill-active">● Aktif</span></div>
+          <div style="margin-top:6px" id="profilStatusBadge"><span class="status-pill pill-active">● Aktif</span></div>
         </div>
         <div style="padding:0 14px 14px">
           <div class="sum-row"><span class="sum-key">Username</span><span class="sum-val" id="profilUser">-</span></div>
@@ -443,51 +413,73 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
           <div class="sum-row"><span class="sum-key">Bagi Hasil</span><span class="sum-val">40% dari profit EA</span></div>
         </div>
       </div>
-      <button class="btn-ghost" style="margin-top:4px" onclick="doLogout()">↩ Keluar Akun</button>
+      <button class="btn-ghost" onclick="doLogout()">↩ Keluar Akun</button>
     </div>
 
-  </div><!-- appContent -->
-
+  </div><!-- app-content -->
   <div class="bottom-nav" id="bottomNav"></div>
 </div><!-- appShell -->
 
-<!-- MODAL TAMBAH NASABAH -->
-<div class="modal-overlay" id="modalTambahNasabah">
+<!-- ══ MODAL TAMBAH ANGGOTA ══ -->
+<div class="modal-overlay" id="modalTambahAnggota">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title">👤 Tambah Nasabah Baru</div>
+    <div class="modal-title">👤 Tambah Anggota Baru</div>
     <label class="lbl">Nama Lengkap</label>
-    <input class="inp" id="tnNama" placeholder="Contoh: Budi Santoso">
+    <input class="inp" id="tnNama" placeholder="Nama lengkap anggota">
     <label class="lbl">Username (untuk login)</label>
-    <input class="inp" id="tnUsername" placeholder="Contoh: nasabah6" autocapitalize="none">
-    <label class="lbl">PIN</label>
+    <input class="inp" id="tnUsername" placeholder="Contoh: budi123" autocapitalize="none">
+    <label class="lbl">PIN Awal (Admin yang tentukan)</label>
     <input class="inp" type="password" id="tnPin" placeholder="Min. 4 digit" maxlength="8">
-    <label class="lbl">Modal Awal (Rp) — opsional</label>
-    <input class="inp" type="number" id="tnModal" placeholder="0 jika belum setor">
-    <div class="info-box" style="margin-bottom:10px">📌 Kode nasabah (NSB-xxx) dibuat otomatis. Modal akan dibagi 50% EA + 50% Darurat.</div>
-    <button class="btn-gold" onclick="simpanNasabahBaru()">✅ Simpan Nasabah</button>
-    <button class="btn-ghost" style="margin-top:8px" onclick="closeModal('modalTambahNasabah')">Batal</button>
+    <label class="lbl">Modal Awal (USD — sesuai MT4) — opsional</label>
+    <input class="inp" type="number" id="tnModal" placeholder="0 jika belum setor" step="0.01" oninput="calcModalBaru()">
+    <div class="topup-info" id="modalBaruCalc" style="display:none">
+      <div class="topup-info-title">📊 Alokasi Modal Awal</div>
+      <div class="ti-row"><span>Modal USD</span><span id="mbUSD">-</span></div>
+      <div class="ti-row"><span>Dalam Cent FBS</span><span id="mbCent" style="color:var(--gold)">-</span></div>
+      <div class="ti-row"><span>→ EA Trading (50%)</span><span id="mbEA">-</span></div>
+      <div class="ti-row"><span>→ Darurat (50%)</span><span id="mbDarurat">-</span></div>
+      <div class="ti-row"><span>Dalam Rupiah</span><span id="mbRp">-</span></div>
+    </div>
+    <div class="info-box">📌 Kode anggota (NSB-xxx) dibuat otomatis. PIN diberikan langsung ke anggota.</div>
+    <button class="btn-gold" onclick="simpanAnggotaBaru()">✅ Simpan Anggota</button>
+    <button class="btn-ghost" onclick="closeModal('modalTambahAnggota')">Batal</button>
   </div>
 </div>
 
-<!-- MODAL KURS USD -->
-<div class="modal-overlay" id="modalKurs">
+<!-- ══ MODAL DETAIL ANGGOTA (Admin) ══ -->
+<div class="modal-overlay" id="modalDetailAnggota">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title">💱 Update Kurs USD/Rp</div>
-    <div class="info-box" style="margin-bottom:10px">Update kurs harian agar konversi USD ↔ Rp akurat. Nilai default: Rp 16.200 per $1.</div>
-    <label class="lbl">1 USD = Rp</label>
-    <input class="inp" type="number" id="kursInput" value="16200">
-    <button class="btn-gold" onclick="updateKurs()">💾 Simpan Kurs</button>
-    <button class="btn-ghost" style="margin-top:8px" onclick="closeModal('modalKurs')">Batal</button>
+    <div class="modal-title" id="modalAnggotaTitle">Detail Anggota</div>
+    <div id="modalAnggotaBody"></div>
+    <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px" id="modalAnggotaActions"></div>
   </div>
 </div>
 
-<!-- MODAL DETAIL NASABAH -->
+<!-- ══ MODAL GANTI PIN ANGGOTA (Admin) ══ -->
+<div class="modal-overlay" id="modalGantiPinAnggota">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔑 Ganti PIN Anggota</div>
+    <div class="info-box">Admin yang menetapkan PIN. Berikan PIN baru ini langsung ke anggota.</div>
+    <label class="lbl">Nama Anggota</label>
+    <input class="inp" id="gpaNama" readonly style="background:#F9FAFB">
+    <label class="lbl">PIN Baru</label>
+    <input class="inp" type="password" id="gpaPinBaru" placeholder="Min. 4 digit" maxlength="8">
+    <label class="lbl">Konfirmasi PIN Baru</label>
+    <input class="inp" type="password" id="gpaPinKonfirm" placeholder="Ulangi PIN baru" maxlength="8">
+    <input type="hidden" id="gpaId">
+    <button class="btn-gold" onclick="simpanPinAnggota()">💾 Simpan PIN Baru</button>
+    <button class="btn-ghost" onclick="closeModal('modalGantiPinAnggota')">Batal</button>
+  </div>
+</div>
+
+<!-- ══ MODAL DETAIL NASABAH (view) ══ -->
 <div class="modal-overlay" id="modalNasabah">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title" id="modalNasabahTitle">Detail Nasabah</div>
+    <div class="modal-title" id="modalNasabahTitle">Detail</div>
     <div id="modalNasabahBody"></div>
     <button class="btn-ghost" style="margin-top:12px" onclick="closeModal('modalNasabah')">Tutup</button>
   </div>
@@ -496,545 +488,505 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <div class="toast" id="toast"></div>
 
 <script>
-// ═══════════════════════════════════
-// SUPABASE CONFIG
-// ═══════════════════════════════════
+// ══════════ CONFIG ══════════
 const SB_URL = 'https://tnucvqhlyngjxzpxpnsv.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRudWN2cWhseW5nanh6cHhwbnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NzY1NzUsImV4cCI6MjA5NjE1MjU3NX0.f-Jtqb6F38ypJr7VNy0Kki1ME3Y0Qe1OrvjMqrb5pDk';
-const HDR = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+const HDR = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
 
-async function sb(path, method='GET', body=null) {
-  const opts = { method, headers: HDR };
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(SB_URL + '/rest/v1/' + path, opts);
-  if (!res.ok) { const e = await res.text(); throw new Error(e); }
-  const txt = await res.text();
-  return txt ? JSON.parse(txt) : [];
+async function sb(path,method='GET',body=null){
+  const opts={method,headers:HDR};
+  if(body) opts.body=JSON.stringify(body);
+  const res=await fetch(SB_URL+'/rest/v1/'+path,opts);
+  if(!res.ok){const e=await res.text();throw new Error(e);}
+  const txt=await res.text();
+  return txt?JSON.parse(txt):[];
 }
 
-// ═══════════════════════════════════
-// STATE
-// ═══════════════════════════════════
-let currentRole = '';
-let currentUser = null; // {id, username, nama, kode, ...}
-let livePrice = 3324.80;
-let toastTimer;
+// ══════════ CURRENCY ══════════
+// Semua nilai DB disimpan dalam CENT (¢)
+// ¢100 = $1 USD = kursUSD Rupiah
+let kursUSD = 16200;
 
-// ═══════════════════════════════════
-// INIT
-// ═══════════════════════════════════
-window.addEventListener('load', async () => {
-  // Test koneksi
-  try {
+function centToUSD(c){ return (c/100).toFixed(2); }
+function centToRp(c){ return Math.round(c/100*kursUSD); }
+function usdToCent(usd){ return Math.round(parseFloat(usd||0)*100); }
+
+function fmtCent(c){ return '¢'+Math.round(c||0).toLocaleString('id-ID'); }
+function fmtUSD(c){ return '$'+(c/100).toFixed(2); }
+function fmtRp(c){ return 'Rp '+Math.round((c||0)/100*kursUSD).toLocaleString('id-ID'); }
+function fmtAll(c){ return `${fmtCent(c)} / ${fmtUSD(c)} / ${fmtRp(c)}`; }
+function fmtDate(s){ if(!s)return'-'; return new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}); }
+
+// ══════════ STATE ══════════
+let currentRole='', currentUser=null, livePrice=3324.80, toastTimer;
+
+// ══════════ INIT ══════════
+window.addEventListener('load',async()=>{
+  try{
     await sb('nasabah?limit=1');
     showScreen('login');
-  } catch(e) {
-    document.getElementById('loadingScreen').innerHTML = `
-      <div style="text-align:center;padding:24px">
-        <div style="font-size:36px;margin-bottom:12px">⚠️</div>
-        <div style="font-size:14px;font-weight:600;margin-bottom:8px">Gagal konek ke database</div>
-        <div style="font-size:12px;color:#666;margin-bottom:16px">Pastikan SQL Schema sudah dijalankan di Supabase</div>
-        <button onclick="location.reload()" style="padding:10px 20px;background:var(--gold);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer">Coba Lagi</button>
-      </div>`;
+  }catch(e){
+    document.getElementById('loadingScreen').innerHTML=`<div style="text-align:center;padding:24px"><div style="font-size:36px;margin-bottom:12px">⚠️</div><div style="font-size:14px;font-weight:600;margin-bottom:8px">Gagal konek database</div><div style="font-size:12px;color:#666;margin-bottom:16px">Jalankan SQL Schema di Supabase terlebih dahulu</div><button onclick="location.reload()" style="padding:10px 20px;background:var(--gold);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer">Coba Lagi</button></div>`;
   }
 });
 
-function showScreen(s) {
-  document.getElementById('loadingScreen').style.display = 'none';
-  document.getElementById('loginScreen').style.display = s==='login' ? 'flex' : 'none';
-  document.getElementById('appShell').style.display = s==='app' ? 'block' : 'none';
+function showScreen(s){
+  document.getElementById('loadingScreen').style.display='none';
+  document.getElementById('loginScreen').style.display=s==='login'?'flex':'none';
+  document.getElementById('appShell').style.display=s==='app'?'block':'none';
+}
+function showLoading(on){ document.getElementById('loadingScreen').style.display=on?'flex':'none'; }
+
+// ══════════ LOGIN ══════════
+let loginRole='admin';
+function setRole(r){
+  loginRole=r;
+  document.getElementById('roleTabAdmin').classList.toggle('active',r==='admin');
+  document.getElementById('roleTabNasabah').classList.toggle('active',r==='nasabah');
+  document.getElementById('loginUser').value=r==='admin'?'admin':'';
 }
 
-// ═══════════════════════════════════
-// LOGIN
-// ═══════════════════════════════════
-let loginRole = 'admin';
-function setRole(r) {
-  loginRole = r;
-  document.getElementById('roleTabAdmin').classList.toggle('active', r==='admin');
-  document.getElementById('roleTabNasabah').classList.toggle('active', r==='nasabah');
-  document.getElementById('loginUser').value = r === 'admin' ? 'admin' : 'nasabah1';
-}
-
-async function doLogin() {
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPass').value.trim();
-  if (!u || !p) { showToast('❌ Isi username dan PIN'); return; }
+async function doLogin(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value.trim();
+  if(!u||!p){showToast('❌ Isi username dan PIN');return;}
   showLoading(true);
-  try {
-    if (loginRole === 'admin') {
-      const rows = await sb(`admin?username=eq.${u}&pin=eq.${p}`);
-      if (!rows.length) { showToast('❌ Username/PIN admin salah'); showLoading(false); return; }
-      currentRole = 'admin';
-      currentUser = rows[0];
-    } else {
-      const rows = await sb(`nasabah?username=eq.${u}&pin=eq.${p}`);
-      if (!rows.length) { showToast('❌ Username/PIN nasabah salah'); showLoading(false); return; }
-      currentRole = 'nasabah';
-      currentUser = rows[0];
+  try{
+    if(loginRole==='admin'){
+      const rows=await sb(`admin?username=eq.${u}&pin=eq.${p}`);
+      if(!rows.length){showToast('❌ Username/PIN salah');showLoading(false);return;}
+      currentRole='admin'; currentUser=rows[0];
+    }else{
+      const rows=await sb(`nasabah?username=eq.${u}&pin=eq.${p}&status=eq.active`);
+      if(!rows.length){showToast('❌ Username/PIN salah atau akun nonaktif');showLoading(false);return;}
+      currentRole='nasabah'; currentUser=rows[0];
     }
     showScreen('app');
-    document.getElementById('roleBadge').textContent = currentRole === 'admin' ? 'ADMIN' : 'NASABAH';
-    document.getElementById('roleBadge').className = 'role-badge ' + (currentRole === 'admin' ? 'badge-admin' : 'badge-nasabah');
+    document.getElementById('roleBadge').textContent=currentRole==='admin'?'ADMIN':'ANGGOTA';
+    document.getElementById('roleBadge').className='role-badge '+(currentRole==='admin'?'badge-admin':'badge-nasabah');
     buildNav();
-    if (currentRole === 'admin') { await loadAdminData(); navigateTo('pg_adminHome'); }
-    else { await loadNasabahData(); navigateTo('pg_nasabahHome'); }
-    showToast('👋 Selamat datang, ' + currentUser.nama);
-  } catch(e) { showToast('❌ Error: ' + e.message); }
+    if(currentRole==='admin'){await loadAdminHome();navigateTo('pg_adminHome');}
+    else{await loadNasabahHome();navigateTo('pg_nasabahHome');}
+    showToast('👋 Selamat datang, '+currentUser.nama);
+  }catch(e){showToast('❌ Error: '+e.message);}
   showLoading(false);
 }
 
-function doLogout() {
-  currentRole = ''; currentUser = null;
-  showScreen('login');
-}
+function doLogout(){ currentRole=''; currentUser=null; showScreen('login'); }
 
-function showLoading(on) {
-  document.getElementById('loadingScreen').style.display = on ? 'flex' : 'none';
-}
-
-// ═══════════════════════════════════
-// NAV
-// ═══════════════════════════════════
-const adminNavItems = [
-  {id:'pg_adminHome',     ico:'🏠', lbl:'Beranda'},
-  {id:'pg_adminNasabah',  ico:'👥', lbl:'Nasabah'},
-  {id:'pg_adminLaporan',  ico:'📊', lbl:'Laporan'},
-  {id:'pg_adminSetelan',  ico:'⚙️',  lbl:'Setelan'},
+// ══════════ NAV ══════════
+const adminNav=[
+  {id:'pg_adminHome',ico:'🏠',lbl:'Beranda'},
+  {id:'pg_adminAnggota',ico:'👥',lbl:'Anggota'},
+  {id:'pg_adminLaporan',ico:'📊',lbl:'Laporan'},
+  {id:'pg_adminSetelan',ico:'⚙️',lbl:'Setelan'},
 ];
-const nasabahNavItems = [
-  {id:'pg_nasabahHome',    ico:'🏠', lbl:'Beranda'},
-  {id:'pg_nasabahTopup',   ico:'💰', lbl:'Topup'},
-  {id:'pg_nasabahRiwayat', ico:'📋', lbl:'Riwayat'},
-  {id:'pg_nasabahProfil',  ico:'👤', lbl:'Profil'},
+const nasabahNav=[
+  {id:'pg_nasabahHome',ico:'🏠',lbl:'Beranda'},
+  {id:'pg_nasabahRiwayat',ico:'📋',lbl:'Riwayat'},
+  {id:'pg_nasabahProfil',ico:'👤',lbl:'Profil'},
 ];
 
-function buildNav() {
-  const items = currentRole === 'admin' ? adminNavItems : nasabahNavItems;
-  document.getElementById('bottomNav').innerHTML = items.map(n =>
-    `<button class="nav-btn" id="nb_${n.id}" onclick="navClick('${n.id}')">
-      <span class="nav-ico">${n.ico}</span><span class="nav-lbl">${n.lbl}</span>
-    </button>`).join('');
+function buildNav(){
+  const items=currentRole==='admin'?adminNav:nasabahNav;
+  document.getElementById('bottomNav').innerHTML=items.map(n=>`<button class="nav-btn" id="nb_${n.id}" onclick="navClick('${n.id}')"><span class="nav-ico">${n.ico}</span><span class="nav-lbl">${n.lbl}</span></button>`).join('');
 }
 
-async function navClick(id) {
+async function navClick(id){
   navigateTo(id);
-  if (id === 'pg_adminNasabah') await loadNasabahList();
-  if (id === 'pg_adminLaporan') await loadLaporan();
-  if (id === 'pg_nasabahRiwayat') await loadNasabahHistory();
-  if (id === 'pg_nasabahTopup') await loadMyRequests();
+  if(id==='pg_adminAnggota') await loadAnggotaList();
+  if(id==='pg_adminLaporan') await loadLaporan();
+  if(id==='pg_nasabahRiwayat') await loadNasabahHistory();
 }
 
-function navigateTo(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  const pg = document.getElementById(id);
-  if (pg) pg.classList.add('active');
-  const nb = document.getElementById('nb_' + id);
-  if (nb) nb.classList.add('active');
+function navigateTo(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+  document.getElementById('nb_'+id)?.classList.add('active');
   window.scrollTo(0,0);
 }
 
-// ═══════════════════════════════════
-// ADMIN DATA
-// ═══════════════════════════════════
-async function loadAdminData() {
-  try {
-    const nasabah = await sb('nasabah?select=*&status=eq.active');
-    const pending = await sb('topup_request?status=eq.pending&select=*&order=created_at.desc');
-
-    const totalModal = nasabah.reduce((s,n) => s+n.modal, 0);
-    const totalEA    = nasabah.reduce((s,n) => s+n.saldo_ea, 0);
-    const totalDar   = nasabah.reduce((s,n) => s+n.saldo_darurat, 0);
-    const totalProfit= nasabah.reduce((s,n) => s+n.profit_total, 0);
-
-    document.getElementById('adminTotalDana').textContent = fmt(totalModal + totalProfit);
-    document.getElementById('adminSubInfo').textContent = `Dana aktif + darurat · ${nasabah.length} nasabah`;
-    document.getElementById('adminTotalNasabah').textContent = nasabah.length;
-    document.getElementById('adminTotalProfit').textContent = fmt(totalProfit);
-    document.getElementById('adminModalTotal').textContent = fmt(totalModal);
-    document.getElementById('adminSaldoEA').textContent = fmt(totalEA);
-    document.getElementById('adminSaldoDarurat').textContent = fmt(totalDar);
-    document.getElementById('adminProfitTotal').textContent = fmt(totalProfit);
-
-    // Pending topup
+// ══════════ ADMIN HOME ══════════
+async function loadAdminHome(){
+  try{
+    const ns=await sb('nasabah?select=*&status=eq.active');
+    const pending=await sb('topup_request?status=eq.pending&order=created_at.desc');
+    const totalCent=ns.reduce((s,n)=>s+n.modal,0);
+    const totalEA=ns.reduce((s,n)=>s+n.saldo_ea,0);
+    const totalDar=ns.reduce((s,n)=>s+n.saldo_darurat,0);
+    const totalProfit=ns.reduce((s,n)=>s+n.profit_total,0);
+    set('adminCent',fmtCent(totalCent+totalProfit));
+    set('adminUSD','= '+fmtUSD(totalCent+totalProfit));
+    set('adminRp','≈ '+fmtRp(totalCent+totalProfit));
+    set('adminJmlNasabah',ns.length);
+    set('adminTotalProfit',fmtCent(totalProfit));
+    set('adminSaldoEA',fmtCent(totalEA)+' / '+fmtUSD(totalEA));
+    set('adminSaldoDarurat',fmtCent(totalDar)+' / '+fmtUSD(totalDar));
+    set('adminProfitTotal',fmtCent(totalProfit)+' / '+fmtUSD(totalProfit));
     renderPending(pending);
-  } catch(e) { showToast('⚠️ Gagal muat data: ' + e.message); }
+  }catch(e){showToast('⚠️ '+e.message);}
 }
 
-function renderPending(rows) {
-  const el = document.getElementById('pendingList');
-  if (!rows.length) { el.innerHTML = '<div class="empty-state"><div class="e-ico">📭</div><div class="e-txt">Tidak ada request pending</div></div>'; return; }
-  el.innerHTML = rows.map(r => `
-    <div class="nasabah-item" id="pending_${r.id}">
-      <div class="nav-avatar">${r.nasabah_nama.substring(0,2).toUpperCase()}</div>
-      <div class="nav-info">
-        <div class="nav-name">${r.nasabah_nama}</div>
-        <div class="nav-id">${r.nasabah_kode} · ${fmtDate(r.created_at)}</div>
-        ${r.catatan ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">${r.catatan}</div>` : ''}
+function renderPending(rows){
+  const el=document.getElementById('pendingList');
+  if(!rows.length){el.innerHTML='<div class="empty-state"><div class="e-ico">📭</div><div class="e-txt">Tidak ada request pending</div></div>';return;}
+  el.innerHTML=rows.map(r=>`
+    <div class="ns-item" id="pending_${r.id}">
+      <div class="ns-avatar">${r.nasabah_nama.substring(0,2).toUpperCase()}</div>
+      <div class="ns-info">
+        <div class="ns-name">${r.nasabah_nama}</div>
+        <div class="ns-id">${r.nasabah_kode} · ${fmtDate(r.created_at)}</div>
+        <div style="font-size:10px;color:var(--green);font-weight:600;margin-top:2px">${fmtAll(r.jumlah)}</div>
       </div>
-      <div style="text-align:right">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--green)">+${fmt(r.jumlah)}</div>
-        <div style="display:flex;gap:4px;margin-top:4px">
-          <button onclick="approveTopup('${r.id}','${r.nasabah_id}',${r.jumlah},'${r.nasabah_nama}')" style="padding:3px 8px;background:var(--green);color:white;border:none;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer">✓ ACC</button>
-          <button onclick="rejectTopup('${r.id}')" style="padding:3px 8px;background:var(--red-bg);color:var(--red);border:none;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer">✕ Tolak</button>
-        </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <button onclick="approveTopup('${r.id}','${r.nasabah_id}',${r.jumlah},'${r.nasabah_nama}')" style="padding:5px 10px;background:var(--green);color:white;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">✓ ACC</button>
+        <button onclick="rejectTopup('${r.id}')" style="padding:5px 10px;background:var(--red-bg);color:var(--red);border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">✕ Tolak</button>
       </div>
     </div>`).join('');
 }
 
-async function approveTopup(rid, nasabahId, jumlah, nama) {
+async function approveTopup(rid,nsId,jumlah,nama){
   showLoading(true);
-  try {
-    const ea = Math.floor(jumlah * 0.5);
-    const darurat = Math.floor(jumlah * 0.5);
-    // Get current nasabah
-    const [ns] = await sb(`nasabah?id=eq.${nasabahId}`);
-    // Update nasabah saldo
-    await sb(`nasabah?id=eq.${nasabahId}`, 'PATCH', {
-      modal: ns.modal + jumlah,
-      saldo_ea: ns.saldo_ea + ea,
-      saldo_darurat: ns.saldo_darurat + darurat
-    });
-    // Update request status
-    await sb(`topup_request?id=eq.${rid}`, 'PATCH', { status: 'approved', updated_at: new Date().toISOString() });
-    // Catat transaksi
-    await sb('transaksi', 'POST', { nasabah_id: nasabahId, nasabah_kode: ns.kode, tipe: 'topup', jumlah, keterangan: 'Topup disetujui Admin' });
-    document.getElementById('pending_' + rid)?.remove();
-    showToast(`✅ Topup ${nama} ${fmt(jumlah)} disetujui`);
-    await loadAdminData();
-  } catch(e) { showToast('❌ Gagal approve: ' + e.message); }
+  try{
+    const ea=Math.floor(jumlah*0.5), dar=Math.floor(jumlah*0.5);
+    const[ns]=await sb(`nasabah?id=eq.${nsId}`);
+    await sb(`nasabah?id=eq.${nsId}`,'PATCH',{modal:ns.modal+jumlah,saldo_ea:ns.saldo_ea+ea,saldo_darurat:ns.saldo_darurat+dar});
+    await sb(`topup_request?id=eq.${rid}`,'PATCH',{status:'approved',updated_at:new Date().toISOString()});
+    await sb('transaksi','POST',{nasabah_id:nsId,nasabah_kode:ns.kode,tipe:'topup',jumlah,keterangan:'Topup disetujui Admin'});
+    document.getElementById('pending_'+rid)?.remove();
+    showToast(`✅ ${nama} ${fmtCent(jumlah)} disetujui`);
+    await loadAdminHome();
+  }catch(e){showToast('❌ '+e.message);}
   showLoading(false);
 }
 
-async function rejectTopup(rid) {
+async function rejectTopup(rid){
   showLoading(true);
-  try {
-    await sb(`topup_request?id=eq.${rid}`, 'PATCH', { status: 'rejected', updated_at: new Date().toISOString() });
-    document.getElementById('pending_' + rid)?.remove();
-    showToast('❌ Request topup ditolak');
-  } catch(e) { showToast('❌ Error: ' + e.message); }
+  try{
+    await sb(`topup_request?id=eq.${rid}`,'PATCH',{status:'rejected',updated_at:new Date().toISOString()});
+    document.getElementById('pending_'+rid)?.remove();
+    showToast('❌ Request ditolak');
+  }catch(e){showToast('❌ '+e.message);}
   showLoading(false);
 }
 
-async function loadNasabahList() {
-  try {
-    const rows = await sb('nasabah?select=*&order=created_at.asc');
-    const el = document.getElementById('nasabahList');
-    if (!rows.length) { el.innerHTML = '<div class="empty-state"><div class="e-ico">👥</div><div class="e-txt">Belum ada nasabah</div></div>'; return; }
-    el.innerHTML = rows.map((n,i) => `
-      <div class="nasabah-item" onclick="openNasabahDetail('${n.id}')">
-        <div class="nav-avatar">${n.nama.substring(0,2).toUpperCase()}</div>
-        <div class="nav-info">
-          <div class="nav-name">${n.nama}</div>
-          <div class="nav-id">${n.kode} · ${n.username}</div>
-        </div>
-        <div class="nav-right">
-          <div class="nav-modal">${fmtShort(n.modal)}</div>
-          <div class="nav-profit val-green">+${fmtShort(n.profit_total)}</div>
+// ══════════ ADMIN ANGGOTA ══════════
+async function loadAnggotaList(){
+  try{
+    const rows=await sb('nasabah?select=*&order=created_at.asc');
+    const el=document.getElementById('anggotaList');
+    if(!rows.length){el.innerHTML='<div class="empty-state"><div class="e-ico">👥</div><div class="e-txt">Belum ada anggota</div></div>';return;}
+    el.innerHTML=rows.map(n=>`
+      <div class="ns-item" onclick="openDetailAnggota('${n.id}')">
+        <div class="ns-avatar ${n.status==='suspend'?'suspended':''}">${n.nama.substring(0,2).toUpperCase()}</div>
+        <div class="ns-info">
+          <div class="ns-name">${n.nama} <span class="status-pill ${n.status==='active'?'pill-active':'pill-suspend'}" style="margin-left:4px">${n.status==='active'?'Aktif':'Suspend'}</span></div>
+          <div class="ns-id">${n.kode} · ${n.username}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:1px">${fmtCent(n.modal)} / ${fmtUSD(n.modal)} / ${fmtRp(n.modal)}</div>
         </div>
         <span style="font-size:16px;color:var(--text3)">›</span>
       </div>`).join('');
-  } catch(e) { showToast('❌ Gagal muat nasabah'); }
+  }catch(e){showToast('❌ '+e.message);}
 }
 
-async function openNasabahDetail(id) {
-  try {
-    const [n] = await sb(`nasabah?id=eq.${id}`);
-    const pct = n.modal > 0 ? ((n.profit_total/n.modal)*100).toFixed(1) : '0';
-    document.getElementById('modalNasabahTitle').textContent = n.nama;
-    document.getElementById('modalNasabahBody').innerHTML = `
-      <div class="nd-row"><span class="nd-key">ID Nasabah</span><span class="nd-val">${n.kode}</span></div>
+async function openDetailAnggota(id){
+  try{
+    const[n]=await sb(`nasabah?id=eq.${id}`);
+    const pct=n.modal>0?((n.profit_total/n.modal)*100).toFixed(1):'0';
+    document.getElementById('modalAnggotaTitle').textContent=n.nama;
+    document.getElementById('modalAnggotaBody').innerHTML=`
+      <div class="nd-row"><span class="nd-key">Kode</span><span class="nd-val">${n.kode}</span></div>
       <div class="nd-row"><span class="nd-key">Username</span><span class="nd-val">${n.username}</span></div>
-      <div class="nd-row"><span class="nd-key">Total Modal</span><span class="nd-val">${fmt(n.modal)}</span></div>
-      <div class="nd-row"><span class="nd-key">Saldo EA Trading</span><span class="nd-val" style="color:var(--gold)">${fmt(n.saldo_ea)}</span></div>
-      <div class="nd-row"><span class="nd-key">Saldo Darurat</span><span class="nd-val" style="color:var(--blue)">${fmt(n.saldo_darurat)}</span></div>
-      <div class="nd-row"><span class="nd-key">Profit Diterima</span><span class="nd-val val-green">+${fmt(n.profit_total)}</span></div>
+      <div class="nd-row"><span class="nd-key">Status</span><span class="nd-val"><span class="status-pill ${n.status==='active'?'pill-active':'pill-suspend'}">${n.status==='active'?'● Aktif':'⛔ Suspend'}</span></span></div>
+      <div class="nd-row"><span class="nd-key">Modal</span><span class="nd-val">${fmtCent(n.modal)}<br><span style="font-size:10px;color:var(--text3)">${fmtUSD(n.modal)} / ${fmtRp(n.modal)}</span></span></div>
+      <div class="nd-row"><span class="nd-key">Saldo EA</span><span class="nd-val">${fmtCent(n.saldo_ea)}<br><span style="font-size:10px;color:var(--text3)">${fmtUSD(n.saldo_ea)}</span></span></div>
+      <div class="nd-row"><span class="nd-key">Saldo Darurat</span><span class="nd-val">${fmtCent(n.saldo_darurat)}<br><span style="font-size:10px;color:var(--text3)">${fmtUSD(n.saldo_darurat)}</span></span></div>
+      <div class="nd-row"><span class="nd-key">Total Profit</span><span class="nd-val" style="color:var(--green)">${fmtCent(n.profit_total)}<br><span style="font-size:10px">${fmtUSD(n.profit_total)} / ${fmtRp(n.profit_total)}</span></span></div>
       <div class="nd-row"><span class="nd-key">Return</span><span class="nd-val val-green">+${pct}%</span></div>
-      <div class="nd-row"><span class="nd-key">Status</span><span class="nd-val"><span class="status-pill pill-active">● Aktif</span></span></div>
-      <div class="pbar-wrap"><div class="pbar-lbl"><span>Modal</span><span>Return +${pct}%</span></div>
-      <div class="pbar-track"><div class="pbar-fill" style="width:${Math.min(pct,100)}%;background:linear-gradient(90deg,#0B7A55,#4ADE80)"></div></div></div>`;
-    document.getElementById('modalNasabah').classList.add('open');
-  } catch(e) { showToast('❌ Gagal muat detail'); }
+      <div class="pbar-track"><div class="pbar-fill" style="width:${Math.min(pct,100)}%;background:linear-gradient(90deg,#0B7A55,#4ADE80)"></div></div>`;
+    const isSuspend=n.status==='suspend';
+    document.getElementById('modalAnggotaActions').innerHTML=`
+      <button class="btn-gold" onclick="closeModal('modalDetailAnggota');openGantiPin('${n.id}','${n.nama}')">🔑 Ganti PIN Anggota</button>
+      <button class="${isSuspend?'btn-gold':'btn-ghost'}" onclick="toggleStatusAnggota('${n.id}','${n.status}','${n.nama}')">${isSuspend?'✅ Aktifkan Anggota':'⛔ Suspend Anggota'}</button>
+      <button class="btn-ghost" onclick="closeModal('modalDetailAnggota')">Tutup</button>`;
+    openModal('modalDetailAnggota');
+  }catch(e){showToast('❌ '+e.message);}
 }
 
-async function loadLaporan() {
-  try {
-    const nasabah = await sb('nasabah?select=*');
-    const transaksi = await sb('transaksi?select=*&order=created_at.desc&limit=20');
-    const totalModal = nasabah.reduce((s,n)=>s+n.modal,0);
-    const totalProfit = nasabah.reduce((s,n)=>s+n.profit_total,0);
-    const totalDarurat = nasabah.reduce((s,n)=>s+n.saldo_darurat,0);
-    const bagNasabah = Math.round(totalProfit * 0.4 / 0.4); // sudah = 40%
-    const bagOps = Math.round(totalProfit * 0.6 / 0.4);
-    document.getElementById('laporanTotal').textContent = fmt(totalModal + totalProfit);
-    document.getElementById('laporanProfitNasabah').textContent = fmt(totalProfit);
-    document.getElementById('laporanOps').textContent = fmt(bagOps);
-    document.getElementById('laporanDarurat').textContent = fmt(totalDarurat);
-    const el = document.getElementById('laporanHistory');
-    if (!transaksi.length) { el.innerHTML = '<div class="empty-state"><div class="e-ico">📋</div><div class="e-txt">Belum ada transaksi</div></div>'; return; }
-    el.innerHTML = transaksi.map(t => `
-      <div class="hist-item">
-        <div class="hist-ico ${t.tipe==='topup'?'h-topup':'h-profit'}">${t.tipe==='topup'?'📥':'💰'}</div>
-        <div class="hist-info">
-          <div class="hist-desc">${t.keterangan || t.tipe}</div>
-          <div class="hist-date">${t.nasabah_kode} · ${fmtDate(t.created_at)}</div>
-        </div>
-        <div class="hist-amt val-green">+${fmt(t.jumlah)}</div>
-      </div>`).join('');
-  } catch(e) { showToast('❌ Gagal muat laporan'); }
+function openGantiPin(id,nama){
+  document.getElementById('gpaId').value=id;
+  document.getElementById('gpaNama').value=nama;
+  document.getElementById('gpaPinBaru').value='';
+  document.getElementById('gpaPinKonfirm').value='';
+  openModal('modalGantiPinAnggota');
 }
 
-// Input profit EA oleh admin
-document.getElementById('profitJumlah')?.addEventListener('input', function() {
-  const v = parseInt(this.value)||0;
-  if (v > 0) {
-    document.getElementById('profitCalcBox').style.display = 'block';
-    document.getElementById('pcTotal').textContent = fmt(v);
-    document.getElementById('pcNasabah').textContent = fmt(Math.round(v*0.4));
-    document.getElementById('pcOps').textContent = fmt(Math.round(v*0.6));
-  } else {
-    document.getElementById('profitCalcBox').style.display = 'none';
-  }
-});
-
-async function catatProfit() {
-  const periode = document.getElementById('profitPeriode').value.trim();
-  const jumlah = parseInt(document.getElementById('profitJumlah').value)||0;
-  const catatan = document.getElementById('profitCatatan').value.trim();
-  if (!periode || !jumlah) { showToast('❌ Isi periode dan jumlah profit'); return; }
+async function simpanPinAnggota(){
+  const id=document.getElementById('gpaId').value;
+  const pinBaru=document.getElementById('gpaPinBaru').value;
+  const pinKonfirm=document.getElementById('gpaPinKonfirm').value;
+  if(pinBaru.length<4){showToast('❌ PIN min. 4 digit');return;}
+  if(pinBaru!==pinKonfirm){showToast('❌ PIN tidak cocok');return;}
   showLoading(true);
-  try {
-    const bagNasabah = Math.round(jumlah * 0.4);
-    const bagOps = Math.round(jumlah * 0.6);
-    // Simpan profit EA
-    await sb('profit_ea', 'POST', { total_profit: jumlah, bagian_nasabah: bagNasabah, bagian_operasional: bagOps, periode, catatan });
-    // Bagi ke nasabah proporsional berdasarkan modal
-    const nasabah = await sb('nasabah?select=*&status=eq.active');
-    const totalModal = nasabah.reduce((s,n)=>s+n.modal,0);
-    for (const n of nasabah) {
-      if (totalModal === 0) continue;
-      const bagian = Math.round(bagNasabah * (n.modal / totalModal));
-      await sb(`nasabah?id=eq.${n.id}`, 'PATCH', { profit_total: n.profit_total + bagian });
-      await sb('transaksi', 'POST', { nasabah_id: n.id, nasabah_kode: n.kode, tipe: 'profit', jumlah: bagian, keterangan: `Bagi hasil ${periode}` });
-    }
-    document.getElementById('profitPeriode').value = '';
-    document.getElementById('profitJumlah').value = '';
-    document.getElementById('profitCatatan').value = '';
-    document.getElementById('profitCalcBox').style.display = 'none';
-    showToast(`✅ Profit ${fmt(jumlah)} dibagikan ke ${nasabah.length} nasabah`);
-    await loadAdminData();
-  } catch(e) { showToast('❌ Gagal catat profit: ' + e.message); }
+  try{
+    await sb(`nasabah?id=eq.${id}`,'PATCH',{pin:pinBaru});
+    showToast('✅ PIN anggota berhasil diubah');
+    closeModal('modalGantiPinAnggota');
+  }catch(e){showToast('❌ '+e.message);}
   showLoading(false);
 }
 
-// ═══════════════════════════════════
-// NASABAH DATA
-// ═══════════════════════════════════
-async function loadNasabahData() {
-  try {
-    const n = currentUser;
-    const total = n.modal + n.profit_total;
-    const ret = n.modal > 0 ? ((n.profit_total/n.modal)*100).toFixed(1) : '0';
-    document.getElementById('nsBalance').textContent = fmt(total);
-    document.getElementById('nsSubInfo').textContent = `Modal: ${fmt(n.modal)} · ${n.kode}`;
-    document.getElementById('nsProfit').textContent = '+' + fmt(n.profit_total);
-    document.getElementById('nsReturn').textContent = '+' + ret + '%';
-    document.getElementById('nsModal').textContent = fmt(n.modal);
-    document.getElementById('nsSaldoEA').textContent = fmt(n.saldo_ea);
-    document.getElementById('nsSaldoDarurat').textContent = fmt(n.saldo_darurat);
-    document.getElementById('nsProfitTotal').textContent = '+' + fmt(n.profit_total);
-    document.getElementById('nsTotalSaldo').textContent = fmt(total);
-    // Profil
-    document.getElementById('profilAvatar').textContent = n.nama.substring(0,2).toUpperCase();
-    document.getElementById('profilNama').textContent = n.nama;
-    document.getElementById('profilKode').textContent = n.kode;
-    document.getElementById('profilUser').textContent = n.username;
-    document.getElementById('profilModal').textContent = fmt(n.modal);
-    document.getElementById('profilProfit').textContent = '+' + fmt(n.profit_total);
-  } catch(e) { showToast('⚠️ Gagal muat data'); }
+async function toggleStatusAnggota(id,status,nama){
+  const newStatus=status==='active'?'suspend':'active';
+  showLoading(true);
+  try{
+    await sb(`nasabah?id=eq.${id}`,'PATCH',{status:newStatus});
+    showToast(`${newStatus==='active'?'✅ Diaktifkan':'⛔ Disuspend'}: ${nama}`);
+    closeModal('modalDetailAnggota');
+    await loadAnggotaList();
+  }catch(e){showToast('❌ '+e.message);}
+  showLoading(false);
 }
 
-async function loadNasabahHistory() {
-  try {
-    const rows = await sb(`transaksi?nasabah_id=eq.${currentUser.id}&order=created_at.desc&limit=30`);
-    const el = document.getElementById('nasabahHistory');
-    if (!rows.length) { el.innerHTML = '<div class="empty-state"><div class="e-ico">📋</div><div class="e-txt">Belum ada transaksi</div></div>'; return; }
-    el.innerHTML = rows.map(t => `
+// ══════════ TAMBAH ANGGOTA ══════════
+function calcModalBaru(){
+  const usd=parseFloat(document.getElementById('tnModal').value)||0;
+  if(usd>0){
+    const cent=usdToCent(usd);
+    document.getElementById('modalBaruCalc').style.display='block';
+    document.getElementById('mbUSD').textContent='$'+usd.toFixed(2);
+    document.getElementById('mbCent').textContent=fmtCent(cent);
+    document.getElementById('mbEA').textContent=fmtCent(Math.floor(cent*0.5))+' / $'+(usd*0.5).toFixed(2);
+    document.getElementById('mbDarurat').textContent=fmtCent(Math.floor(cent*0.5))+' / $'+(usd*0.5).toFixed(2);
+    document.getElementById('mbRp').textContent=fmtRp(cent);
+  }else{
+    document.getElementById('modalBaruCalc').style.display='none';
+  }
+}
+
+async function simpanAnggotaBaru(){
+  const nama=document.getElementById('tnNama').value.trim();
+  const username=document.getElementById('tnUsername').value.trim().toLowerCase();
+  const pin=document.getElementById('tnPin').value.trim();
+  const modalUSD=parseFloat(document.getElementById('tnModal').value)||0;
+  if(!nama||!username||!pin){showToast('❌ Isi nama, username, PIN');return;}
+  if(pin.length<4){showToast('❌ PIN min. 4 digit');return;}
+  showLoading(true);
+  try{
+    const cek=await sb(`nasabah?username=eq.${username}`);
+    if(cek.length){showToast('❌ Username sudah ada');showLoading(false);return;}
+    const all=await sb('nasabah?select=kode&order=created_at.desc&limit=1');
+    let nextNum=1;
+    if(all.length){const last=parseInt((all[0].kode||'NSB-000').split('-')[1]||'0');nextNum=last+1;}
+    const kode='NSB-'+String(nextNum).padStart(3,'0');
+    const modalCent=usdToCent(modalUSD);
+    const ea=Math.floor(modalCent*0.5), dar=Math.floor(modalCent*0.5);
+    await sb('nasabah','POST',{kode,nama,username,pin,modal:modalCent,saldo_ea:ea,saldo_darurat:dar,profit_total:0,status:'active'});
+    if(modalCent>0){
+      const[ns]=await sb(`nasabah?username=eq.${username}`);
+      await sb('transaksi','POST',{nasabah_id:ns.id,nasabah_kode:kode,tipe:'topup',jumlah:modalCent,keterangan:'Setoran Awal'});
+    }
+    showToast(`✅ ${nama} (${kode}) ditambahkan`);
+    closeModal('modalTambahAnggota');
+    ['tnNama','tnUsername','tnPin','tnModal'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('modalBaruCalc').style.display='none';
+    await loadAnggotaList();
+    await loadAdminHome();
+  }catch(e){showToast('❌ '+e.message);}
+  showLoading(false);
+}
+
+// ══════════ LAPORAN ══════════
+async function loadLaporan(){
+  try{
+    const ns=await sb('nasabah?select=*');
+    const tx=await sb('transaksi?select=*&order=created_at.desc&limit=30');
+    const totalModal=ns.reduce((s,n)=>s+n.modal,0);
+    const totalProfit=ns.reduce((s,n)=>s+n.profit_total,0);
+    const totalDar=ns.reduce((s,n)=>s+n.saldo_darurat,0);
+    set('laporanCent',fmtCent(totalProfit));
+    set('laporanUSD','= '+fmtUSD(totalProfit));
+    set('laporanRp','≈ '+fmtRp(totalProfit));
+    set('laporanNasabah',fmtCent(totalProfit));
+    set('laporanOps',fmtCent(Math.round(totalProfit*0.6/0.4)));
+    set('laporanDarurat',fmtCent(totalDar)+' / '+fmtUSD(totalDar));
+    const el=document.getElementById('laporanHistory');
+    if(!tx.length){el.innerHTML='<div class="empty-state"><div class="e-ico">📋</div><div class="e-txt">Belum ada transaksi</div></div>';return;}
+    el.innerHTML=tx.map(t=>`
+      <div class="hist-item">
+        <div class="hist-ico ${t.tipe==='topup'?'h-topup':'h-profit'}">${t.tipe==='topup'?'📥':'💰'}</div>
+        <div style="flex:1">
+          <div class="hist-desc">${t.keterangan||t.tipe}</div>
+          <div class="hist-date">${t.nasabah_kode} · ${fmtDate(t.created_at)}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="hist-amt val-green">${fmtCent(t.jumlah)}</div>
+          <div style="font-size:10px;color:var(--text3)">${fmtUSD(t.jumlah)}</div>
+        </div>
+      </div>`).join('');
+  }catch(e){showToast('❌ '+e.message);}
+}
+
+// ══════════ CATAT PROFIT ══════════
+function calcProfit(){
+  const usd=parseFloat(document.getElementById('profitJumlah').value)||0;
+  if(usd>0){
+    const cent=usdToCent(usd);
+    document.getElementById('profitCalcBox').style.display='block';
+    set('pcUSD','$'+usd.toFixed(2));
+    set('pcCent',fmtCent(cent));
+    set('pcNasabah',fmtCent(Math.round(cent*0.4))+' / $'+(usd*0.4).toFixed(2));
+    set('pcOps',fmtCent(Math.round(cent*0.6))+' / $'+(usd*0.6).toFixed(2));
+    set('pcRp',fmtRp(cent));
+  }else{
+    document.getElementById('profitCalcBox').style.display='none';
+  }
+}
+
+async function catatProfit(){
+  const periode=document.getElementById('profitPeriode').value.trim();
+  const usd=parseFloat(document.getElementById('profitJumlah').value)||0;
+  if(!periode||!usd){showToast('❌ Isi periode dan jumlah');return;}
+  const cent=usdToCent(usd);
+  const bagNasabah=Math.round(cent*0.4);
+  const bagOps=Math.round(cent*0.6);
+  showLoading(true);
+  try{
+    await sb('profit_ea','POST',{total_profit:cent,bagian_nasabah:bagNasabah,bagian_operasional:bagOps,periode,catatan:''});
+    const ns=await sb('nasabah?select=*&status=eq.active');
+    const totalModal=ns.reduce((s,n)=>s+n.modal,0);
+    for(const n of ns){
+      if(!totalModal)continue;
+      const bagian=Math.round(bagNasabah*(n.modal/totalModal));
+      await sb(`nasabah?id=eq.${n.id}`,'PATCH',{profit_total:n.profit_total+bagian});
+      await sb('transaksi','POST',{nasabah_id:n.id,nasabah_kode:n.kode,tipe:'profit',jumlah:bagian,keterangan:`Bagi hasil ${periode}`});
+    }
+    document.getElementById('profitPeriode').value='';
+    document.getElementById('profitJumlah').value='';
+    document.getElementById('profitCalcBox').style.display='none';
+    showToast(`✅ $${usd.toFixed(2)} dibagikan ke ${ns.length} anggota`);
+    await loadAdminHome();
+  }catch(e){showToast('❌ '+e.message);}
+  showLoading(false);
+}
+
+// ══════════ KURS ══════════
+function updateKurs(){
+  const v=parseInt(document.getElementById('kursInput').value)||16200;
+  kursUSD=v;
+  set('kursDisplay','$1 = Rp '+v.toLocaleString('id-ID'));
+  set('kursRpPer100','= Rp '+v.toLocaleString('id-ID'));
+  set('headerKurs',`$1=Rp${(v/1000).toFixed(1)}k · ¢100=$1`);
+  showToast('✅ Kurs diupdate: $1 = Rp '+v.toLocaleString('id-ID'));
+}
+
+// ══════════ GANTI PIN ADMIN ══════════
+async function gantiPinAdmin(){
+  const lama=document.getElementById('pinLama').value;
+  const baru=document.getElementById('pinBaru').value;
+  const konfirm=document.getElementById('pinKonfirm').value;
+  if(!lama||!baru){showToast('❌ Isi semua field');return;}
+  if(lama!==currentUser.pin){showToast('❌ PIN lama salah');return;}
+  if(baru.length<4){showToast('❌ PIN baru min. 4 digit');return;}
+  if(baru!==konfirm){showToast('❌ Konfirmasi PIN tidak cocok');return;}
+  showLoading(true);
+  try{
+    await sb(`admin?id=eq.${currentUser.id}`,'PATCH',{pin:baru});
+    currentUser.pin=baru;
+    document.getElementById('pinLama').value='';
+    document.getElementById('pinBaru').value='';
+    document.getElementById('pinKonfirm').value='';
+    showToast('✅ PIN Admin berhasil diubah');
+  }catch(e){showToast('❌ '+e.message);}
+  showLoading(false);
+}
+
+// ══════════ NASABAH HOME ══════════
+async function loadNasabahHome(){
+  try{
+    const[n]=await sb(`nasabah?id=eq.${currentUser.id}`);
+    currentUser=n;
+    const total=n.modal+n.profit_total;
+    const ret=n.modal>0?((n.profit_total/n.modal)*100).toFixed(1):'0';
+    set('nsCent',fmtCent(total));
+    set('nsUSD','= '+fmtUSD(total));
+    set('nsRp','≈ '+fmtRp(total));
+    set('nsProfit',fmtCent(n.profit_total));
+    set('nsReturn','+'+ret+'%');
+    // Detail rows
+    setCur3('nsModal',n.modal);
+    setCur3('nsSaldoEA',n.saldo_ea);
+    setCur3('nsDarurat',n.saldo_darurat);
+    setCur3('nsProfit2'||'nsProfitCent',n.profit_total);
+    document.getElementById('nsProfitCent').textContent=fmtCent(n.profit_total);
+    document.getElementById('nsProfitCent').className='cur-cent val-green';
+    document.getElementById('nsProfitUSD').textContent=fmtUSD(n.profit_total);
+    document.getElementById('nsProfitRp').textContent=fmtRp(n.profit_total);
+    setCur3('nsModal',n.modal);
+    setCur3('nsSaldoEA',n.saldo_ea);
+    setCur3('nsDarurat',n.saldo_darurat);
+    // Profil
+    set('profilAvatar',n.nama.substring(0,2).toUpperCase());
+    set('profilNama',n.nama);
+    set('profilKode',n.kode);
+    set('profilUser',n.username);
+    set('profilModal',fmtCent(n.modal)+' / '+fmtUSD(n.modal)+' / '+fmtRp(n.modal));
+    set('profilProfit','+'+fmtCent(n.profit_total)+' / '+fmtUSD(n.profit_total));
+  }catch(e){showToast('⚠️ '+e.message);}
+}
+
+function setCur3(prefix,cent){
+  const ec=document.getElementById(prefix+'Cent');
+  const eu=document.getElementById(prefix+'USD');
+  const er=document.getElementById(prefix+'Rp');
+  if(ec)ec.textContent=fmtCent(cent);
+  if(eu)eu.textContent=fmtUSD(cent);
+  if(er)er.textContent=fmtRp(cent);
+}
+
+async function loadNasabahHistory(){
+  try{
+    const rows=await sb(`transaksi?nasabah_id=eq.${currentUser.id}&order=created_at.desc&limit=30`);
+    const el=document.getElementById('nasabahHistory');
+    if(!rows.length){el.innerHTML='<div class="empty-state"><div class="e-ico">📋</div><div class="e-txt">Belum ada transaksi</div></div>';return;}
+    el.innerHTML=rows.map(t=>`
       <div class="hist-item">
         <div class="hist-ico ${t.tipe==='topup'?'h-topup':'h-profit'}">${t.tipe==='topup'?'📥':'✦'}</div>
-        <div class="hist-info">
+        <div style="flex:1">
           <div class="hist-desc">${t.keterangan||t.tipe}</div>
           <div class="hist-date">${fmtDate(t.created_at)}</div>
         </div>
-        <div class="hist-amt val-green">+${fmt(t.jumlah)}</div>
-      </div>`).join('');
-  } catch(e) { showToast('❌ Gagal muat riwayat'); }
-}
-
-async function loadMyRequests() {
-  try {
-    const rows = await sb(`topup_request?nasabah_id=eq.${currentUser.id}&order=created_at.desc&limit=10`);
-    const el = document.getElementById('myRequestList');
-    if (!rows.length) { el.innerHTML = '<div class="empty-state"><div class="e-ico">📭</div><div class="e-txt">Belum ada request topup</div></div>'; return; }
-    el.innerHTML = rows.map(r => `
-      <div class="hist-item">
-        <div class="hist-ico ${r.status==='approved'?'h-topup':r.status==='rejected'?'h-profit':'h-pending'}">${r.status==='approved'?'✅':r.status==='rejected'?'❌':'⏳'}</div>
-        <div class="hist-info">
-          <div class="hist-desc">Request Topup ${fmt(r.jumlah)}</div>
-          <div class="hist-date">${fmtDate(r.created_at)}</div>
+        <div style="text-align:right">
+          <div class="hist-amt val-green">${fmtCent(t.jumlah)}</div>
+          <div style="font-size:10px;color:var(--text3)">${fmtUSD(t.jumlah)} / ${fmtRp(t.jumlah)}</div>
         </div>
-        <span class="status-pill ${r.status==='approved'?'pill-active':r.status==='rejected'?'pill-reject':'pill-pending'}">${r.status==='approved'?'Disetujui':r.status==='rejected'?'Ditolak':'Pending'}</span>
       </div>`).join('');
-  } catch(e) { showToast('❌ Gagal muat request'); }
+  }catch(e){showToast('❌ '+e.message);}
 }
 
-// ═══════════════════════════════════
-// TOPUP FORM
-// ═══════════════════════════════════
-function selectAmt(el, val) {
-  document.querySelectorAll('.amt-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  if (val !== 'custom') { document.getElementById('topupAmt').value = val; calcTopup(); }
-  else { document.getElementById('topupAmt').value = ''; document.getElementById('topupAmt').focus(); }
-}
-
-function calcTopup() {
-  const v = parseInt(document.getElementById('topupAmt').value)||0;
-  const usd = (v/kursUSD).toFixed(2);
-  document.getElementById('tcTotal').textContent = `$${usd} / Rp ${v.toLocaleString('id-ID')}`;
-  document.getElementById('tcEA').textContent = `$${(v*0.5/kursUSD).toFixed(2)} / Rp ${Math.floor(v*0.5).toLocaleString('id-ID')}`;
-  document.getElementById('tcDarurat').textContent = `$${(v*0.5/kursUSD).toFixed(2)} / Rp ${Math.floor(v*0.5).toLocaleString('id-ID')}`;
-}
-
-async function submitTopup() {
-  const jumlah = parseInt(document.getElementById('topupAmt').value)||0;
-  const catatan = document.getElementById('topupNote').value.trim();
-  if (jumlah < 1000) { showToast('❌ Minimal topup Rp 1.000'); return; }
-  showLoading(true);
-  try {
-    await sb('topup_request', 'POST', {
-      nasabah_id: currentUser.id,
-      nasabah_nama: currentUser.nama,
-      nasabah_kode: currentUser.kode,
-      jumlah, catatan
-    });
-    showToast('📤 Request Rp ' + fmtShort(jumlah) + ' terkirim ke Admin');
-    document.getElementById('topupAmt').value = '';
-    document.getElementById('topupNote').value = '';
-    calcTopup();
-    await loadMyRequests();
-  } catch(e) { showToast('❌ Gagal kirim request: ' + e.message); }
-  showLoading(false);
-}
-
-function updateKurs() {
-  const v = parseInt(document.getElementById('kursInput').value)||16200;
-  kursUSD = v;
-  updateKursDisplay();
-  closeModal('modalKurs');
-  showToast('✅ Kurs diupdate: $1 = Rp ' + v.toLocaleString('id-ID'));
-}
-
-// ═══════════════════════════════════
-// KURS USD ↔ Rp  (update manual atau live)
-// ═══════════════════════════════════
-let kursUSD = 16200; // 1 USD = Rp 16.200 (update sesuai kurs harian)
-
-// Semua nilai di DB disimpan dalam CENT USD (misal $10.50 = 1050)
-// tapi untuk kompatibilitas demo lama, kita anggap nilai DB = Rp
-// Fungsi dual: tampilkan USD + Rp
-function fmt(n) {
-  const rp = n || 0;
-  const usd = (rp / kursUSD).toFixed(2);
-  return `$${usd} <span style="font-size:0.8em;opacity:0.6;font-weight:400">/ Rp ${rp.toLocaleString('id-ID')}</span>`;
-}
-function fmtUSD(n) {
-  return '$' + ((n||0) / kursUSD).toFixed(2);
-}
-function fmtRp(n) {
-  return 'Rp ' + (n||0).toLocaleString('id-ID');
-}
-function fmtShort(n) {
-  const usd = (n / kursUSD).toFixed(2);
-  return `$${usd}`;
-}
-function fmtDate(s) {
-  if (!s) return '-';
-  return new Date(s).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'});
-}
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+// ══════════ UTILS ══════════
+function set(id,val){ const el=document.getElementById(id); if(el)el.textContent=val; }
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.classList.remove('show'), 3000);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
 }
 
-// Live price ticker
-function tickPrice() {
-  livePrice += (Math.random()-0.49)*1.5;
-  livePrice = Math.max(3280, Math.min(3380, livePrice));
-  const p = livePrice.toFixed(2);
-  const el1 = document.getElementById('eaPrice1');
-  const el2 = document.getElementById('eaPrice2');
-  if (el1) el1.textContent = parseFloat(p).toLocaleString('en',{minimumFractionDigits:2});
-  if (el2) el2.textContent = parseFloat(p).toLocaleString('en',{minimumFractionDigits:2});
+// Live XAU/USD price
+function tickPrice(){
+  livePrice+=(Math.random()-0.49)*1.5;
+  livePrice=Math.max(3280,Math.min(3380,livePrice));
+  const p=livePrice.toFixed(2);
+  ['eaPrice1','eaPrice2'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.textContent=parseFloat(p).toLocaleString('en',{minimumFractionDigits:2});
+  });
 }
-setInterval(tickPrice, 1200);
-
-// ═══════════════════════════════════
-// TAMBAH NASABAH (Admin)
-// ═══════════════════════════════════
-function openTambahNasabah() {
-  document.getElementById('modalTambahNasabah').classList.add('open');
-}
-
-async function simpanNasabahBaru() {
-  const nama    = document.getElementById('tnNama').value.trim();
-  const username= document.getElementById('tnUsername').value.trim();
-  const pin     = document.getElementById('tnPin').value.trim();
-  const modal   = parseInt(document.getElementById('tnModal').value)||0;
-  if (!nama || !username || !pin) { showToast('❌ Isi nama, username, dan PIN'); return; }
-  if (pin.length < 4) { showToast('❌ PIN minimal 4 digit'); return; }
-  showLoading(true);
-  try {
-    // Cek username sudah ada
-    const cek = await sb(`nasabah?username=eq.${username}`);
-    if (cek.length) { showToast('❌ Username sudah dipakai'); showLoading(false); return; }
-    // Generate kode otomatis
-    const all = await sb('nasabah?select=kode&order=created_at.desc&limit=1');
-    let nextNum = 1;
-    if (all.length) {
-      const lastKode = all[0].kode; // NSB-005
-      const lastNum = parseInt(lastKode.split('-')[1]||'0');
-      nextNum = lastNum + 1;
-    }
-    const kode = 'NSB-' + String(nextNum).padStart(3,'0');
-    const ea = Math.floor(modal * 0.5);
-    const darurat = Math.floor(modal * 0.5);
-    await sb('nasabah', 'POST', { kode, nama, username, pin, modal, saldo_ea: ea, saldo_darurat: darurat, profit_total: 0, status: 'active' });
-    if (modal > 0) {
-      const [ns] = await sb(`nasabah?username=eq.${username}`);
-      await sb('transaksi', 'POST', { nasabah_id: ns.id, nasabah_kode: kode, tipe: 'topup', jumlah: modal, keterangan: 'Setoran Awal' });
-    }
-    showToast(`✅ Nasabah ${nama} (${kode}) berhasil ditambahkan`);
-    closeModal('modalTambahNasabah');
-    // Reset form
-    ['tnNama','tnUsername','tnPin','tnModal'].forEach(id => document.getElementById(id).value = '');
-    await loadNasabahList();
-    await loadAdminData();
-  } catch(e) { showToast('❌ Gagal tambah nasabah: ' + e.message); }
-  showLoading(false);
-}
-
-// Kurs updater (tampil di header admin)
-function updateKursDisplay() {
-  const el = document.getElementById('kursInfo');
-  if (el) el.textContent = `Kurs: $1 = Rp ${kursUSD.toLocaleString('id-ID')}`;
-}
-updateKursDisplay();
+setInterval(tickPrice,1200);
 </script>
 </body>
 </html>
