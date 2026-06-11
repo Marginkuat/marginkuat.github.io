@@ -258,7 +258,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
     <!-- ADMIN NASABAH -->
     <div id="pg_adminNasabah" class="page">
-      <div class="sec-lbl">Daftar Nasabah</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="sec-lbl" style="padding:0">Daftar Nasabah</div>
+        <button onclick="openTambahNasabah()" style="padding:7px 14px;background:linear-gradient(135deg,#B8860B,#D4A017);color:white;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ Tambah Nasabah</button>
+      </div>
       <div class="card"><div id="nasabahList"><div class="empty-state"><div class="e-ico">⏳</div><div class="e-txt">Memuat data nasabah...</div></div></div></div>
     </div>
 
@@ -291,6 +294,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
           <div class="sum-row"><span class="sum-key">Lot Size</span><span class="sum-val">🔒 Rahasia</span></div>
           <div class="sum-row"><span class="sum-key">Stop Loss</span><span class="sum-val">🔒 Rahasia</span></div>
           <div class="sum-row"><span class="sum-key">Take Profit</span><span class="sum-val">🔒 Rahasia</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">💱 Kurs USD / Rupiah</span></div>
+        <div class="card-body">
+          <div class="sum-row"><span class="sum-key">Kurs Aktif</span><span class="sum-val val-gold" id="kursInfo">$1 = Rp 16.200</span></div>
+          <div class="sum-row"><span class="sum-key">Sumber FBS</span><span class="sum-val">Akun Cent / Mikro</span></div>
+          <button class="btn-gold" style="margin-top:10px" onclick="document.getElementById('modalKurs').classList.add('open')">💱 Update Kurs Hari Ini</button>
         </div>
       </div>
       <div class="card">
@@ -379,11 +390,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
         <div class="card-body">
           <label class="lbl">Pilih Nominal</label>
           <div class="amt-grid">
-            <div class="amt-chip" onclick="selectAmt(this,'500000')">Rp 500K</div>
-            <div class="amt-chip active" onclick="selectAmt(this,'1000000')">Rp 1 Jt</div>
-            <div class="amt-chip" onclick="selectAmt(this,'2000000')">Rp 2 Jt</div>
-            <div class="amt-chip" onclick="selectAmt(this,'5000000')">Rp 5 Jt</div>
-            <div class="amt-chip" onclick="selectAmt(this,'10000000')">Rp 10 Jt</div>
+            <div class="amt-chip" onclick="selectAmt(this,'162000')">$10</div>
+            <div class="amt-chip active" onclick="selectAmt(this,'810000')">$50</div>
+            <div class="amt-chip" onclick="selectAmt(this,'1620000')">$100</div>
+            <div class="amt-chip" onclick="selectAmt(this,'4050000')">$250</div>
+            <div class="amt-chip" onclick="selectAmt(this,'8100000')">$500</div>
             <div class="amt-chip" onclick="selectAmt(this,'custom')">Lainnya</div>
           </div>
           <input class="inp" type="number" id="topupAmt" value="1000000" placeholder="Nominal (Rp)" oninput="calcTopup()">
@@ -439,6 +450,38 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
   <div class="bottom-nav" id="bottomNav"></div>
 </div><!-- appShell -->
+
+<!-- MODAL TAMBAH NASABAH -->
+<div class="modal-overlay" id="modalTambahNasabah">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">👤 Tambah Nasabah Baru</div>
+    <label class="lbl">Nama Lengkap</label>
+    <input class="inp" id="tnNama" placeholder="Contoh: Budi Santoso">
+    <label class="lbl">Username (untuk login)</label>
+    <input class="inp" id="tnUsername" placeholder="Contoh: nasabah6" autocapitalize="none">
+    <label class="lbl">PIN</label>
+    <input class="inp" type="password" id="tnPin" placeholder="Min. 4 digit" maxlength="8">
+    <label class="lbl">Modal Awal (Rp) — opsional</label>
+    <input class="inp" type="number" id="tnModal" placeholder="0 jika belum setor">
+    <div class="info-box" style="margin-bottom:10px">📌 Kode nasabah (NSB-xxx) dibuat otomatis. Modal akan dibagi 50% EA + 50% Darurat.</div>
+    <button class="btn-gold" onclick="simpanNasabahBaru()">✅ Simpan Nasabah</button>
+    <button class="btn-ghost" style="margin-top:8px" onclick="closeModal('modalTambahNasabah')">Batal</button>
+  </div>
+</div>
+
+<!-- MODAL KURS USD -->
+<div class="modal-overlay" id="modalKurs">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">💱 Update Kurs USD/Rp</div>
+    <div class="info-box" style="margin-bottom:10px">Update kurs harian agar konversi USD ↔ Rp akurat. Nilai default: Rp 16.200 per $1.</div>
+    <label class="lbl">1 USD = Rp</label>
+    <input class="inp" type="number" id="kursInput" value="16200">
+    <button class="btn-gold" onclick="updateKurs()">💾 Simpan Kurs</button>
+    <button class="btn-ghost" style="margin-top:8px" onclick="closeModal('modalKurs')">Batal</button>
+  </div>
+</div>
 
 <!-- MODAL DETAIL NASABAH -->
 <div class="modal-overlay" id="modalNasabah">
@@ -858,15 +901,16 @@ function selectAmt(el, val) {
 
 function calcTopup() {
   const v = parseInt(document.getElementById('topupAmt').value)||0;
-  document.getElementById('tcTotal').textContent = fmt(v);
-  document.getElementById('tcEA').textContent = fmt(Math.floor(v*0.5));
-  document.getElementById('tcDarurat').textContent = fmt(Math.floor(v*0.5));
+  const usd = (v/kursUSD).toFixed(2);
+  document.getElementById('tcTotal').textContent = `$${usd} / Rp ${v.toLocaleString('id-ID')}`;
+  document.getElementById('tcEA').textContent = `$${(v*0.5/kursUSD).toFixed(2)} / Rp ${Math.floor(v*0.5).toLocaleString('id-ID')}`;
+  document.getElementById('tcDarurat').textContent = `$${(v*0.5/kursUSD).toFixed(2)} / Rp ${Math.floor(v*0.5).toLocaleString('id-ID')}`;
 }
 
 async function submitTopup() {
   const jumlah = parseInt(document.getElementById('topupAmt').value)||0;
   const catatan = document.getElementById('topupNote').value.trim();
-  if (jumlah < 100000) { showToast('❌ Minimal topup Rp 100.000'); return; }
+  if (jumlah < 1000) { showToast('❌ Minimal topup Rp 1.000'); return; }
   showLoading(true);
   try {
     await sb('topup_request', 'POST', {
@@ -884,14 +928,36 @@ async function submitTopup() {
   showLoading(false);
 }
 
+function updateKurs() {
+  const v = parseInt(document.getElementById('kursInput').value)||16200;
+  kursUSD = v;
+  updateKursDisplay();
+  closeModal('modalKurs');
+  showToast('✅ Kurs diupdate: $1 = Rp ' + v.toLocaleString('id-ID'));
+}
+
 // ═══════════════════════════════════
-// UTILS
+// KURS USD ↔ Rp  (update manual atau live)
 // ═══════════════════════════════════
-function fmt(n) { return 'Rp ' + (n||0).toLocaleString('id-ID'); }
+let kursUSD = 16200; // 1 USD = Rp 16.200 (update sesuai kurs harian)
+
+// Semua nilai di DB disimpan dalam CENT USD (misal $10.50 = 1050)
+// tapi untuk kompatibilitas demo lama, kita anggap nilai DB = Rp
+// Fungsi dual: tampilkan USD + Rp
+function fmt(n) {
+  const rp = n || 0;
+  const usd = (rp / kursUSD).toFixed(2);
+  return `$${usd} <span style="font-size:0.8em;opacity:0.6;font-weight:400">/ Rp ${rp.toLocaleString('id-ID')}</span>`;
+}
+function fmtUSD(n) {
+  return '$' + ((n||0) / kursUSD).toFixed(2);
+}
+function fmtRp(n) {
+  return 'Rp ' + (n||0).toLocaleString('id-ID');
+}
 function fmtShort(n) {
-  if (n >= 1000000) return 'Rp ' + (n/1000000).toFixed(1) + 'jt';
-  if (n >= 1000) return 'Rp ' + (n/1000).toFixed(0) + 'K';
-  return 'Rp ' + n;
+  const usd = (n / kursUSD).toFixed(2);
+  return `$${usd}`;
 }
 function fmtDate(s) {
   if (!s) return '-';
@@ -917,6 +983,58 @@ function tickPrice() {
   if (el2) el2.textContent = parseFloat(p).toLocaleString('en',{minimumFractionDigits:2});
 }
 setInterval(tickPrice, 1200);
+
+// ═══════════════════════════════════
+// TAMBAH NASABAH (Admin)
+// ═══════════════════════════════════
+function openTambahNasabah() {
+  document.getElementById('modalTambahNasabah').classList.add('open');
+}
+
+async function simpanNasabahBaru() {
+  const nama    = document.getElementById('tnNama').value.trim();
+  const username= document.getElementById('tnUsername').value.trim();
+  const pin     = document.getElementById('tnPin').value.trim();
+  const modal   = parseInt(document.getElementById('tnModal').value)||0;
+  if (!nama || !username || !pin) { showToast('❌ Isi nama, username, dan PIN'); return; }
+  if (pin.length < 4) { showToast('❌ PIN minimal 4 digit'); return; }
+  showLoading(true);
+  try {
+    // Cek username sudah ada
+    const cek = await sb(`nasabah?username=eq.${username}`);
+    if (cek.length) { showToast('❌ Username sudah dipakai'); showLoading(false); return; }
+    // Generate kode otomatis
+    const all = await sb('nasabah?select=kode&order=created_at.desc&limit=1');
+    let nextNum = 1;
+    if (all.length) {
+      const lastKode = all[0].kode; // NSB-005
+      const lastNum = parseInt(lastKode.split('-')[1]||'0');
+      nextNum = lastNum + 1;
+    }
+    const kode = 'NSB-' + String(nextNum).padStart(3,'0');
+    const ea = Math.floor(modal * 0.5);
+    const darurat = Math.floor(modal * 0.5);
+    await sb('nasabah', 'POST', { kode, nama, username, pin, modal, saldo_ea: ea, saldo_darurat: darurat, profit_total: 0, status: 'active' });
+    if (modal > 0) {
+      const [ns] = await sb(`nasabah?username=eq.${username}`);
+      await sb('transaksi', 'POST', { nasabah_id: ns.id, nasabah_kode: kode, tipe: 'topup', jumlah: modal, keterangan: 'Setoran Awal' });
+    }
+    showToast(`✅ Nasabah ${nama} (${kode}) berhasil ditambahkan`);
+    closeModal('modalTambahNasabah');
+    // Reset form
+    ['tnNama','tnUsername','tnPin','tnModal'].forEach(id => document.getElementById(id).value = '');
+    await loadNasabahList();
+    await loadAdminData();
+  } catch(e) { showToast('❌ Gagal tambah nasabah: ' + e.message); }
+  showLoading(false);
+}
+
+// Kurs updater (tampil di header admin)
+function updateKursDisplay() {
+  const el = document.getElementById('kursInfo');
+  if (el) el.textContent = `Kurs: $1 = Rp ${kursUSD.toLocaleString('id-ID')}`;
+}
+updateKursDisplay();
 </script>
 </body>
 </html>
