@@ -527,6 +527,48 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
   </div>
 </div>
 
+<!-- MODAL HAPUS PERMANEN -->
+<div class="modal-overlay" id="modalHapusAnggota">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:var(--red)">🗑️ Hapus Anggota Permanen</div>
+    <div style="background:var(--red-bg);border:1px solid #FECACA;border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:4px">⚠️ PERINGATAN!</div>
+      <div style="font-size:11px;color:var(--red);line-height:1.6">Tindakan ini <b>tidak bisa dibatalkan</b>. Semua data anggota dan riwayat transaksi akan terhapus permanen.</div>
+    </div>
+    <div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:14px;text-align:center">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Anggota yang akan dihapus:</div>
+      <div style="font-size:16px;font-weight:800;color:var(--text)" id="hapusAnggotaNama">-</div>
+    </div>
+    <input type="hidden" id="hapusAnggotaId">
+    <label class="lbl">Ketik <b>HAPUS</b> untuk konfirmasi</label>
+    <input class="inp" id="hapusKonfirmInput" placeholder="Ketik: HAPUS" autocapitalize="characters">
+    <button class="btn-red" onclick="hapusAnggotaPermanen()">🗑️ Ya, Hapus Permanen</button>
+    <button class="btn-ghost" onclick="closeModal('modalHapusAnggota')">Batal</button>
+  </div>
+</div>
+
+<!-- MODAL KONFIRMASI HAPUS ANGGOTA -->
+<div class="modal-overlay" id="modalKonfirmasiHapus">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🗑️ Hapus Anggota Permanen</div>
+    <div class="warn-box" style="margin-bottom:14px">
+      ⚠️ <b>Tindakan ini tidak dapat dibatalkan!</b><br>
+      Semua data anggota, saldo, dan riwayat transaksi akan terhapus permanen.
+    </div>
+    <div style="background:var(--red-bg);border-radius:12px;padding:14px;text-align:center;margin-bottom:16px">
+      <div style="font-size:11px;color:var(--red);margin-bottom:4px">Anggota yang akan dihapus:</div>
+      <div style="font-size:16px;font-weight:800;color:var(--red)" id="hapusNamaConfirm">-</div>
+      <input type="hidden" id="hapusIdConfirm">
+    </div>
+    <label class="lbl">Ketik nama anggota untuk konfirmasi</label>
+    <input class="inp" id="hapusNamaInput" placeholder="Ketik nama persis di atas">
+    <button class="btn-red" onclick="konfirmasiHapus()">🗑️ Ya, Hapus Permanen</button>
+    <button class="btn-ghost" onclick="closeModal('modalKonfirmasiHapus')">Batal</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -703,6 +745,7 @@ async function openDetailAnggota(id){
   document.getElementById('modalAnggotaActions').innerHTML=`
     <button class="btn-gold" onclick="closeModal('modalDetailAnggota');openGantiPin('${n.id}','${n.nama}')">🔑 Ganti PIN</button>
     <button class="${isSuspend?'btn-gold':'btn-ghost'}" onclick="toggleStatus('${n.id}','${n.status}','${n.nama}')">${isSuspend?'✅ Aktifkan':'⛔ Suspend'}</button>
+    <button class="btn-red" onclick="konfirmasiHapusAnggota('${n.id}','${n.nama}')">🗑️ Hapus Permanen</button>
     <button class="btn-ghost" onclick="closeModal('modalDetailAnggota')">Tutup</button>`;
   openModal('modalDetailAnggota');
 }
@@ -730,6 +773,66 @@ async function toggleStatus(id,status,nama){
     await sb(`nasabah?id=eq.${id}`,'PATCH',{status:ns});
     showToast(`${ns==='active'?'✅ Aktif':'⛔ Suspend'}: ${nama}`);
     closeModal('modalDetailAnggota'); await loadAnggota();
+  }catch(e){showToast('❌ '+e.message);}
+  showLoading(false);
+}
+
+async function konfirmasiHapusAnggota(id,nama){
+  hapusAnggota(id,nama);
+}
+async function hapusAnggota(id,nama){
+  closeModal('modalDetailAnggota');
+  openModal('modalKonfirmasiHapus');
+  set('hapusNamaConfirm', nama);
+  document.getElementById('hapusIdConfirm').value = id;
+  document.getElementById('hapusNamaInput').value = '';
+}
+
+async function konfirmasiHapus(){
+  const id = document.getElementById('hapusIdConfirm').value;
+  const nama = document.getElementById('hapusNamaConfirm').textContent;
+  const input = document.getElementById('hapusNamaInput').value.trim();
+  if(input !== nama){showToast('❌ Nama tidak cocok');return;}
+  showLoading(true);
+  try{
+    // Hapus semua transaksi anggota ini dulu
+    await sb(`transaksi?nasabah_id=eq.${id}`,'DELETE');
+    await sb(`topup_request?nasabah_id=eq.${id}`,'DELETE');
+    // Hapus anggota
+    await sb(`nasabah?id=eq.${id}`,'DELETE');
+    showToast(`🗑️ ${nama} berhasil dihapus permanen`);
+    closeModal('modalKonfirmasiHapus');
+    await loadAnggota();
+    await loadBeranda();
+  }catch(e){showToast('❌ '+e.message);}
+  showLoading(false);
+}
+
+function konfirmasiHapusAnggota(id, nama){
+  // Set data ke modal konfirmasi
+  document.getElementById('hapusAnggotaId').value = id;
+  document.getElementById('hapusAnggotaNama').textContent = nama;
+  document.getElementById('hapusKonfirmInput').value = '';
+  closeModal('modalDetailAnggota');
+  openModal('modalHapusAnggota');
+}
+
+async function hapusAnggotaPermanen(){
+  const id = document.getElementById('hapusAnggotaId').value;
+  const konfirm = document.getElementById('hapusKonfirmInput').value.trim();
+  if(konfirm !== 'HAPUS'){showToast('❌ Ketik HAPUS untuk konfirmasi');return;}
+  showLoading(true);
+  try{
+    // Hapus transaksi dulu
+    await sb(`transaksi?nasabah_id=eq.${id}`,'DELETE');
+    // Hapus topup request
+    await sb(`topup_request?nasabah_id=eq.${id}`,'DELETE');
+    // Hapus nasabah
+    await sb(`nasabah?id=eq.${id}`,'DELETE');
+    showToast('🗑️ Anggota berhasil dihapus permanen');
+    closeModal('modalHapusAnggota');
+    await loadAnggota();
+    await loadBeranda();
   }catch(e){showToast('❌ '+e.message);}
   showLoading(false);
 }
