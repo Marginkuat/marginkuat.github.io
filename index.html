@@ -287,6 +287,63 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       </div>
     </div>
 
+    <!-- ══ ASET (PUBLIK + ADMIN INPUT) ══ -->
+    <div id="pg_aset" class="page">
+
+      <!-- PORTOFOLIO SUMMARY — semua orang lihat -->
+      <div id="asetHeroWrap"></div>
+
+      <!-- FORM INPUT — hanya admin -->
+      <div id="asetFormSection" style="display:none">
+        <div class="sec-lbl">Tambah / Update Aset <span class="edit-tag">Admin</span></div>
+        <div class="card">
+          <div class="card-body">
+            <label class="lbl">Jenis Aset</label>
+            <select class="inp" id="asetJenis2" style="margin-bottom:12px">
+              <option value="saham">📈 Saham</option>
+              <option value="pinjaman">🤝 Dana Dipinjamkan (KSP)</option>
+              <option value="deposito">🏦 Deposito</option>
+              <option value="reksadana">📊 Reksa Dana</option>
+              <option value="tabungan">💰 Tabungan</option>
+              <option value="lainnya">📦 Aset Lainnya</option>
+            </select>
+            <label class="lbl">Nama Aset</label>
+            <input class="inp" id="asetNama2" placeholder="Contoh: Saham BBCA, Pinjaman Pak Budi">
+            <div class="inp-row">
+              <div>
+                <label class="lbl">Modal (USD)</label>
+                <input class="inp" type="number" id="asetModal2" placeholder="0.00" step="0.01" oninput="calcAset2()">
+              </div>
+              <div>
+                <label class="lbl">Nilai Sekarang (USD)</label>
+                <input class="inp" type="number" id="asetNilai2" placeholder="0.00" step="0.01" oninput="calcAset2()">
+              </div>
+            </div>
+            <label class="lbl">Bunga / Imbal Hasil (%/tahun) — opsional</label>
+            <input class="inp" type="number" id="asetBunga2" placeholder="Contoh: 12" step="0.1">
+            <label class="lbl">Keterangan / Jatuh Tempo</label>
+            <input class="inp" id="asetKet2" placeholder="Contoh: Jatuh tempo Des 2025">
+            <div class="calc-box" id="asetCalcBox2" style="display:none">
+              <div class="calc-title">📊 Simulasi Aset</div>
+              <div class="calc-row"><span>Modal USD</span><span id="ac21">-</span></div>
+              <div class="calc-row"><span>Modal Cent / Rp</span><span id="ac22" style="color:var(--gold)">-</span></div>
+              <div class="calc-row"><span>Nilai Sekarang</span><span id="ac23">-</span></div>
+              <div class="calc-row"><span>Profit / Loss</span><span id="ac24">-</span></div>
+              <div class="calc-row"><span>Nilai dalam Rp</span><span id="ac25">-</span></div>
+            </div>
+            <input type="hidden" id="asetEditId2">
+            <button class="btn-gold" onclick="simpanAset2()">💾 Simpan Aset</button>
+            <button class="btn-ghost" id="asetCancelEdit" style="display:none" onclick="cancelEditAset()">✕ Batal Edit</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIST ASET — semua orang lihat, admin bisa edit/hapus -->
+      <div class="sec-lbl">Daftar Aset</div>
+      <div id="asetListWrap"><div class="card"><div class="empty-state"><div class="e-ico">⏳</div></div></div></div>
+
+    </div>
+
     <!-- ══ LAPORAN (PUBLIK) ══ -->
     <div id="pg_laporan" class="page">
       <div class="hero" style="background:linear-gradient(135deg,#0B4F2D,#166534)">
@@ -686,6 +743,8 @@ async function doLogin(){
     document.getElementById('nb_pg_setelan').style.display='flex';
     document.getElementById('addAnggotaSection').style.display='block';
     showToast('👑 Selamat datang Admin!');
+    const af=document.getElementById('asetFormSection');
+    if(af) af.style.display='block';
     await loadBeranda();
     renderAsetPortofolio();
   }catch(e){showToast('❌ '+e.message);}
@@ -698,6 +757,8 @@ function doLogout(){
   document.getElementById('adminMenuBtn').style.display='none';
   document.getElementById('nb_pg_setelan').style.display='none';
   document.getElementById('addAnggotaSection').style.display='none';
+  const af=document.getElementById('asetFormSection');
+  if(af) af.style.display='none';
   document.getElementById('loginPass').value='';
   showToast('👋 Keluar dari mode Admin');
   navigateTo('pg_beranda');
@@ -707,6 +768,7 @@ function doLogout(){
 function navClick(id){
   navigateTo(id);
   if(id==='pg_beranda') loadBeranda();
+  if(id==='pg_aset') loadAsetPage();
   if(id==='pg_anggota') loadAnggota();
   if(id==='pg_laporan') loadLaporan();
   if(id==='pg_setelan'&&isAdmin){ loadEditRiwayat(); renderAsetListAdmin(); }
@@ -1390,6 +1452,177 @@ function renderAsetListAdmin(){
 }
 
 // ══════════ END ASET ══════════
+
+// ══════════ ASET PAGE ══════════
+function loadAsetPage(){
+  renderAsetHero();
+  renderAsetList();
+  // show/hide form
+  const af=document.getElementById('asetFormSection');
+  if(af) af.style.display=isAdmin?'block':'none';
+}
+
+function renderAsetHero(){
+  const list=getAsetList();
+  const el=document.getElementById('asetHeroWrap');
+  if(!el)return;
+  if(!list.length){
+    el.innerHTML='<div class="info-box">📦 Belum ada aset tercatat. '+( isAdmin?'Gunakan form di bawah untuk menambahkan aset.':'Admin belum menambahkan aset.' )+'</div>';
+    return;
+  }
+  const tModal=list.reduce((s,a)=>s+usd2c(a.modal),0);
+  const tNilai=list.reduce((s,a)=>s+usd2c(a.nilai),0);
+  const tPL=tNilai-tModal;
+  el.innerHTML=`<div class="hero" style="background:linear-gradient(135deg,#0B3D6B,#1E6FE8)">
+    <div class="hero-lbl">Total Portofolio Aset</div>
+    <div class="hero-cent">${fC(tNilai)}</div>
+    <div class="hero-usd">= $${(tNilai/10000).toFixed(2)} USD nyata</div>
+    <div class="hero-rp">≈ ${fR(tNilai)}</div>
+    <div class="hero-grid">
+      <div class="hero-stat"><div class="hero-stat-val c-gold">${list.length}</div><div class="hero-stat-lbl">Aset</div></div>
+      <div class="hero-stat"><div class="hero-stat-val ${tPL>=0?'c-green':'c-red'}">${tPL>=0?'+':''}${fC(tPL)}</div><div class="hero-stat-lbl">Profit/Loss</div></div>
+      <div class="hero-stat"><div class="hero-stat-val ${tPL>=0?'c-green':'c-red'}">${tModal>0?((tPL/tModal)*100).toFixed(1):0}%</div><div class="hero-stat-lbl">Return</div></div>
+    </div>
+  </div>`;
+}
+
+function renderAsetList(){
+  const list=getAsetList();
+  const el=document.getElementById('asetListWrap');
+  if(!el)return;
+  if(!list.length){
+    el.innerHTML='<div class="card"><div class="empty-state"><div class="e-ico">📦</div><div class="e-txt">Belum ada aset tercatat</div></div></div>';
+    return;
+  }
+  // Group by jenis
+  const groups={};
+  list.forEach(a=>{if(!groups[a.jenis])groups[a.jenis]=[];groups[a.jenis].push(a);});
+  let html='';
+  Object.keys(groups).forEach(jenis=>{
+    const items=groups[jenis];
+    const gM=items.reduce((s,a)=>s+usd2c(a.modal),0);
+    const gN=items.reduce((s,a)=>s+usd2c(a.nilai),0);
+    const gPL=gN-gM;
+    html+=`<div class="card" style="margin-bottom:10px">
+      <div class="card-hdr">
+        <span class="card-title">${ASET_ICONS[jenis]||'📦'} ${ASET_NAMES[jenis]||jenis}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:${gPL>=0?'var(--green)':'var(--red)'}">${gPL>=0?'+':''}${fC(gPL)}</span>
+      </div>`;
+    items.forEach(a=>{
+      const mC=usd2c(a.modal),nC=usd2c(a.nilai),pl=nC-mC;
+      const pct=mC>0?((pl/mC)*100).toFixed(1):0;
+      html+=`<div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700">${a.nama}</div>
+            ${a.bunga?`<div style="font-size:10px;color:var(--blue);font-weight:600">📊 ${a.bunga}%/tahun</div>`:''}
+            ${a.ket?`<div style="font-size:10px;color:var(--text3)">${a.ket}</div>`:''}
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--gold)">${fC(nC)}</div>
+            <div style="font-size:10px;color:var(--text3)">$${(nC/10000).toFixed(2)} / ${fR(nC)}</div>
+            <div style="font-size:11px;font-weight:700;color:${pl>=0?'var(--green)':'var(--red)'}">${pl>=0?'+':''}${fC(pl)} (${pl>=0?'+':''}${pct}%)</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3)">
+          <span>Modal: ${fC(mC)} / $${(mC/10000).toFixed(2)} / ${fR(mC)}</span>
+          ${isAdmin?`<div style="display:flex;gap:6px">
+            <button class="btn-sm" style="background:var(--blue-bg);color:var(--blue)" onclick="editAset2('${a.id}')">✏️ Edit</button>
+            <button class="btn-sm" style="background:var(--red-bg);color:var(--red)" onclick="hapusAset2('${a.id}','${a.nama.replace(/'/g,'`')}')">🗑️ Hapus</button>
+          </div>`:''}
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  el.innerHTML=html;
+}
+
+function calcAset2(){
+  const modal=parseFloat(document.getElementById('asetModal2').value)||0;
+  const nilai=parseFloat(document.getElementById('asetNilai2').value)||0;
+  if(modal>0||nilai>0){
+    document.getElementById('asetCalcBox2').style.display='block';
+    const mC=usd2c(modal),nC=usd2c(nilai||modal);
+    const pl=nC-mC;
+    set('ac21','$'+modal.toFixed(2));
+    set('ac22',fC(mC)+' / '+fR(mC));
+    set('ac23',fC(nC)+' / $'+(nC/10000).toFixed(2));
+    document.getElementById('ac24').innerHTML=`<span style="color:${pl>=0?'var(--green)':'var(--red)'}">${pl>=0?'+':''}${fC(pl)} (${mC>0?((pl/mC)*100).toFixed(1):0}%)</span>`;
+    set('ac25',fR(nC));
+  }else{
+    document.getElementById('asetCalcBox2').style.display='none';
+  }
+}
+
+function simpanAset2(){
+  if(!isAdmin){showToast('❌ Harus login Admin');return;}
+  const jenis=document.getElementById('asetJenis2').value;
+  const nama=document.getElementById('asetNama2').value.trim();
+  const modal=parseFloat(document.getElementById('asetModal2').value)||0;
+  const nilai=parseFloat(document.getElementById('asetNilai2').value)||0;
+  const bunga=parseFloat(document.getElementById('asetBunga2').value)||0;
+  const ket=document.getElementById('asetKet2').value.trim();
+  if(!nama){showToast('❌ Isi nama aset');return;}
+  if(!modal){showToast('❌ Isi modal aset (USD)');return;}
+  const editId=document.getElementById('asetEditId2').value;
+  const list=getAsetList();
+  const aset={
+    id:editId||Date.now().toString(),
+    jenis,nama,modal,nilai:nilai||modal,bunga,ket,
+    tanggal:new Date().toISOString()
+  };
+  if(editId){
+    const idx=list.findIndex(a=>a.id===editId);
+    if(idx>=0)list[idx]=aset; else list.push(aset);
+  }else{
+    list.push(aset);
+  }
+  saveAsetList(list);
+  showToast('✅ Aset '+nama+' tersimpan!');
+  // Reset
+  ['asetNama2','asetModal2','asetNilai2','asetBunga2','asetKet2'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('asetEditId2').value='';
+  document.getElementById('asetCalcBox2').style.display='none';
+  document.getElementById('asetCancelEdit').style.display='none';
+  renderAsetHero();
+  renderAsetList();
+  renderAsetPortofolio();
+}
+
+function editAset2(id){
+  const aset=getAsetList().find(a=>a.id===id);
+  if(!aset)return;
+  document.getElementById('asetJenis2').value=aset.jenis;
+  document.getElementById('asetNama2').value=aset.nama;
+  document.getElementById('asetModal2').value=aset.modal;
+  document.getElementById('asetNilai2').value=aset.nilai;
+  document.getElementById('asetBunga2').value=aset.bunga||'';
+  document.getElementById('asetKet2').value=aset.ket||'';
+  document.getElementById('asetEditId2').value=aset.id;
+  document.getElementById('asetCancelEdit').style.display='block';
+  calcAset2();
+  document.getElementById('asetJenis2').scrollIntoView({behavior:'smooth',block:'center'});
+  showToast('✏️ Edit: '+aset.nama);
+}
+
+function cancelEditAset(){
+  ['asetNama2','asetModal2','asetNilai2','asetBunga2','asetKet2'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('asetEditId2').value='';
+  document.getElementById('asetCalcBox2').style.display='none';
+  document.getElementById('asetCancelEdit').style.display='none';
+  showToast('✕ Edit dibatalkan');
+}
+
+function hapusAset2(id,nama){
+  if(!confirm('Hapus aset "'+nama+'"?'))return;
+  const list=getAsetList().filter(a=>a.id!==id);
+  saveAsetList(list);
+  showToast('🗑️ Aset '+nama+' dihapus');
+  renderAsetHero();
+  renderAsetList();
+  renderAsetPortofolio();
+}
 
 // XAU/USD Live
 function tickPrice(){
