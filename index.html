@@ -544,15 +544,19 @@ async function sb(path,method='GET',body=null){
 }
 
 // ══════════ CURRENCY ══════════
-let kursUSD=16200;
-// Semua nilai DB dalam CENT (¢)
-const c2usd=c=>(c/100).toFixed(2);
-const c2rp=c=>Math.round((c||0)/100*kursUSD);
-const usd2c=u=>Math.round(parseFloat(u||0)*100);
-const fC=c=>'¢'+Math.round(c||0).toLocaleString('id-ID');
-const fU=c=>'$'+(c/100).toFixed(2);
-const fR=c=>'Rp '+c2rp(c).toLocaleString('id-ID');
-const fDate=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';
+// FBS CENT ACCOUNT — RUMUS BENAR:
+// MT4 tampil $105.40 → ini CENT FBS, bukan USD nyata
+// USD nyata = $105.40 ÷ 100 = $1.054
+// Rupiah    = $1.054 × 16.700 = Rp 17.601 ✅
+// DB simpan: nilai MT4 × 100 = integer (10540)
+let kursUSD=16700;
+const c2usd = c => (c/100).toFixed(2);
+const c2rp  = c => Math.round((c||0)/10000*kursUSD);
+const usd2c = u => Math.round(parseFloat(u||0)*100);
+const fC = c => '¢'+(c/100).toFixed(2);
+const fU = c => '$'+(c/10000).toFixed(2)+' USD nyata';
+const fR = c => 'Rp '+c2rp(c).toLocaleString('id-ID');
+const fDate = s => s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';
 
 // ══════════ STATE ══════════
 let isAdmin=false, adminUser=null, livePrice=3324.80, toastTimer;
@@ -819,14 +823,17 @@ function calcSaldoHarian(){
 }
 
 function calcProfitHarian(){
-  const u=parseFloat(document.getElementById('inputProfit').value)||0;
-  const c=usd2c(u);
-  if(Math.abs(u)>0){
+  const mt4val=parseFloat(document.getElementById('inputProfit').value)||0;
+  const c=usd2c(mt4val); // simpan sebagai cent integer
+  const usdNyata=mt4val/100; // USD asli = MT4 value ÷ 100
+  const rpTotal=Math.round(usdNyata*kursUSD);
+  if(Math.abs(mt4val)>0){
     document.getElementById('profitCalcBox').style.display='block';
-    set('pc1','$'+u.toFixed(2)); set('pc2',fC(c));
-    set('pc3',fC(Math.round(c*.4))+' / $'+(u*.4).toFixed(2));
-    set('pc4',fC(Math.round(c*.6))+' / $'+(u*.6).toFixed(2));
-    set('pc5',fR(c));
+    set('pc1','$'+mt4val.toFixed(2)+' (nilai MT4 FBS Cent)');
+    set('pc2','$'+usdNyata.toFixed(4)+' USD nyata');
+    set('pc3',fC(Math.round(c*.4))+' = Rp '+Math.round(rpTotal*.4).toLocaleString('id-ID'));
+    set('pc4',fC(Math.round(c*.6))+' = Rp '+Math.round(rpTotal*.6).toLocaleString('id-ID'));
+    set('pc5','Rp '+rpTotal.toLocaleString('id-ID'));
   }else document.getElementById('profitCalcBox').style.display='none';
 }
 
