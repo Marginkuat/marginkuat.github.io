@@ -566,7 +566,7 @@ async function sb(p,m='GET',b=null){
 // ══════════ CURRENCY ══════════
 // FBS CENT: nilai di MT4 = CENT (¢)
 // ¢100 = $1 USD nyata
-// Rupiah = (cent/100) * kursUSD / 100
+// Rupiah = (cent/100) * K / 100
 // Contoh: ¢1277.98 → $12.78 USD → Rp 213.423
 // DB simpan: nilai MT4 langsung (float, bukan integer)
 let K=16700; // kurs $1=Rp
@@ -575,6 +575,7 @@ const fU=v=>'$'+(parseFloat(v||0)/100).toFixed(2)+' USD nyata';
 const fUS=v=>'$'+(parseFloat(v||0)/100).toFixed(2); // short
 const fR=v=>'Rp '+Math.round(parseFloat(v||0)/100*K).toLocaleString('id-ID');
 const fD=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';
+const usd2c=u=>Math.round(parseFloat(u||0)*100); // MT4 value → integer cents (565.48→56548)
 
 // ══════════ STATE ══════════
 let isAdmin=false,adminUser=null,livePx=3324.80,toastT;
@@ -702,26 +703,25 @@ function calcSaldoHarian(){
   const v = parseFloat(document.getElementById('inputSaldoMT4').value)||0;
   if(v>0){
     document.getElementById('saldoHarianCalc').style.display='block';
-    const cent = usd2c(v); // v adalah nilai MT4 langsung = cent
-    set('shCent','¢'+v.toFixed(2));
-    set('shUSD','$'+(v/100).toFixed(4));
-    set('shRp','Rp '+Math.round(v/100*kursUSD).toLocaleString('id-ID'));
+    // v = nilai MT4 langsung misal ¢565.48
+    set('shCent', fC(v));
+    set('shUSD', fUS(v)+' USD nyata');
+    set('shRp', fR(v));
     // hitung profit otomatis vs saldo kemarin
     if(lastSaldoMT4>0 && v!==lastSaldoMT4){
       const profit = v - lastSaldoMT4;
       const box = document.getElementById('profitHarianInfo');
       box.style.display='block';
       box.style.background = profit>=0?'rgba(74,222,128,0.15)':'rgba(248,113,113,0.15)';
+      const absP=Math.abs(profit);
       set('profitHarianTxt',
-        (profit>=0?'📈 Profit: +':'📉 Rugi: ')+
-        '¢'+Math.abs(profit).toFixed(2)+
-        ' / $'+Math.abs(profit/100).toFixed(4)+
-        ' / Rp '+Math.round(Math.abs(profit)/100*kursUSD).toLocaleString('id-ID')
+        (profit>=0?'📈 Profit hari ini: +':'📉 Rugi hari ini: ')+
+        fC(absP)+' / '+fUS(absP)+' USD / '+fR(absP)
       );
       document.getElementById('profitHarianTxt').style.color = profit>=0?'#4ADE80':'#F87171';
       // Auto-isi profit field
       const pEl = document.getElementById('inputProfit');
-      if(pEl && !pEl.value) pEl.value = (profit/100).toFixed(2);
+      if(pEl && !pEl.value) pEl.value = profit.toFixed(2);
       calcProfitHarian();
     }
   } else {
@@ -732,7 +732,7 @@ function calcSaldoHarian(){
 function calcProfitHarian(){
   const mt4val = parseFloat(document.getElementById('inputProfit').value)||0;
   const usdNyata = mt4val/100;
-  const rpTotal = Math.round(usdNyata*kursUSD);
+  const rpTotal = Math.round(usdNyata*K);
   if(Math.abs(mt4val)>0){
     document.getElementById('profitCalcBox').style.display='block';
     set('pc1','¢'+mt4val.toFixed(2)+' (nilai MT4)');
@@ -754,8 +754,10 @@ async function simpanSaldoHarian(){
   if(!saldo){showToast('❌ Isi saldo MT4');return;}
   if(!tanggal){showToast('❌ Isi tanggal');return;}
 
-  const saldoCent = usd2c(saldo);   // saldo dalam cent integer
-  const profitCent = usd2c(profitMT4); // profit dalam cent integer
+  // DB menyimpan nilai MT4 langsung sebagai float: 565.48
+  // loadBeranda baca langsung: fC(565.48)='¢565.48', fUS(565.48)='$5.65'
+  const saldoCent = saldo;        // simpan langsung: 565.48
+  const profitCent = profitMT4;   // simpan langsung: 29.40
 
   showLoading(true);
   try{
@@ -827,7 +829,7 @@ async function loadRiwayatSaldo(){
       const profitCent = r.profit||0;
       const saldoMT4display = (r.saldo_mt4/100).toFixed(2);
       const usdNyata = (r.saldo_mt4/10000).toFixed(4);
-      const rp = Math.round(r.saldo_mt4/10000*kursUSD);
+      const rp = Math.round(r.saldo_mt4/10000*K);
       return `<div style="padding:12px 14px;border-bottom:1px solid var(--border)">
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
           <div style="flex:1">
@@ -835,7 +837,7 @@ async function loadRiwayatSaldo(){
             <div style="font-size:13px;font-weight:800;color:var(--gold);font-family:'JetBrains Mono',monospace;margin-top:2px">¢${saldoMT4display}</div>
             <div style="font-size:10px;color:var(--text3)">$${usdNyata} USD · Rp ${rp.toLocaleString('id-ID')}</div>
             ${profitCent!==0?`<div style="font-size:11px;font-weight:700;color:${profitCent>=0?'var(--green)':'var(--red)'};margin-top:2px">
-              ${profitCent>=0?'📈 Profit':'📉 Rugi'}: ¢${Math.abs(profitCent/100).toFixed(2)} / Rp ${Math.round(Math.abs(profitCent)/10000*kursUSD).toLocaleString('id-ID')}
+              ${profitCent>=0?'📈 Profit':'📉 Rugi'}: ¢${Math.abs(profitCent/100).toFixed(2)} / Rp ${Math.round(Math.abs(profitCent)/10000*K).toLocaleString('id-ID')}
             </div>`:'<div style="font-size:10px;color:var(--text3)">Tidak ada profit</div>'}
             ${r.catatan?`<div style="font-size:10px;color:var(--text3);margin-top:2px">📝 ${r.catatan}</div>`:''}
           </div>
