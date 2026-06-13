@@ -4,354 +4,358 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#B8860B">
-<title>ARISAN EA</title>
+<title>ARISAN EA — Gold Investment</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'Inter',sans-serif;background:#F5F6FA;color:#111827;min-height:100vh}
-
-/* HEADER */
-.header{background:#fff;border-bottom:1px solid #E4E8F0;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;position:sticky;top:0;z-index:99;box-shadow:0 1px 8px rgba(0,0,0,0.06)}
-.logo{display:flex;align-items:center;gap:8px}
-.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,#B8860B,#FFD700);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
-.logo-text{font-size:15px;font-weight:800}
-.logo-text span{color:#B8860B}
-.admin-btn{padding:6px 14px;border-radius:20px;border:1.5px solid #E8D5A0;background:#FDF8EC;color:#B8860B;font-size:11px;font-weight:700;cursor:pointer}
-
-/* CONTENT */
-.content{padding:12px;padding-bottom:72px}
-
-/* HERO CARD */
-.hero{background:linear-gradient(135deg,#1A1D2E,#2D3250);border-radius:18px;padding:18px;margin-bottom:12px;color:#fff;position:relative;overflow:hidden}
-.hero::after{content:'✦';position:absolute;right:-8px;top:-8px;font-size:90px;color:rgba(255,215,0,0.07)}
-.hero-label{font-size:10px;opacity:.55;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
-.hero-saldo{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;color:#FFD700;letter-spacing:-1px}
-.hero-usd{font-size:13px;opacity:.6;margin-top:3px;font-family:'JetBrains Mono',monospace}
-.hero-rp{font-size:11px;opacity:.4;margin-top:1px;font-family:'JetBrains Mono',monospace;margin-bottom:14px}
-.hero-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.hero-box{background:rgba(255,255,255,.09);border-radius:10px;padding:10px 6px;text-align:center}
-.hero-box-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
-.hero-box-lbl{font-size:9px;opacity:.5;margin-top:2px;text-transform:uppercase}
-.c-green{color:#4ADE80}.c-gold{color:#FFD700}
-
-/* EA STATUS */
-.ea-bar{background:#1A1D2E;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;color:#fff}
-.ea-dot{width:7px;height:7px;background:#4ADE80;border-radius:50%;animation:pulse 1.5s infinite;margin-right:8px;flex-shrink:0}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.ea-info{flex:1}
-.ea-name{font-size:12px;font-weight:700}
-.ea-sub{font-size:10px;opacity:.4;margin-top:1px}
-.ea-price{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#FFD700;text-align:right}
-.ea-lbl{font-size:9px;color:#4ADE80;text-align:right}
-
-/* CARD */
-.card{background:#fff;border-radius:14px;border:1px solid #E4E8F0;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-.card-head{padding:11px 14px;border-bottom:1px solid #F0F2F5;display:flex;justify-content:space-between;align-items:center}
-.card-title{font-size:12px;font-weight:700;color:#111}
-.card-body{padding:14px}
-.sec-lbl{font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.8px;padding:2px 2px 6px}
-
-/* ROW */
-.row{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid #F0F2F5}
-.row:last-child{border-bottom:none}
-.row-key{font-size:12px;color:#4B5563}
-.row-val{text-align:right}
-.val-big{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#B8860B}
-.val-usd{font-size:10px;color:#6B7280;font-family:'JetBrains Mono',monospace}
-.val-rp{font-size:10px;color:#9CA3AF;font-family:'JetBrains Mono',monospace}
-.green{color:#0B7A55}.red{color:#C0392B}
-
-/* ANGGOTA */
-.member{padding:10px 14px;border-bottom:1px solid #F0F2F5;display:flex;align-items:center;gap:10px}
-.member:last-child{border-bottom:none}
-.avatar{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#B8860B,#FFD700);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
-.member-name{font-size:13px;font-weight:600}
-.member-id{font-size:10px;color:#9CA3AF;font-family:'JetBrains Mono',monospace}
-.member-right{text-align:right;margin-left:auto}
-
-/* RIWAYAT */
-.tx{padding:10px 14px;border-bottom:1px solid #F0F2F5;display:flex;align-items:center;gap:10px}
-.tx:last-child{border-bottom:none}
-.tx-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
-.bg-green{background:#E8F5F0}.bg-gold{background:#FDF8EC}.bg-red{background:#FDECEA}
-.tx-desc{font-size:12px;font-weight:500}
-.tx-date{font-size:10px;color:#9CA3AF;margin-top:1px}
-.tx-amt{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;text-align:right}
-
-/* BOTTOM NAV */
-.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #E4E8F0;display:flex;height:58px;z-index:99}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:transparent;cursor:pointer}
-.nav-ico{font-size:18px}
-.nav-lbl{font-size:9px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.3px}
-.nav-item.active .nav-lbl{color:#B8860B}
-
-/* PAGE */
-.page{display:none}.page.active{display:block}
-
-/* FORM */
-.lbl{font-size:11px;font-weight:600;color:#4B5563;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px}
-.inp{width:100%;padding:11px 13px;border:1.5px solid #E4E8F0;border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;background:#F9FAFB;outline:none;margin-bottom:12px;color:#111}
-.inp:focus{border-color:#B8860B;background:#fff}
-.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px}
-.btn-primary{background:linear-gradient(135deg,#B8860B,#D4A017);color:#fff}
-.btn-ghost{background:#F5F6FA;color:#4B5563;border:1.5px solid #E4E8F0}
-.btn-danger{background:#C0392B;color:#fff}
-.hint{font-size:11px;color:#9CA3AF;text-align:center;margin-top:8px;line-height:1.5}
-.info{background:#EEF4FF;border:1px solid #BFDBFE;border-radius:10px;padding:10px 12px;font-size:11px;color:#1E40AF;line-height:1.5;margin-bottom:12px}
-.warn{background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:10px 12px;font-size:11px;color:#9A3412;line-height:1.5;margin-bottom:12px}
-.pill{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
-.pill-green{background:#E8F5F0;color:#0B7A55}
-.pill-red{background:#FDECEA;color:#C0392B}
-
-/* MODAL */
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center}
-.modal.open{display:flex}
-.modal-box{background:#fff;width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px;max-height:88vh;overflow-y:auto}
-.modal-bar{width:36px;height:4px;background:#E4E8F0;border-radius:2px;margin:0 auto 16px}
-.modal-title{font-size:16px;font-weight:700;margin-bottom:16px}
+body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:100vh}
 
 /* LOADING */
-#loading{display:flex;position:fixed;inset:0;background:rgba(255,255,255,.95);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:10px}
-.spin{width:32px;height:32px;border:3px solid #E8D5A0;border-top-color:#B8860B;border-radius:50%;animation:spin .8s linear infinite}
+#loading{position:fixed;inset:0;background:#0D0F0A;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.spin{width:32px;height:32px;border:2px solid #2A2E1F;border-top-color:#B8860B;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* HEADER */
+.header{padding:20px 16px 0;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;flex-direction:column}
+.brand-name{font-size:22px;font-weight:800;color:#C8A84B;letter-spacing:.5px;line-height:1.1}
+.brand-sub{font-size:10px;color:#6B7A4A;text-transform:uppercase;letter-spacing:1.5px;margin-top:2px}
+.header-right{display:flex;gap:8px;align-items:center}
+.btn-risk{padding:6px 14px;border-radius:20px;border:1.5px solid #7B3535;background:transparent;color:#E57373;font-size:11px;font-weight:600;cursor:pointer}
+.btn-wa{padding:6px 14px;border-radius:20px;border:none;background:#25D366;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px}
+.btn-admin{padding:5px 12px;border-radius:20px;border:1.5px solid #B8860B;background:transparent;color:#C8A84B;font-size:10px;font-weight:700;cursor:pointer}
+.btn-logout{padding:5px 12px;border-radius:20px;border:1.5px solid #555;background:transparent;color:#888;font-size:10px;font-weight:700;cursor:pointer;display:none}
+
+/* SECTION */
+.section{padding:20px 16px 0}
+.sec-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#9CA070;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px}
+
+/* BALANCE HERO */
+.balance-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:20px;margin:16px;margin-bottom:0;text-align:center}
+.bal-label{font-size:10px;color:#6B7A4A;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px}
+.bal-cent{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:#C8A84B;letter-spacing:-1px}
+.bal-usd{font-size:14px;color:#7B9060;margin-top:4px;font-family:'JetBrains Mono',monospace}
+.bal-rp{font-size:12px;color:#4A5A35;margin-top:2px;font-family:'JetBrains Mono',monospace;margin-bottom:16px}
+.bal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.bal-box{background:#1E2312;border-radius:10px;padding:10px 6px;text-align:center}
+.bal-box-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
+.bal-box-lbl{font-size:9px;color:#5A6A40;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.cg{color:#4ADE80}.cr{color:#F87171}.cy{color:#C8A84B}
+
+/* EA STATUS */
+.ea-status{background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:12px 14px;margin:12px 16px 0;display:flex;align-items:center;justify-content:space-between}
+.ea-left{display:flex;align-items:center;gap:8px}
+.ea-dot{width:7px;height:7px;background:#4ADE80;border-radius:50%;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.ea-text .ea-name{font-size:12px;font-weight:700;color:#E8E2D5}
+.ea-text .ea-sub{font-size:10px;color:#4A5A35;margin-top:1px}
+.ea-price{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#C8A84B;text-align:right}
+.ea-pl{font-size:10px;color:#4ADE80;text-align:right;margin-top:1px}
+
+/* MILESTONE */
+.milestone-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.ms-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:12px 8px;text-align:center}
+.ms-card.achieved{border-color:#2E4A1E;background:#131A0D}
+.ms-emoji{font-size:24px;margin-bottom:6px}
+.ms-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#E8E2D5;margin-bottom:4px}
+.ms-status{font-size:10px;font-weight:600}
+.ms-achieved{color:#4ADE80}.ms-belum{color:#5A6A40}
+
+/* KALENDER */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-nav-btn{width:34px;height:34px;background:#161A0F;border:1px solid #2A2E1F;border-radius:8px;color:#C8A84B;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cal-month{font-size:16px;font-weight:700;color:#C8A84B}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px}
+.cal-day-lbl{text-align:center;font-size:9px;color:#4A5A35;font-weight:600;padding:4px 0;text-transform:uppercase}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-cell{border-radius:8px;padding:4px 2px;text-align:center;min-height:44px;display:flex;flex-direction:column;justify-content:center;background:#161A0F;border:1px solid #1E2312}
+.cal-cell.profit{background:#132D0E;border-color:#1E4A14}
+.cal-cell.loss{background:#2D0E0E;border-color:#4A1414}
+.cal-cell.today{border-color:#C8A84B;border-width:1.5px}
+.cal-cell.empty{background:transparent;border-color:transparent}
+.cal-num{font-size:11px;font-weight:700;color:#E8E2D5}
+.cal-amt{font-size:8px;font-weight:700;margin-top:1px}
+.cal-legend{display:flex;justify-content:center;gap:14px;margin-top:8px}
+.cal-leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#5A6A40}
+.cal-leg-dot{width:8px;height:8px;border-radius:3px}
+
+/* TARGET */
+.target-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px}
+.target-title{text-align:center;font-size:13px;font-weight:700;color:#E8E2D5;margin-bottom:4px}
+.target-sub{text-align:center;font-size:11px;color:#5A6A40;margin-bottom:12px}
+.target-sub b{color:#C8A84B}
+.target-row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:12px}
+.target-box{background:#1E2312;border-radius:10px;padding:10px;text-align:center}
+.target-box-lbl{font-size:9px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.target-box-val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#C8A84B}
+.target-arrow{font-size:18px;color:#4A5A35;text-align:center}
+.target-main{background:#2A2E1F;border-radius:10px;padding:10px;text-align:center}
+.target-main-lbl{font-size:9px;color:#C8A84B;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.target-main-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#FFD700}
+.progress-bar{height:6px;background:#1E2312;border-radius:3px;overflow:hidden;margin-top:10px}
+.progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#2E4A1E,#4ADE80);transition:width 1s}
+.progress-info{display:flex;justify-content:space-between;font-size:10px;color:#5A6A40;margin-top:4px}
+
+/* ANGGOTA */
+.member{background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.m-avatar{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#B8860B,#C8A84B);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0D0F0A;flex-shrink:0}
+.m-name{font-size:13px;font-weight:600;color:#E8E2D5}
+.m-id{font-size:10px;color:#4A5A35;font-family:'JetBrains Mono',monospace;margin-top:1px}
+.m-right{text-align:right;margin-left:auto}
+.m-saldo{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#C8A84B}
+.m-profit{font-size:10px;color:#4ADE80;margin-top:1px}
+.pill{padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700}
+.pill-g{background:#132D0E;color:#4ADE80}
+.pill-r{background:#2D0E0E;color:#F87171}
+
+/* RIWAYAT */
+.tx{background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.tx-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.bg-g{background:#132D0E}.bg-r{background:#2D0E0E}.bg-y{background:#2A2410}
+.tx-desc{font-size:12px;font-weight:500;color:#E8E2D5}
+.tx-date{font-size:10px;color:#4A5A35;margin-top:1px}
+.tx-amt{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;text-align:right;margin-left:auto}
+
+/* ADMIN PANEL */
+.admin-panel{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px;display:none}
+.ap-title{font-size:12px;font-weight:700;color:#C8A84B;margin-bottom:12px}
+.lbl{font-size:10px;font-weight:600;color:#5A6A40;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px}
+.inp{width:100%;padding:10px 12px;border:1.5px solid #2A2E1F;border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;outline:none;margin-bottom:10px}
+.inp:focus{border-color:#B8860B}
+.inp::placeholder{color:#3A4A2A}
+.btn{width:100%;padding:11px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px}
+.btn-p{background:linear-gradient(135deg,#B8860B,#C8A84B);color:#0D0F0A}
+.btn-g{background:#132D0E;color:#4ADE80;border:1px solid #1E4A14}
+.btn-ghost{background:#1E2312;color:#6B7A4A}
+.btn-r{background:#2D0E0E;color:#F87171;border:1px solid #4A1414}
+.preview-box{background:#0D0F0A;border-radius:9px;padding:10px;margin-bottom:10px;display:none}
+.preview-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center}
+.pv-lbl{font-size:9px;color:#4A5A35;margin-bottom:2px}
+.pv-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
+.sim-box{background:#1E2312;border-radius:9px;padding:10px;margin-bottom:10px;font-size:11px;display:none}
+.sim-row{display:flex;justify-content:space-between;margin-bottom:3px}
+.sim-key{color:#5A6A40}
+.sim-val{font-weight:600;color:#E8E2D5}
+.riwayat-item{background:#0D0F0A;border-radius:9px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.ri-info{flex:1}
+.ri-date{font-size:11px;font-weight:700;color:#C8A84B}
+.ri-saldo{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#E8E2D5}
+.ri-profit{font-size:10px;font-weight:600}
+.ri-cat{font-size:10px;color:#4A5A35}
+.btn-sm{padding:4px 9px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer;border:none}
+
+/* MODAL */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end;justify-content:center}
+.modal.open{display:flex}
+.modal-box{background:#161A0F;border:1px solid #2A2E1F;width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px;max-height:88vh;overflow-y:auto}
+.modal-bar{width:36px;height:4px;background:#2A2E1F;border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:15px;font-weight:700;color:#E8E2D5;margin-bottom:14px}
+.warn{background:#2D1A0E;border:1px solid #4A2A14;border-radius:9px;padding:9px 11px;font-size:11px;color:#E5A050;line-height:1.5;margin-bottom:10px}
+.info{background:#0E1A2D;border:1px solid #1A3A5A;border-radius:9px;padding:9px 11px;font-size:11px;color:#60A0E0;line-height:1.5;margin-bottom:10px}
+
 /* TOAST */
-.toast{position:fixed;top:64px;left:50%;transform:translateX(-50%) translateY(-8px);background:#1A1D2E;color:#fff;padding:9px 16px;border-radius:9px;font-size:12px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:nowrap;max-width:92vw;text-align:center}
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-8px);background:#1E2312;color:#E8E2D5;border:1px solid #2A2E1F;padding:9px 16px;border-radius:9px;font-size:12px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* SALDO INPUT DARK */
-.saldo-box{background:linear-gradient(135deg,#1A1D2E,#2D3250);border-radius:12px;padding:14px;margin-bottom:12px;color:#fff}
-.saldo-lbl{font-size:10px;opacity:.55;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
-.saldo-inp{width:100%;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);border-radius:8px;padding:10px 13px;font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:#FFD700;outline:none;margin-bottom:0}
-.saldo-inp::placeholder{color:rgba(255,215,0,.3)}
-.saldo-preview{display:none;margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
-.saldo-prev-box{background:rgba(255,255,255,.1);border-radius:7px;padding:8px;text-align:center}
-.saldo-prev-lbl{font-size:9px;opacity:.55;margin-bottom:2px}
-.saldo-prev-val{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+/* DIVIDER */
+.divider{height:1px;background:#1E2312;margin:20px 16px 0}
+.footer{padding:20px 16px;text-align:center;font-size:10px;color:#2A3A1A;line-height:1.8}
+
+/* SALDO HARIAN RIWAYAT */
+#riwayatSaldoWrap{max-height:300px;overflow-y:auto}
 </style>
 </head>
 <body>
 
 <div id="loading">
+  <div style="font-size:24px;margin-bottom:8px">✦</div>
   <div class="spin"></div>
-  <div style="font-size:12px;color:#666">Memuat ARISAN EA...</div>
+  <div style="font-size:11px;color:#4A5A35;margin-top:4px">ARISAN EA</div>
 </div>
 
 <!-- HEADER -->
 <div class="header">
-  <div class="logo">
-    <div class="logo-icon">✦</div>
-    <div class="logo-text">ARISAN <span>EA</span></div>
+  <div class="brand">
+    <div class="brand-name">ARISAN EA</div>
+    <div class="brand-sub">EA Trading XAUUSD</div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <div style="font-size:9px;color:#9CA3AF;text-align:right" id="hKurs">$1=Rp16.700<br>¢100=$1</div>
-    <button class="admin-btn" id="btnAdmin" onclick="openModal('mLogin')">🔑 Admin</button>
-    <button class="admin-btn" id="btnLogout" style="display:none" onclick="logout()">↩ Keluar</button>
+  <div class="header-right">
+    <button class="btn-admin" id="btnAdmin" onclick="openModal('mLogin')">🔑 Admin</button>
+    <button class="btn-logout" id="btnLogout" onclick="logout()">↩ Keluar</button>
   </div>
 </div>
 
-<!-- CONTENT -->
-<div class="content">
-
-  <!-- ═══ BERANDA ═══ -->
-  <div id="pg_home" class="page active">
-    <div class="ea-bar">
-      <div class="ea-dot"></div>
-      <div class="ea-info">
-        <div class="ea-name">🤖 ARISAN EA — Live</div>
-        <div class="ea-sub">XAUUSD · FBS Cent Account</div>
-      </div>
-      <div>
-        <div class="ea-price" id="xauPrice">3,324.80</div>
-        <div class="ea-lbl">XAU/USD</div>
-      </div>
-    </div>
-
-    <div class="hero">
-      <div class="hero-label">Total Dana Kelola (Saldo MT4)</div>
-      <div class="hero-saldo" id="hSaldo">¢0.00</div>
-      <div class="hero-usd" id="hUSD">= $0.00 USD nyata</div>
-      <div class="hero-rp" id="hRp">≈ Rp 0</div>
-      <div class="hero-row">
-        <div class="hero-box">
-          <div class="hero-box-val c-green" id="hWinRate">78.3%</div>
-          <div class="hero-box-lbl">Win Rate</div>
-        </div>
-        <div class="hero-box">
-          <div class="hero-box-val c-gold" id="hAnggota">0</div>
-          <div class="hero-box-lbl">Anggota</div>
-        </div>
-        <div class="hero-box">
-          <div class="hero-box-val c-green" id="hProfit">¢0</div>
-          <div class="hero-box-lbl">Total Profit</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="sec-lbl">Saldo Hari Ini</div>
-    <div class="card">
-      <div class="card-body" style="padding:0">
-        <div class="row" style="padding:10px 14px">
-          <div class="row-key">Saldo MT4 (FBS Cent)</div>
-          <div class="row-val">
-            <div class="val-big" id="rSaldo">¢0.00</div>
-            <div class="val-usd" id="rSaldoUSD">$0.00</div>
-            <div class="val-rp" id="rSaldoRp">Rp 0</div>
-          </div>
-        </div>
-        <div class="row" style="padding:10px 14px">
-          <div class="row-key">Dana EA Trading (50%)</div>
-          <div class="row-val">
-            <div class="val-big" id="rEA">¢0.00</div>
-            <div class="val-usd" id="rEAUSD">$0.00</div>
-          </div>
-        </div>
-        <div class="row" style="padding:10px 14px">
-          <div class="row-key">Dana Darurat (50%)</div>
-          <div class="row-val">
-            <div class="val-big" id="rDar">¢0.00</div>
-            <div class="val-usd" id="rDarUSD">$0.00</div>
-          </div>
-        </div>
-        <div class="row" style="padding:10px 14px">
-          <div class="row-key">Total Profit Terbagi</div>
-          <div class="row-val">
-            <div class="val-big green" id="rProfit">¢0.00</div>
-            <div class="val-usd" id="rProfitUSD">$0.00</div>
-            <div class="val-rp" id="rProfitRp">Rp 0</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="info" style="font-size:11px">
-      📊 <b>Transparan.</b> Bagi hasil: <b>40% ke anggota</b> · <b>60% operasional</b>. Topup: 50% EA + 50% Darurat.
-    </div>
-
-    <div class="sec-lbl">Aktivitas Terbaru</div>
-    <div class="card"><div id="riwayat"><div style="padding:24px;text-align:center;color:#9CA3AF;font-size:12px">Memuat...</div></div></div>
-  </div>
-
-  <!-- ═══ ANGGOTA ═══ -->
-  <div id="pg_anggota" class="page">
-    <div class="sec-lbl">Daftar Anggota</div>
-    <div class="card"><div id="listAnggota"><div style="padding:24px;text-align:center;color:#9CA3AF;font-size:12px">Memuat...</div></div></div>
-    <div id="btnTambahWrap" style="display:none;margin-top:4px">
-      <button class="btn btn-primary" onclick="openModal('mTambahAnggota')">+ Tambah Anggota</button>
+<!-- EA STATUS -->
+<div class="ea-status" style="margin:12px 16px 0">
+  <div class="ea-left">
+    <div class="ea-dot"></div>
+    <div class="ea-text">
+      <div class="ea-name">🤖 ARISAN EA — Live Trading</div>
+      <div class="ea-sub">XAUUSD · FBS Cent Account · Auto Running</div>
     </div>
   </div>
-
-  <!-- ═══ LAPORAN ═══ -->
-  <div id="pg_laporan" class="page">
-    <div class="hero" style="background:linear-gradient(135deg,#0B4F2D,#166534)">
-      <div class="hero-label">Total Profit Semua Periode</div>
-      <div class="hero-saldo" id="lapSaldo">¢0.00</div>
-      <div class="hero-usd" id="lapUSD">= $0.00 USD nyata</div>
-      <div class="hero-rp" id="lapRp">≈ Rp 0</div>
-      <div class="hero-row">
-        <div class="hero-box"><div class="hero-box-val c-green" id="lapBagi">¢0</div><div class="hero-box-lbl">Ke Anggota 40%</div></div>
-        <div class="hero-box"><div class="hero-box-val c-gold" id="lapOps">¢0</div><div class="hero-box-lbl">Operasional 60%</div></div>
-        <div class="hero-box"><div class="hero-box-val" id="lapDar">¢0</div><div class="hero-box-lbl">Saldo Darurat</div></div>
-      </div>
-    </div>
-    <div class="sec-lbl">Riwayat Transaksi</div>
-    <div class="card"><div id="lapRiwayat"><div style="padding:24px;text-align:center;color:#9CA3AF;font-size:12px">Memuat...</div></div></div>
+  <div>
+    <div class="ea-price" id="xauPrice">3,324.80</div>
+    <div class="ea-pl">XAU/USD</div>
   </div>
+</div>
 
-  <!-- ═══ SETELAN (ADMIN) ═══ -->
-  <div id="pg_setelan" class="page">
-    <div class="warn">🔑 Halaman Admin. Data yang diinput akan tampil ke publik.</div>
+<!-- BALANCE HERO -->
+<div class="balance-card">
+  <div class="bal-label">Total Dana Kelola (Saldo MT4)</div>
+  <div class="bal-cent" id="balCent">¢0.00</div>
+  <div class="bal-usd" id="balUSD">= $0.00 USD nyata</div>
+  <div class="bal-rp" id="balRp">≈ Rp 0</div>
+  <div class="bal-grid">
+    <div class="bal-box"><div class="bal-box-val cg" id="bWinRate">78.3%</div><div class="bal-box-lbl">Win Rate</div></div>
+    <div class="bal-box"><div class="bal-box-val cy" id="bAnggota">0</div><div class="bal-box-lbl">Anggota</div></div>
+    <div class="bal-box"><div class="bal-box-val cg" id="bProfit">¢0</div><div class="bal-box-lbl">Total Profit</div></div>
+  </div>
+</div>
 
-    <!-- INPUT SALDO HARIAN -->
-    <div class="sec-lbl">Input Saldo MT4 Harian</div>
-    <div class="card">
-      <div class="card-body">
-        <div class="saldo-box">
-          <div class="saldo-lbl">Saldo MT4 (tulis angka dari MT4)</div>
-          <input class="saldo-inp" type="number" id="inpSaldo" placeholder="565.48" step="0.01" oninput="previewSaldo()">
-          <div id="saldoPreview" style="display:none;margin-top:10px">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-              <div class="saldo-prev-box"><div class="saldo-prev-lbl">CENT</div><div class="saldo-prev-val c-gold" id="pvCent">-</div></div>
-              <div class="saldo-prev-box"><div class="saldo-prev-lbl">USD NYATA</div><div class="saldo-prev-val" id="pvUSD">-</div></div>
-              <div class="saldo-prev-box"><div class="saldo-prev-lbl">RUPIAH</div><div class="saldo-prev-val" id="pvRp">-</div></div>
-            </div>
-          </div>
+<!-- MILESTONE -->
+<div class="section">
+  <div class="sec-title">🏆 MILESTONE BOARD<span style="font-size:10px;color:#4A5A35;font-weight:400;letter-spacing:.5px">Pencapaian balance EA</span></div>
+  <div class="milestone-grid" id="milestoneGrid"></div>
+</div>
+
+<!-- KALENDER -->
+<div class="section">
+  <div class="sec-title">📅 KALENDER TRADING</div>
+  <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:14px">
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calPrev()">‹</button>
+      <div class="cal-month" id="calTitle">Jun 2026</div>
+      <button class="cal-nav-btn" onclick="calNext()">›</button>
+    </div>
+    <div class="cal-days">
+      <div class="cal-day-lbl">Min</div><div class="cal-day-lbl">Sen</div>
+      <div class="cal-day-lbl">Sel</div><div class="cal-day-lbl">Rab</div>
+      <div class="cal-day-lbl">Kam</div><div class="cal-day-lbl">Jum</div>
+      <div class="cal-day-lbl">Sab</div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend">
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#132D0E"></div>Profit</div>
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#2D0E0E"></div>Loss</div>
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#161A0F"></div>Tidak Trading</div>
+    </div>
+  </div>
+</div>
+
+<!-- TARGET BULANAN -->
+<div class="section">
+  <div class="sec-title">🎯 TARGET BULAN INI</div>
+  <div class="target-card">
+    <div class="target-title" id="targetTitle">TARGET JUN 2026</div>
+    <div class="target-sub" id="targetSub">Memuat...</div>
+    <div class="target-row">
+      <div class="target-box"><div class="target-box-lbl">Balance Lalu</div><div class="target-box-val" id="tBalLalu">¢0</div></div>
+      <div class="target-arrow">→</div>
+      <div class="target-main"><div class="target-main-lbl">TARGET</div><div class="target-main-val" id="tTarget">¢0</div></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-info"><span id="progressPct">0% tercapai</span><span id="progressSisa">Sisa: ¢0</span></div>
+  </div>
+</div>
+
+<!-- ANGGOTA -->
+<div class="section">
+  <div class="sec-title">👥 ANGGOTA</div>
+  <div id="listAnggota"><div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Memuat...</div></div>
+  <div id="btnTambahWrap" style="display:none;margin-top:8px">
+    <button class="btn btn-g" style="border-radius:9px" onclick="openModal('mTambahAnggota')">+ Tambah Anggota</button>
+  </div>
+</div>
+
+<!-- RIWAYAT -->
+<div class="section">
+  <div class="sec-title">📋 AKTIVITAS TERBARU</div>
+  <div id="riwayatList"><div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Memuat...</div></div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="section">
+  <div class="admin-panel" id="adminPanel">
+    <div class="ap-title">⚙️ Panel Admin</div>
+
+    <!-- INPUT SALDO -->
+    <div style="background:#0D0F0A;border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="font-size:11px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">📋 Input Saldo MT4 Harian</div>
+      <label class="lbl">Saldo MT4 (tulis angka dari MT4)</label>
+      <input class="inp" type="number" id="inpSaldo" placeholder="565.48" step="0.01" oninput="previewSaldo()">
+      <div class="preview-box" id="pvBox">
+        <div class="preview-grid">
+          <div><div class="pv-lbl">CENT</div><div class="pv-val cy" id="pvCent">-</div></div>
+          <div><div class="pv-lbl">USD NYATA</div><div class="pv-val" id="pvUSD">-</div></div>
+          <div><div class="pv-lbl">RUPIAH</div><div class="pv-val" id="pvRp">-</div></div>
         </div>
-        <label class="lbl">Tanggal</label>
-        <input class="inp" type="date" id="inpTgl">
-        <label class="lbl">Profit Hari Ini (angka dari MT4, isi 0 jika tidak ada)</label>
-        <input class="inp" type="number" id="inpProfit" placeholder="0.00" step="0.01" oninput="previewProfit()">
-        <div id="profitPreview" style="display:none;background:#FDF8EC;border:1px solid #E8D5A0;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px">
-          <div style="font-weight:700;color:#B8860B;margin-bottom:5px">📊 Simulasi Bagi Hasil</div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="color:#4B5563">Profit MT4</span><span id="ppMT4" style="font-weight:600">-</span></div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="color:#4B5563">USD Nyata</span><span id="ppUSD" style="font-weight:600">-</span></div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="color:#4B5563">→ Anggota 40%</span><span id="ppBagi" style="font-weight:600;color:#0B7A55">-</span></div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="color:#4B5563">→ Operasional 60%</span><span id="ppOps" style="font-weight:600;color:#B8860B">-</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:#4B5563">Dalam Rupiah</span><span id="ppRp" style="font-weight:600">-</span></div>
-        </div>
-        <label class="lbl">Catatan (opsional)</label>
-        <input class="inp" id="inpCatatan" placeholder="Contoh: Setelah WD 600">
-        <button class="btn btn-primary" onclick="simpanSaldo()">💾 Simpan Saldo & Bagi Hasil</button>
       </div>
+      <label class="lbl">Tanggal</label>
+      <input class="inp" type="date" id="inpTgl">
+      <label class="lbl">Profit Hari Ini (angka dari MT4, 0 jika tidak ada)</label>
+      <input class="inp" type="number" id="inpProfit" placeholder="0.00" step="0.01" oninput="previewProfit()">
+      <div class="sim-box" id="simBox">
+        <div class="sim-row"><span class="sim-key">Profit MT4</span><span class="sim-val cy" id="simMT4">-</span></div>
+        <div class="sim-row"><span class="sim-key">USD Nyata</span><span class="sim-val" id="simUSD">-</span></div>
+        <div class="sim-row"><span class="sim-key">→ Anggota 40%</span><span class="sim-val cg" id="simBagi">-</span></div>
+        <div class="sim-row"><span class="sim-key">→ Operasional 60%</span><span class="sim-val cy" id="simOps">-</span></div>
+        <div class="sim-row"><span class="sim-key">Dalam Rupiah</span><span class="sim-val" id="simRp">-</span></div>
+      </div>
+      <label class="lbl">Catatan (opsional)</label>
+      <input class="inp" id="inpCatatan" placeholder="Contoh: Setelah WD 600">
+      <button class="btn btn-p" onclick="simpanSaldo()">💾 Simpan Saldo & Bagi Hasil</button>
     </div>
 
-    <!-- RIWAYAT SALDO - BISA EDIT -->
-    <div class="sec-lbl">Riwayat Saldo Harian <span style="font-size:9px;background:#EEF4FF;color:#1A56DB;padding:2px 7px;border-radius:10px;font-weight:600">Bisa Dikoreksi</span></div>
-    <div class="card"><div id="riwayatSaldo"><div style="padding:24px;text-align:center;color:#9CA3AF;font-size:12px">Memuat...</div></div></div>
+    <!-- RIWAYAT SALDO -->
+    <div style="font-size:10px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📅 Riwayat Saldo — Bisa Dikoreksi</div>
+    <div id="riwayatSaldoWrap"><div style="text-align:center;padding:16px;color:#4A5A35;font-size:12px">Memuat...</div></div>
 
     <!-- KURS -->
-    <div class="sec-lbl" style="margin-top:8px">Kurs</div>
-    <div class="card">
-      <div class="card-body">
-        <label class="lbl">$1 USD = Rp</label>
-        <input class="inp" type="number" id="inpKurs" value="16700">
-        <button class="btn btn-primary" onclick="simpanKurs()">💾 Simpan Kurs</button>
-      </div>
+    <div style="background:#0D0F0A;border-radius:12px;padding:14px;margin-top:12px;margin-bottom:12px">
+      <div style="font-size:11px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">💱 Kurs USD/Rp</div>
+      <label class="lbl">$1 USD = Rp</label>
+      <input class="inp" type="number" id="inpKurs" value="16700">
+      <button class="btn btn-p" onclick="simpanKurs()">💾 Simpan Kurs</button>
     </div>
 
     <!-- GANTI PIN -->
-    <div class="sec-lbl">Ganti PIN Admin</div>
-    <div class="card">
-      <div class="card-body">
-        <label class="lbl">PIN Lama</label>
-        <input class="inp" type="password" id="inpPinLama" placeholder="PIN saat ini">
-        <label class="lbl">PIN Baru</label>
-        <input class="inp" type="password" id="inpPinBaru" placeholder="Min. 4 digit">
-        <label class="lbl">Konfirmasi PIN Baru</label>
-        <input class="inp" type="password" id="inpPinKonfirm" placeholder="Ulangi PIN baru">
-        <button class="btn btn-primary" onclick="gantiPin()">🔑 Ganti PIN</button>
-      </div>
+    <div style="background:#0D0F0A;border-radius:12px;padding:14px">
+      <div style="font-size:11px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">🔑 Ganti PIN Admin</div>
+      <label class="lbl">PIN Lama</label>
+      <input class="inp" type="password" id="pinLama" placeholder="PIN saat ini">
+      <label class="lbl">PIN Baru</label>
+      <input class="inp" type="password" id="pinBaru" placeholder="Min. 4 digit">
+      <label class="lbl">Konfirmasi</label>
+      <input class="inp" type="password" id="pinKonfirm" placeholder="Ulangi PIN baru">
+      <button class="btn btn-p" onclick="gantiPin()">🔑 Ganti PIN</button>
     </div>
-
-    <button class="btn btn-ghost" onclick="logout()">↩ Keluar Admin</button>
   </div>
+</div>
 
-</div><!-- content -->
-
-<!-- NAV -->
-<div class="nav">
-  <button class="nav-item active" id="nb_home" onclick="go('home')"><span class="nav-ico">🏠</span><span class="nav-lbl">Beranda</span></button>
-  <button class="nav-item" id="nb_anggota" onclick="go('anggota')"><span class="nav-ico">👥</span><span class="nav-lbl">Anggota</span></button>
-  <button class="nav-item" id="nb_laporan" onclick="go('laporan')"><span class="nav-ico">📊</span><span class="nav-lbl">Laporan</span></button>
-  <button class="nav-item" id="nb_setelan" style="display:none" onclick="go('setelan')"><span class="nav-ico">⚙️</span><span class="nav-lbl">Setelan</span></button>
+<!-- FOOTER -->
+<div class="divider"></div>
+<div class="footer">
+  ARISAN EA · EA Trading XAUUSD · FBS Cent Account<br>
+  Dana dikelola secara transparan · Bagi hasil 40% anggota<br>
+  <span style="color:#1E2A12">marginkuat.github.io</span>
 </div>
 
 <!-- MODAL LOGIN -->
 <div class="modal" id="mLogin">
   <div class="modal-box">
     <div class="modal-bar"></div>
-    <div style="text-align:center;margin-bottom:20px">
-      <div style="width:52px;height:52px;background:linear-gradient(135deg,#B8860B,#FFD700);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 10px">✦</div>
-      <div style="font-size:17px;font-weight:800">ARISAN <span style="color:#B8860B">EA</span></div>
-      <div style="font-size:11px;color:#9CA3AF;margin-top:2px">Login Admin</div>
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="font-size:28px;margin-bottom:6px">✦</div>
+      <div style="font-size:16px;font-weight:800;color:#C8A84B">ARISAN EA</div>
+      <div style="font-size:10px;color:#4A5A35;margin-top:2px">Login Admin</div>
     </div>
     <label class="lbl">Username</label>
-    <input class="inp" id="lUser" value="admin" placeholder="Username">
+    <input class="inp" id="lUser" value="admin">
     <label class="lbl">PIN</label>
     <input class="inp" type="password" id="lPin" placeholder="PIN">
-    <button class="btn btn-primary" onclick="login()">Masuk →</button>
+    <button class="btn btn-p" onclick="login()">Masuk →</button>
     <button class="btn btn-ghost" onclick="closeModal('mLogin')">Batal</button>
-    <div class="hint">Admin: <b>admin / 1234</b></div>
   </div>
 </div>
 
@@ -362,25 +366,25 @@ body{font-family:'Inter',sans-serif;background:#F5F6FA;color:#111827;min-height:
     <div class="modal-title">👤 Tambah Anggota</div>
     <label class="lbl">Nama Lengkap</label>
     <input class="inp" id="taNama" placeholder="Nama anggota">
-    <label class="lbl">Username (untuk login)</label>
-    <input class="inp" id="taUser" placeholder="Contoh: budi123" autocapitalize="none">
+    <label class="lbl">Username</label>
+    <input class="inp" id="taUser" placeholder="budi123" autocapitalize="none">
     <label class="lbl">PIN Awal</label>
     <input class="inp" type="password" id="taPin" placeholder="Min. 4 digit" maxlength="8">
     <label class="lbl">Modal Awal (angka dari MT4) — opsional</label>
     <input class="inp" type="number" id="taModal" placeholder="0.00" step="0.01">
-    <div class="info">📌 Kode anggota (NSB-xxx) dibuat otomatis. PIN diberikan langsung ke anggota.</div>
-    <button class="btn btn-primary" onclick="tambahAnggota()">✅ Simpan</button>
+    <div class="info">Kode (NSB-xxx) dibuat otomatis. PIN diberikan ke anggota.</div>
+    <button class="btn btn-p" onclick="tambahAnggota()">✅ Simpan</button>
     <button class="btn btn-ghost" onclick="closeModal('mTambahAnggota')">Batal</button>
   </div>
 </div>
 
 <!-- MODAL DETAIL ANGGOTA -->
-<div class="modal" id="mDetailAnggota">
+<div class="modal" id="mDetail">
   <div class="modal-box">
     <div class="modal-bar"></div>
-    <div class="modal-title" id="mDetailTitle">Detail Anggota</div>
+    <div class="modal-title" id="mDetailTitle">Detail</div>
     <div id="mDetailBody"></div>
-    <div id="mDetailActions" style="margin-top:14px"></div>
+    <div id="mDetailActs" style="margin-top:12px"></div>
   </div>
 </div>
 
@@ -389,16 +393,34 @@ body{font-family:'Inter',sans-serif;background:#F5F6FA;color:#111827;min-height:
   <div class="modal-box">
     <div class="modal-bar"></div>
     <div class="modal-title">🔑 Ganti PIN Anggota</div>
-    <div class="info">PIN ditetapkan Admin, lalu berikan ke anggota.</div>
+    <div class="info">PIN ditetapkan Admin.</div>
     <label class="lbl">Anggota</label>
-    <input class="inp" id="gpNama" readonly style="background:#F9FAFB">
+    <input class="inp" id="gpNama" readonly>
     <label class="lbl">PIN Baru</label>
-    <input class="inp" type="password" id="gpPin" placeholder="Min. 4 digit" maxlength="8">
-    <label class="lbl">Konfirmasi PIN</label>
+    <input class="inp" type="password" id="gpPin" maxlength="8">
+    <label class="lbl">Konfirmasi</label>
     <input class="inp" type="password" id="gpKonfirm" maxlength="8">
     <input type="hidden" id="gpId">
-    <button class="btn btn-primary" onclick="simpanPinAnggota()">💾 Simpan PIN</button>
+    <button class="btn btn-p" onclick="simpanPin()">💾 Simpan PIN</button>
     <button class="btn btn-ghost" onclick="closeModal('mGantiPin')">Batal</button>
+  </div>
+</div>
+
+<!-- MODAL HAPUS ANGGOTA -->
+<div class="modal" id="mHapus">
+  <div class="modal-box">
+    <div class="modal-bar"></div>
+    <div class="modal-title">🗑️ Hapus Anggota</div>
+    <div class="warn">⚠️ <b>Tidak bisa dibatalkan!</b></div>
+    <div style="background:#1A0E0E;border-radius:9px;padding:12px;text-align:center;margin-bottom:12px">
+      <div style="font-size:10px;color:#F87171;margin-bottom:4px">Akan dihapus:</div>
+      <div style="font-size:16px;font-weight:800;color:#F87171" id="hapusNama">-</div>
+      <input type="hidden" id="hapusId">
+    </div>
+    <label class="lbl">Ketik nama untuk konfirmasi</label>
+    <input class="inp" id="hapusKonfirm" placeholder="Ketik nama persis di atas">
+    <button class="btn btn-r" onclick="hapusAnggota()">🗑️ Hapus Permanen</button>
+    <button class="btn btn-ghost" onclick="closeModal('mHapus')">Batal</button>
   </div>
 </div>
 
@@ -415,204 +437,207 @@ body{font-family:'Inter',sans-serif;background:#F5F6FA;color:#111827;min-height:
     <label class="lbl">Catatan</label>
     <input class="inp" id="esCatatan">
     <input type="hidden" id="esId">
-    <input type="hidden" id="esTgl">
-    <button class="btn btn-primary" onclick="simpanEditSaldo()">💾 Simpan</button>
-    <button class="btn btn-danger" onclick="hapusSaldo()">🗑️ Hapus Data Ini</button>
+    <button class="btn btn-p" onclick="simpanEditSaldo()">💾 Simpan</button>
+    <button class="btn btn-r" onclick="hapusSaldoItem()">🗑️ Hapus Data Ini</button>
     <button class="btn btn-ghost" onclick="closeModal('mEditSaldo')">Batal</button>
-  </div>
-</div>
-
-<!-- MODAL HAPUS ANGGOTA -->
-<div class="modal" id="mHapusAnggota">
-  <div class="modal-box">
-    <div class="modal-bar"></div>
-    <div class="modal-title">🗑️ Hapus Anggota</div>
-    <div class="warn">⚠️ <b>Tidak bisa dibatalkan!</b> Semua data anggota akan hilang.</div>
-    <div style="background:#FDECEA;border-radius:10px;padding:12px;text-align:center;margin-bottom:14px">
-      <div style="font-size:11px;color:#C0392B;margin-bottom:4px">Anggota yang dihapus:</div>
-      <div style="font-size:16px;font-weight:800;color:#C0392B" id="hapusNama">-</div>
-      <input type="hidden" id="hapusId">
-    </div>
-    <label class="lbl">Ketik nama untuk konfirmasi</label>
-    <input class="inp" id="hapusKonfirm" placeholder="Ketik nama di atas persis">
-    <button class="btn btn-danger" onclick="hapusAnggota()">🗑️ Hapus Permanen</button>
-    <button class="btn btn-ghost" onclick="closeModal('mHapusAnggota')">Batal</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ══════════ CONFIG ══════════
-const SB = 'https://tnucvqhlyngjxzpxpnsv.supabase.co';
-const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRudWN2cWhseW5nanh6cHhwbnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NzY1NzUsImV4cCI6MjA5NjE1MjU3NX0.f-Jtqb6F38ypJr7VNy0Kki1ME3Y0Qe1OrvjMqrb5pDk';
-const H = {'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=representation'};
-
-async function api(path,method='GET',body=null){
-  const o={method,headers:H};
-  if(body) o.body=JSON.stringify(body);
-  const r=await fetch(SB+'/rest/v1/'+path,o);
-  if(!r.ok) throw new Error(await r.text());
-  const t=await r.text();
-  return t?JSON.parse(t):[];
+// ══ CONFIG ══
+const SB='https://tnucvqhlyngjxzpxpnsv.supabase.co';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRudWN2cWhseW5nanh6cHhwbnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NzY1NzUsImV4cCI6MjA5NjE1MjU3NX0.f-Jtqb6F38ypJr7VNy0Kki1ME3Y0Qe1OrvjMqrb5pDk';
+const H={'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=representation'};
+async function api(p,m='GET',b=null){
+  const o={method:m,headers:H};if(b)o.body=JSON.stringify(b);
+  const r=await fetch(SB+'/rest/v1/'+p,o);
+  if(!r.ok)throw new Error(await r.text());
+  const t=await r.text();return t?JSON.parse(t):[];
 }
 
-// ══════════ CURRENCY ══════════
-// FBS Cent: nilai MT4 (misal 565.48) = CENT langsung
-// USD nyata = MT4 ÷ 100 = 5.6548
-// Rupiah    = USD nyata × K = 5.6548 × 16700 = 94.435
-let K = 16700;
-const fc = v => '¢' + parseFloat(v||0).toFixed(2);
-const fu = v => '$' + (parseFloat(v||0)/100).toFixed(2);
-const fr = v => 'Rp ' + Math.round(parseFloat(v||0)/100*K).toLocaleString('id-ID');
+// ══ CURRENCY ══
+// FBS Cent: nilai MT4 = CENT langsung
+// USD nyata = MT4 ÷ 100
+// Rupiah = USD nyata × K
+let K=16700;
+const fc=v=>'¢'+parseFloat(v||0).toFixed(2);
+const fu=v=>'$'+(parseFloat(v||0)/100).toFixed(2);
+const fr=v=>'Rp '+Math.round(parseFloat(v||0)/100*K).toLocaleString('id-ID');
+const fd=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';
 
-// ══════════ STATE ══════════
-let isAdmin=false, adminData=null, xauPx=3324.80, toastT;
+// ══ STATE ══
+let isAdmin=false,adminData=null,xauPx=3324.80,toastT;
+let calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
+let saldoData=[];
 
-// ══════════ INIT ══════════
-window.onload = async () => {
+// ══ INIT ══
+window.onload=async()=>{
   try{
     await api('nasabah?limit=1');
-    document.getElementById('loading').style.display='none';
-    // set today date
-    const d=new Date(), pad=n=>String(n).padStart(2,'0');
+    hide('loading');
+    const d=new Date(),pad=n=>String(n).padStart(2,'0');
     document.getElementById('inpTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-    await loadHome();
+    await loadAll();
   }catch(e){
-    document.getElementById('loading').innerHTML=`<div style="text-align:center;padding:20px"><div style="font-size:32px;margin-bottom:10px">⚠️</div><div style="font-weight:600;margin-bottom:6px">Gagal konek database</div><div style="font-size:11px;color:#666;margin-bottom:14px">Jalankan SQL Schema di Supabase dulu</div><button onclick="location.reload()" style="padding:9px 18px;background:#B8860B;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer">Coba Lagi</button></div>`;
+    document.getElementById('loading').innerHTML=`<div style="text-align:center;padding:20px;color:#E8E2D5"><div style="font-size:32px;margin-bottom:10px">⚠️</div><div style="font-weight:600;margin-bottom:6px">Gagal konek database</div><div style="font-size:11px;color:#4A5A35;margin-bottom:14px">Jalankan SQL Schema di Supabase</div><button onclick="location.reload()" style="padding:9px 18px;background:#B8860B;color:#0D0F0A;border:none;border-radius:8px;font-weight:700;cursor:pointer">Coba Lagi</button></div>`;
   }
 };
 
-// ══════════ NAVIGATION ══════════
-function go(page){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
-  document.getElementById('pg_'+page).classList.add('active');
-  document.getElementById('nb_'+page)?.classList.add('active');
-  window.scrollTo(0,0);
-  if(page==='home') loadHome();
-  if(page==='anggota') loadAnggota();
-  if(page==='laporan') loadLaporan();
-  if(page==='setelan') loadRiwayatSaldo();
+async function loadAll(){
+  await Promise.all([loadBalance(),loadAnggota(),loadRiwayat(),loadSaldoHarian()]);
+  renderMilestone();
+  renderKalender();
+  renderTarget();
 }
 
-// ══════════ LOGIN ══════════
-async function login(){
-  const u=document.getElementById('lUser').value.trim();
-  const p=document.getElementById('lPin').value.trim();
-  if(!u||!p){toast('❌ Isi username dan PIN');return;}
-  load(true);
-  try{
-    const rows=await api(`admin?username=eq.${u}&pin=eq.${p}`);
-    if(!rows.length){toast('❌ Username/PIN salah');load(false);return;}
-    isAdmin=true; adminData=rows[0];
-    closeModal('mLogin');
-    document.getElementById('btnAdmin').style.display='none';
-    document.getElementById('btnLogout').style.display='flex';
-    document.getElementById('nb_setelan').style.display='flex';
-    document.getElementById('btnTambahWrap').style.display='block';
-    toast('👑 Selamat datang Admin!');
-    await loadHome();
-  }catch(e){toast('❌ '+e.message);}
-  load(false);
-}
-
-function logout(){
-  isAdmin=false; adminData=null;
-  document.getElementById('btnAdmin').style.display='flex';
-  document.getElementById('btnLogout').style.display='none';
-  document.getElementById('nb_setelan').style.display='none';
-  document.getElementById('btnTambahWrap').style.display='none';
-  document.getElementById('lPin').value='';
-  toast('👋 Keluar dari Admin');
-  go('home');
-}
-
-// ══════════ LOAD HOME ══════════
-async function loadHome(){
+// ══ BALANCE ══
+async function loadBalance(){
   try{
     const sh=await api('saldo_harian?select=*&order=tanggal.desc&limit=1');
     const ns=await api('nasabah?select=*&status=eq.active');
-    const tx=await api('transaksi?select=*&order=created_at.desc&limit=8');
-
-    const saldo = sh.length ? parseFloat(sh[0].saldo_mt4) : 0;
-    const profit = ns.reduce((s,n)=>s+parseFloat(n.profit_total||0),0);
-    const ea=saldo/2, dar=saldo/2;
-
-    // Hero
-    set('hSaldo', fc(saldo));
-    set('hUSD', '= '+fu(saldo)+' USD nyata');
-    set('hRp', '≈ '+fr(saldo));
-    set('hAnggota', ns.length);
-    set('hProfit', fc(profit));
-
-    // Saldo cards
-    set('rSaldo', fc(saldo)); set('rSaldoUSD', fu(saldo)); set('rSaldoRp', fr(saldo));
-    set('rEA', fc(ea)); set('rEAUSD', fu(ea));
-    set('rDar', fc(dar)); set('rDarUSD', fu(dar));
-    set('rProfit', fc(profit)); set('rProfitUSD', fu(profit)); set('rProfitRp', fr(profit));
-
-    // Riwayat
-    const el=document.getElementById('riwayat');
-    if(!tx.length){el.innerHTML='<div style="padding:24px;text-align:center;color:#9CA3AF;font-size:12px">Belum ada aktivitas</div>';return;}
-    el.innerHTML=tx.map(t=>`
-      <div class="tx">
-        <div class="tx-icon ${t.tipe==='topup'?'bg-green':t.tipe==='wd'?'bg-red':'bg-gold'}">${t.tipe==='topup'?'📥':t.tipe==='wd'?'📤':'💰'}</div>
-        <div style="flex:1"><div class="tx-desc">${t.keterangan||t.tipe}</div><div class="tx-date">${t.nasabah_kode||'EA'} · ${fd(t.created_at)}</div></div>
-        <div>
-          <div class="tx-amt ${parseFloat(t.jumlah)>=0?'green':'red'}">${parseFloat(t.jumlah)>=0?'+':''}${fc(t.jumlah)}</div>
-          <div style="font-size:10px;color:#9CA3AF;text-align:right">${fu(Math.abs(t.jumlah))}</div>
-        </div>
-      </div>`).join('');
-  }catch(e){toast('⚠️ '+e.message);}
+    const saldo=sh.length?parseFloat(sh[0].saldo_mt4):0;
+    const profit=ns.reduce((s,n)=>s+parseFloat(n.profit_total||0),0);
+    set('balCent',fc(saldo));
+    set('balUSD','= '+fu(saldo)+' USD nyata');
+    set('balRp','≈ '+fr(saldo));
+    set('bAnggota',ns.length);
+    set('bProfit',fc(profit));
+  }catch(e){}
 }
 
-// ══════════ LOAD ANGGOTA ══════════
+// ══ SALDO HARIAN ══
+async function loadSaldoHarian(){
+  try{
+    saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=60');
+    renderKalender();
+    renderTarget();
+    if(isAdmin) renderRiwayatSaldo();
+  }catch(e){}
+}
+
+// ══ MILESTONE ══
+const milestones=[
+  {val:100,emoji:'🌱'},{val:200,emoji:'🌿'},{val:300,emoji:'🌳'},
+  {val:500,emoji:'⭐'},{val:750,emoji:'🌟'},{val:1000,emoji:'🏆'},
+  {val:1500,emoji:'💎'},{val:2000,emoji:'👑'},{val:5000,emoji:'🚀'}
+];
+function renderMilestone(){
+  const sh=saldoData[0];
+  const cur=sh?parseFloat(sh.saldo_mt4):0;
+  const curUSD=cur/100;
+  document.getElementById('milestoneGrid').innerHTML=milestones.map(m=>{
+    const done=curUSD>=m.val;
+    return `<div class="ms-card ${done?'achieved':''}">
+      <div class="ms-emoji">${m.emoji}</div>
+      <div class="ms-val">$${m.val.toLocaleString()}</div>
+      <div class="ms-status ${done?'ms-achieved':'ms-belum'}">${done?'✅ Tercapai':'⏳ Belum'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ══ KALENDER ══
+function renderKalender(){
+  const months=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  set('calTitle',months[calMonth]+' '+calYear);
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const today=new Date();
+  // Map tanggal → data
+  const map={};
+  saldoData.forEach(s=>{
+    const d=new Date(s.tanggal);
+    if(d.getFullYear()===calYear&&d.getMonth()===calMonth){
+      map[d.getDate()]={profit:parseFloat(s.profit||0),saldo:parseFloat(s.saldo_mt4)};
+    }
+  });
+  let html='';
+  for(let i=0;i<firstDay;i++) html+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const isToday=d===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear();
+    const data=map[d];
+    let cls='cal-cell';
+    if(data){cls+=data.profit>0?' profit':data.profit<0?' loss':'';}
+    if(isToday) cls+=' today';
+    const amtStr=data&&data.profit!==0?`<div class="cal-amt" style="color:${data.profit>0?'#4ADE80':'#F87171'}">${data.profit>0?'+':''}${fu(data.profit)}</div>`:'';
+    html+=`<div class="${cls}"><div class="cal-num">${d}</div>${amtStr}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML=html;
+}
+function calPrev(){if(calMonth===0){calMonth=11;calYear--;}else calMonth--;renderKalender();}
+function calNext(){if(calMonth===11){calMonth=0;calYear++;}else calMonth++;renderKalender();}
+
+// ══ TARGET ══
+function renderTarget(){
+  const now=new Date();
+  const months=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const mName=months[now.getMonth()]+' '+now.getFullYear();
+  set('targetTitle','TARGET '+mName.toUpperCase());
+  // Cari saldo bulan lalu
+  const lastMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const lmStr=saldoData.filter(s=>{
+    const d=new Date(s.tanggal);
+    return d.getMonth()===lastMonth.getMonth()&&d.getFullYear()===lastMonth.getFullYear();
+  });
+  const balLalu=lmStr.length?parseFloat(lmStr[0].saldo_mt4):0;
+  const target=balLalu*2||saldoData[0]?parseFloat(saldoData[0]?.saldo_mt4||0)*2:0;
+  const current=saldoData[0]?parseFloat(saldoData[0].saldo_mt4):0;
+  const pct=target>0?Math.min((current/target)*100,100):0;
+  const sisa=Math.max(target-current,0);
+  set('tBalLalu',fc(balLalu));
+  set('tTarget',fc(target));
+  set('targetSub',`Target 100% dari balance ${months[lastMonth.getMonth()]+' '+lastMonth.getFullYear()} · Target profit: <b>+${fc(balLalu)}</b>`);
+  document.getElementById('targetSub').innerHTML=`Balance ${months[lastMonth.getMonth()]}: <b style="color:#C8A84B">${fc(balLalu)}</b> · Target profit: <b style="color:#4ADE80">+${fc(balLalu)}</b>`;
+  document.getElementById('progressFill').style.width=pct+'%';
+  set('progressPct',pct.toFixed(0)+'% tercapai');
+  set('progressSisa','Sisa: '+fc(sisa));
+}
+
+// ══ ANGGOTA ══
 async function loadAnggota(){
   try{
     const rows=await api('nasabah?select=*&order=created_at.asc');
     const el=document.getElementById('listAnggota');
-    if(!rows.length){el.innerHTML='<div style="padding:24px;text-align:center;color:#9CA3AF;font-size:12px">Belum ada anggota</div>';return;}
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Belum ada anggota</div>';return;}
     el.innerHTML=rows.map(n=>`
       <div class="member" ${isAdmin?`onclick="detailAnggota('${n.id}')" style="cursor:pointer"`:''}>
-        <div class="avatar" style="${n.status!=='active'?'background:linear-gradient(135deg,#9CA3AF,#D1D5DB)':''}">${n.nama.substring(0,2).toUpperCase()}</div>
+        <div class="m-avatar" style="${n.status!=='active'?'background:linear-gradient(135deg,#3A3A3A,#666)':''}">${n.nama.substring(0,2).toUpperCase()}</div>
         <div>
-          <div class="member-name">${n.nama} <span class="pill ${n.status==='active'?'pill-green':'pill-red'}">${n.status==='active'?'Aktif':'Suspend'}</span></div>
-          <div class="member-id">${n.kode}</div>
+          <div class="m-name">${n.nama} <span class="pill ${n.status==='active'?'pill-g':'pill-r'}">${n.status==='active'?'Aktif':'Suspend'}</span></div>
+          <div class="m-id">${n.kode}</div>
         </div>
-        <div class="member-right">
-          <div class="val-big" style="font-size:12px">${fc(n.modal)}</div>
-          <div class="val-usd">${fu(n.modal)}</div>
-          <div style="font-size:10px;font-weight:600;color:#0B7A55">+${fc(n.profit_total)}</div>
+        <div class="m-right">
+          <div class="m-saldo">${fc(n.modal)}</div>
+          <div style="font-size:10px;color:#5A6A40">${fu(n.modal)}</div>
+          <div class="m-profit">+${fc(n.profit_total)}</div>
         </div>
       </div>`).join('');
-  }catch(e){toast('❌ '+e.message);}
+  }catch(e){}
 }
 
 async function detailAnggota(id){
-  if(!isAdmin) return;
+  if(!isAdmin)return;
   const[n]=await api(`nasabah?id=eq.${id}`);
   const pct=n.modal>0?((n.profit_total/n.modal)*100).toFixed(1):'0';
-  set('mDetailTitle', n.nama);
+  set('mDetailTitle',n.nama);
   document.getElementById('mDetailBody').innerHTML=`
-    <div class="row"><span class="row-key">Kode</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600">${n.kode}</span></div>
-    <div class="row"><span class="row-key">Username</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600">${n.username}</span></div>
-    <div class="row"><span class="row-key">Status</span><span class="pill ${n.status==='active'?'pill-green':'pill-red'}">${n.status==='active'?'Aktif':'Suspend'}</span></div>
-    <div class="row"><span class="row-key">Modal</span><div class="row-val"><div class="val-big" style="font-size:12px">${fc(n.modal)}</div><div class="val-usd">${fu(n.modal)} / ${fr(n.modal)}</div></div></div>
-    <div class="row"><span class="row-key">Saldo EA</span><div class="row-val"><div class="val-big" style="font-size:12px">${fc(n.saldo_ea)}</div><div class="val-usd">${fu(n.saldo_ea)}</div></div></div>
-    <div class="row"><span class="row-key">Darurat</span><div class="row-val"><div class="val-big" style="font-size:12px">${fc(n.saldo_darurat)}</div><div class="val-usd">${fu(n.saldo_darurat)}</div></div></div>
-    <div class="row"><span class="row-key">Total Profit</span><div class="row-val"><div class="val-big green" style="font-size:12px">+${fc(n.profit_total)}</div><div class="val-usd">${fu(n.profit_total)} / ${fr(n.profit_total)}</div></div></div>
-    <div class="row"><span class="row-key">Return</span><span style="font-weight:700;color:#0B7A55">+${pct}%</span></div>`;
-  const isSus=n.status==='suspend';
-  document.getElementById('mDetailActions').innerHTML=`
-    <button class="btn btn-primary" onclick="closeModal('mDetailAnggota');bukaGantiPin('${n.id}','${n.nama}')">🔑 Ganti PIN</button>
-    <button class="btn ${isSus?'btn-primary':'btn-ghost'}" onclick="toggleSuspend('${n.id}','${n.status}','${n.nama}')">${isSus?'✅ Aktifkan':'⛔ Suspend'}</button>
-    <button class="btn btn-danger" onclick="bukaHapus('${n.id}','${n.nama}')">🗑️ Hapus Permanen</button>
-    <button class="btn btn-ghost" onclick="closeModal('mDetailAnggota')">Tutup</button>`;
-  openModal('mDetailAnggota');
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #2A2E1F"><span style="font-size:12px;color:#5A6A40">Kode</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#E8E2D5">${n.kode}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #2A2E1F"><span style="font-size:12px;color:#5A6A40">Modal</span><div style="text-align:right"><div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#C8A84B">${fc(n.modal)}</div><div style="font-size:10px;color:#4A5A35">${fu(n.modal)} / ${fr(n.modal)}</div></div></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #2A2E1F"><span style="font-size:12px;color:#5A6A40">Total Profit</span><div style="text-align:right"><div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#4ADE80">+${fc(n.profit_total)}</div><div style="font-size:10px;color:#4A5A35">${fu(n.profit_total)} / ${fr(n.profit_total)}</div></div></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0"><span style="font-size:12px;color:#5A6A40">Return</span><span style="font-weight:700;color:#4ADE80">+${pct}%</span></div>
+    </div>`;
+  const sus=n.status==='suspend';
+  document.getElementById('mDetailActs').innerHTML=`
+    <button class="btn btn-p" onclick="closeModal('mDetail');bukaGantiPin('${n.id}','${n.nama.replace(/'/g,'`')}')">🔑 Ganti PIN</button>
+    <button class="btn ${sus?'btn-g':'btn-ghost'}" onclick="toggleSus('${n.id}','${n.status}','${n.nama.replace(/'/g,'`')}')">${sus?'✅ Aktifkan':'⛔ Suspend'}</button>
+    <button class="btn btn-r" onclick="bukaHapus('${n.id}','${n.nama.replace(/'/g,'`')}')">🗑️ Hapus</button>
+    <button class="btn btn-ghost" onclick="closeModal('mDetail')">Tutup</button>`;
+  openModal('mDetail');
 }
 
-// ══════════ TAMBAH ANGGOTA ══════════
+// ══ TAMBAH ANGGOTA ══
 async function tambahAnggota(){
   const nama=document.getElementById('taNama').value.trim();
   const uname=document.getElementById('taUser').value.trim().toLowerCase();
@@ -625,31 +650,25 @@ async function tambahAnggota(){
     const cek=await api(`nasabah?username=eq.${uname}`);
     if(cek.length){toast('❌ Username sudah ada');load(false);return;}
     const all=await api('nasabah?select=kode&order=created_at.desc&limit=1');
-    let num=1;
-    if(all.length) num=parseInt((all[0].kode||'NSB-000').split('-')[1]||'0')+1;
+    let num=1;if(all.length)num=parseInt((all[0].kode||'NSB-000').split('-')[1]||'0')+1;
     const kode='NSB-'+String(num).padStart(3,'0');
-    const ea=modal/2, dar=modal/2;
-    await api('nasabah','POST',{kode,nama,username:uname,pin,modal,saldo_ea:ea,saldo_darurat:dar,profit_total:0,status:'active'});
-    if(modal>0){
-      const[ns]=await api(`nasabah?username=eq.${uname}`);
-      await api('transaksi','POST',{nasabah_id:ns.id,nasabah_kode:kode,tipe:'topup',jumlah:modal,keterangan:'Setoran Awal'});
-    }
+    await api('nasabah','POST',{kode,nama,username:uname,pin,modal,saldo_ea:modal/2,saldo_darurat:modal/2,profit_total:0,status:'active'});
+    if(modal>0){const[ns]=await api(`nasabah?username=eq.${uname}`);await api('transaksi','POST',{nasabah_id:ns.id,nasabah_kode:kode,tipe:'topup',jumlah:modal,keterangan:'Setoran Awal'});}
     toast(`✅ ${nama} (${kode}) ditambahkan`);
     closeModal('mTambahAnggota');
     ['taNama','taUser','taPin','taModal'].forEach(id=>document.getElementById(id).value='');
-    await loadAnggota();
-    await loadHome();
+    await loadAnggota();await loadBalance();
   }catch(e){toast('❌ '+e.message);}
   load(false);
 }
 
-// ══════════ KELOLA ANGGOTA ══════════
+// ══ KELOLA ANGGOTA ══
 function bukaGantiPin(id,nama){
-  set('gpNama',nama); document.getElementById('gpId').value=id;
-  document.getElementById('gpPin').value=''; document.getElementById('gpKonfirm').value='';
+  set('gpNama',nama);document.getElementById('gpId').value=id;
+  document.getElementById('gpPin').value='';document.getElementById('gpKonfirm').value='';
   openModal('mGantiPin');
 }
-async function simpanPinAnggota(){
+async function simpanPin(){
   const id=document.getElementById('gpId').value;
   const p=document.getElementById('gpPin').value;
   const k=document.getElementById('gpKonfirm').value;
@@ -657,92 +676,68 @@ async function simpanPinAnggota(){
   if(p!==k){toast('❌ PIN tidak cocok');return;}
   load(true);
   try{await api(`nasabah?id=eq.${id}`,'PATCH',{pin:p});toast('✅ PIN berhasil diubah');closeModal('mGantiPin');}
-  catch(e){toast('❌ '+e.message);}
-  load(false);
+  catch(e){toast('❌ '+e.message);}load(false);
 }
-async function toggleSuspend(id,status,nama){
+async function toggleSus(id,status,nama){
   const ns=status==='active'?'suspend':'active';
   load(true);
-  try{
-    await api(`nasabah?id=eq.${id}`,'PATCH',{status:ns});
-    toast(`${ns==='active'?'✅ Aktif':'⛔ Suspend'}: ${nama}`);
-    closeModal('mDetailAnggota'); await loadAnggota();
-  }catch(e){toast('❌ '+e.message);}
-  load(false);
+  try{await api(`nasabah?id=eq.${id}`,'PATCH',{status:ns});toast(`${ns==='active'?'✅':'⛔'} ${nama}`);closeModal('mDetail');await loadAnggota();}
+  catch(e){toast('❌ '+e.message);}load(false);
 }
 function bukaHapus(id,nama){
-  set('hapusNama',nama); document.getElementById('hapusId').value=id;
+  set('hapusNama',nama);document.getElementById('hapusId').value=id;
   document.getElementById('hapusKonfirm').value='';
-  closeModal('mDetailAnggota'); openModal('mHapusAnggota');
+  closeModal('mDetail');openModal('mHapus');
 }
 async function hapusAnggota(){
   const id=document.getElementById('hapusId').value;
   const nama=document.getElementById('hapusNama').textContent;
-  const konfirm=document.getElementById('hapusKonfirm').value.trim();
-  if(konfirm!==nama){toast('❌ Nama tidak cocok');return;}
+  if(document.getElementById('hapusKonfirm').value.trim()!==nama){toast('❌ Nama tidak cocok');return;}
   load(true);
   try{
     await api(`transaksi?nasabah_id=eq.${id}`,'DELETE');
     await api(`topup_request?nasabah_id=eq.${id}`,'DELETE');
     await api(`nasabah?id=eq.${id}`,'DELETE');
-    toast(`🗑️ ${nama} dihapus`);
-    closeModal('mHapusAnggota'); await loadAnggota(); await loadHome();
-  }catch(e){toast('❌ '+e.message);}
-  load(false);
+    toast(`🗑️ ${nama} dihapus`);closeModal('mHapus');await loadAnggota();await loadBalance();
+  }catch(e){toast('❌ '+e.message);}load(false);
 }
 
-// ══════════ LAPORAN ══════════
-async function loadLaporan(){
+// ══ RIWAYAT ══
+async function loadRiwayat(){
   try{
-    const ns=await api('nasabah?select=*');
-    const tx=await api('transaksi?select=*&order=created_at.desc&limit=50');
-    const sh=await api('saldo_harian?select=*&order=tanggal.desc&limit=1');
-    const saldo=sh.length?parseFloat(sh[0].saldo_mt4):0;
-    const profit=ns.reduce((s,n)=>s+parseFloat(n.profit_total||0),0);
-    const dar=ns.reduce((s,n)=>s+parseFloat(n.saldo_darurat||0),0);
-    set('lapSaldo',fc(profit)); set('lapUSD','= '+fu(profit)+' USD nyata'); set('lapRp','≈ '+fr(profit));
-    set('lapBagi',fc(profit)); set('lapOps',fc(Math.round(profit*1.5)));
-    set('lapDar',fc(dar)+' / '+fu(dar));
-    const el=document.getElementById('lapRiwayat');
-    if(!tx.length){el.innerHTML='<div style="padding:24px;text-align:center;color:#9CA3AF;font-size:12px">Belum ada transaksi</div>';return;}
+    const tx=await api('transaksi?select=*&order=created_at.desc&limit=10');
+    const el=document.getElementById('riwayatList');
+    if(!tx.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Belum ada aktivitas</div>';return;}
     el.innerHTML=tx.map(t=>`
       <div class="tx">
-        <div class="tx-icon ${t.tipe==='topup'?'bg-green':t.tipe==='wd'?'bg-red':'bg-gold'}">${t.tipe==='topup'?'📥':t.tipe==='wd'?'📤':'💰'}</div>
+        <div class="tx-ico ${t.tipe==='topup'?'bg-g':t.tipe==='wd'?'bg-r':'bg-y'}">${t.tipe==='topup'?'📥':t.tipe==='wd'?'📤':'💰'}</div>
         <div style="flex:1"><div class="tx-desc">${t.keterangan||t.tipe}</div><div class="tx-date">${t.nasabah_kode||''} · ${fd(t.created_at)}</div></div>
-        <div>
-          <div class="tx-amt ${parseFloat(t.jumlah)>=0?'green':'red'}">${fc(t.jumlah)}</div>
-          <div style="font-size:10px;color:#9CA3AF;text-align:right">${fu(Math.abs(t.jumlah))}</div>
-        </div>
+        <div class="tx-amt ${parseFloat(t.jumlah)>=0?'cg':'cr'}">${parseFloat(t.jumlah)>=0?'+':''}${fc(t.jumlah)}<br><span style="font-size:9px;color:#4A5A35">${fu(Math.abs(t.jumlah))}</span></div>
       </div>`).join('');
-  }catch(e){toast('❌ '+e.message);}
+  }catch(e){}
 }
 
-// ══════════ SALDO HARIAN ══════════
+// ══ SALDO HARIAN ══
 function previewSaldo(){
   const v=parseFloat(document.getElementById('inpSaldo').value)||0;
-  const box=document.getElementById('saldoPreview');
+  const box=document.getElementById('pvBox');
   if(v>0){
-    box.style.display='grid';
-    set('pvCent', fc(v));
-    set('pvUSD', fu(v)+' USD');
-    set('pvRp', fr(v));
+    box.style.display='block';
+    set('pvCent',fc(v));set('pvUSD',fu(v));set('pvRp',fr(v));
   }else box.style.display='none';
 }
-
 function previewProfit(){
   const v=parseFloat(document.getElementById('inpProfit').value)||0;
-  const box=document.getElementById('profitPreview');
+  const box=document.getElementById('simBox');
   if(Math.abs(v)>0){
     box.style.display='block';
-    const usd=v/100, rp=Math.round(usd*K);
-    set('ppMT4', fc(v));
-    set('ppUSD', '$'+usd.toFixed(4)+' USD nyata');
-    set('ppBagi', '¢'+(v*0.4).toFixed(2)+' = Rp '+Math.round(rp*0.4).toLocaleString('id-ID'));
-    set('ppOps', '¢'+(v*0.6).toFixed(2)+' = Rp '+Math.round(rp*0.6).toLocaleString('id-ID'));
-    set('ppRp', fr(v));
+    const rp=Math.round(v/100*K);
+    set('simMT4',fc(v));set('simUSD',fu(v)+' USD nyata');
+    set('simBagi','¢'+(v*0.4).toFixed(2)+' = Rp '+Math.round(rp*0.4).toLocaleString('id-ID'));
+    set('simOps','¢'+(v*0.6).toFixed(2)+' = Rp '+Math.round(rp*0.6).toLocaleString('id-ID'));
+    set('simRp',fr(v));
   }else box.style.display='none';
 }
-
 async function simpanSaldo(){
   if(!isAdmin){toast('❌ Harus login Admin');return;}
   const saldo=parseFloat(document.getElementById('inpSaldo').value)||0;
@@ -753,22 +748,17 @@ async function simpanSaldo(){
   if(!tgl){toast('❌ Isi tanggal');return;}
   load(true);
   try{
-    // Cek sudah ada belum
-    const existing=await api(`saldo_harian?tanggal=eq.${tgl}`);
-    if(existing.length){
-      await api(`saldo_harian?id=eq.${existing[0].id}`,'PATCH',{saldo_mt4:saldo,profit,catatan});
-    }else{
-      await api('saldo_harian','POST',{tanggal:tgl,saldo_mt4:saldo,profit,catatan});
-    }
-    // Bagi profit ke anggota
+    const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
+    if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',{saldo_mt4:saldo,profit,catatan});
+    else await api('saldo_harian','POST',{tanggal:tgl,saldo_mt4:saldo,profit,catatan});
     if(profit!==0){
       const bagNasabah=profit*0.4;
       const ns=await api('nasabah?select=*&status=eq.active');
       const tModal=ns.reduce((s,n)=>s+parseFloat(n.modal||0),0);
       for(const n of ns){
-        if(!tModal) continue;
+        if(!tModal)continue;
         const bagian=bagNasabah*(parseFloat(n.modal)/tModal);
-        if(Math.abs(bagian)<0.01) continue;
+        if(Math.abs(bagian)<0.01)continue;
         await api(`nasabah?id=eq.${n.id}`,'PATCH',{profit_total:parseFloat(n.profit_total||0)+bagian});
         await api('transaksi','POST',{nasabah_id:n.id,nasabah_kode:n.kode,tipe:'profit',jumlah:bagian,keterangan:`Bagi hasil ${tgl}${catatan?' - '+catatan:''}`});
       }
@@ -777,40 +767,31 @@ async function simpanSaldo(){
     document.getElementById('inpSaldo').value='';
     document.getElementById('inpProfit').value='';
     document.getElementById('inpCatatan').value='';
-    document.getElementById('saldoPreview').style.display='none';
-    document.getElementById('profitPreview').style.display='none';
-    await loadHome();
-    await loadRiwayatSaldo();
+    document.getElementById('pvBox').style.display='none';
+    document.getElementById('simBox').style.display='none';
+    await loadAll();
   }catch(e){toast('❌ '+e.message);}
   load(false);
 }
-
-async function loadRiwayatSaldo(){
-  if(!isAdmin) return;
-  try{
-    const rows=await api('saldo_harian?select=*&order=tanggal.desc&limit=30');
-    const el=document.getElementById('riwayatSaldo');
-    if(!rows.length){el.innerHTML='<div style="padding:24px;text-align:center;color:#9CA3AF;font-size:12px">Belum ada data saldo</div>';return;}
-    el.innerHTML=rows.map(r=>`
-      <div style="padding:12px 14px;border-bottom:1px solid #F0F2F5;display:flex;align-items:center;gap:10px">
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:700;color:#111">📅 ${r.tanggal}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:#B8860B;margin-top:2px">${fc(r.saldo_mt4)}</div>
-          <div style="font-size:10px;color:#9CA3AF">${fu(r.saldo_mt4)} · ${fr(r.saldo_mt4)}</div>
-          ${r.profit?`<div style="font-size:11px;font-weight:600;color:${r.profit>=0?'#0B7A55':'#C0392B'};margin-top:2px">${r.profit>=0?'📈':'📉'} Profit: ${fc(r.profit)}</div>`:''}
-          ${r.catatan?`<div style="font-size:10px;color:#9CA3AF">📝 ${r.catatan}</div>`:''}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px">
-          <button onclick="editSaldo('${r.id}','${r.tanggal}',${r.saldo_mt4},${r.profit||0},'${r.catatan||''}')" style="padding:5px 10px;background:#EEF4FF;color:#1A56DB;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">✏️ Edit</button>
-          <button onclick="konfirmasiHapusSaldo('${r.id}','${r.tanggal}')" style="padding:5px 10px;background:#FDECEA;color:#C0392B;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">🗑️ Hapus</button>
-        </div>
-      </div>`).join('');
-  }catch(e){toast('❌ '+e.message);}
+function renderRiwayatSaldo(){
+  const el=document.getElementById('riwayatSaldoWrap');
+  if(!saldoData.length){el.innerHTML='<div style="text-align:center;padding:16px;color:#4A5A35;font-size:12px">Belum ada data</div>';return;}
+  el.innerHTML=saldoData.slice(0,20).map(r=>`
+    <div class="riwayat-item">
+      <div class="ri-info">
+        <div class="ri-date">📅 ${r.tanggal}</div>
+        <div class="ri-saldo">${fc(r.saldo_mt4)} <span style="font-size:10px;color:#4A5A35">${fu(r.saldo_mt4)}</span></div>
+        ${r.profit?`<div class="ri-profit" style="color:${r.profit>=0?'#4ADE80':'#F87171'}">${r.profit>=0?'📈':'📉'} ${fc(r.profit)}</div>`:''}
+        ${r.catatan?`<div class="ri-cat">📝 ${r.catatan}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <button class="btn-sm" style="background:#0E1A2D;color:#60A0E0" onclick="bukaEditSaldo('${r.id}','${r.tanggal}',${r.saldo_mt4},${r.profit||0},'${(r.catatan||'').replace(/'/g,'`')}')">✏️ Edit</button>
+        <button class="btn-sm" style="background:#1A0E0E;color:#F87171" onclick="konfirmasiHapusSaldo('${r.id}','${r.tanggal}')">🗑️</button>
+      </div>
+    </div>`).join('');
 }
-
-function editSaldo(id,tgl,saldo,profit,catatan){
+function bukaEditSaldo(id,tgl,saldo,profit,catatan){
   document.getElementById('esId').value=id;
-  document.getElementById('esTgl').value=tgl;
   document.getElementById('esSaldo').value=saldo;
   document.getElementById('esProfit').value=profit;
   document.getElementById('esCatatan').value=catatan;
@@ -825,79 +806,88 @@ async function simpanEditSaldo(){
   load(true);
   try{
     await api(`saldo_harian?id=eq.${id}`,'PATCH',{saldo_mt4:saldo,profit,catatan});
-    toast('✅ Data diperbarui');
-    closeModal('mEditSaldo');
-    await loadRiwayatSaldo(); await loadHome();
-  }catch(e){toast('❌ '+e.message);}
-  load(false);
+    toast('✅ Data diperbarui');closeModal('mEditSaldo');
+    await loadAll();
+  }catch(e){toast('❌ '+e.message);}load(false);
+}
+async function hapusSaldoItem(){
+  const id=document.getElementById('esId').value;
+  if(!confirm('Hapus data ini?'))return;
+  load(true);
+  try{await api(`saldo_harian?id=eq.${id}`,'DELETE');toast('🗑️ Dihapus');closeModal('mEditSaldo');await loadAll();}
+  catch(e){toast('❌ '+e.message);}load(false);
 }
 async function konfirmasiHapusSaldo(id,tgl){
-  if(!confirm('Hapus data saldo '+tgl+'?')) return;
+  if(!confirm('Hapus data '+tgl+'?'))return;
   load(true);
-  try{
-    await api(`saldo_harian?id=eq.${id}`,'DELETE');
-    toast('🗑️ Data '+tgl+' dihapus');
-    await loadRiwayatSaldo(); await loadHome();
-  }catch(e){toast('❌ '+e.message);}
-  load(false);
-}
-async function hapusSaldo(){
-  const id=document.getElementById('esId').value;
-  const tgl=document.getElementById('esTgl').value;
-  if(!confirm('Hapus data saldo '+tgl+'?')) return;
-  load(true);
-  try{
-    await api(`saldo_harian?id=eq.${id}`,'DELETE');
-    toast('🗑️ Dihapus'); closeModal('mEditSaldo');
-    await loadRiwayatSaldo(); await loadHome();
-  }catch(e){toast('❌ '+e.message);}
-  load(false);
+  try{await api(`saldo_harian?id=eq.${id}`,'DELETE');toast('🗑️ '+tgl+' dihapus');await loadAll();}
+  catch(e){toast('❌ '+e.message);}load(false);
 }
 
-// ══════════ KURS & PIN ══════════
+// ══ KURS & PIN ══
 function simpanKurs(){
-  const v=parseInt(document.getElementById('inpKurs').value)||16700;
-  K=v;
-  set('hKurs','$1=Rp'+Math.round(v/1000)+'k\n¢100=$1');
-  toast('✅ Kurs: $1 = Rp '+v.toLocaleString('id-ID'));
-  loadHome();
+  K=parseInt(document.getElementById('inpKurs').value)||16700;
+  toast('✅ Kurs: $1 = Rp '+K.toLocaleString('id-ID'));
+  loadBalance();
 }
 async function gantiPin(){
-  const lama=document.getElementById('inpPinLama').value;
-  const baru=document.getElementById('inpPinBaru').value;
-  const kfm=document.getElementById('inpPinKonfirm').value;
+  const lama=document.getElementById('pinLama').value;
+  const baru=document.getElementById('pinBaru').value;
+  const kfm=document.getElementById('pinKonfirm').value;
   if(!adminData||lama!==adminData.pin){toast('❌ PIN lama salah');return;}
   if(baru.length<4){toast('❌ PIN min 4 digit');return;}
   if(baru!==kfm){toast('❌ Konfirmasi tidak cocok');return;}
   load(true);
+  try{await api(`admin?id=eq.${adminData.id}`,'PATCH',{pin:baru});adminData.pin=baru;['pinLama','pinBaru','pinKonfirm'].forEach(id=>document.getElementById(id).value='');toast('✅ PIN berhasil diubah');}
+  catch(e){toast('❌ '+e.message);}load(false);
+}
+
+// ══ LOGIN ══
+async function login(){
+  const u=document.getElementById('lUser').value.trim();
+  const p=document.getElementById('lPin').value.trim();
+  if(!u||!p){toast('❌ Isi username dan PIN');return;}
+  load(true);
   try{
-    await api(`admin?id=eq.${adminData.id}`,'PATCH',{pin:baru});
-    adminData.pin=baru;
-    ['inpPinLama','inpPinBaru','inpPinKonfirm'].forEach(id=>document.getElementById(id).value='');
-    toast('✅ PIN Admin berhasil diubah');
+    const rows=await api(`admin?username=eq.${u}&pin=eq.${p}`);
+    if(!rows.length){toast('❌ Username/PIN salah');load(false);return;}
+    isAdmin=true;adminData=rows[0];
+    closeModal('mLogin');
+    hide('btnAdmin');show('btnLogout');
+    show('adminPanel');show('btnTambahWrap');
+    toast('👑 Selamat datang Admin!');
+    await loadSaldoHarian();
+    renderRiwayatSaldo();
   }catch(e){toast('❌ '+e.message);}
   load(false);
 }
-
-// ══════════ UTILS ══════════
-function set(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
-function fd(s){return s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';}
-function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
-function load(on){document.getElementById('loading').style.display=on?'flex':'none';}
-function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  clearTimeout(toastT);
-  toastT=setTimeout(()=>t.classList.remove('show'),3000);
+function logout(){
+  isAdmin=false;adminData=null;
+  show('btnAdmin');hide('btnLogout');
+  hide('adminPanel');hide('btnTambahWrap');
+  document.getElementById('lPin').value='';
+  toast('👋 Keluar dari Admin');
 }
 
-// XAU/USD Live tick
+// ══ UTILS ══
+const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+const show=(id)=>{const e=document.getElementById(id);if(e)e.style.display='block';};
+const hide=(id)=>{const e=document.getElementById(id);if(e)e.style.display='none';};
+const openModal=(id)=>document.getElementById(id).classList.add('open');
+const closeModal=(id)=>document.getElementById(id).classList.remove('open');
+const load=(on)=>document.getElementById('loading').style.display=on?'flex':'none';
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ══ XAU/USD LIVE ══
 setInterval(()=>{
   xauPx+=(Math.random()-.49)*1.5;
   xauPx=Math.max(3280,Math.min(3380,xauPx));
   const el=document.getElementById('xauPrice');
-  if(el) el.textContent=xauPx.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  if(el)el.textContent=xauPx.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
 },1200);
 </script>
 </body>
