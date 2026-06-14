@@ -731,12 +731,10 @@ function previewSaldo(){
     set('pvCent',fc(v));set('pvUSD',fu(v));set('pvRp',fr(v));
   }else box.style.display='none';
 }
-let plType='profit';
 function setPL(type){
-  plType=type;
   const bp=document.getElementById('btnProfit');
   const bl=document.getElementById('btnLoss');
-  document.getElementById('plType').value=type;
+  if(document.getElementById('plType')) document.getElementById('plType').value=type;
   if(type==='profit'){
     bp.style.border='1.5px solid #2E4A1E';bp.style.background='#132D0E';bp.style.color='#4ADE80';
     bl.style.border='1.5px solid #2A2E1F';bl.style.background='#0D0F0A';bl.style.color='#5A6A40';
@@ -769,18 +767,25 @@ function previewProfit(){
 async function simpanSaldo(){
   if(!isAdmin){toast('❌ Harus login Admin');return;}
   const saldo=parseFloat(document.getElementById('inpSaldo').value)||0;
-  const profitRaw=parseFloat(document.getElementById('inpProfit').value)||0;
-  const isLoss=document.getElementById('plType').value==='loss';
-  const profit=isLoss?-Math.abs(profitRaw):Math.abs(profitRaw); // negatif jika loss
+  const profitRaw=Math.abs(parseFloat(document.getElementById('inpProfit').value)||0);
+  const plEl=document.getElementById('plType');
+  const isLoss=plEl?plEl.value==='loss':false;
+  const profit=isLoss?-profitRaw:profitRaw; // negatif jika loss
   const tgl=document.getElementById('inpTgl').value;
   const catatan=document.getElementById('inpCatatan').value.trim();
   if(!saldo){toast('❌ Isi saldo MT4');return;}
   if(!tgl){toast('❌ Isi tanggal');return;}
   load(true);
   try{
+    // Pastikan semua nilai bertipe benar
+    const bodyData = {
+      saldo_mt4: parseFloat(saldo.toFixed(2)),
+      profit: parseFloat((profit||0).toFixed(2)),
+      catatan: catatan || null
+    };
     const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
-    if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',{saldo_mt4:saldo,profit:profit||0,catatan:catatan||''});
-    else await api('saldo_harian','POST',{tanggal:tgl,saldo_mt4:saldo,profit:profit||0,catatan:catatan||''});
+    if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH', bodyData);
+    else await api('saldo_harian','POST',{tanggal:tgl, ...bodyData});
     // Hanya bagi ke anggota jika PROFIT (bukan loss)
     if(profit>0){
       const bagNasabah=profit*0.4;
@@ -793,13 +798,13 @@ async function simpanSaldo(){
           const bagian=bagNasabah*(modal/tModal);
           if(Math.abs(bagian)<0.001)continue;
           const profitBefore=parseFloat(n.profit_total||0);
-          await api(`nasabah?id=eq.${n.id}`,'PATCH',{profit_total:profitBefore+bagian});
+          await api(`nasabah?id=eq.${n.id}`,'PATCH',{profit_total:parseFloat((profitBefore+bagian).toFixed(2))});
           await api('transaksi','POST',{
-            nasabah_id:n.id,
-            nasabah_kode:n.kode||'',
-            tipe:'profit',
-            jumlah:bagian,
-            keterangan:`Bagi hasil ${tgl}${catatan?' - '+catatan:''}`
+            nasabah_id: n.id,
+            nasabah_kode: String(n.kode||'NSB-000'),
+            tipe: 'profit',
+            jumlah: parseFloat(bagian.toFixed(2)),
+            keterangan: `Bagi hasil ${tgl}${catatan?' - '+catatan:''}`
           });
         }
       }
