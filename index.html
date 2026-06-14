@@ -293,8 +293,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
       </div>
       <label class="lbl">Tanggal</label>
       <input class="inp" type="date" id="inpTgl">
-      <label class="lbl">Profit Hari Ini (angka dari MT4, 0 jika tidak ada)</label>
-      <input class="inp" type="number" id="inpProfit" placeholder="0.00" step="0.01" oninput="previewProfit()">
+      <label class="lbl">Profit / Loss Hari Ini (angka dari MT4)</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
+        <button id="btnProfit" onclick="setPL('profit')" style="padding:9px;border-radius:8px;border:1.5px solid #2E4A1E;background:#132D0E;color:#4ADE80;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📈 PROFIT</button>
+        <button id="btnLoss" onclick="setPL('loss')" style="padding:9px;border-radius:8px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#5A6A40;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📉 LOSS</button>
+      </div>
+      <input class="inp" type="number" id="inpProfit" placeholder="0.00 (tulis angka positif)" step="0.01" min="0" oninput="previewProfit()">
+      <input type="hidden" id="plType" value="profit">
       <div class="sim-box" id="simBox">
         <div class="sim-row"><span class="sim-key">Profit MT4</span><span class="sim-val cy" id="simMT4">-</span></div>
         <div class="sim-row"><span class="sim-key">USD Nyata</span><span class="sim-val" id="simUSD">-</span></div>
@@ -726,22 +731,47 @@ function previewSaldo(){
     set('pvCent',fc(v));set('pvUSD',fu(v));set('pvRp',fr(v));
   }else box.style.display='none';
 }
+let plType='profit';
+function setPL(type){
+  plType=type;
+  const bp=document.getElementById('btnProfit');
+  const bl=document.getElementById('btnLoss');
+  document.getElementById('plType').value=type;
+  if(type==='profit'){
+    bp.style.border='1.5px solid #2E4A1E';bp.style.background='#132D0E';bp.style.color='#4ADE80';
+    bl.style.border='1.5px solid #2A2E1F';bl.style.background='#0D0F0A';bl.style.color='#5A6A40';
+  }else{
+    bl.style.border='1.5px solid #4A1414';bl.style.background='#2D0E0E';bl.style.color='#F87171';
+    bp.style.border='1.5px solid #2A2E1F';bp.style.background='#0D0F0A';bp.style.color='#5A6A40';
+  }
+  previewProfit();
+}
 function previewProfit(){
   const v=parseFloat(document.getElementById('inpProfit').value)||0;
+  const isLoss=document.getElementById('plType').value==='loss';
+  const actual=isLoss?-Math.abs(v):Math.abs(v);
   const box=document.getElementById('simBox');
-  if(Math.abs(v)>0){
+  if(v>0){
     box.style.display='block';
-    const rp=Math.round(v/100*K);
-    set('simMT4',fc(v));set('simUSD',fu(v)+' USD nyata');
-    set('simBagi','¢'+(v*0.4).toFixed(2)+' = Rp '+Math.round(rp*0.4).toLocaleString('id-ID'));
-    set('simOps','¢'+(v*0.6).toFixed(2)+' = Rp '+Math.round(rp*0.6).toLocaleString('id-ID'));
-    set('simRp',fr(v));
+    const rp=Math.round(Math.abs(actual)/100*K);
+    set('simMT4',(isLoss?'-':'+')+'¢'+v.toFixed(2));
+    set('simUSD',(isLoss?'-':'+')+fu(v)+' USD nyata');
+    if(isLoss){
+      set('simBagi','Loss tidak dibagi ke anggota');
+      set('simOps','Loss ditanggung EA');
+    }else{
+      set('simBagi','¢'+(v*0.4).toFixed(2)+' = Rp '+Math.round(rp*0.4).toLocaleString('id-ID'));
+      set('simOps','¢'+(v*0.6).toFixed(2)+' = Rp '+Math.round(rp*0.6).toLocaleString('id-ID'));
+    }
+    set('simRp',(isLoss?'-':'')+fr(v));
   }else box.style.display='none';
 }
 async function simpanSaldo(){
   if(!isAdmin){toast('❌ Harus login Admin');return;}
   const saldo=parseFloat(document.getElementById('inpSaldo').value)||0;
-  const profit=parseFloat(document.getElementById('inpProfit').value)||0;
+  const profitRaw=parseFloat(document.getElementById('inpProfit').value)||0;
+  const isLoss=document.getElementById('plType').value==='loss';
+  const profit=isLoss?-Math.abs(profitRaw):Math.abs(profitRaw); // negatif jika loss
   const tgl=document.getElementById('inpTgl').value;
   const catatan=document.getElementById('inpCatatan').value.trim();
   if(!saldo){toast('❌ Isi saldo MT4');return;}
@@ -749,18 +779,29 @@ async function simpanSaldo(){
   load(true);
   try{
     const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
-    if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',{saldo_mt4:saldo,profit,catatan});
-    else await api('saldo_harian','POST',{tanggal:tgl,saldo_mt4:saldo,profit,catatan});
-    if(profit!==0){
+    if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',{saldo_mt4:saldo,profit:profit||0,catatan:catatan||''});
+    else await api('saldo_harian','POST',{tanggal:tgl,saldo_mt4:saldo,profit:profit||0,catatan:catatan||''});
+    // Hanya bagi ke anggota jika PROFIT (bukan loss)
+    if(profit>0){
       const bagNasabah=profit*0.4;
       const ns=await api('nasabah?select=*&status=eq.active');
       const tModal=ns.reduce((s,n)=>s+parseFloat(n.modal||0),0);
-      for(const n of ns){
-        if(!tModal)continue;
-        const bagian=bagNasabah*(parseFloat(n.modal)/tModal);
-        if(Math.abs(bagian)<0.01)continue;
-        await api(`nasabah?id=eq.${n.id}`,'PATCH',{profit_total:parseFloat(n.profit_total||0)+bagian});
-        await api('transaksi','POST',{nasabah_id:n.id,nasabah_kode:n.kode,tipe:'profit',jumlah:bagian,keterangan:`Bagi hasil ${tgl}${catatan?' - '+catatan:''}`});
+      if(tModal>0){
+        for(const n of ns){
+          const modal=parseFloat(n.modal||0);
+          if(modal<=0)continue;
+          const bagian=bagNasabah*(modal/tModal);
+          if(Math.abs(bagian)<0.001)continue;
+          const profitBefore=parseFloat(n.profit_total||0);
+          await api(`nasabah?id=eq.${n.id}`,'PATCH',{profit_total:profitBefore+bagian});
+          await api('transaksi','POST',{
+            nasabah_id:n.id,
+            nasabah_kode:n.kode||'',
+            tipe:'profit',
+            jumlah:bagian,
+            keterangan:`Bagi hasil ${tgl}${catatan?' - '+catatan:''}`
+          });
+        }
       }
     }
     toast(`✅ Saldo ${fc(saldo)} tersimpan`);
@@ -769,6 +810,7 @@ async function simpanSaldo(){
     document.getElementById('inpCatatan').value='';
     document.getElementById('pvBox').style.display='none';
     document.getElementById('simBox').style.display='none';
+    setPL('profit'); // reset ke profit mode
     await loadAll();
   }catch(e){toast('❌ '+e.message);}
   load(false);
