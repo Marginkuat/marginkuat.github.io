@@ -52,14 +52,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 .ea-price{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#C8A84B;text-align:right}
 .ea-pl{font-size:10px;color:#4ADE80;text-align:right;margin-top:1px}
 
-/* MILESTONE */
-.milestone-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.ms-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:12px 8px;text-align:center}
-.ms-card.achieved{border-color:#2E4A1E;background:#131A0D}
-.ms-emoji{font-size:24px;margin-bottom:6px}
-.ms-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#E8E2D5;margin-bottom:4px}
-.ms-status{font-size:10px;font-weight:600}
-.ms-achieved{color:#4ADE80}.ms-belum{color:#5A6A40}
+
 
 /* KALENDER */
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -213,11 +206,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
   </div>
 </div>
 
-<!-- MILESTONE -->
-<div class="section">
-  <div class="sec-title">🏆 MILESTONE BOARD<span style="font-size:10px;color:#4A5A35;font-weight:400;letter-spacing:.5px">Pencapaian balance EA</span></div>
-  <div class="milestone-grid" id="milestoneGrid"></div>
-</div>
+
 
 <!-- KALENDER -->
 <div class="section">
@@ -492,7 +481,6 @@ window.onload=async()=>{
 
 async function loadAll(){
   await Promise.all([loadBalance(),loadAnggota(),loadRiwayat(),loadSaldoHarian()]);
-  renderMilestone();
   renderKalender();
   renderTarget();
 }
@@ -522,25 +510,7 @@ async function loadSaldoHarian(){
   }catch(e){}
 }
 
-// ══ MILESTONE ══
-const milestones=[
-  {val:100,emoji:'🌱'},{val:200,emoji:'🌿'},{val:300,emoji:'🌳'},
-  {val:500,emoji:'⭐'},{val:750,emoji:'🌟'},{val:1000,emoji:'🏆'},
-  {val:1500,emoji:'💎'},{val:2000,emoji:'👑'},{val:5000,emoji:'🚀'}
-];
-function renderMilestone(){
-  const sh=saldoData[0];
-  const cur=sh?parseFloat(sh.saldo_mt4):0;
-  const curUSD=cur/100;
-  document.getElementById('milestoneGrid').innerHTML=milestones.map(m=>{
-    const done=curUSD>=m.val;
-    return `<div class="ms-card ${done?'achieved':''}">
-      <div class="ms-emoji">${m.emoji}</div>
-      <div class="ms-val">$${m.val.toLocaleString()}</div>
-      <div class="ms-status ${done?'ms-achieved':'ms-belum'}">${done?'✅ Tercapai':'⏳ Belum'}</div>
-    </div>`;
-  }).join('');
-}
+
 
 // ══ KALENDER ══
 function renderKalender(){
