@@ -305,6 +305,40 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
     <div style="font-size:10px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📅 Riwayat Saldo — Bisa Dikoreksi</div>
     <div id="riwayatSaldoWrap"><div style="text-align:center;padding:16px;color:#4A5A35;font-size:12px">Memuat...</div></div>
 
+    <!-- DEPOSIT / WD -->
+    <div style="background:#0D0F0A;border-radius:12px;padding:14px;margin-top:12px;margin-bottom:12px">
+      <div style="font-size:11px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">💸 Deposit / Withdraw MT4</div>
+      <div class="warn" style="margin-bottom:10px">Catat transaksi deposit atau WD dari akun MT4 FBS kamu.</div>
+
+      <!-- Toggle DP / WD -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <button id="btnDP" onclick="setDW('dp')" style="padding:10px;border-radius:8px;border:1.5px solid #2E4A1E;background:#132D0E;color:#4ADE80;font-weight:700;font-size:12px;cursor:pointer">📥 DEPOSIT</button>
+        <button id="btnWD2" onclick="setDW('wd')" style="padding:10px;border-radius:8px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#5A6A40;font-weight:700;font-size:12px;cursor:pointer">📤 WITHDRAW</button>
+      </div>
+
+      <label class="lbl">Jumlah (angka dari MT4)</label>
+      <input class="inp" type="number" id="inpDW" placeholder="0.00" step="0.01" min="0" oninput="previewDW()">
+
+      <div id="dwPreview" style="display:none;background:#161A0F;border-radius:9px;padding:10px;margin-bottom:10px">
+        <div style="font-size:10px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px" id="dwPreviewTitle">📊 Simulasi Deposit</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px"><span style="color:#5A6A40">Jumlah MT4</span><span style="font-weight:600;color:#C8A84B" id="dwP1">-</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px"><span style="color:#5A6A40">USD Nyata</span><span style="font-weight:600" id="dwP2">-</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px"><span style="color:#5A6A40" id="dwP3lbl">→ Saldo EA (50%)</span><span style="font-weight:600;color:#4ADE80" id="dwP3">-</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px"><span style="color:#5A6A40" id="dwP4lbl">→ Saldo Darurat (50%)</span><span style="font-weight:600" id="dwP4">-</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#5A6A40">Dalam Rupiah</span><span style="font-weight:600" id="dwP5">-</span></div>
+      </div>
+
+      <label class="lbl">Tanggal Transaksi</label>
+      <input class="inp" type="date" id="inpDWTgl">
+      <label class="lbl">Catatan (opsional)</label>
+      <input class="inp" id="inpDWCatatan" placeholder="Contoh: DP dari rekening BCA">
+      <button class="btn btn-p" id="btnSimpanDW" onclick="simpanDW()">💾 Simpan Deposit</button>
+    </div>
+
+    <!-- RIWAYAT DP/WD -->
+    <div style="font-size:10px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📋 Riwayat Deposit / Withdraw</div>
+    <div id="riwayatDW"><div style="text-align:center;padding:16px;color:#4A5A35;font-size:12px">Memuat...</div></div>
+
     <!-- KURS -->
     <div style="background:#0D0F0A;border-radius:12px;padding:14px;margin-top:12px;margin-bottom:12px">
       <div style="font-size:11px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">💱 Kurs USD/Rp</div>
@@ -841,6 +875,139 @@ async function konfirmasiHapusSaldo(id,tgl){
   catch(e){toast('❌ '+e.message);}load(false);
 }
 
+// ══ DEPOSIT / WITHDRAW ══
+let dwMode = 'dp';
+
+function setDW(mode){
+  dwMode = mode;
+  const bd = document.getElementById('btnDP');
+  const bw = document.getElementById('btnWD2');
+  const btn = document.getElementById('btnSimpanDW');
+  if(mode === 'dp'){
+    bd.style.border='1.5px solid #2E4A1E'; bd.style.background='#132D0E'; bd.style.color='#4ADE80';
+    bw.style.border='1.5px solid #2A2E1F'; bw.style.background='#0D0F0A'; bw.style.color='#5A6A40';
+    btn.textContent='💾 Simpan Deposit';
+    if(document.getElementById('dwP3lbl')) document.getElementById('dwP3lbl').textContent='→ Saldo EA (50%)';
+    if(document.getElementById('dwP4lbl')) document.getElementById('dwP4lbl').textContent='→ Saldo Darurat (50%)';
+    if(document.getElementById('dwPreviewTitle')) document.getElementById('dwPreviewTitle').textContent='📊 Simulasi Deposit';
+  } else {
+    bw.style.border='1.5px solid #4A1414'; bw.style.background='#2D0E0E'; bw.style.color='#F87171';
+    bd.style.border='1.5px solid #2A2E1F'; bd.style.background='#0D0F0A'; bd.style.color='#5A6A40';
+    btn.textContent='💾 Simpan Withdraw';
+    if(document.getElementById('dwP3lbl')) document.getElementById('dwP3lbl').textContent='Dikurangi dari Saldo EA';
+    if(document.getElementById('dwP4lbl')) document.getElementById('dwP4lbl').textContent='Dikurangi dari Darurat';
+    if(document.getElementById('dwPreviewTitle')) document.getElementById('dwPreviewTitle').textContent='📊 Simulasi Withdraw';
+  }
+  previewDW();
+}
+
+function previewDW(){
+  const v = parseFloat(document.getElementById('inpDW').value)||0;
+  const box = document.getElementById('dwPreview');
+  if(v > 0){
+    box.style.display = 'block';
+    const isDP = dwMode === 'dp';
+    const sign = isDP ? '+' : '-';
+    set('dwP1', sign + fc(v));
+    set('dwP2', sign + fu(v) + ' USD nyata');
+    set('dwP3', sign + fc(v/2) + ' / ' + sign + fu(v/2));
+    set('dwP4', sign + fc(v/2) + ' / ' + sign + fu(v/2));
+    set('dwP5', (isDP?'+':'-') + fr(v));
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+async function simpanDW(){
+  if(!isAdmin){toast('❌ Harus login Admin'); return;}
+  const jumlah = parseFloat(document.getElementById('inpDW').value)||0;
+  const tgl = document.getElementById('inpDWTgl').value;
+  const catatan = document.getElementById('inpDWCatatan').value.trim();
+  if(!jumlah){toast('❌ Isi jumlah'); return;}
+  if(!tgl){toast('❌ Isi tanggal'); return;}
+  const isDP = dwMode === 'dp';
+  load(true);
+  try{
+    // Catat ke transaksi global (tanpa nasabah_id)
+    await api('transaksi', 'POST', {
+      nasabah_id: null,
+      nasabah_kode: 'EA',
+      tipe: isDP ? 'topup' : 'wd',
+      jumlah: parseFloat((isDP ? jumlah : -jumlah).toFixed(2)),
+      keterangan: (isDP ? '📥 Deposit MT4' : '📤 Withdraw MT4') + (catatan ? ' - '+catatan : '') + ' ('+tgl+')'
+    });
+
+    // Update saldo nasabah proporsional
+    const ns = await api('nasabah?select=*&status=eq.active');
+    const tModal = ns.reduce((s,n) => s + parseFloat(n.modal||0), 0);
+    if(tModal > 0){
+      for(const n of ns){
+        const modal = parseFloat(n.modal||0);
+        if(modal <= 0) continue;
+        const porsi = jumlah * (modal/tModal);
+        const ea = parseFloat((porsi/2).toFixed(2));
+        const dar = parseFloat((porsi/2).toFixed(2));
+        if(isDP){
+          await api(`nasabah?id=eq.${n.id}`, 'PATCH', {
+            modal: parseFloat((parseFloat(n.modal||0)+porsi).toFixed(2)),
+            saldo_ea: parseFloat((parseFloat(n.saldo_ea||0)+ea).toFixed(2)),
+            saldo_darurat: parseFloat((parseFloat(n.saldo_darurat||0)+dar).toFixed(2))
+          });
+          await api('transaksi', 'POST', {
+            nasabah_id: n.id,
+            nasabah_kode: String(n.kode||''),
+            tipe: 'topup',
+            jumlah: parseFloat(porsi.toFixed(2)),
+            keterangan: `📥 Deposit ${tgl}${catatan?' - '+catatan:''}`
+          });
+        } else {
+          await api(`nasabah?id=eq.${n.id}`, 'PATCH', {
+            modal: parseFloat(Math.max(0, parseFloat(n.modal||0)-porsi).toFixed(2)),
+            saldo_ea: parseFloat(Math.max(0, parseFloat(n.saldo_ea||0)-ea).toFixed(2)),
+            saldo_darurat: parseFloat(Math.max(0, parseFloat(n.saldo_darurat||0)-dar).toFixed(2))
+          });
+          await api('transaksi', 'POST', {
+            nasabah_id: n.id,
+            nasabah_kode: String(n.kode||''),
+            tipe: 'wd',
+            jumlah: parseFloat((-porsi).toFixed(2)),
+            keterangan: `📤 Withdraw ${tgl}${catatan?' - '+catatan:''}`
+          });
+        }
+      }
+    }
+
+    toast(`✅ ${isDP?'Deposit':'Withdraw'} ${fc(jumlah)} tersimpan`);
+    document.getElementById('inpDW').value = '';
+    document.getElementById('inpDWCatatan').value = '';
+    document.getElementById('dwPreview').style.display = 'none';
+    await loadRiwayatDW();
+    await loadAll();
+  }catch(e){toast('❌ '+e.message);}
+  load(false);
+}
+
+async function loadRiwayatDW(){
+  if(!isAdmin) return;
+  try{
+    const rows = await api("transaksi?nasabah_kode=eq.EA&order=created_at.desc&limit=20");
+    const el = document.getElementById('riwayatDW');
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:16px;color:#4A5A35;font-size:12px">Belum ada riwayat DP/WD</div>';return;}
+    el.innerHTML = rows.map(r=>`
+      <div style="background:#0D0F0A;border-radius:9px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
+        <div style="font-size:18px">${r.tipe==='topup'?'📥':'📤'}</div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:600;color:#E8E2D5">${r.keterangan||r.tipe}</div>
+          <div style="font-size:10px;color:#4A5A35;margin-top:1px">${fd(r.created_at)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:${parseFloat(r.jumlah)>=0?'#4ADE80':'#F87171'}">${parseFloat(r.jumlah)>=0?'+':''}${fc(r.jumlah)}</div>
+          <div style="font-size:10px;color:#4A5A35">${fu(Math.abs(r.jumlah))}</div>
+        </div>
+      </div>`).join('');
+  }catch(e){}
+}
+
 // ══ KURS & PIN ══
 function simpanKurs(){
   K=parseInt(document.getElementById('inpKurs').value)||16700;
@@ -875,6 +1042,11 @@ async function login(){
     toast('👑 Selamat datang Admin!');
     await loadSaldoHarian();
     renderRiwayatSaldo();
+    await loadRiwayatDW();
+    // Set today date for DW
+    const dd=new Date(),pad2=n=>String(n).padStart(2,'0');
+    const dwEl=document.getElementById('inpDWTgl');
+    if(dwEl) dwEl.value=`${dd.getFullYear()}-${pad2(dd.getMonth()+1)}-${pad2(dd.getDate())}`;
   }catch(e){toast('❌ '+e.message);}
   load(false);
 }
