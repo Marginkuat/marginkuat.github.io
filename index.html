@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- ARISAN EA v3.0 - 15 Jun 2026 - NO EA BAR -->
 <html lang="id">
 <head>
 <meta charset="UTF-8">
@@ -43,14 +44,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 .cg{color:#4ADE80}.cr{color:#F87171}.cy{color:#C8A84B}
 
 /* EA STATUS */
-.ea-status{background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:12px 14px;margin:12px 16px 0;display:flex;align-items:center;justify-content:space-between}
-.ea-left{display:flex;align-items:center;gap:8px}
-.ea-dot{width:7px;height:7px;background:#4ADE80;border-radius:50%;animation:pulse 1.5s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.ea-text .ea-name{font-size:12px;font-weight:700;color:#E8E2D5}
-.ea-text .ea-sub{font-size:10px;color:#4A5A35;margin-top:1px}
-.ea-price{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#C8A84B;text-align:right}
-.ea-pl{font-size:10px;color:#4ADE80;text-align:right;margin-top:1px}
+
 
 
 
@@ -178,18 +172,25 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
   </div>
 </div>
 
-<!-- EA STATUS -->
-<div class="ea-status" style="margin:12px 16px 0">
-  <div class="ea-left">
-    <div class="ea-dot"></div>
-    <div class="ea-text">
-      <div class="ea-name">🤖 ARISAN EA — Live Trading</div>
-      <div class="ea-sub">XAUUSD · FBS Cent Account · Auto Running</div>
+<!-- RINGKASAN PROFIT -->
+<div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:14px;margin:12px 16px 0;padding:14px">
+  <div style="font-size:10px;color:#5A6A40;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">📊 Ringkasan Total Profit</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+    <div style="background:#0D0F0A;border-radius:10px;padding:10px 6px;text-align:center">
+      <div style="font-size:9px;color:#4A5A35;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Total Profit</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:#C8A84B" id="rsTotal">¢0</div>
+      <div style="font-size:9px;color:#4A5A35;margin-top:2px" id="rsTotalUSD">$0.00</div>
     </div>
-  </div>
-  <div>
-    <div class="ea-price" id="xauPrice">3,324.80</div>
-    <div class="ea-pl">XAU/USD</div>
+    <div style="background:#0D0F0A;border-radius:10px;padding:10px 6px;text-align:center">
+      <div style="font-size:9px;color:#4A5A35;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Ke Anggota 40%</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:#4ADE80" id="rsAnggota">¢0</div>
+      <div style="font-size:9px;color:#4A5A35;margin-top:2px" id="rsAnggotaUSD">$0.00</div>
+    </div>
+    <div style="background:#0D0F0A;border-radius:10px;padding:10px 6px;text-align:center">
+      <div style="font-size:9px;color:#4A5A35;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Operasional 60%</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:#C8A84B" id="rsOps">¢0</div>
+      <div style="font-size:9px;color:#4A5A35;margin-top:2px" id="rsOpsUSD">$0.00</div>
+    </div>
   </div>
 </div>
 
@@ -232,6 +233,64 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
   </div>
 </div>
 
+<!-- PROFIT TERKUMPUL & PEMBAGIAN -->
+<div class="section">
+  <div class="sec-title">💰 PROFIT TERKUMPUL</div>
+  <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px;margin-bottom:8px">
+
+    <!-- Total Profit Terkumpul -->
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:10px;color:#5A6A40;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Profit Belum Dibagikan</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:800;color:#4ADE80" id="profitTerkumpul">¢0.00</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#5A6A40;margin-top:4px" id="profitTerkumpulUSD">= $0.00 USD nyata</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#3A4A2A;margin-top:2px" id="profitTerkumpulRp">≈ Rp 0</div>
+    </div>
+
+    <!-- Simulasi Pembagian -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div style="background:#0D0F0A;border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:9px;color:#4A5A35;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Ke Anggota (40%)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:#4ADE80" id="ptAnggota">¢0.00</div>
+        <div style="font-size:10px;color:#3A4A2A;margin-top:2px" id="ptAnggotaUSD">$0.00</div>
+        <div style="font-size:10px;color:#3A4A2A" id="ptAnggotaRp">Rp 0</div>
+      </div>
+      <div style="background:#0D0F0A;border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:9px;color:#4A5A35;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Operasional (60%)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:#C8A84B" id="ptOps">¢0.00</div>
+        <div style="font-size:10px;color:#3A4A2A;margin-top:2px" id="ptOpsUSD">$0.00</div>
+        <div style="font-size:10px;color:#3A4A2A" id="ptOpsRp">Rp 0</div>
+      </div>
+    </div>
+
+    <!-- Warning rapat -->
+    <div style="background:#1A1200;border:1px solid #3A2E00;border-radius:10px;padding:10px 12px;text-align:center">
+      <div style="font-size:12px;font-weight:700;color:#C8A84B;margin-bottom:3px">⚠️ Pembagian Profit</div>
+      <div style="font-size:11px;color:#5A4A20;line-height:1.5">Pembagian hanya dilakukan setelah <b style="color:#C8A84B">rapat internal anggota</b>.<br>Admin akan mencatat hasil rapat di bawah.</div>
+    </div>
+
+    <!-- Tombol catat — hanya admin -->
+    <div id="btnCatatPembagianWrap" style="display:none;margin-top:10px">
+      <button class="btn btn-p" onclick="openModal('mTambahPembagian')" style="border-radius:9px">📋 Catat Hasil Rapat & Bagikan</button>
+    </div>
+  </div>
+</div>
+
+<!-- RIWAYAT PEMBAGIAN -->
+<div class="section">
+  <div class="sec-title">📋 RIWAYAT PEMBAGIAN</div>
+  <div id="pembagianList">
+    <div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
+<!-- PENCAPAIAN BULANAN -->
+<div class="section">
+  <div class="sec-title">📈 PENCAPAIAN BULANAN</div>
+  <div id="pencapaianBulanan">
+    <div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
 <!-- TARGET BULANAN -->
 <div class="section">
   <div class="sec-title">🎯 TARGET BULAN INI</div>
@@ -257,6 +316,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
   </div>
 </div>
 
+
+
 <!-- RIWAYAT -->
 <div class="section">
   <div class="sec-title">📋 AKTIVITAS TERBARU</div>
@@ -271,6 +332,24 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
     <!-- INPUT SALDO -->
     <div style="background:#0D0F0A;border-radius:12px;padding:14px;margin-bottom:12px">
       <div style="font-size:11px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">📋 Input Saldo MT4 Harian</div>
+
+      <!-- SCAN SCREENSHOT -->
+      <div style="background:#161A0F;border:1.5px dashed #2E4A1E;border-radius:10px;padding:14px;margin-bottom:12px;text-align:center">
+        <div style="font-size:11px;color:#5A6A40;margin-bottom:8px">📸 Upload Screenshot MT4 — AI baca otomatis</div>
+        <input type="file" id="screenshotFile" accept="image/*" style="display:none" onchange="scanScreenshot()">
+        <button class="btn btn-g" style="border-radius:8px;padding:9px 16px;font-size:12px;width:auto;margin-bottom:0" onclick="document.getElementById('screenshotFile').click()">
+          📷 Pilih Screenshot MT4
+        </button>
+        <div id="scanStatus" style="font-size:11px;color:#4A5A35;margin-top:8px;display:none"></div>
+        <div id="scanResult" style="display:none;background:#0D0F0A;border-radius:8px;padding:10px;margin-top:8px;text-align:left">
+          <div style="font-size:10px;color:#4ADE80;font-weight:700;margin-bottom:6px">✅ AI berhasil membaca:</div>
+          <div id="scanResultBody" style="font-size:11px;color:#E8E2D5;line-height:1.6"></div>
+          <button onclick="pakaiHasilScan()" style="margin-top:8px;padding:6px 14px;background:#132D0E;color:#4ADE80;border:1px solid #2E4A1E;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;width:100%">
+            ✓ Pakai Data Ini
+          </button>
+        </div>
+      </div>
+
       <label class="lbl">Saldo MT4 (tulis angka dari MT4)</label>
       <input class="inp" type="number" id="inpSaldo" placeholder="565.48" step="0.01" oninput="previewSaldo()">
       <div class="preview-box" id="pvBox">
@@ -364,7 +443,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 <!-- FOOTER -->
 <div class="divider"></div>
 <div class="footer">
-  ARISAN EA · EA Trading XAUUSD · FBS Cent Account<br>
+  ARISAN EA v3.0 · EA Trading XAUUSD · FBS Cent Account<br>
   Dana dikelola secara transparan · Bagi hasil 40% anggota<br>
   <span style="color:#1E2A12">marginkuat.github.io</span>
 </div>
@@ -434,6 +513,46 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
   </div>
 </div>
 
+<!-- MODAL TAMBAH PEMBAGIAN HASIL -->
+<div class="modal" id="mTambahPembagian">
+  <div class="modal-box">
+    <div class="modal-bar"></div>
+    <div class="modal-title">💰 Catat Pembagian Hasil</div>
+    <div class="info" style="margin-bottom:12px">Catat total profit yang dikumpulkan dan kapan dibagikan ke anggota sesuai hasil rapat.</div>
+
+    <label class="lbl">Periode Profit (dari — sampai)</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <div style="font-size:10px;color:#5A6A40;margin-bottom:4px">Dari Tanggal</div>
+        <input class="inp" type="date" id="pbDari">
+      </div>
+      <div>
+        <div style="font-size:10px;color:#5A6A40;margin-bottom:4px">Sampai Tanggal</div>
+        <input class="inp" type="date" id="pbSampai">
+      </div>
+    </div>
+
+    <label class="lbl">Total Profit (angka dari MT4)</label>
+    <input class="inp" type="number" id="pbTotal" placeholder="0.00" step="0.01" oninput="previewPembagian()">
+
+    <label class="lbl">Tanggal Dibagikan</label>
+    <input class="inp" type="date" id="pbTglBagi">
+
+    <label class="lbl">Keterangan Rapat / Kebijakan</label>
+    <input class="inp" id="pbKet" placeholder="Contoh: Hasil rapat anggota Juni 2026">
+
+    <div id="pbPreview" style="display:none;background:#0D0F0A;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:10px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📊 Simulasi Pembagian</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px"><span style="color:#5A6A40">Total Profit</span><span style="font-weight:600;color:#C8A84B" id="pbP1">-</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px"><span style="color:#5A6A40">→ Anggota 40%</span><span style="font-weight:600;color:#4ADE80" id="pbP2">-</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#5A6A40">→ Operasional 60%</span><span style="font-weight:600;color:#C8A84B" id="pbP3">-</span></div>
+    </div>
+
+    <button class="btn btn-p" onclick="simpanPembagian()">💾 Simpan Pembagian</button>
+    <button class="btn btn-ghost" onclick="closeModal('mTambahPembagian')">Batal</button>
+  </div>
+</div>
+
 <!-- MODAL HAPUS ANGGOTA -->
 <div class="modal" id="mHapus">
   <div class="modal-box">
@@ -496,7 +615,7 @@ const fr=v=>'Rp '+Math.round(parseFloat(v||0)/100*K).toLocaleString('id-ID');
 const fd=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';
 
 // ══ STATE ══
-let isAdmin=false,adminData=null,xauPx=3324.80,toastT;
+let isAdmin=false,adminData=null,toastT;
 let calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
 let saldoData=[];
 
@@ -514,27 +633,58 @@ window.onload=async()=>{
 };
 
 async function loadAll(){
-  await Promise.all([loadBalance(),loadAnggota(),loadRiwayat(),loadSaldoHarian()]);
+  await Promise.all([loadBalance(),loadAnggota(),loadRiwayat(),loadSaldoHarian(),loadPembagian()]);
   renderKalender();
+  renderPencapaian();
   renderTarget();
 }
 
 // ══ BALANCE ══
 async function loadBalance(){
   try{
-    const sh=await api('saldo_harian?select=*&order=tanggal.desc&limit=1');
-    const ns=await api('nasabah?select=*&status=eq.active');
-    const saldo=sh.length?parseFloat(sh[0].saldo_mt4):0;
-    const profit=ns.reduce((s,n)=>s+parseFloat(n.profit_total||0),0);
-    set('balCent',fc(saldo));
-    set('balUSD','= '+fu(saldo)+' USD nyata');
-    set('balRp','≈ '+fr(saldo));
-    set('bAnggota',ns.length);
-    set('bProfit',fc(profit));
-  }catch(e){}
+    const sh = await api('saldo_harian?select=*&order=tanggal.desc&limit=1');
+    const ns = await api('nasabah?select=*&status=eq.active');
+    const allSh = await api('saldo_harian?select=profit&order=tanggal.desc');
+    const pb = await api('profit_ea?select=total_profit');
+
+    const saldo  = sh.length ? parseFloat(sh[0].saldo_mt4) : 0;
+    const profit = ns.reduce((s,n) => s + parseFloat(n.profit_total||0), 0);
+
+    // Hero balance
+    set('balCent', fc(saldo));
+    set('balUSD',  '= '+fu(saldo)+' USD nyata');
+    set('balRp',   '≈ '+fr(saldo));
+    set('bAnggota', ns.length);
+    set('bProfit',  fc(profit));
+
+    // Ringkasan profit dari saldo harian
+    const totalProfit = allSh.reduce((s,r) => s + Math.max(0, parseFloat(r.profit||0)), 0);
+    const totalLoss   = allSh.reduce((s,r) => s + Math.min(0, parseFloat(r.profit||0)), 0);
+    const net = totalProfit + totalLoss;
+
+    set('rsTotal',      fc(net));
+    set('rsTotalUSD',   fu(net)+' / '+fr(net));
+    set('rsAnggota',    fc(net*0.4));
+    set('rsAnggotaUSD', fu(net*0.4)+' / '+fr(net*0.4));
+    set('rsOps',        fc(net*0.6));
+    set('rsOpsUSD',     fu(net*0.6)+' / '+fr(net*0.6));
+
+    // Profit terkumpul = total profit harian - yang sudah dibagikan
+    const sudahDibagi = pb.reduce((s,r) => s + parseFloat(r.total_profit||0), 0);
+    const terkumpul = Math.max(0, net - sudahDibagi);
+    set('profitTerkumpul',    fc(terkumpul));
+    set('profitTerkumpulUSD','= '+fu(terkumpul)+' USD nyata');
+    set('profitTerkumpulRp', '≈ '+fr(terkumpul));
+    set('ptAnggota',    fc(terkumpul*0.4));
+    set('ptAnggotaUSD', fu(terkumpul*0.4));
+    set('ptAnggotaRp',  fr(terkumpul*0.4));
+    set('ptOps',    fc(terkumpul*0.6));
+    set('ptOpsUSD', fu(terkumpul*0.6));
+    set('ptOpsRp',  fr(terkumpul*0.6));
+  }catch(e){ console.error(e); }
 }
 
-// ══ SALDO HARIAN ══
+
 async function loadSaldoHarian(){
   try{
     saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=60');
@@ -576,6 +726,74 @@ function renderKalender(){
 }
 function calPrev(){if(calMonth===0){calMonth=11;calYear--;}else calMonth--;renderKalender();}
 function calNext(){if(calMonth===11){calMonth=0;calYear++;}else calMonth++;renderKalender();}
+
+// ══ PENCAPAIAN BULANAN ══
+function renderPencapaian(){
+  const el = document.getElementById('pencapaianBulanan');
+  if(!el) return;
+  if(!saldoData.length){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Belum ada data</div>';
+    return;
+  }
+
+  const months=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+  // Group saldo per bulan
+  const grouped = {};
+  saldoData.forEach(s => {
+    const d = new Date(s.tanggal);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = months[d.getMonth()] + ' ' + d.getFullYear();
+    if(!grouped[key]) grouped[key] = { label, profit:0, loss:0, days:0, saldoAkhir:0 };
+    grouped[key].profit += parseFloat(s.profit||0) > 0 ? parseFloat(s.profit) : 0;
+    grouped[key].loss   += parseFloat(s.profit||0) < 0 ? parseFloat(s.profit) : 0;
+    grouped[key].days++;
+    grouped[key].saldoAkhir = parseFloat(s.saldo_mt4||0); // ambil yang pertama (terlama)
+  });
+
+  // Sort terbaru dulu
+  const sorted = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
+
+  if(!sorted.length){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Belum ada data bulanan</div>';
+    return;
+  }
+
+  el.innerHTML = sorted.map((key, i) => {
+    const m = grouped[key];
+    const netProfit = m.profit + m.loss; // profit - loss (loss sudah negatif)
+    const isPos = netProfit >= 0;
+    const isLatest = i === 0;
+
+    return `<div style="background:#161A0F;border:1px solid ${isLatest?'#2E4A1E':'#2A2E1F'};border-radius:14px;padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:14px;font-weight:800;color:#E8E2D5">${m.label}</div>
+          <div style="font-size:10px;color:#4A5A35;margin-top:2px">${m.days} hari trading</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:${isPos?'#4ADE80':'#F87171'}">${isPos?'+':''}${fc(netProfit)}</div>
+          <div style="font-size:10px;color:#4A5A35">${isPos?'+':''}${fu(netProfit)} USD nyata</div>
+          <div style="font-size:10px;color:#4A5A35">${isPos?'+':''}${fr(netProfit)}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <div style="background:#0D0F0A;border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:9px;color:#4A5A35;margin-bottom:2px;text-transform:uppercase">Profit</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#4ADE80">+${fc(m.profit)}</div>
+        </div>
+        <div style="background:#0D0F0A;border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:9px;color:#4A5A35;margin-bottom:2px;text-transform:uppercase">Loss</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:${m.loss<0?'#F87171':'#4A5A35'}">${fc(m.loss)}</div>
+        </div>
+        <div style="background:#0D0F0A;border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:9px;color:#4A5A35;margin-bottom:2px;text-transform:uppercase">Saldo Akhir</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#C8A84B">${fc(m.saldoAkhir)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
 
 // ══ TARGET ══
 function renderTarget(){
@@ -1011,6 +1229,279 @@ async function loadRiwayatDW(){
   }catch(e){}
 }
 
+// ══ PEMBAGIAN HASIL ══
+function previewPembagian(){
+  const v = parseFloat(document.getElementById('pbTotal').value)||0;
+  const box = document.getElementById('pbPreview');
+  if(v > 0){
+    box.style.display = 'block';
+    set('pbP1', fc(v) + ' / ' + fu(v));
+    set('pbP2', fc(v*0.4) + ' / ' + fu(v*0.4) + ' / ' + fr(v*0.4));
+    set('pbP3', fc(v*0.6) + ' / ' + fu(v*0.6) + ' / ' + fr(v*0.6));
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+async function simpanPembagian(){
+  if(!isAdmin){ toast('❌ Harus login Admin'); return; }
+  const dari    = document.getElementById('pbDari').value;
+  const sampai  = document.getElementById('pbSampai').value;
+  const total   = parseFloat(document.getElementById('pbTotal').value)||0;
+  const tglBagi = document.getElementById('pbTglBagi').value;
+  const ket     = document.getElementById('pbKet').value.trim();
+
+  if(!dari||!sampai){ toast('❌ Isi periode dari-sampai'); return; }
+  if(!total){ toast('❌ Isi total profit'); return; }
+  if(!tglBagi){ toast('❌ Isi tanggal dibagikan'); return; }
+
+  load(true);
+  try{
+    const bagNasabah = total * 0.4;
+    const bagOps     = total * 0.6;
+
+    // Simpan ke tabel profit_ea
+    await api('profit_ea', 'POST', {
+      total_profit:       parseFloat(total.toFixed(2)),
+      bagian_nasabah:     parseFloat(bagNasabah.toFixed(2)),
+      bagian_operasional: parseFloat(bagOps.toFixed(2)),
+      periode: `${dari} s/d ${sampai}`,
+      catatan: (ket || '') + ` | Dibagikan: ${tglBagi}`
+    });
+
+    // Bagi ke anggota proporsional modal
+    const ns = await api('nasabah?select=*&status=eq.active');
+    const tModal = ns.reduce((s,n) => s + parseFloat(n.modal||0), 0);
+    if(tModal > 0){
+      for(const n of ns){
+        const modal = parseFloat(n.modal||0);
+        if(modal <= 0) continue;
+        const bagian = parseFloat((bagNasabah * (modal/tModal)).toFixed(2));
+        if(bagian < 0.01) continue;
+        await api(`nasabah?id=eq.${n.id}`, 'PATCH', {
+          profit_total: parseFloat((parseFloat(n.profit_total||0) + bagian).toFixed(2))
+        });
+        await api('transaksi', 'POST', {
+          nasabah_id:   n.id,
+          nasabah_kode: String(n.kode||''),
+          tipe:         'profit',
+          jumlah:       bagian,
+          keterangan:   `💰 Bagi hasil ${dari} s/d ${sampai} | Dibagikan ${tglBagi}${ket?' | '+ket:''}`
+        });
+      }
+    }
+
+    toast(`✅ Pembagian ${fc(total)} dicatat & dibagikan`);
+    closeModal('mTambahPembagian');
+    // Reset form
+    ['pbDari','pbSampai','pbTotal','pbTglBagi','pbKet'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('pbPreview').style.display='none';
+    await loadPembagian();
+    await loadRiwayat();
+    await loadBalance();
+  }catch(e){ toast('❌ '+e.message); }
+  load(false);
+}
+
+async function loadPembagian(){
+  try{
+    const rows = await api('profit_ea?select=*&order=created_at.desc&limit=20');
+    const el = document.getElementById('pembagianList');
+    if(!rows.length){
+      el.innerHTML='<div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Belum ada pembagian hasil</div>';
+      return;
+    }
+
+    // Summary total
+    const totalProfit  = rows.reduce((s,r) => s + parseFloat(r.total_profit||0), 0);
+    const totalNasabah = rows.reduce((s,r) => s + parseFloat(r.bagian_nasabah||0), 0);
+    const totalOps     = rows.reduce((s,r) => s + parseFloat(r.bagian_operasional||0), 0);
+
+    let html = `
+      <div style="background:#161A0F;border:1px solid #2E4A1E;border-radius:14px;padding:14px;margin-bottom:10px">
+        <div style="font-size:10px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Ringkasan Semua Periode</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          <div style="background:#0D0F0A;border-radius:8px;padding:8px;text-align:center">
+            <div style="font-size:9px;color:#4A5A35;margin-bottom:2px">TOTAL PROFIT</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#C8A84B">${fc(totalProfit)}</div>
+            <div style="font-size:9px;color:#4A5A35">${fu(totalProfit)}</div>
+          </div>
+          <div style="background:#0D0F0A;border-radius:8px;padding:8px;text-align:center">
+            <div style="font-size:9px;color:#4A5A35;margin-bottom:2px">KE ANGGOTA 40%</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#4ADE80">${fc(totalNasabah)}</div>
+            <div style="font-size:9px;color:#4A5A35">${fu(totalNasabah)}</div>
+          </div>
+          <div style="background:#0D0F0A;border-radius:8px;padding:8px;text-align:center">
+            <div style="font-size:9px;color:#4A5A35;margin-bottom:2px">OPERASIONAL 60%</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#C8A84B">${fc(totalOps)}</div>
+            <div style="font-size:9px;color:#4A5A35">${fu(totalOps)}</div>
+          </div>
+        </div>
+      </div>`;
+
+    rows.forEach(r => {
+      // Parse periode dan tanggal bagi dari catatan
+      const catatanParts = (r.catatan||'').split('|');
+      const ketRapat = catatanParts[0]?.trim() || '';
+      const tglBagiStr = catatanParts[1]?.replace('Dibagikan:','').trim() || '';
+
+      html += `
+        <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:14px;padding:14px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:#E8E2D5">📅 ${r.periode||'-'}</div>
+              ${tglBagiStr?`<div style="font-size:10px;color:#4ADE80;margin-top:2px">✅ Dibagikan: ${tglBagiStr}</div>`:''}
+              ${ketRapat?`<div style="font-size:10px;color:#4A5A35;margin-top:2px">📝 ${ketRapat}</div>`:''}
+            </div>
+            <div style="text-align:right">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:800;color:#4ADE80">+${fc(r.total_profit)}</div>
+              <div style="font-size:10px;color:#4A5A35">${fu(r.total_profit)} / ${fr(r.total_profit)}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div style="background:#0D0F0A;border-radius:8px;padding:8px">
+              <div style="font-size:9px;color:#4A5A35;margin-bottom:2px">KE ANGGOTA (40%)</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#4ADE80">+${fc(r.bagian_nasabah)}</div>
+              <div style="font-size:9px;color:#4A5A35">${fu(r.bagian_nasabah)} / ${fr(r.bagian_nasabah)}</div>
+            </div>
+            <div style="background:#0D0F0A;border-radius:8px;padding:8px">
+              <div style="font-size:9px;color:#4A5A35;margin-bottom:2px">OPERASIONAL (60%)</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#C8A84B">${fc(r.bagian_operasional)}</div>
+              <div style="font-size:9px;color:#4A5A35">${fu(r.bagian_operasional)} / ${fr(r.bagian_operasional)}</div>
+            </div>
+          </div>
+        </div>`;
+    });
+
+    el.innerHTML = html;
+  }catch(e){ console.error(e); }
+}
+
+// ══ SCAN SCREENSHOT MT4 ══
+let scanData = null;
+
+async function scanScreenshot(){
+  const file = document.getElementById('screenshotFile').files[0];
+  if(!file){ toast('❌ Pilih file screenshot'); return; }
+
+  const status = document.getElementById('scanStatus');
+  const result = document.getElementById('scanResult');
+  status.style.display = 'block';
+  result.style.display = 'none';
+  status.textContent = '🤖 AI sedang membaca screenshot...';
+  status.style.color = '#C8A84B';
+
+  try{
+    // Convert image to base64
+    const base64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = () => res(reader.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+
+    // Call Claude API with vision
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: file.type, data: base64 }
+            },
+            {
+              type: 'text',
+              text: `Ini adalah screenshot dari aplikasi MT4 (MetaTrader 4) akun FBS Cent.
+Tolong baca dan ekstrak informasi berikut dalam format JSON:
+{
+  "saldo": (angka Saldo dari MT4, contoh: 565.48),
+  "keuntungan": (angka Keuntungan/profit hari ini, bisa negatif jika loss),
+  "tanggal": (tanggal dari screenshot jika ada, format YYYY-MM-DD, atau null),
+  "keterangan": (ringkasan singkat apa yang kamu lihat)
+}
+Jika tidak bisa menemukan angka tersebut, isi dengan null.
+Balas HANYA dengan JSON, tanpa penjelasan tambahan.`
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || '';
+
+    // Parse JSON from response
+    let parsed = null;
+    try{
+      const clean = text.replace(/```json|```/g,'').trim();
+      parsed = JSON.parse(clean);
+    }catch{
+      throw new Error('AI tidak bisa membaca format screenshot ini');
+    }
+
+    if(!parsed || (parsed.saldo === null && parsed.keuntungan === null)){
+      throw new Error('Tidak ada data yang bisa dibaca dari screenshot ini');
+    }
+
+    scanData = parsed;
+
+    // Tampilkan hasil
+    let resultHtml = '';
+    if(parsed.saldo !== null)
+      resultHtml += `<div>📊 <b>Saldo MT4:</b> <span style="color:#C8A84B;font-family:'JetBrains Mono',monospace">¢${parsed.saldo}</span></div>`;
+    if(parsed.keuntungan !== null){
+      const isPos = parseFloat(parsed.keuntungan) >= 0;
+      resultHtml += `<div>${isPos?'📈':'📉'} <b>${isPos?'Profit':'Loss'}:</b> <span style="color:${isPos?'#4ADE80':'#F87171'};font-family:'JetBrains Mono',monospace">${isPos?'+':''}¢${parsed.keuntungan}</span></div>`;
+    }
+    if(parsed.tanggal)
+      resultHtml += `<div>📅 <b>Tanggal:</b> ${parsed.tanggal}</div>`;
+    if(parsed.keterangan)
+      resultHtml += `<div style="color:#5A6A40;font-size:10px;margin-top:4px">💬 ${parsed.keterangan}</div>`;
+
+    document.getElementById('scanResultBody').innerHTML = resultHtml;
+    result.style.display = 'block';
+    status.textContent = '✅ Screenshot berhasil dibaca!';
+    status.style.color = '#4ADE80';
+
+  }catch(e){
+    status.textContent = '❌ Gagal: ' + e.message;
+    status.style.color = '#F87171';
+    scanData = null;
+  }
+}
+
+function pakaiHasilScan(){
+  if(!scanData){ toast('❌ Tidak ada data scan'); return; }
+
+  if(scanData.saldo !== null){
+    document.getElementById('inpSaldo').value = Math.abs(scanData.saldo);
+    previewSaldo();
+  }
+  if(scanData.keuntungan !== null){
+    const profit = parseFloat(scanData.keuntungan);
+    document.getElementById('inpProfit').value = Math.abs(profit);
+    setPL(profit >= 0 ? 'profit' : 'loss');
+  }
+  if(scanData.tanggal){
+    document.getElementById('inpTgl').value = scanData.tanggal;
+  }
+
+  // Scroll ke form
+  document.getElementById('inpSaldo').scrollIntoView({behavior:'smooth', block:'center'});
+  toast('✅ Data dari screenshot sudah diisi!');
+
+  // Reset scan UI
+  document.getElementById('scanResult').style.display = 'none';
+  document.getElementById('scanStatus').style.display = 'none';
+  document.getElementById('screenshotFile').value = '';
+  scanData = null;
+}
+
 // ══ KURS & PIN ══
 function simpanKurs(){
   K=parseInt(document.getElementById('inpKurs').value)||16700;
@@ -1041,15 +1532,20 @@ async function login(){
     isAdmin=true;adminData=rows[0];
     closeModal('mLogin');
     hide('btnAdmin');show('btnLogout');
-    show('adminPanel');show('btnTambahWrap');
+    show('adminPanel');show('btnTambahWrap');show('btnTambahPembagianWrap');show('btnCatatPembagianWrap');
     toast('👑 Selamat datang Admin!');
     await loadSaldoHarian();
     renderRiwayatSaldo();
     await loadRiwayatDW();
     // Set today date for DW
     const dd=new Date(),pad2=n=>String(n).padStart(2,'0');
+    const todayStr=`${dd.getFullYear()}-${pad2(dd.getMonth()+1)}-${pad2(dd.getDate())}`;
     const dwEl=document.getElementById('inpDWTgl');
-    if(dwEl) dwEl.value=`${dd.getFullYear()}-${pad2(dd.getMonth()+1)}-${pad2(dd.getDate())}`;
+    if(dwEl) dwEl.value=todayStr;
+    const pbEl=document.getElementById('pbTglBagi');
+    if(pbEl) pbEl.value=todayStr;
+    const pbSmpEl=document.getElementById('pbSampai');
+    if(pbSmpEl) pbSmpEl.value=todayStr;
   }catch(e){toast('❌ '+e.message);}
   load(false);
 }
@@ -1074,13 +1570,7 @@ function toast(msg){
   clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3000);
 }
 
-// ══ XAU/USD LIVE ══
-setInterval(()=>{
-  xauPx+=(Math.random()-.49)*1.5;
-  xauPx=Math.max(3280,Math.min(3380,xauPx));
-  const el=document.getElementById('xauPrice');
-  if(el)el.textContent=xauPx.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
-},1200);
+
 </script>
 </body>
 </html>
