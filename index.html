@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- ARISAN EA v3.0 - 15 Jun 2026 - NO EA BAR -->
+<!-- MARGINKUAT CAPITAL v3.0 - 15 Jun 2026 - NO EA BAR -->
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#B8860B">
-<title>ARISAN EA — Gold Investment</title>
+<title>MARGINKUAT CAPITAL</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -157,14 +157,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 <div id="loading">
   <div style="font-size:24px;margin-bottom:8px">✦</div>
   <div class="spin"></div>
-  <div style="font-size:11px;color:#4A5A35;margin-top:4px">ARISAN EA</div>
+  <div style="font-size:11px;color:#4A5A35;margin-top:4px">MARGINKUAT CAPITAL</div>
 </div>
 
 <!-- HEADER -->
 <div class="header">
   <div class="brand">
-    <div class="brand-name">ARISAN EA</div>
-    <div class="brand-sub">EA Trading XAUUSD</div>
+    <div class="brand-name">MARGINKUAT <span style="color:#C8A84B">CAPITAL</span></div>
+    <div class="brand-sub">Gold & Multi Asset Investment</div>
   </div>
   <div class="header-right">
     <button class="btn-admin" id="btnAdmin" onclick="openModal('mLogin')">🔑 Admin</button>
@@ -443,7 +443,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 <!-- FOOTER -->
 <div class="divider"></div>
 <div class="footer">
-  ARISAN EA v3.0 · EA Trading XAUUSD · FBS Cent Account<br>
+  MARGINKUAT CAPITAL · Gold & Multi Asset Investment<br>
   Dana dikelola secara transparan · Bagi hasil 40% anggota<br>
   <span style="color:#1E2A12">marginkuat.github.io</span>
 </div>
@@ -454,7 +454,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
     <div class="modal-bar"></div>
     <div style="text-align:center;margin-bottom:18px">
       <div style="font-size:28px;margin-bottom:6px">✦</div>
-      <div style="font-size:16px;font-weight:800;color:#C8A84B">ARISAN EA</div>
+      <div style="font-size:16px;font-weight:800;color:#C8A84B">MARGINKUAT CAPITAL</div>
       <div style="font-size:10px;color:#4A5A35;margin-top:2px">Login Admin</div>
     </div>
     <label class="lbl">Username</label>
@@ -1452,14 +1452,20 @@ Balas HANYA dengan JSON, tanpa penjelasan tambahan.`
 
     // Tampilkan hasil
     let resultHtml = '';
+    const jenis = parsed.jenis || 'harian';
+    resultHtml += `<div style="font-size:10px;color:#C8A84B;font-weight:700;margin-bottom:4px">${jenis==='bulanan'?'📅 DATA BULANAN':'📊 DATA HARIAN'}</div>`;
     if(parsed.saldo !== null)
-      resultHtml += `<div>📊 <b>Saldo MT4:</b> <span style="color:#C8A84B;font-family:'JetBrains Mono',monospace">¢${parsed.saldo}</span></div>`;
+      resultHtml += `<div>📊 <b>Saldo:</b> <span style="color:#C8A84B;font-family:'JetBrains Mono',monospace">¢${parsed.saldo}</span></div>`;
     if(parsed.keuntungan !== null){
       const isPos = parseFloat(parsed.keuntungan) >= 0;
-      resultHtml += `<div>${isPos?'📈':'📉'} <b>${isPos?'Profit':'Loss'}:</b> <span style="color:${isPos?'#4ADE80':'#F87171'};font-family:'JetBrains Mono',monospace">${isPos?'+':''}¢${parsed.keuntungan}</span></div>`;
+      resultHtml += `<div>${isPos?'📈':'📉'} <b>Keuntungan:</b> <span style="color:${isPos?'#4ADE80':'#F87171'};font-family:'JetBrains Mono',monospace">${isPos?'+':''}¢${parsed.keuntungan}</span></div>`;
     }
+    if(parsed.deposito != null)
+      resultHtml += `<div>📥 <b>Deposito:</b> <span style="color:#4ADE80;font-family:'JetBrains Mono',monospace">¢${parsed.deposito}</span></div>`;
+    if(parsed.penarikan != null)
+      resultHtml += `<div>📤 <b>Penarikan:</b> <span style="color:#F87171;font-family:'JetBrains Mono',monospace">¢${parsed.penarikan}</span></div>`;
     if(parsed.tanggal)
-      resultHtml += `<div>📅 <b>Tanggal:</b> ${parsed.tanggal}</div>`;
+      resultHtml += `<div>📅 <b>Periode:</b> ${parsed.tanggal}</div>`;
     if(parsed.keterangan)
       resultHtml += `<div style="color:#5A6A40;font-size:10px;margin-top:4px">💬 ${parsed.keterangan}</div>`;
 
@@ -1478,22 +1484,32 @@ Balas HANYA dengan JSON, tanpa penjelasan tambahan.`
 function pakaiHasilScan(){
   if(!scanData){ toast('❌ Tidak ada data scan'); return; }
 
-  if(scanData.saldo !== null){
-    document.getElementById('inpSaldo').value = Math.abs(scanData.saldo);
-    previewSaldo();
+  if(scanData.jenis === 'bulanan'){
+    // Untuk riwayat bulanan - buka modal pembagian/input manual
+    const info = `Data Bulanan MT4:\n` +
+      (scanData.keuntungan != null ? `• Keuntungan: ¢${scanData.keuntungan}\n` : '') +
+      (scanData.deposito != null ? `• Deposito: ¢${scanData.deposito}\n` : '') +
+      (scanData.penarikan != null ? `• Penarikan: ¢${scanData.penarikan}\n` : '') +
+      (scanData.saldo != null ? `• Saldo Akhir: ¢${scanData.saldo}\n` : '');
+    alert(info + '\nInput data bulanan ini ke form Saldo Harian satu per satu, atau catat di Pembagian Hasil.');
+    toast('📊 Data bulanan terbaca — input manual ke form');
+  } else {
+    // Untuk saldo harian
+    if(scanData.saldo !== null){
+      document.getElementById('inpSaldo').value = Math.abs(scanData.saldo);
+      previewSaldo();
+    }
+    if(scanData.keuntungan !== null){
+      const profit = parseFloat(scanData.keuntungan);
+      document.getElementById('inpProfit').value = Math.abs(profit);
+      setPL(profit >= 0 ? 'profit' : 'loss');
+    }
+    if(scanData.tanggal){
+      document.getElementById('inpTgl').value = scanData.tanggal;
+    }
+    document.getElementById('inpSaldo').scrollIntoView({behavior:'smooth', block:'center'});
+    toast('✅ Data dari screenshot sudah diisi!');
   }
-  if(scanData.keuntungan !== null){
-    const profit = parseFloat(scanData.keuntungan);
-    document.getElementById('inpProfit').value = Math.abs(profit);
-    setPL(profit >= 0 ? 'profit' : 'loss');
-  }
-  if(scanData.tanggal){
-    document.getElementById('inpTgl').value = scanData.tanggal;
-  }
-
-  // Scroll ke form
-  document.getElementById('inpSaldo').scrollIntoView({behavior:'smooth', block:'center'});
-  toast('✅ Data dari screenshot sudah diisi!');
 
   // Reset scan UI
   document.getElementById('scanResult').style.display = 'none';
