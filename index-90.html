@@ -199,6 +199,63 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 
 
 
+<!-- LAPORAN KEUANGAN -->
+<div class="section">
+  <div class="sec-title">📊 LAPORAN KINERJA KEUANGAN</div>
+  <div style="background:linear-gradient(135deg,#161A0F,#0F1209);border:1px solid #2E4A1E;border-radius:16px;padding:18px">
+    <div style="text-align:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #2A2E1F">
+      <div style="font-size:11px;color:#C8A84B;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">✦ MARGINKUAT CAPITAL</div>
+      <div style="font-size:9px;color:#4A5A35;margin-top:4px">Periode: Sejak Awal Pengelolaan s/d <span id="lkTglSekarang">-</span></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div style="background:#0D0F0A;border-radius:10px;padding:12px;border-left:3px solid #C8A84B">
+        <div style="font-size:9px;color:#4A5A35;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Total Dana Kelola (AUM)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#C8A84B" id="lkAUM">¢0.00</div>
+        <div style="font-size:9px;color:#4A5A35;margin-top:2px" id="lkAUMUsd">$0.00</div>
+      </div>
+      <div style="background:#0D0F0A;border-radius:10px;padding:12px;border-left:3px solid #4ADE80">
+        <div style="font-size:9px;color:#4A5A35;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Total Profit Kumulatif</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#4ADE80" id="lkProfit">¢0.00</div>
+        <div style="font-size:9px;color:#4A5A35;margin-top:2px" id="lkProfitUsd">$0.00</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:#0D0F0A;border-radius:10px;padding:10px 6px;text-align:center">
+        <div style="font-size:9px;color:#4A5A35;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Win Rate</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:#4ADE80" id="lkWinRate">0%</div>
+      </div>
+      <div style="background:#0D0F0A;border-radius:10px;padding:10px 6px;text-align:center">
+        <div style="font-size:9px;color:#4A5A35;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Return on Capital</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:#C8A84B" id="lkROC">0%</div>
+      </div>
+      <div style="background:#0D0F0A;border-radius:10px;padding:10px 6px;text-align:center">
+        <div style="font-size:9px;color:#4A5A35;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Anggota Aktif</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:#E8E2D5" id="lkAnggota">0</div>
+      </div>
+    </div>
+
+    <div style="background:#0D0F0A;border-radius:10px;padding:12px">
+      <div style="font-size:10px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Rincian Aktivitas Trading</div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1E2214;font-size:11px">
+        <span style="color:#5A6A40">Modal Awal</span><span style="font-weight:700;color:#E8E2D5;font-family:'JetBrains Mono',monospace" id="lkModalAwal">¢0.00</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1E2214;font-size:11px">
+        <span style="color:#5A6A40">Total Hari Trading</span><span style="font-weight:700;color:#E8E2D5;font-family:'JetBrains Mono',monospace" id="lkHariTrading">0 hari</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1E2214;font-size:11px">
+        <span style="color:#5A6A40">Hari Profit</span><span style="font-weight:700;color:#4ADE80;font-family:'JetBrains Mono',monospace" id="lkHariProfit">0 hari</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:11px">
+        <span style="color:#5A6A40">Hari Loss</span><span style="font-weight:700;color:#F87171;font-family:'JetBrains Mono',monospace" id="lkHariLoss">0 hari</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:14px;font-size:9px;color:#3A4A2A">Laporan dibuat otomatis berdasarkan data trading aktual</div>
+  </div>
+</div>
+
 <!-- KALENDER -->
 <div class="section">
   <div class="sec-title">📅 KALENDER TRADING</div>
@@ -623,10 +680,53 @@ window.onload=async()=>{
 };
 
 async function loadAll(){
-  await Promise.all([loadBalance(),loadAnggota(),loadRiwayat(),loadSaldoHarian(),loadPembagian()]);
+  await Promise.all([loadBalance(),loadAnggota(),loadRiwayat(),loadSaldoHarian(),loadPembagian(),loadLaporanKeuangan()]);
   renderKalender();
   renderPencapaian();
   renderTarget();
+}
+
+// ══ LAPORAN KEUANGAN ══
+async function loadLaporanKeuangan(){
+  try{
+    const allSh = await api('saldo_harian?select=*&order=tanggal.asc');
+    const ns = await api('nasabah?select=*&status=eq.active');
+
+    const now = new Date();
+    set('lkTglSekarang', now.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}));
+
+    if(!allSh.length){
+      set('lkAUM','¢0.00'); set('lkProfit','¢0.00'); set('lkWinRate','0%');
+      set('lkROC','0%'); set('lkAnggota', ns.length); set('lkModalAwal','¢0.00');
+      set('lkHariTrading','0 hari'); set('lkHariProfit','0 hari'); set('lkHariLoss','0 hari');
+      return;
+    }
+
+    const first = allSh[0];
+    const last  = allSh[allSh.length-1];
+
+    const modalAwal = Math.max(0, parseFloat(first.saldo_mt4||0) - parseFloat(first.profit||0));
+    const aum       = parseFloat(last.saldo_mt4||0);
+    const totalProfit = allSh.reduce((s,r) => s + parseFloat(r.profit||0), 0);
+
+    const hariTrading = allSh.length;
+    const hariProfit  = allSh.filter(r => parseFloat(r.profit||0) > 0).length;
+    const hariLoss    = allSh.filter(r => parseFloat(r.profit||0) < 0).length;
+    const winRate     = hariTrading ? (hariProfit/hariTrading*100) : 0;
+    const roc         = modalAwal > 0 ? (totalProfit/modalAwal*100) : 0;
+
+    set('lkAUM',     fc(aum));
+    set('lkAUMUsd',  fu(aum)+' / '+fr(aum));
+    set('lkProfit',    fc(totalProfit));
+    set('lkProfitUsd', fu(totalProfit)+' / '+fr(totalProfit));
+    set('lkWinRate', winRate.toFixed(1)+'%');
+    set('lkROC',     (roc>=0?'+':'')+roc.toFixed(1)+'%');
+    set('lkAnggota', ns.length);
+    set('lkModalAwal',   fc(modalAwal));
+    set('lkHariTrading', hariTrading+' hari');
+    set('lkHariProfit',  hariProfit+' hari');
+    set('lkHariLoss',    hariLoss+' hari');
+  }catch(e){ console.error(e); }
 }
 
 // ══ BALANCE ══
