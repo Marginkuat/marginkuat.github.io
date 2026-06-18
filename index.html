@@ -394,6 +394,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
       </div>
       <label class="lbl">Tanggal</label>
       <input class="inp" type="date" id="inpTgl">
+      <label class="lbl">Jumlah Signal / Orderan Hari Ini</label>
+      <input class="inp" type="number" id="inpSignal" placeholder="0" step="1" min="0">
       <label class="lbl">Profit / Loss Hari Ini (angka dari MT4)</label>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
         <button id="btnProfit" onclick="setPL('profit')" style="padding:9px;border-radius:8px;border:1.5px solid #2E4A1E;background:#132D0E;color:#4ADE80;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📈 PROFIT</button>
@@ -572,6 +574,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
     <div class="warn">Perubahan langsung update data.</div>
     <label class="lbl">Saldo MT4</label>
     <input class="inp" type="number" id="esSaldo" step="0.01">
+    <label class="lbl">Jumlah Signal / Orderan</label>
+    <input class="inp" type="number" id="esSignal" step="1" min="0">
     <label class="lbl">Profit</label>
     <input class="inp" type="number" id="esProfit" step="0.01">
     <label class="lbl">Catatan</label>
@@ -639,7 +643,7 @@ const ppbBulanNama = ['Januari','Februari','Maret','April','Mei','Juni','Juli','
 
 async function loadProfitBulanan(){
   try{
-    const rows = await api('saldo_harian?select=tanggal,profit&order=tanggal.desc');
+    const rows = await api('saldo_harian?select=tanggal,profit,jumlah_signal&order=tanggal.desc');
     const el = document.getElementById('profitBulananList');
     if(!rows.length){
       el.innerHTML = '<div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Belum ada data trading</div>';
@@ -651,9 +655,9 @@ async function loadProfitBulanan(){
     rows.forEach(r => {
       const d = new Date(r.tanggal);
       const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-      if(!map[key]) map[key] = { year:d.getFullYear(), month:d.getMonth(), profit:0, hari:0 };
+      if(!map[key]) map[key] = { year:d.getFullYear(), month:d.getMonth(), profit:0, signal:0 };
       map[key].profit += parseFloat(r.profit||0);
-      map[key].hari += 1;
+      map[key].signal += parseInt(r.jumlah_signal||0);
     });
 
     ppbData = Object.values(map).sort((a,b) => (b.year-a.year) || (b.month-a.month));
@@ -673,7 +677,7 @@ function renderProfitBulanan(){
       <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;${border}">
         <div>
           <div style="font-size:15px;font-weight:700;color:#E8E2D5">${ppbBulanNama[m.month]} ${m.year}</div>
-          <div style="font-size:11px;color:#5A6A40;margin-top:2px">${m.hari} Hari Trading</div>
+          <div style="font-size:11px;color:#5A6A40;margin-top:2px">${m.signal} Signal</div>
         </div>
         <div style="text-align:right">
           <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:${color}">${up?'+':''}${fc(m.profit)}</div>
@@ -1118,6 +1122,7 @@ async function simpanSaldo(){
   const isLoss=plEl?plEl.value==='loss':false;
   const profit=isLoss?-profitRaw:profitRaw; // negatif jika loss
   const tgl=document.getElementById('inpTgl').value;
+  const jumlahSignal=parseInt(document.getElementById('inpSignal').value)||0;
   const catatan=document.getElementById('inpCatatan').value.trim();
   if(!saldo){toast('❌ Isi saldo MT4');return;}
   if(!tgl){toast('❌ Isi tanggal');return;}
@@ -1127,6 +1132,7 @@ async function simpanSaldo(){
     const bodyData = {
       saldo_mt4: parseFloat(saldo.toFixed(2)),
       profit: parseFloat((profit||0).toFixed(2)),
+      jumlah_signal: jumlahSignal,
       catatan: catatan || null
     };
     const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
@@ -1157,6 +1163,7 @@ async function simpanSaldo(){
     }
     toast(`✅ Saldo ${fc(saldo)} tersimpan`);
     document.getElementById('inpSaldo').value='';
+    document.getElementById('inpSignal').value='';
     document.getElementById('inpProfit').value='';
     document.getElementById('inpCatatan').value='';
     document.getElementById('pvBox').style.display='none';
@@ -1178,14 +1185,15 @@ function renderRiwayatSaldo(){
         ${r.catatan?`<div class="ri-cat">📝 ${r.catatan}</div>`:''}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px">
-        <button class="btn-sm" style="background:#0E1A2D;color:#60A0E0" onclick="bukaEditSaldo('${r.id}','${r.tanggal}',${r.saldo_mt4},${r.profit||0},'${(r.catatan||'').replace(/'/g,'`')}')">✏️ Edit</button>
+        <button class="btn-sm" style="background:#0E1A2D;color:#60A0E0" onclick="bukaEditSaldo('${r.id}','${r.tanggal}',${r.saldo_mt4},${r.profit||0},'${(r.catatan||'').replace(/'/g,'`')}',${r.jumlah_signal||0})">✏️ Edit</button>
         <button class="btn-sm" style="background:#1A0E0E;color:#F87171" onclick="konfirmasiHapusSaldo('${r.id}','${r.tanggal}')">🗑️</button>
       </div>
     </div>`).join('');
 }
-function bukaEditSaldo(id,tgl,saldo,profit,catatan){
+function bukaEditSaldo(id,tgl,saldo,profit,catatan,jumlahSignal){
   document.getElementById('esId').value=id;
   document.getElementById('esSaldo').value=saldo;
+  document.getElementById('esSignal').value=jumlahSignal||0;
   document.getElementById('esProfit').value=profit;
   document.getElementById('esCatatan').value=catatan;
   openModal('mEditSaldo');
@@ -1193,12 +1201,13 @@ function bukaEditSaldo(id,tgl,saldo,profit,catatan){
 async function simpanEditSaldo(){
   const id=document.getElementById('esId').value;
   const saldo=parseFloat(document.getElementById('esSaldo').value)||0;
+  const jumlahSignal=parseInt(document.getElementById('esSignal').value)||0;
   const profit=parseFloat(document.getElementById('esProfit').value)||0;
   const catatan=document.getElementById('esCatatan').value.trim();
   if(!saldo){toast('❌ Isi saldo');return;}
   load(true);
   try{
-    await api(`saldo_harian?id=eq.${id}`,'PATCH',{saldo_mt4:saldo,profit,catatan});
+    await api(`saldo_harian?id=eq.${id}`,'PATCH',{saldo_mt4:saldo,profit,jumlah_signal:jumlahSignal,catatan});
     toast('✅ Data diperbarui');closeModal('mEditSaldo');
     await loadAll();
   }catch(e){toast('❌ '+e.message);}load(false);
