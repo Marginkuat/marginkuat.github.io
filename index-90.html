@@ -1146,6 +1146,57 @@ async function loadRiwayat(){
 }
 
 
+// ══ PREVIEW INPUT SALDO HARIAN ══
+function previewSaldo(){
+  const v = parseFloat(document.getElementById('inpSaldo').value)||0;
+  const box = document.getElementById('pvBox');
+  if(v){
+    box.style.display='block';
+    set('pvCent', fc(v));
+    set('pvUSD', fu(v));
+    set('pvRp', fr(v));
+  } else {
+    box.style.display='none';
+  }
+}
+
+function setPL(type){
+  document.getElementById('plType').value = type;
+  const bp = document.getElementById('btnProfit');
+  const bl = document.getElementById('btnLoss');
+  if(type==='profit'){
+    bp.style.border='1.5px solid #2E4A1E'; bp.style.background='#132D0E'; bp.style.color='#4ADE80';
+    bl.style.border='1.5px solid #2A2E1F'; bl.style.background='#0D0F0A'; bl.style.color='#5A6A40';
+  }else{
+    bl.style.border='1.5px solid #4A1E1E'; bl.style.background='#2D1313'; bl.style.color='#F87171';
+    bp.style.border='1.5px solid #2A2E1F'; bp.style.background='#0D0F0A'; bp.style.color='#5A6A40';
+  }
+  previewProfit();
+}
+
+function previewProfit(){
+  const raw = Math.abs(parseFloat(document.getElementById('inpProfit').value)||0);
+  const isLoss = document.getElementById('plType').value==='loss';
+  const v = isLoss ? -raw : raw;
+  const box = document.getElementById('simBox');
+  if(raw){
+    box.style.display='block';
+    set('simMT4', (v>=0?'+':'')+fc(v));
+    set('simUSD', (v>=0?'+':'')+fu(v));
+    if(v>0){
+      const bagi = v*0.4, ops = v*0.6;
+      set('simBagi', '+'+fc(bagi));
+      set('simOps', '+'+fc(ops));
+    } else {
+      set('simBagi', fc(0));
+      set('simOps', fc(0));
+    }
+    set('simRp', (v>=0?'+':'')+fr(v));
+  } else {
+    box.style.display='none';
+  }
+}
+
 async function simpanSaldo(){
   if(!isAdmin){toast('❌ Harus login Admin');return;}
   const saldo=parseFloat(document.getElementById('inpSaldo').value)||0;
