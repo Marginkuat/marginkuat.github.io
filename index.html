@@ -9,7 +9,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:100vh}
+body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:100vh}
 
 /* LOADING */
 #loading{position:fixed;inset:0;background:#0D0F0A;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
@@ -20,25 +20,25 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 .header{padding:20px 16px 0;display:flex;align-items:center;justify-content:space-between}
 .brand{display:flex;flex-direction:column}
 .brand-name{font-size:22px;font-weight:800;color:#C8A84B;letter-spacing:.5px;line-height:1.1}
-.brand-sub{font-size:10px;color:#6B7A4A;text-transform:uppercase;letter-spacing:1.5px;margin-top:2px}
+.brand-sub{font-size:10px;color:#9C7A2E;text-transform:uppercase;letter-spacing:1.5px;margin-top:2px}
 .header-right{display:flex;gap:8px;align-items:center}
 .btn-admin{padding:5px 12px;border-radius:20px;border:1.5px solid #B8860B;background:transparent;color:#C8A84B;font-size:10px;font-weight:700;cursor:pointer}
-.btn-logout{padding:5px 12px;border-radius:20px;border:1.5px solid #555;background:transparent;color:#888;font-size:10px;font-weight:700;cursor:pointer;display:none}
+.btn-logout{padding:5px 12px;border-radius:20px;border:1.5px solid #555;background:transparent;color:#9C7A2E;font-size:10px;font-weight:700;cursor:pointer;display:none}
 
 /* SECTION */
 .section{padding:20px 16px 0}
-.sec-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#9CA070;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px}
+.sec-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px}
 
 /* BALANCE HERO */
 .balance-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:20px;margin:16px;margin-bottom:0;text-align:center}
-.bal-label{font-size:10px;color:#6B7A4A;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px}
+.bal-label{font-size:10px;color:#9C7A2E;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px}
 .bal-cent{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:#C8A84B;letter-spacing:-1px}
-.bal-usd{font-size:14px;color:#7B9060;margin-top:4px;font-family:'JetBrains Mono',monospace}
-.bal-rp{font-size:12px;color:#4A5A35;margin-top:2px;font-family:'JetBrains Mono',monospace;margin-bottom:16px}
+.bal-usd{font-size:14px;color:#B8924A;margin-top:4px;font-family:'JetBrains Mono',monospace}
+.bal-rp{font-size:12px;color:#7A5D1F;margin-top:2px;font-family:'JetBrains Mono',monospace;margin-bottom:16px}
 .bal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .bal-box{background:#1E2312;border-radius:10px;padding:10px 6px;text-align:center}
 .bal-box-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
-.bal-box-lbl{font-size:9px;color:#5A6A40;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.bal-box-lbl{font-size:9px;color:#8A6B26;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
 .cg{color:#4ADE80}.cr{color:#F87171}.cy{color:#C8A84B}
 
 /* KALENDER */
@@ -46,57 +46,57 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 .cal-nav-btn{width:34px;height:34px;background:#161A0F;border:1px solid #2A2E1F;border-radius:8px;color:#C8A84B;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .cal-month{font-size:16px;font-weight:700;color:#C8A84B}
 .cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px}
-.cal-day-lbl{text-align:center;font-size:9px;color:#4A5A35;font-weight:600;padding:4px 0;text-transform:uppercase}
+.cal-day-lbl{text-align:center;font-size:9px;color:#7A5D1F;font-weight:600;padding:4px 0;text-transform:uppercase}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
 .cal-cell{border-radius:8px;padding:4px 2px;text-align:center;min-height:44px;display:flex;flex-direction:column;justify-content:center;background:#161A0F;border:1px solid #1E2312}
 .cal-cell.profit{background:#132D0E;border-color:#1E4A14}
 .cal-cell.loss{background:#2D0E0E;border-color:#4A1414}
 .cal-cell.today{border-color:#C8A84B;border-width:1.5px}
 .cal-cell.empty{background:transparent;border-color:transparent}
-.cal-num{font-size:11px;font-weight:700;color:#E8E2D5}
+.cal-num{font-size:11px;font-weight:700;color:#D4AF37}
 .cal-amt{font-size:8px;font-weight:700;margin-top:1px}
 .cal-legend{display:flex;justify-content:center;gap:14px;margin-top:8px}
-.cal-leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#5A6A40}
+.cal-leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#8A6B26}
 .cal-leg-dot{width:8px;height:8px;border-radius:3px}
 
 /* TARGET */
 .target-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px}
-.target-title{text-align:center;font-size:13px;font-weight:700;color:#E8E2D5;margin-bottom:4px}
-.target-sub{text-align:center;font-size:11px;color:#5A6A40;margin-bottom:12px}
+.target-title{text-align:center;font-size:13px;font-weight:700;color:#D4AF37;margin-bottom:4px}
+.target-sub{text-align:center;font-size:11px;color:#8A6B26;margin-bottom:12px}
 .target-row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:12px}
 .target-box{background:#1E2312;border-radius:10px;padding:10px;text-align:center}
-.target-box-lbl{font-size:9px;color:#5A6A40;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.target-box-lbl{font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
 .target-box-val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#C8A84B}
-.target-arrow{font-size:18px;color:#4A5A35;text-align:center}
+.target-arrow{font-size:18px;color:#7A5D1F;text-align:center}
 .target-main{background:#2A2E1F;border-radius:10px;padding:10px;text-align:center}
 .target-main-lbl{font-size:9px;color:#C8A84B;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
 .target-main-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#FFD700}
 .progress-bar{height:6px;background:#1E2312;border-radius:3px;overflow:hidden;margin-top:10px}
 .progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#2E4A1E,#4ADE80);transition:width 1s}
-.progress-info{display:flex;justify-content:space-between;font-size:10px;color:#5A6A40;margin-top:4px}
+.progress-info{display:flex;justify-content:space-between;font-size:10px;color:#8A6B26;margin-top:4px}
 
 /* RIWAYAT */
 .riwayat-item{background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
 .ri-info{flex:1}
 .ri-date{font-size:11px;font-weight:700;color:#C8A84B}
-.ri-saldo{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#E8E2D5}
+.ri-saldo{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#D4AF37}
 .ri-profit{font-size:10px;font-weight:600}
-.ri-cat{font-size:10px;color:#4A5A35}
+.ri-cat{font-size:10px;color:#7A5D1F}
 
 /* ADMIN PANEL */
 .admin-panel{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px;display:none}
 .ap-title{font-size:12px;font-weight:700;color:#C8A84B;margin-bottom:12px}
-.lbl{font-size:10px;font-weight:600;color:#5A6A40;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px}
-.inp{width:100%;padding:10px 12px;border:1.5px solid #2A2E1F;border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;outline:none;margin-bottom:10px}
+.lbl{font-size:10px;font-weight:600;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px}
+.inp{width:100%;padding:10px 12px;border:1.5px solid #2A2E1F;border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;outline:none;margin-bottom:10px}
 .inp:focus{border-color:#B8860B}
-.inp::placeholder{color:#3A4A2A}
+.inp::placeholder{color:#5C4818}
 .btn{width:100%;padding:11px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px}
 .btn-p{background:linear-gradient(135deg,#B8860B,#C8A84B);color:#0D0F0A}
 .btn-g{background:#132D0E;color:#4ADE80;border:1px solid #1E4A14}
-.btn-ghost{background:#1E2312;color:#6B7A4A}
+.btn-ghost{background:#1E2312;color:#9C7A2E}
 .preview-box{background:#0D0F0A;border-radius:9px;padding:10px;margin-bottom:10px;display:none}
 .preview-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center}
-.pv-lbl{font-size:9px;color:#4A5A35;margin-bottom:2px}
+.pv-lbl{font-size:9px;color:#7A5D1F;margin-bottom:2px}
 .pv-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
 
 /* MODAL */
@@ -104,14 +104,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 .modal.open{display:flex}
 .modal-box{background:#161A0F;border:1px solid #2A2E1F;width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px;max-height:88vh;overflow-y:auto}
 .modal-bar{width:36px;height:4px;background:#2A2E1F;border-radius:2px;margin:0 auto 16px}
-.modal-title{font-size:15px;font-weight:700;color:#E8E2D5;margin-bottom:14px}
+.modal-title{font-size:15px;font-weight:700;color:#D4AF37;margin-bottom:14px}
 
 /* TOAST */
-.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-8px);background:#1E2312;color:#E8E2D5;border:1px solid #2A2E1F;padding:9px 16px;border-radius:9px;font-size:12px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-8px);background:#1E2312;color:#D4AF37;border:1px solid #2A2E1F;padding:9px 16px;border-radius:9px;font-size:12px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 .divider{height:1px;background:#1E2312;margin:20px 16px 0}
-.footer{padding:20px 16px;text-align:center;font-size:10px;color:#2A3A1A;line-height:1.8}
+.footer{padding:20px 16px;text-align:center;font-size:10px;color:#4A3A14;line-height:1.8}
 #riwayatSaldoWrap{max-height:300px;overflow-y:auto}
 </style>
 </head>
@@ -119,12 +119,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 
 <div id="loading">
   <div class="spin"></div>
-  <div style="font-size:11px;color:#5A6A40">Memuat catatan trading...</div>
+  <div style="font-size:11px;color:#8A6B26">Memuat catatan trading...</div>
 </div>
 
 <div class="header">
   <div class="brand">
     <div class="brand-name">MARGINKUAT</div>
+    <div class="brand-sub">Dari kerja ke MT4, tercatat semua</div>
   </div>
   <div class="header-right">
     <button class="btn-admin" id="btnAdmin" onclick="openModal('mLogin')">🔑 Masuk</button>
@@ -148,7 +149,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 <!-- ALIRAN UANG -->
 <div class="section">
   <div class="sec-title">💸 Aliran Uang Masuk &amp; Keluar</div>
-  <div id="kasList"><div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Memuat...</div></div>
+  <div id="kasList"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
 </div>
 
 <!-- TARGET -->
@@ -195,7 +196,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 <div class="section">
   <div class="sec-title">📋 Riwayat Harian</div>
   <div id="riwayatSaldoWrap">
-    <div id="riwayatList"><div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Memuat...</div></div>
+    <div id="riwayatList"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
   </div>
 </div>
 
@@ -223,7 +224,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
     <label class="lbl">Profit / Loss Hari Ini (angka dari MT4)</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
       <button id="btnProfit" onclick="setPL('profit')" style="padding:9px;border-radius:8px;border:1.5px solid #2E4A1E;background:#132D0E;color:#4ADE80;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📈 PROFIT</button>
-      <button id="btnLoss" onclick="setPL('loss')" style="padding:9px;border-radius:8px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#5A6A40;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📉 LOSS</button>
+      <button id="btnLoss" onclick="setPL('loss')" style="padding:9px;border-radius:8px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#8A6B26;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📉 LOSS</button>
     </div>
     <input class="inp" type="number" id="inpProfit" placeholder="0.00 (tulis angka positif)" step="0.01" min="0">
     <input type="hidden" id="plType" value="profit">
@@ -349,7 +350,7 @@ window.onload=async()=>{
     document.getElementById('kasTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     await loadAll();
   }catch(e){
-    document.getElementById('loading').innerHTML=`<div style="text-align:center;padding:20px;color:#E8E2D5"><div style="font-size:32px;margin-bottom:10px">⚠️</div><div style="font-weight:600;margin-bottom:6px">Gagal konek database</div><div style="font-size:11px;color:#4A5A35;margin-bottom:14px">Cek koneksi internet atau coba lagi</div><button onclick="location.reload()" style="padding:9px 18px;background:#B8860B;color:#0D0F0A;border:none;border-radius:8px;font-weight:700;cursor:pointer">Coba Lagi</button></div>`;
+    document.getElementById('loading').innerHTML=`<div style="text-align:center;padding:20px;color:#D4AF37"><div style="font-size:32px;margin-bottom:10px">⚠️</div><div style="font-weight:600;margin-bottom:6px">Gagal konek database</div><div style="font-size:11px;color:#7A5D1F;margin-bottom:14px">Cek koneksi internet atau coba lagi</div><button onclick="location.reload()" style="padding:9px 18px;background:#B8860B;color:#0D0F0A;border:none;border-radius:8px;font-weight:700;cursor:pointer">Coba Lagi</button></div>`;
   }
 };
 
@@ -406,7 +407,26 @@ async function loadTarget(){
 
     const progress = target>saldoAwalBulan ? Math.max(0,Math.min(100,(saldoTerakhir-saldoAwalBulan)/(target-saldoAwalBulan)*100)) : 0;
     document.getElementById('progressFill').style.width=progress.toFixed(1)+'%';
-    set('progressPct', progress.toFixed(1)+'% tercapai');
+
+    // Status warna: hijau jika target sudah tercapai, merah jika bulan sudah lewat & belum tercapai, emas jika masih berjalan
+    const akhirBulan=new Date(now.getFullYear(),now.getMonth()+1,0);
+    const sudahLewatBulan = now>akhirBulan;
+    const fill=document.getElementById('progressFill');
+    const pctEl=document.getElementById('progressPct');
+    if(progress>=100){
+      fill.style.background='linear-gradient(90deg,#1E4A14,#4ADE80)';
+      pctEl.style.color='#4ADE80';
+      set('progressPct', '✅ Target tercapai ('+progress.toFixed(1)+'%)');
+    }else if(sudahLewatBulan){
+      fill.style.background='linear-gradient(90deg,#4A1414,#F87171)';
+      pctEl.style.color='#F87171';
+      set('progressPct', '❌ Tidak tercapai ('+progress.toFixed(1)+'%)');
+    }else{
+      fill.style.background='linear-gradient(90deg,#5C4818,#C8A84B)';
+      pctEl.style.color='#C8A84B';
+      set('progressPct', progress.toFixed(1)+'% tercapai');
+    }
+
     const sisa=Math.max(0,target-saldoTerakhir);
     set('progressSisa', 'Sisa: '+fc(sisa));
     set('targetSub', `Saldo saat ini ${fc(saldoTerakhir)}`);
@@ -455,10 +475,10 @@ async function loadRiwayat(){
   try{
     const rows=await api('saldo_harian?select=*&order=tanggal.desc&limit=30');
     const el=document.getElementById('riwayatList');
-    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Belum ada catatan</div>';return;}
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada catatan</div>';return;}
     el.innerHTML=rows.map(r=>{
       const p=parseFloat(r.profit||0);
-      const pColor=p>0?'#4ADE80':(p<0?'#F87171':'#5A6A40');
+      const pColor=p>0?'#4ADE80':(p<0?'#F87171':'#8A6B26');
       return `<div class="riwayat-item">
         <div class="ri-info">
           <div class="ri-date">${fd(r.tanggal)}</div>
@@ -480,15 +500,15 @@ async function loadKas(){
     const rows=await api('kas_pribadi?select=*&order=tanggal.desc,created_at.desc&limit=50');
 
     const el=document.getElementById('kasList');
-    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Belum ada catatan</div>';return;}
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada catatan</div>';return;}
     el.innerHTML=rows.map(r=>{
       return `<div class="riwayat-item">
         <div class="ri-info">
           <div class="ri-date">${fd(r.tanggal)}</div>
-          <div class="ri-saldo" style="font-size:12px"><span style="color:#9CA070">${escapeHtml(r.dari||'-')}</span> → <span style="color:#C8A84B">${escapeHtml(r.ke||'-')}</span></div>
+          <div class="ri-saldo" style="font-size:12px"><span style="color:#C8A84B">${escapeHtml(r.dari||'-')}</span> → <span style="color:#C8A84B">${escapeHtml(r.ke||'-')}</span></div>
           ${r.keterangan?`<div class="ri-cat">${escapeHtml(r.keterangan)}</div>`:''}
         </div>
-        <div class="ri-profit" style="color:#E8E2D5">${fc(r.jumlah)}</div>
+        <div class="ri-profit" style="color:#D4AF37">${fc(r.jumlah)}</div>
       </div>`;
     }).join('');
   }catch(e){console.error(e);}
@@ -577,10 +597,10 @@ function setPL(type){
   const bp=document.getElementById('btnProfit'),bl=document.getElementById('btnLoss');
   if(type==='profit'){
     bp.style.border='1.5px solid #2E4A1E';bp.style.background='#132D0E';bp.style.color='#4ADE80';
-    bl.style.border='1.5px solid #2A2E1F';bl.style.background='#0D0F0A';bl.style.color='#5A6A40';
+    bl.style.border='1.5px solid #2A2E1F';bl.style.background='#0D0F0A';bl.style.color='#8A6B26';
   }else{
     bl.style.border='1.5px solid #4A1E1E';bl.style.background='#2D1313';bl.style.color='#F87171';
-    bp.style.border='1.5px solid #2A2E1F';bp.style.background='#0D0F0A';bp.style.color='#5A6A40';
+    bp.style.border='1.5px solid #2A2E1F';bp.style.background='#0D0F0A';bp.style.color='#8A6B26';
   }
 }
 async function simpanSaldo(){
