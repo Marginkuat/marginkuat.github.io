@@ -194,17 +194,9 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
   </div>
 </div>
 
-<!-- KAS PRIBADI -->
+<!-- ALIRAN UANG -->
 <div class="section">
-  <div class="sec-title">💰 Kas Pribadi (Deposit &amp; WD)</div>
-  <div class="balance-card" style="margin:0 0 14px">
-    <div class="bal-label">Sisa Tabungan</div>
-    <div class="bal-cent" id="kasSaldo">¢0.00</div>
-    <div class="bal-grid" style="grid-template-columns:1fr 1fr">
-      <div class="bal-box"><div class="bal-box-val cg" id="kasTotalDeposit">¢0</div><div class="bal-box-lbl">Total Deposit</div></div>
-      <div class="bal-box"><div class="bal-box-val cr" id="kasTotalWd">¢0</div><div class="bal-box-lbl">Total WD</div></div>
-    </div>
-  </div>
+  <div class="sec-title">💸 Aliran Uang Masuk &amp; Keluar</div>
   <div id="kasList"><div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Memuat...</div></div>
 </div>
 
@@ -245,13 +237,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
 
     <div style="height:1px;background:#2A2E1F;margin:16px 0"></div>
 
-    <div class="ap-title">💰 Input Deposit / WD Kas Pribadi</div>
+    <div class="ap-title">💸 Input Aliran Uang</div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
-      <button id="btnKasDeposit" onclick="setKasTipe('deposit')" style="padding:9px;border-radius:8px;border:1.5px solid #2E4A1E;background:#132D0E;color:#4ADE80;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">⬇️ DEPOSIT</button>
-      <button id="btnKasWd" onclick="setKasTipe('wd')" style="padding:9px;border-radius:8px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#5A6A40;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">⬆️ WD</button>
-    </div>
-    <input type="hidden" id="kasTipe" value="deposit">
+    <label class="lbl">Dari (sumber uang)</label>
+    <input class="inp" id="kasDari" placeholder="Contoh: Gaji Kerja / Saldo MT4">
+
+    <label class="lbl">Ke (tujuan uang)</label>
+    <input class="inp" id="kasKe" placeholder="Contoh: Saldo MT4 / Belanja Dapur">
 
     <label class="lbl">Jumlah (¢ cent MT4)</label>
     <input class="inp" type="number" id="kasJumlah" placeholder="0.00" step="0.01" min="0">
@@ -259,10 +251,10 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
     <label class="lbl">Tanggal</label>
     <input class="inp" type="date" id="kasTgl">
 
-    <label class="lbl">Keterangan (wajib diisi)</label>
-    <input class="inp" id="kasKet" placeholder="Contoh: Gaji bulan ini / WD untuk belanja dapur">
+    <label class="lbl">Catatan tambahan (opsional)</label>
+    <input class="inp" id="kasKet" placeholder="Contoh: untuk keperluan mendesak keluarga">
 
-    <button class="btn btn-p" onclick="simpanKas()">💾 Simpan Kas</button>
+    <button class="btn btn-p" onclick="simpanKas()">💾 Simpan Catatan</button>
   </div>
 </div>
 
@@ -488,56 +480,42 @@ async function loadKas(){
   try{
     const rows=await api('kas_pribadi?select=*&order=tanggal.desc,created_at.desc&limit=50');
 
-    const totalDeposit = rows.filter(r=>r.tipe==='deposit').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
-    const totalWd = rows.filter(r=>r.tipe==='wd').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
-    set('kasSaldo', fc(totalDeposit-totalWd));
-    set('kasTotalDeposit', fc(totalDeposit));
-    set('kasTotalWd', fc(totalWd));
-
     const el=document.getElementById('kasList');
-    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Belum ada catatan kas</div>';return;}
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#4A5A35;font-size:12px">Belum ada catatan</div>';return;}
     el.innerHTML=rows.map(r=>{
-      const isDeposit=r.tipe==='deposit';
-      const color=isDeposit?'#4ADE80':'#F87171';
-      const label=isDeposit?'DEPOSIT':'WD';
       return `<div class="riwayat-item">
         <div class="ri-info">
-          <div class="ri-date">${fd(r.tanggal)} · <span style="color:${color}">${label}</span></div>
-          <div class="ri-cat">${escapeHtml(r.keterangan||'')}</div>
+          <div class="ri-date">${fd(r.tanggal)}</div>
+          <div class="ri-saldo" style="font-size:12px"><span style="color:#9CA070">${escapeHtml(r.dari||'-')}</span> → <span style="color:#C8A84B">${escapeHtml(r.ke||'-')}</span></div>
+          ${r.keterangan?`<div class="ri-cat">${escapeHtml(r.keterangan)}</div>`:''}
         </div>
-        <div class="ri-profit" style="color:${color}">${isDeposit?'+':'-'}${fc(r.jumlah)}</div>
+        <div class="ri-profit" style="color:#E8E2D5">${fc(r.jumlah)}</div>
       </div>`;
     }).join('');
   }catch(e){console.error(e);}
 }
-function setKasTipe(tipe){
-  document.getElementById('kasTipe').value=tipe;
-  const bd=document.getElementById('btnKasDeposit'),bw=document.getElementById('btnKasWd');
-  if(tipe==='deposit'){
-    bd.style.border='1.5px solid #2E4A1E';bd.style.background='#132D0E';bd.style.color='#4ADE80';
-    bw.style.border='1.5px solid #2A2E1F';bw.style.background='#0D0F0A';bw.style.color='#5A6A40';
-  }else{
-    bw.style.border='1.5px solid #4A1E1E';bw.style.background='#2D1313';bw.style.color='#F87171';
-    bd.style.border='1.5px solid #2A2E1F';bd.style.background='#0D0F0A';bd.style.color='#5A6A40';
-  }
-}
 async function simpanKas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
-  const tipe=document.getElementById('kasTipe').value;
+  const dari=document.getElementById('kasDari').value.trim();
+  const ke=document.getElementById('kasKe').value.trim();
   const jumlah=parseFloat(document.getElementById('kasJumlah').value)||0;
   const tgl=document.getElementById('kasTgl').value;
   const ket=document.getElementById('kasKet').value.trim();
+  if(!dari){toast('❌ Isi sumber uang (Dari)');return;}
+  if(!ke){toast('❌ Isi tujuan uang (Ke)');return;}
   if(!jumlah){toast('❌ Isi jumlah');return;}
   if(!tgl){toast('❌ Isi tanggal');return;}
-  if(!ket){toast('❌ Keterangan wajib diisi');return;}
   try{
     await api('kas_pribadi','POST',{
       tanggal: tgl,
-      tipe: tipe,
+      dari: dari,
+      ke: ke,
       jumlah: parseFloat(jumlah.toFixed(2)),
-      keterangan: ket
+      keterangan: ket || null
     });
-    toast('✅ Catatan kas tersimpan');
+    toast('✅ Catatan tersimpan');
+    document.getElementById('kasDari').value='';
+    document.getElementById('kasKe').value='';
     document.getElementById('kasJumlah').value='';
     document.getElementById('kasKet').value='';
     await loadKas();
