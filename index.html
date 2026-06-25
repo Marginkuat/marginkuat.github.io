@@ -227,6 +227,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
     <input class="inp" id="inpCatatan" placeholder="Contoh: Setelah WD 600">
 
     <button class="btn btn-p" onclick="simpanSaldo()">💾 Simpan Catatan Hari Ini</button>
+    <button class="btn btn-ghost" onclick="openModal('mGantiPin')">🔐 Ganti PIN</button>
   </div>
 </div>
 
@@ -248,6 +249,22 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#E8E2D5;min-height:
   </div>
 </div>
 
+<!-- MODAL GANTI PIN -->
+<div class="modal" id="mGantiPin">
+  <div class="modal-box">
+    <div class="modal-bar"></div>
+    <div class="modal-title">🔐 Ganti PIN</div>
+    <label class="lbl">PIN Lama</label>
+    <input class="inp" type="password" id="pinLama" placeholder="Masukkan PIN saat ini">
+    <label class="lbl">PIN Baru</label>
+    <input class="inp" type="password" id="pinBaru" placeholder="Minimal 4 digit">
+    <label class="lbl">Ulangi PIN Baru</label>
+    <input class="inp" type="password" id="pinBaru2" placeholder="Ulangi PIN baru">
+    <button class="btn btn-p" onclick="doGantiPin()">Simpan PIN Baru</button>
+    <button class="btn btn-ghost" onclick="closeModal('mGantiPin')">Batal</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -265,8 +282,11 @@ async function api(p,m='GET',b=null){
 }
 
 // ══ ADMIN PIN ══
-// Ganti PIN ini sebelum publikasi. Disimpan sederhana di sisi klien (cukup untuk catatan pribadi).
-const ADMIN_PIN='123456';
+// PIN default. Setelah diganti lewat tombol "Ganti PIN", nilai baru tersimpan
+// di localStorage browser ini (tidak dikirim ke server). Ganti PIN ini sebelum publikasi.
+const DEFAULT_PIN='123456';
+function getAdminPin(){ return localStorage.getItem('mk_admin_pin') || DEFAULT_PIN; }
+function setAdminPin(p){ localStorage.setItem('mk_admin_pin', p); }
 
 // ══ CURRENCY ══
 let K=16700;
@@ -430,7 +450,7 @@ function escapeHtml(s){
 // ══ ADMIN LOGIN ══
 function doLogin(){
   const pin=document.getElementById('loginPin').value;
-  if(pin===ADMIN_PIN){
+  if(pin===getAdminPin()){
     isAdmin=true;
     closeModal('mLogin');
     document.getElementById('loginPin').value='';
@@ -446,6 +466,22 @@ function logout(){
   show('btnAdmin');hide('btnLogout');
   hide('adminPanel');
   toast('↩ Keluar dari mode Admin');
+}
+
+// ══ GANTI PIN ══
+function doGantiPin(){
+  const lama=document.getElementById('pinLama').value;
+  const baru=document.getElementById('pinBaru').value;
+  const baru2=document.getElementById('pinBaru2').value;
+  if(lama!==getAdminPin()){toast('❌ PIN lama salah');return;}
+  if(baru.length<4){toast('❌ PIN baru minimal 4 digit');return;}
+  if(baru!==baru2){toast('❌ PIN baru tidak sama');return;}
+  setAdminPin(baru);
+  document.getElementById('pinLama').value='';
+  document.getElementById('pinBaru').value='';
+  document.getElementById('pinBaru2').value='';
+  closeModal('mGantiPin');
+  toast('✅ PIN berhasil diganti');
 }
 
 // ══ PREVIEW & SIMPAN SALDO ══
