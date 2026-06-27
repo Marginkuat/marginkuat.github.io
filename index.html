@@ -599,7 +599,7 @@ async function simpanKas(){
     await loadKas();
   }catch(e){
     console.error(e);
-    toast('❌ Gagal simpan, coba lagi');
+    toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,80));
   }
 }
 
@@ -692,7 +692,7 @@ async function simpanSaldo(){
     await loadAll();
   }catch(e){
     console.error(e);
-    toast('❌ Gagal simpan, coba lagi');
+    toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,80));
   }
 }
 </script>
