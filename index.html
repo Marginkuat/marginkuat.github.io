@@ -270,8 +270,18 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <label class="lbl">Ke (tujuan uang)</label>
     <input class="inp" id="kasKe" placeholder="Contoh: Saldo MT4 / Belanja Dapur">
 
-    <label class="lbl">Jumlah (¢ cent MT4)</label>
-    <input class="inp" type="number" id="kasJumlah" placeholder="0.00" step="0.01" min="0">
+    <label class="lbl">Mata Uang Asli (opsional)</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
+      <button id="btnMataIDR" onclick="setMataUang('IDR')" style="padding:9px;border-radius:8px;border:1.5px solid #B8860B;background:#2A2410;color:#D4AF37;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">IDR (Rupiah)</button>
+      <button id="btnMataUSD" onclick="setMataUang('USD')" style="padding:9px;border-radius:8px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#7A5D1F;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">USD</button>
+    </div>
+    <input type="hidden" id="kasMataUang" value="IDR">
+
+    <label class="lbl">Nominal Asli (sesuai kebijakan FBS, opsional)</label>
+    <input class="inp" type="number" id="kasNominalAsli" placeholder="Contoh: 50000" step="0.01" min="0">
+
+    <label class="lbl">Jumlah (¢ cent MT4 yang didapat/dipakai)</label>
+    <input class="inp" type="number" id="kasJumlah" placeholder="Contoh: 275" step="0.01" min="0">
 
     <label class="lbl">Tanggal</label>
     <input class="inp" type="date" id="kasTgl">
@@ -561,16 +571,35 @@ async function loadKas(){
     const el=document.getElementById('kasList');
     if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada catatan</div>';return;}
     el.innerHTML=rows.map(r=>{
+      let kursHtml='';
+      if(r.nominal_asli && r.mata_uang_asli){
+        const nominalFmt = r.mata_uang_asli==='IDR'
+          ? 'Rp '+parseFloat(r.nominal_asli).toLocaleString('id-ID')
+          : '$'+parseFloat(r.nominal_asli).toFixed(2);
+        kursHtml=`<div class="ri-cat" style="color:#7A5D1F">${nominalFmt} → ${fc(r.jumlah)}</div>`;
+      }
       return `<div class="riwayat-item">
         <div class="ri-info">
           <div class="ri-date">${fd(r.tanggal)}</div>
           <div class="ri-saldo" style="font-size:12px"><span style="color:#C8A84B">${escapeHtml(r.dari||'-')}</span> → <span style="color:#C8A84B">${escapeHtml(r.ke||'-')}</span></div>
+          ${kursHtml}
           ${r.keterangan?`<div class="ri-cat">${escapeHtml(r.keterangan)}</div>`:''}
         </div>
         <div class="ri-profit" style="color:#D4AF37">${fc(r.jumlah)}</div>
       </div>`;
     }).join('');
   }catch(e){console.error(e);}
+}
+function setMataUang(mata){
+  document.getElementById('kasMataUang').value=mata;
+  const bi=document.getElementById('btnMataIDR'),bu=document.getElementById('btnMataUSD');
+  if(mata==='IDR'){
+    bi.style.border='1.5px solid #B8860B';bi.style.background='#2A2410';bi.style.color='#D4AF37';
+    bu.style.border='1.5px solid #2A2E1F';bu.style.background='#0D0F0A';bu.style.color='#7A5D1F';
+  }else{
+    bu.style.border='1.5px solid #B8860B';bu.style.background='#2A2410';bu.style.color='#D4AF37';
+    bi.style.border='1.5px solid #2A2E1F';bi.style.background='#0D0F0A';bi.style.color='#7A5D1F';
+  }
 }
 async function simpanKas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
@@ -579,6 +608,8 @@ async function simpanKas(){
   const jumlah=parseFloat(document.getElementById('kasJumlah').value)||0;
   const tgl=document.getElementById('kasTgl').value;
   const ket=document.getElementById('kasKet').value.trim();
+  const mataUang=document.getElementById('kasMataUang').value;
+  const nominalAsli=parseFloat(document.getElementById('kasNominalAsli').value)||0;
   if(!dari){toast('❌ Isi sumber uang (Dari)');return;}
   if(!ke){toast('❌ Isi tujuan uang (Ke)');return;}
   if(!jumlah){toast('❌ Isi jumlah');return;}
@@ -589,12 +620,15 @@ async function simpanKas(){
       dari: dari,
       ke: ke,
       jumlah: parseFloat(jumlah.toFixed(2)),
-      keterangan: ket || null
+      keterangan: ket || null,
+      mata_uang_asli: nominalAsli ? mataUang : null,
+      nominal_asli: nominalAsli ? parseFloat(nominalAsli.toFixed(2)) : null
     });
     toast('✅ Catatan tersimpan');
     document.getElementById('kasDari').value='';
     document.getElementById('kasKe').value='';
     document.getElementById('kasJumlah').value='';
+    document.getElementById('kasNominalAsli').value='';
     document.getElementById('kasKet').value='';
     await loadKas();
   }catch(e){
