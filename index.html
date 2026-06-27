@@ -113,7 +113,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 .modal-title{font-size:15px;font-weight:700;color:#D4AF37;margin-bottom:14px}
 
 /* TOAST */
-.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-8px);background:#1E2312;color:#D4AF37;border:1px solid #2A2E1F;padding:9px 16px;border-radius:9px;font-size:12px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-8px);background:#1E2312;color:#D4AF37;border:1px solid #2A2E1F;padding:9px 16px;border-radius:9px;font-size:11px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:normal;max-width:90vw;text-align:center;line-height:1.4}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 .divider{height:1px;background:#1E2312;margin:20px 16px 0}
@@ -371,7 +371,7 @@ function toast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
   clearTimeout(window._toastT);
-  window._toastT=setTimeout(()=>t.classList.remove('show'),2200);
+  window._toastT=setTimeout(()=>t.classList.remove('show'),5000);
 }
 function load(on){ /* placeholder for future loading-state hooks */ }
 
@@ -633,7 +633,7 @@ async function simpanKas(){
     await loadKas();
   }catch(e){
     console.error(e);
-    toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,80));
+    toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,200));
   }
 }
 
@@ -726,7 +726,7 @@ async function simpanSaldo(){
     await loadAll();
   }catch(e){
     console.error(e);
-    toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,80));
+    toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,200));
   }
 }
 </script>
