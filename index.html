@@ -178,10 +178,21 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
-<!-- ALIRAN UANG -->
+<!-- GRAFIK BULANAN -->
 <div class="section">
-  <div class="sec-title">💸 Aliran Uang Masuk &amp; Keluar</div>
-  <div id="kasList"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+  <div class="sec-title">📈 Grafik Kinerja Bulanan</div>
+  <div class="graph-card">
+    <div class="graph-nav">
+      <button class="cal-nav-btn" onclick="graphPrev()">‹</button>
+      <div style="text-align:center">
+        <div class="graph-month" id="graphMonth">-</div>
+        <div class="graph-signal" id="graphSignal">0 Signal</div>
+      </div>
+      <button class="cal-nav-btn" onclick="graphNext()">›</button>
+    </div>
+    <div class="graph-total" id="graphTotal">¢0.00</div>
+    <div id="graphSvgWrap" style="position:relative"></div>
+  </div>
 </div>
 
 <!-- KALENDER -->
@@ -208,21 +219,10 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
-<!-- GRAFIK BULANAN -->
+<!-- ALIRAN UANG -->
 <div class="section">
-  <div class="sec-title">📈 Grafik Kinerja Bulanan</div>
-  <div class="graph-card">
-    <div class="graph-nav">
-      <button class="cal-nav-btn" onclick="graphPrev()">‹</button>
-      <div style="text-align:center">
-        <div class="graph-month" id="graphMonth">-</div>
-        <div class="graph-signal" id="graphSignal">0 Signal</div>
-      </div>
-      <button class="cal-nav-btn" onclick="graphNext()">›</button>
-    </div>
-    <div class="graph-total" id="graphTotal">¢0.00</div>
-    <div id="graphSvgWrap" style="position:relative"></div>
-  </div>
+  <div class="sec-title">💸 Aliran Uang Masuk &amp; Keluar</div>
+  <div id="kasList"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
 </div>
 
 <!-- PROFIT PER BULAN -->
