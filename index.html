@@ -163,16 +163,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="bal-box"><div class="bal-box-val cy" id="bHari">0</div><div class="bal-box-lbl">Hari Trading</div></div>
     <div class="bal-box"><div class="bal-box-val cg" id="bProfit">¢0</div><div class="bal-box-lbl">Total Profit</div></div>
   </div>
-
-  <div style="margin-top:16px;border-top:1px solid #2A2E1F;padding-top:14px">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:8px">
-      <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px">Bulan</div>
-      <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;text-align:right">Gain</div>
-      <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;text-align:right">DD</div>
-      <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;text-align:right">Monthly</div>
-    </div>
-    <div id="gainDdMonthlyList"></div>
-  </div>
 </div>
 
 <!-- ALIRAN UANG -->
@@ -384,7 +374,7 @@ window.onload=async()=>{
 };
 
 async function loadAll(){
-  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadGainDdMonthly()]);
+  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan()]);
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
   renderKalender();
 }
@@ -408,50 +398,6 @@ async function loadBalance(){
 
     const totalProfit = allSh.reduce((s,r)=>s+parseFloat(r.profit||0),0);
     set('bProfit', fc(totalProfit));
-  }catch(e){console.error(e);}
-}
-
-// ══ GAIN / DRAWDOWN / MONTHLY PER BULAN ══
-async function loadGainDdMonthly(){
-  try{
-    const rows=await api('saldo_harian?select=tanggal,profit,saldo_mt4&order=tanggal.asc');
-    const el=document.getElementById('gainDdMonthlyList');
-    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:10px;color:#7A5D1F;font-size:11px">Belum ada data</div>';return;}
-
-    const bulanNama=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    const grouped={};
-    rows.forEach(r=>{
-      const d=new Date(r.tanggal);
-      const key=`${d.getFullYear()}-${d.getMonth()}`;
-      if(!grouped[key]) grouped[key]={year:d.getFullYear(),month:d.getMonth(),profit:0,saldoAwal:null,dataPoints:[]};
-      grouped[key].profit+=parseFloat(r.profit||0);
-      const saldoSetelahProfit=parseFloat(r.saldo_mt4||0);
-      const saldoSebelumProfit=saldoSetelahProfit-parseFloat(r.profit||0);
-      if(grouped[key].saldoAwal===null) grouped[key].saldoAwal=saldoSebelumProfit;
-      grouped[key].dataPoints.push(saldoSetelahProfit);
-    });
-
-    const list=Object.values(grouped).sort((a,b)=> (b.year-a.year)||(b.month-a.month));
-
-    el.innerHTML=list.map(g=>{
-      const gainPct = g.saldoAwal>0 ? (g.profit/g.saldoAwal*100) : 0;
-
-      // Max drawdown dalam bulan itu: penurunan terbesar dari titik tertinggi ke titik terendah berikutnya
-      let peak=g.saldoAwal, maxDd=0;
-      g.dataPoints.forEach(v=>{
-        if(v>peak) peak=v;
-        const dd = peak>0 ? (peak-v)/peak*100 : 0;
-        if(dd>maxDd) maxDd=dd;
-      });
-
-      const gColor = gainPct>0?'#4ADE80':(gainPct<0?'#F87171':'#8A6B26');
-      return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:6px 0;border-bottom:1px solid #1E2312">
-        <div style="font-size:11px;font-weight:700;color:#D4AF37">${bulanNama[g.month]} ${g.year}</div>
-        <div style="font-size:11px;font-weight:700;text-align:right;color:${gColor}">${gainPct>=0?'+':''}${gainPct.toFixed(1)}%</div>
-        <div style="font-size:11px;font-weight:700;text-align:right;color:#F87171">${maxDd.toFixed(1)}%</div>
-        <div style="font-size:11px;font-weight:700;text-align:right;color:${gColor}">${gainPct>=0?'+':''}${gainPct.toFixed(1)}%</div>
-      </div>`;
-    }).join('');
   }catch(e){console.error(e);}
 }
 
