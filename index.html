@@ -65,6 +65,12 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 .graph-month{font-size:15px;font-weight:700;color:#D4AF37}
 .graph-signal{font-size:10px;color:#8A6B26;margin-top:2px}
 .graph-total{text-align:center;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;margin-bottom:12px}
+.graph-tooltip{position:absolute;top:6px;background:#0D0F0A;border:1px solid #2A2E1F;border-radius:9px;padding:7px 11px;pointer-events:none;display:none;white-space:nowrap;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.graph-tooltip-date{font-size:10px;color:#9C7A2E;font-weight:700;margin-bottom:2px}
+.graph-tooltip-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
+.graph-dashed{stroke:#5C4818;stroke-width:1;stroke-dasharray:3,3}
+.graph-dot-outer{fill:none;stroke-width:2}
+.graph-dot-inner{stroke:none}
 
 /* TARGET */
 .target-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px}
@@ -215,7 +221,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <button class="cal-nav-btn" onclick="graphNext()">›</button>
     </div>
     <div class="graph-total" id="graphTotal">¢0.00</div>
-    <div id="graphSvgWrap"></div>
+    <div id="graphSvgWrap" style="position:relative"></div>
   </div>
 </div>
 
@@ -488,8 +494,13 @@ function renderGraph(){
 
   // Hitung kumulatif profit harian dalam bulan ini, mulai dari 0
   let kumulatif=0;
-  const points=[0];
-  rowsBulan.forEach(r=>{ kumulatif+=parseFloat(r.profit||0); points.push(kumulatif); });
+  const points=[0]; // points[i] = kumulatif setelah hari ke-(i-1); points[0]=awal bulan (0)
+  const dailyInfo=[{tanggal:null,profit:null}]; // sejajar dengan points; index 0 = titik awal (tanpa data harian)
+  rowsBulan.forEach(r=>{
+    kumulatif+=parseFloat(r.profit||0);
+    points.push(kumulatif);
+    dailyInfo.push({tanggal:r.tanggal, profit:parseFloat(r.profit||0)});
+  });
 
   const total=kumulatif;
   const isProfit = total>=0;
@@ -516,7 +527,7 @@ function renderGraph(){
   const tglAkhir=fd(rowsBulan[rowsBulan.length-1].tanggal);
 
   wrap.innerHTML=`
-    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:140px;display:block">
+    <svg id="graphSvg" viewBox="0 0 ${W} ${H}" style="width:100%;height:140px;display:block;touch-action:none;cursor:pointer">
       <defs>
         <linearGradient id="graphFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="${fillColorTop}"/>
@@ -526,11 +537,75 @@ function renderGraph(){
       <line x1="${pad}" y1="${zeroY}" x2="${W-pad}" y2="${zeroY}" stroke="#2A2E1F" stroke-width="1"/>
       <polygon points="${areaPts}" fill="url(#graphFill)"/>
       <polyline points="${linePts}" fill="none" stroke="${mainColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <line id="graphIndicatorLine" x1="0" y1="0" x2="0" y2="${H}" class="graph-dashed" style="display:none"/>
+      <circle id="graphIndicatorDot" r="4" class="graph-dot-outer" stroke="${mainColor}" style="display:none"/>
+      <circle id="graphIndicatorDotInner" r="2" class="graph-dot-inner" fill="${mainColor}" style="display:none"/>
     </svg>
     <div style="display:flex;justify-content:space-between;font-size:9px;color:#7A5D1F;margin-top:4px">
       <span>${tglAwal}</span>
       <span>${tglAkhir}</span>
+    </div>
+    <div class="graph-tooltip" id="graphTooltip">
+      <div class="graph-tooltip-date" id="graphTooltipDate">-</div>
+      <div class="graph-tooltip-val" id="graphTooltipVal">¢0.00</div>
     </div>`;
+
+  setupGraphInteraction(points, dailyInfo, xFor, yFor, mainColor, W, pad);
+}
+function setupGraphInteraction(points, dailyInfo, xFor, yFor, mainColor, W, pad){
+  const svg=document.getElementById('graphSvg');
+  const tooltip=document.getElementById('graphTooltip');
+  const tooltipDate=document.getElementById('graphTooltipDate');
+  const tooltipVal=document.getElementById('graphTooltipVal');
+  const line=document.getElementById('graphIndicatorLine');
+  const dot=document.getElementById('graphIndicatorDot');
+  const dotInner=document.getElementById('graphIndicatorDotInner');
+  const wrap=document.getElementById('graphSvgWrap');
+
+  function showAt(clientX){
+    const rect=svg.getBoundingClientRect();
+    const relX=clientX-rect.left;
+    const svgX = (relX/rect.width)*W;
+    // cari index titik terdekat
+    let idx=0, bestDist=Infinity;
+    points.forEach((v,i)=>{
+      const d=Math.abs(xFor(i)-svgX);
+      if(d<bestDist){bestDist=d;idx=i;}
+    });
+    if(idx===0){ hideTooltip(); return; } // titik awal bulan, tidak ada data harian
+    const info=dailyInfo[idx];
+    const px=xFor(idx), py=yFor(points[idx]);
+
+    line.setAttribute('x1',px);line.setAttribute('x2',px);line.style.display='block';
+    dot.setAttribute('cx',px);dot.setAttribute('cy',py);dot.style.display='block';
+    dotInner.setAttribute('cx',px);dotInner.setAttribute('cy',py);dotInner.style.display='block';
+
+    const p=info.profit;
+    const pColor = p>0?'#4ADE80':(p<0?'#F87171':'#8A6B26');
+    tooltipDate.textContent=fd(info.tanggal);
+    tooltipVal.textContent=(p>=0?'+':'')+fc(p);
+    tooltipVal.style.color=pColor;
+
+    const rectWrap=wrap.getBoundingClientRect();
+    const pxPercent = px/W;
+    let leftPx = pxPercent*rectWrap.width;
+    tooltip.style.display='block';
+    const tooltipWidth=tooltip.offsetWidth||110;
+    leftPx = Math.max(4, Math.min(rectWrap.width-tooltipWidth-4, leftPx-tooltipWidth/2));
+    tooltip.style.left=leftPx+'px';
+  }
+  function hideTooltip(){
+    tooltip.style.display='none';
+    line.style.display='none';
+    dot.style.display='none';
+    dotInner.style.display='none';
+  }
+
+  let dragging=false;
+  svg.addEventListener('pointerdown',e=>{dragging=true;showAt(e.clientX);});
+  svg.addEventListener('pointermove',e=>{if(dragging)showAt(e.clientX);});
+  window.addEventListener('pointerup',()=>{dragging=false;});
+  svg.addEventListener('pointerleave',()=>{if(!dragging)hideTooltip();});
 }
 function graphPrev(){graphMonth--;if(graphMonth<0){graphMonth=11;graphYear--;}renderGraph();}
 function graphNext(){graphMonth++;if(graphMonth>11){graphMonth=0;graphYear++;}renderGraph();}
