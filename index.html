@@ -171,22 +171,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   <div id="kasList"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
 </div>
 
-<!-- TARGET -->
-<div class="section">
-  <div class="sec-title">🎯 Target Bulan Ini</div>
-  <div class="target-card">
-    <div class="target-title" id="targetTitle">TARGET -</div>
-    <div class="target-sub" id="targetSub">Memuat...</div>
-    <div class="target-row">
-      <div class="target-box"><div class="target-box-lbl">Saldo Awal Bulan</div><div class="target-box-val" id="tBalLalu">¢0</div></div>
-      <div class="target-arrow">→</div>
-      <div class="target-main"><div class="target-main-lbl">TARGET</div><div class="target-main-val" id="tTarget">¢0</div></div>
-    </div>
-    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-    <div class="progress-info"><span id="progressPct">0% tercapai</span><span id="progressSisa">Sisa: ¢0</span></div>
-  </div>
-</div>
-
 <!-- KALENDER -->
 <div class="section">
   <div class="sec-title">📅 Kalender Trading</div>
@@ -390,7 +374,7 @@ window.onload=async()=>{
 };
 
 async function loadAll(){
-  await Promise.all([loadBalance(),loadTarget(),loadRiwayat(),loadKas(),loadProfitBulanan()]);
+  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan()]);
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
   renderKalender();
 }
@@ -414,57 +398,6 @@ async function loadBalance(){
 
     const totalProfit = allSh.reduce((s,r)=>s+parseFloat(r.profit||0),0);
     set('bProfit', fc(totalProfit));
-  }catch(e){console.error(e);}
-}
-
-// ══ TARGET BULAN INI ══
-async function loadTarget(){
-  try{
-    const now=new Date();
-    const bulanNama=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][now.getMonth()];
-    set('targetTitle', `TARGET ${bulanNama.toUpperCase()} ${now.getFullYear()}`);
-
-    const semua=await api('saldo_harian?select=*&order=tanggal.asc');
-    if(!semua.length){
-      set('targetSub','Belum ada data');
-      return;
-    }
-    const awalBulan=new Date(now.getFullYear(),now.getMonth(),1);
-    const dataSebelumBulan=semua.filter(r=>new Date(r.tanggal)<awalBulan);
-    const saldoAwalBulan = dataSebelumBulan.length ? parseFloat(dataSebelumBulan[dataSebelumBulan.length-1].saldo_mt4||0) : parseFloat(semua[0].saldo_mt4||0);
-    const saldoTerakhir = parseFloat(semua[semua.length-1].saldo_mt4||0);
-
-    const targetPct=0.20; // target pertumbuhan bulanan, bisa disesuaikan
-    const target = saldoAwalBulan*(1+targetPct);
-
-    set('tBalLalu', fc(saldoAwalBulan));
-    set('tTarget', fc(target));
-
-    const progress = target>saldoAwalBulan ? Math.max(0,Math.min(100,(saldoTerakhir-saldoAwalBulan)/(target-saldoAwalBulan)*100)) : 0;
-    document.getElementById('progressFill').style.width=progress.toFixed(1)+'%';
-
-    // Status warna: hijau jika target sudah tercapai, merah jika bulan sudah lewat & belum tercapai, emas jika masih berjalan
-    const akhirBulan=new Date(now.getFullYear(),now.getMonth()+1,0);
-    const sudahLewatBulan = now>akhirBulan;
-    const fill=document.getElementById('progressFill');
-    const pctEl=document.getElementById('progressPct');
-    if(progress>=100){
-      fill.style.background='linear-gradient(90deg,#1E4A14,#4ADE80)';
-      pctEl.style.color='#4ADE80';
-      set('progressPct', '✅ Target tercapai ('+progress.toFixed(1)+'%)');
-    }else if(sudahLewatBulan){
-      fill.style.background='linear-gradient(90deg,#4A1414,#F87171)';
-      pctEl.style.color='#F87171';
-      set('progressPct', '❌ Tidak tercapai ('+progress.toFixed(1)+'%)');
-    }else{
-      fill.style.background='linear-gradient(90deg,#5C4818,#C8A84B)';
-      pctEl.style.color='#C8A84B';
-      set('progressPct', progress.toFixed(1)+'% tercapai');
-    }
-
-    const sisa=Math.max(0,target-saldoTerakhir);
-    set('progressSisa', 'Sisa: '+fc(sisa));
-    set('targetSub', `Saldo saat ini ${fc(saldoTerakhir)}`);
   }catch(e){console.error(e);}
 }
 
