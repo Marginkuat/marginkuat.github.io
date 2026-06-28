@@ -64,7 +64,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 .graph-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .graph-month{font-size:15px;font-weight:700;color:#D4AF37}
 .graph-signal{font-size:10px;color:#8A6B26;margin-top:2px}
-.graph-total{text-align:center;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;margin-bottom:12px}
+.graph-total{text-align:center;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;margin-bottom:2px}
+.graph-pct{text-align:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;margin-bottom:12px}
 .graph-tooltip{position:absolute;top:6px;background:#0D0F0A;border:1px solid #2A2E1F;border-radius:9px;padding:7px 11px;pointer-events:none;display:none;white-space:nowrap;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.4)}
 .graph-tooltip-date{font-size:10px;color:#9C7A2E;font-weight:700;margin-bottom:2px}
 .graph-tooltip-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
@@ -191,6 +192,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <button class="cal-nav-btn" onclick="graphNext()">›</button>
     </div>
     <div class="graph-total" id="graphTotal">¢0.00</div>
+    <div class="graph-pct" id="graphPct">0%</div>
     <div id="graphSvgWrap" style="position:relative"></div>
   </div>
 </div>
@@ -408,7 +410,7 @@ window.onload=async()=>{
 async function loadAll(){
   await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan()]);
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
-  allSaldoData=await api('saldo_harian?select=tanggal,profit&order=tanggal.asc');
+  allSaldoData=await api('saldo_harian?select=tanggal,profit,saldo_mt4&order=tanggal.asc');
   renderKalender();
   renderGraph();
 }
@@ -488,6 +490,8 @@ function renderGraph(){
   if(!rowsBulan.length){
     set('graphTotal','¢0.00');
     document.getElementById('graphTotal').style.color='#8A6B26';
+    set('graphPct','0%');
+    document.getElementById('graphPct').style.color='#8A6B26';
     wrap.innerHTML='<div style="text-align:center;padding:30px 0;color:#7A5D1F;font-size:12px">Belum ada data bulan ini</div>';
     return;
   }
@@ -510,6 +514,12 @@ function renderGraph(){
 
   set('graphTotal', (total>=0?'+':'')+fc(total));
   document.getElementById('graphTotal').style.color=mainColor;
+
+  // Saldo awal bulan = saldo_mt4 hari pertama tercatat dikurangi profit hari itu
+  const saldoAwalBulan = parseFloat(rowsBulan[0].saldo_mt4||0) - parseFloat(rowsBulan[0].profit||0);
+  const pct = saldoAwalBulan>0 ? (total/saldoAwalBulan*100) : 0;
+  set('graphPct', (pct>=0?'+':'')+pct.toFixed(1)+'%');
+  document.getElementById('graphPct').style.color=mainColor;
 
   // Render SVG
   const W=300,H=140,pad=8;
