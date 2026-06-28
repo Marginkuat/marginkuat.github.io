@@ -59,6 +59,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 .cal-leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#8A6B26}
 .cal-leg-dot{width:8px;height:8px;border-radius:3px}
 
+/* GRAFIK BULANAN */
+.graph-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px}
+.graph-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.graph-month{font-size:15px;font-weight:700;color:#D4AF37}
+.graph-signal{font-size:10px;color:#8A6B26;margin-top:2px}
+.graph-total{text-align:center;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;margin-bottom:12px}
+
 /* TARGET */
 .target-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px}
 .target-title{text-align:center;font-size:13px;font-weight:700;color:#D4AF37;margin-bottom:4px}
@@ -192,6 +199,23 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#2D0E0E"></div>Loss</div>
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#161A0F"></div>Tidak Trading</div>
     </div>
+  </div>
+</div>
+
+<!-- GRAFIK BULANAN -->
+<div class="section">
+  <div class="sec-title">📈 Grafik Kinerja Bulanan</div>
+  <div class="graph-card">
+    <div class="graph-nav">
+      <button class="cal-nav-btn" onclick="graphPrev()">‹</button>
+      <div style="text-align:center">
+        <div class="graph-month" id="graphMonth">-</div>
+        <div class="graph-signal" id="graphSignal">0 Signal</div>
+      </div>
+      <button class="cal-nav-btn" onclick="graphNext()">›</button>
+    </div>
+    <div class="graph-total" id="graphTotal">¢0.00</div>
+    <div id="graphSvgWrap"></div>
   </div>
 </div>
 
@@ -344,7 +368,9 @@ const fd=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short
 // ══ STATE ══
 let isAdmin=false;
 let calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
+let graphYear=new Date().getFullYear(),graphMonth=new Date().getMonth();
 let saldoData=[];
+let allSaldoData=[];
 
 function show(id){document.getElementById(id).style.display='block'}
 function hide(id){document.getElementById(id).style.display='none'}
@@ -376,7 +402,9 @@ window.onload=async()=>{
 async function loadAll(){
   await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan()]);
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
+  allSaldoData=await api('saldo_harian?select=tanggal,profit&order=tanggal.asc');
   renderKalender();
+  renderGraph();
 }
 
 // ══ BALANCE HERO ══
@@ -437,6 +465,75 @@ function renderKalender(){
 }
 function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderKalender();}
 function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderKalender();}
+
+// ══ GRAFIK BULANAN ══
+function renderGraph(){
+  const bulanNama=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  set('graphMonth', `${bulanNama[graphMonth]} ${graphYear}`);
+
+  const rowsBulan = allSaldoData.filter(r=>{
+    const d=new Date(r.tanggal);
+    return d.getFullYear()===graphYear && d.getMonth()===graphMonth;
+  }).sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+
+  set('graphSignal', rowsBulan.length+' Hari Tercatat');
+
+  const wrap=document.getElementById('graphSvgWrap');
+  if(!rowsBulan.length){
+    set('graphTotal','¢0.00');
+    document.getElementById('graphTotal').style.color='#8A6B26';
+    wrap.innerHTML='<div style="text-align:center;padding:30px 0;color:#7A5D1F;font-size:12px">Belum ada data bulan ini</div>';
+    return;
+  }
+
+  // Hitung kumulatif profit harian dalam bulan ini, mulai dari 0
+  let kumulatif=0;
+  const points=[0];
+  rowsBulan.forEach(r=>{ kumulatif+=parseFloat(r.profit||0); points.push(kumulatif); });
+
+  const total=kumulatif;
+  const isProfit = total>=0;
+  const mainColor = isProfit ? '#4ADE80' : '#F87171';
+  const fillColorTop = isProfit ? 'rgba(74,222,128,0.35)' : 'rgba(248,113,113,0.35)';
+  const fillColorBottom = isProfit ? 'rgba(74,222,128,0.02)' : 'rgba(248,113,113,0.02)';
+
+  set('graphTotal', (total>=0?'+':'')+fc(total));
+  document.getElementById('graphTotal').style.color=mainColor;
+
+  // Render SVG
+  const W=300,H=140,pad=8;
+  const minV=Math.min(...points), maxV=Math.max(...points);
+  const range = (maxV-minV)||1;
+  const xStep = (W-pad*2)/(points.length-1);
+  const yFor = v => H-pad - ((v-minV)/range)*(H-pad*2);
+  const xFor = i => pad + i*xStep;
+
+  const linePts = points.map((v,i)=>`${xFor(i).toFixed(1)},${yFor(v).toFixed(1)}`).join(' ');
+  const zeroY = yFor(0).toFixed(1);
+  const areaPts = `${pad},${zeroY} ${linePts} ${xFor(points.length-1).toFixed(1)},${zeroY}`;
+
+  const tglAwal=fd(rowsBulan[0].tanggal);
+  const tglAkhir=fd(rowsBulan[rowsBulan.length-1].tanggal);
+
+  wrap.innerHTML=`
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:140px;display:block">
+      <defs>
+        <linearGradient id="graphFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${fillColorTop}"/>
+          <stop offset="100%" stop-color="${fillColorBottom}"/>
+        </linearGradient>
+      </defs>
+      <line x1="${pad}" y1="${zeroY}" x2="${W-pad}" y2="${zeroY}" stroke="#2A2E1F" stroke-width="1"/>
+      <polygon points="${areaPts}" fill="url(#graphFill)"/>
+      <polyline points="${linePts}" fill="none" stroke="${mainColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:#7A5D1F;margin-top:4px">
+      <span>${tglAwal}</span>
+      <span>${tglAkhir}</span>
+    </div>`;
+}
+function graphPrev(){graphMonth--;if(graphMonth<0){graphMonth=11;graphYear--;}renderGraph();}
+function graphNext(){graphMonth++;if(graphMonth>11){graphMonth=0;graphYear++;}renderGraph();}
 
 // ══ RIWAYAT ══
 async function loadRiwayat(){
