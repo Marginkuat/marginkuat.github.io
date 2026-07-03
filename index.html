@@ -197,6 +197,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- SCORE DASHBOARD -->
+<div class="section">
+  <div class="sec-title">🏆 Score Dashboard</div>
+  <div class="graph-card">
+    <div id="scoreDashboard" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
 <!-- KALENDER -->
 <div class="section">
   <div class="sec-title">📅 Kalender Trading</div>
@@ -269,6 +277,12 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     </div>
     <input class="inp" type="number" id="inpProfit" placeholder="0.00 (tulis angka positif)" step="0.01" min="0">
     <input type="hidden" id="plType" value="profit">
+
+    <label class="lbl">Gross Profit Hari Ini (total dari transaksi yang untung)</label>
+    <input class="inp" type="number" id="inpGrossProfit" placeholder="0.00" step="0.01" min="0">
+
+    <label class="lbl">Gross Loss Hari Ini (total dari transaksi yang rugi, angka positif)</label>
+    <input class="inp" type="number" id="inpGrossLoss" placeholder="0.00" step="0.01" min="0">
 
     <label class="lbl">Catatan (opsional)</label>
     <input class="inp" id="inpCatatan" placeholder="Contoh: Setelah WD 600">
@@ -408,7 +422,7 @@ window.onload=async()=>{
 };
 
 async function loadAll(){
-  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan()]);
+  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore()]);
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
   allSaldoData=await api('saldo_harian?select=tanggal,profit,saldo_mt4&order=tanggal.asc');
   renderKalender();
@@ -827,6 +841,8 @@ async function simpanSaldo(){
   const tgl=document.getElementById('inpTgl').value;
   const jumlahSignal=parseInt(document.getElementById('inpSignal').value)||0;
   const catatan=document.getElementById('inpCatatan').value.trim();
+  const grossProfit=parseFloat(document.getElementById('inpGrossProfit').value)||0;
+  const grossLoss=parseFloat(document.getElementById('inpGrossLoss').value)||0;
   if(!saldo){toast('❌ Isi saldo MT4');return;}
   if(!tgl){toast('❌ Isi tanggal');return;}
   try{
@@ -834,7 +850,9 @@ async function simpanSaldo(){
       saldo_mt4: parseFloat(saldo.toFixed(2)),
       profit: parseFloat((profit||0).toFixed(2)),
       jumlah_signal: jumlahSignal,
-      catatan: catatan || null
+      catatan: catatan || null,
+      gross_profit: grossProfit||null,
+      gross_loss: grossLoss||null
     };
     const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
     if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyData);
@@ -844,6 +862,8 @@ async function simpanSaldo(){
     document.getElementById('inpProfit').value='';
     document.getElementById('inpSignal').value='';
     document.getElementById('inpCatatan').value='';
+    document.getElementById('inpGrossProfit').value='';
+    document.getElementById('inpGrossLoss').value='';
     document.getElementById('pvBox').style.display='none';
     await loadAll();
   }catch(e){
@@ -851,6 +871,121 @@ async function simpanSaldo(){
     toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,200));
   }
 }
+
+// ══ SCORE DASHBOARD ══
+async function loadScore(){
+  try{
+    const now=new Date();
+    const cutoff=new Date(now.getFullYear(),now.getMonth()-5,1); // 6 bulan terakhir
+    const rows=await api(`saldo_harian?select=tanggal,profit,gross_profit,gross_loss&order=tanggal.asc`);
+    const r6=rows.filter(r=>new Date(r.tanggal)>=cutoff);
+
+    // ── Profit Factor ──
+    const totalGP=r6.reduce((s,r)=>s+parseFloat(r.gross_profit||0),0);
+    const totalGL=r6.reduce((s,r)=>s+parseFloat(r.gross_loss||0),0);
+    const pf = totalGL>0 ? totalGP/totalGL : (totalGP>0?99:0);
+    let pfSkor=0;
+    if(pf>=2.1)pfSkor=4;else if(pf>=1.7)pfSkor=3;else if(pf>=1.4)pfSkor=2;else if(pf>=1.1)pfSkor=1;
+    const pfLabel=pfSkor>=3?'High':pfSkor>=2?'Medium':'Low';
+    const pfLabelColor=pfSkor>=3?'#4ADE80':pfSkor>=2?'#C8A84B':'#F87171';
+
+    // ── Profit Months ──
+    const grouped={};
+    r6.forEach(r=>{
+      const d=new Date(r.tanggal);
+      const k=`${d.getFullYear()}-${d.getMonth()}`;
+      if(!grouped[k])grouped[k]=0;
+      grouped[k]+=parseFloat(r.profit||0);
+    });
+    const bulanProfit=Object.values(grouped).filter(v=>v>0).length;
+    let pmSkor=0;
+    if(bulanProfit>=6)pmSkor=4;else if(bulanProfit>=5)pmSkor=3;else if(bulanProfit>=3)pmSkor=2;else if(bulanProfit>=2)pmSkor=1;
+    const pmLabel=pmSkor>=3?'High':pmSkor>=2?'Medium':'Low';
+    const pmLabelColor=pmSkor>=3?'#4ADE80':pmSkor>=2?'#C8A84B':'#F87171';
+
+    // ── Monthly Loss Ratio ──
+    const bulanValues=Object.values(grouped);
+    const avgProfit=bulanValues.length?bulanValues.reduce((a,b)=>a+b,0)/bulanValues.length:0;
+    const worstLoss=Math.min(...bulanValues,0);
+    const mlr=avgProfit>0?Math.abs(worstLoss)/avgProfit*100:0;
+    let mlrSkor=0;
+    if(mlr<=10)mlrSkor=4;else if(mlr<=50)mlrSkor=3;else if(mlr<=100)mlrSkor=2;else if(mlr<=150)mlrSkor=1;
+    const mlrLabel=mlrSkor>=3?'High':mlrSkor>=2?'Medium':'Low';
+    const mlrLabelColor=mlrSkor>=3?'#4ADE80':mlrSkor>=2?'#C8A84B':'#F87171';
+
+    // ── Recovery Factor ──
+    let peak=0,maxDd=0,cumPL=0;
+    r6.forEach(r=>{
+      cumPL+=parseFloat(r.profit||0);
+      if(cumPL>peak)peak=cumPL;
+      const dd=peak-cumPL;
+      if(dd>maxDd)maxDd=dd;
+    });
+    const totalNetPL=r6.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+    const rfVal=maxDd>0?totalNetPL/maxDd:0;
+    let rfSkor=0;
+    if(rfVal>=8)rfSkor=4;else if(rfVal>=5)rfSkor=3;else if(rfVal>=1.01)rfSkor=2;else if(rfVal>=0.01)rfSkor=1;
+    const rfLabel=rfSkor>=3?'High':rfSkor>=2?'Medium':'Low';
+    const rfLabelColor=rfSkor>=3?'#4ADE80':rfSkor>=2?'#C8A84B':'#F87171';
+
+    // ── Total Score & Speedometer ──
+    const totalSkor=pfSkor+pmSkor+mlrSkor+rfSkor;
+    const maxSkor=16;
+    const skorNorm=(totalSkor/maxSkor)*4;
+
+    // Render speedometer SVG
+    const el=document.getElementById('scoreDashboard');
+    const pct=totalSkor/maxSkor;
+    const angle=-180+pct*180;
+    const rad=(angle+90)*Math.PI/180;
+    const cx=120,cy=100,r=80;
+    const nx=cx+r*Math.cos(rad-Math.PI/2);
+    const ny=cy+r*Math.sin(rad-Math.PI/2);
+
+    el.innerHTML=`
+      <svg viewBox="0 0 240 115" style="width:100%;max-width:280px;display:block;margin:0 auto 12px">
+        <defs>
+          <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#F87171"/>
+            <stop offset="50%" stop-color="#C8A84B"/>
+            <stop offset="100%" stop-color="#4ADE80"/>
+          </linearGradient>
+        </defs>
+        <!-- Track background -->
+        <path d="M 40,100 A 80,80 0 0,1 200,100" fill="none" stroke="#2A2E1F" stroke-width="14" stroke-linecap="round"/>
+        <!-- Colored arc -->
+        <path d="M 40,100 A 80,80 0 0,1 200,100" fill="none" stroke="url(#gaugeGrad)" stroke-width="12" stroke-linecap="round" opacity="0.8"/>
+        <!-- Needle -->
+        <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#D4AF37" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="${cx}" cy="${cy}" r="5" fill="#D4AF37"/>
+        <!-- Labels -->
+        <text x="28" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">0</text>
+        <text x="212" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">16</text>
+        <!-- Score -->
+        <text x="120" y="90" font-size="22" font-weight="800" fill="#D4AF37" text-anchor="middle">${totalSkor}</text>
+        <text x="120" y="108" font-size="10" fill="#8A6B26" text-anchor="middle">dari 16 poin</text>
+      </svg>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${scoreCard('Profit Factor', pf>=99?'∞':pf.toFixed(2), pfSkor, pfLabel, pfLabelColor)}
+        ${scoreCard('Monthly Loss Ratio', mlr.toFixed(1)+'%', mlrSkor, mlrLabel, mlrLabelColor)}
+        ${scoreCard('Profit Months', bulanProfit+' Bulan', pmSkor, pmLabel, pmLabelColor)}
+        ${scoreCard('Recovery Factor', rfVal.toFixed(2), rfSkor, rfLabel, rfLabelColor)}
+      </div>`;
+  }catch(e){console.error(e);}
+}
+
+function scoreCard(title, val, skor, label, labelColor){
+  return `<div style="background:#1E2312;border:1px solid #2A2E1F;border-radius:12px;padding:12px">
+    <div style="font-size:10px;font-weight:700;color:#9C7A2E;margin-bottom:4px">${title}</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#D4AF37;margin-bottom:6px">${val}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:16px;font-weight:800;color:#D4AF37">${skor}<span style="font-size:11px;color:#5A5A3A"> / 4</span></div>
+      <div style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:${labelColor}22;color:${labelColor}">${label}</div>
+    </div>
+  </div>`;
+}
+
 </script>
 </body>
 </html>
