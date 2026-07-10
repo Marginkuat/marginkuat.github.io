@@ -130,6 +130,23 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 .toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-8px);background:#1E2312;color:#D4AF37;border:1px solid #2A2E1F;padding:9px 16px;border-radius:9px;font-size:11px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:normal;max-width:90vw;text-align:center;line-height:1.4}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* KALKULATOR LOT */
+.calc-seg{display:flex;background:#0D0F0A;border:1px solid #2A2E1F;border-radius:10px;padding:3px;gap:3px;margin-bottom:14px}
+.calc-seg button{flex:1;background:transparent;border:none;color:#8A6B26;font-family:'Inter',sans-serif;font-size:11px;font-weight:700;padding:9px 4px;border-radius:7px;cursor:pointer;transition:all .15s}
+.calc-seg button.active{background:linear-gradient(135deg,#B8860B,#C8A84B);color:#0D0F0A}
+.calc-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.calc-hero{background:linear-gradient(135deg,#1E2312,#161A0F);border:1px solid #B8860B;border-radius:14px;padding:20px;text-align:center;margin-bottom:14px}
+.calc-hero-lbl{font-size:10px;color:#C8A84B;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;font-weight:700}
+.calc-hero-val{font-family:'JetBrains Mono',monospace;font-size:38px;font-weight:800;color:#FFD700;letter-spacing:-1px}
+.calc-hero-note{font-size:11px;color:#8A6B26;margin-top:8px;font-family:'JetBrains Mono',monospace}
+.calc-risk-track{height:7px;background:#0D0F0A;border-radius:4px;overflow:hidden;margin-top:14px}
+.calc-risk-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#4ADE80,#C8A84B);transition:width .2s}
+.calc-risk-labels{display:flex;justify-content:space-between;font-size:9px;color:#7A5D1F;margin-top:5px;font-family:'JetBrains Mono',monospace}
+.calc-wc-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #1E2312;font-size:12px}
+.calc-wc-row:last-child{border-bottom:none}
+.calc-wc-row .n{color:#8A6B26}
+.calc-wc-row .v{font-family:'JetBrains Mono',monospace;font-weight:700;color:#D4AF37}
+
 .divider{height:1px;background:#1E2312;margin:20px 16px 0}
 .footer{padding:20px 16px;text-align:center;font-size:10px;color:#4A3A14;line-height:1.8}
 #riwayatSaldoWrap{max-height:300px;overflow-y:auto}
@@ -178,6 +195,123 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="bal-box"><div class="bal-box-val cg" id="bProfit">¢0</div><div class="bal-box-lbl">Total Profit</div></div>
   </div>
 </div>
+
+<!-- KALKULATOR LOT INVESTOR -->
+<div class="section">
+  <div class="sec-title">🧮 Kalkulator Lot Investor</div>
+  <div class="graph-card">
+
+    <label class="lbl">Modal Investor ($)</label>
+    <input type="number" class="inp" id="calcModal" value="176" step="1">
+
+    <label class="lbl">Risk per Transaksi (% dari modal)</label>
+    <input type="number" class="inp" id="calcRisk" value="1.5" step="0.1" style="margin-bottom:14px">
+
+    <label class="lbl">Skenario SL</label>
+    <div class="calc-seg" id="calcSeg">
+      <button data-sl="166.66" data-tp="500" class="active">A · 166,66 pips (RR 1:3)</button>
+      <button data-sl="250" data-tp="500">B · 250 pips (RR 1:2)</button>
+    </div>
+
+    <div class="calc-row">
+      <div>
+        <label class="lbl">SL (pips)</label>
+        <input type="number" class="inp" id="calcSL" value="166.66" step="0.01">
+      </div>
+      <div>
+        <label class="lbl">TP (pips)</label>
+        <input type="number" class="inp" id="calcTP" value="500" step="0.01">
+      </div>
+    </div>
+
+    <div class="calc-row">
+      <div>
+        <label class="lbl">Nilai/Pip saat Tes ($)</label>
+        <input type="number" class="inp" id="calcPipValue" value="0.1" step="0.01">
+      </div>
+      <div>
+        <label class="lbl">Lot saat Tes</label>
+        <input type="number" class="inp" id="calcLotTest" value="0.01" step="0.01" style="margin-bottom:0">
+      </div>
+    </div>
+
+    <div class="calc-hero" style="margin-top:16px">
+      <div class="calc-hero-lbl">Lot untuk Investor Ini</div>
+      <div class="calc-hero-val" id="calcOutLot">0.000</div>
+      <div class="calc-hero-note" id="calcOutLotNote">= lot tes × faktor skala</div>
+      <div class="calc-risk-track"><div class="calc-risk-fill" id="calcRiskBar" style="width:15%"></div></div>
+      <div class="calc-risk-labels"><span>0%</span><span id="calcRiskBarLabel">1.5% dari modal</span><span>10%</span></div>
+    </div>
+
+    <div class="bal-grid" style="margin-bottom:14px">
+      <div class="bal-box"><div class="bal-box-val cr" id="calcOutRisk">$0.00</div><div class="bal-box-lbl">Risk $</div></div>
+      <div class="bal-box"><div class="bal-box-val cg" id="calcOutReward">$0.00</div><div class="bal-box-lbl">Reward $</div></div>
+      <div class="bal-box"><div class="bal-box-val cy" id="calcOutBE">0%</div><div class="bal-box-lbl">BE Win Rate</div></div>
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Worst-Case Loss Beruntun</div>
+    <div class="calc-wc-row"><span class="n">5x loss</span><span class="v" id="calcWc5">$0.00 (0%)</span></div>
+    <div class="calc-wc-row"><span class="n">10x loss</span><span class="v" id="calcWc10">$0.00 (0%)</span></div>
+    <div class="calc-wc-row"><span class="n">15x loss</span><span class="v" id="calcWc15">$0.00 (0%)</span></div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const modalEl=$('calcModal'), riskEl=$('calcRisk'), slEl=$('calcSL'), tpEl=$('calcTP'),
+        pipvalueEl=$('calcPipValue'), lottestEl=$('calcLotTest'), segBtns=document.querySelectorAll('#calcSeg button');
+
+  segBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      segBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      slEl.value=btn.dataset.sl; tpEl.value=btn.dataset.tp;
+      calcRun();
+    });
+  });
+
+  function fmtUSD(n){return '$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function fmtPct(n){return (n*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
+
+  function calcRun(){
+    const modal=parseFloat(modalEl.value)||0;
+    const riskPct=(parseFloat(riskEl.value)||0)/100;
+    const sl=parseFloat(slEl.value)||0;
+    const tp=parseFloat(tpEl.value)||0;
+    const pipvalue=parseFloat(pipvalueEl.value)||0;
+    const lottest=parseFloat(lottestEl.value)||0;
+
+    const rr = sl>0 ? tp/sl : 0;
+    const beWinRate = rr>0 ? 1/(1+rr) : 0;
+    const riskTarget = modal*riskPct;
+    const rewardTarget = riskTarget*rr;
+    const slDollarTest = sl*pipvalue;
+    const scaleFactor = slDollarTest>0 ? riskTarget/slDollarTest : 0;
+    const lotInvestor = lottest*scaleFactor;
+
+    $('calcOutLot').textContent = lotInvestor.toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3});
+    $('calcOutLotNote').textContent = `= ${lottest} × ${scaleFactor.toFixed(3)} (faktor skala)`;
+    $('calcOutRisk').textContent = fmtUSD(riskTarget);
+    $('calcOutReward').textContent = fmtUSD(rewardTarget);
+    $('calcOutBE').textContent = fmtPct(beWinRate);
+
+    const barPct = Math.min(riskPct*100,10);
+    $('calcRiskBar').style.width = (barPct/10*100)+'%';
+    $('calcRiskBarLabel').textContent = fmtPct(riskPct)+' dari modal';
+
+    [5,10,15].forEach(n=>{
+      const total=riskTarget*n;
+      const pct=modal>0?total/modal:0;
+      $('calcWc'+n).textContent = `${fmtUSD(total)} (${fmtPct(pct)})`;
+    });
+  }
+
+  [modalEl,riskEl,tpEl,slEl,pipvalueEl,lottestEl].forEach(el=>el.addEventListener('input',calcRun));
+  calcRun();
+})();
+</script>
 
 <!-- GRAFIK BULANAN -->
 <div class="section">
