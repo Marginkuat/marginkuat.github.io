@@ -196,31 +196,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
-<!-- KALKULATOR LOT INVESTOR -->
+<!-- KALKULATOR RISIKO PER PAIR (LOT FIX 0,01) -->
 <div class="section">
-  <div class="sec-title">🧮 Kalkulator Lot Investor</div>
+  <div class="sec-title">🧮 Kalkulator Risiko per Pair</div>
   <div class="graph-card">
 
     <label class="lbl">Modal Investor ($)</label>
     <input type="number" class="inp" id="calcModal" value="170" step="1">
-
-    <label class="lbl" style="margin-bottom:4px">Aturan Risiko: Loss Beruntun = Batas Drawdown</label>
-    <div class="calc-row" style="margin-bottom:6px">
-      <div>
-        <label class="lbl" style="font-size:10px;color:#7A5D1F">Loss Beruntun (x)</label>
-        <input type="number" class="inp" id="calcLossCount" value="5" step="1" style="margin-bottom:0">
-      </div>
-      <div>
-        <label class="lbl" style="font-size:10px;color:#7A5D1F">Target Max Drawdown (%)</label>
-        <input type="number" class="inp" id="calcTargetDD" value="50" step="1" style="margin-bottom:0">
-      </div>
-    </div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-bottom:6px">
-      → Berhenti trading jika total loss mencapai: <span id="calcStopPips" style="color:#F87171;font-weight:700">0 pips</span>
-    </div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-bottom:14px">
-      → Risk per transaksi (otomatis): <span id="calcRiskAuto" style="color:#FFD700;font-weight:700">10.0%</span>
-    </div>
 
     <label class="lbl">Pilih Pair / Skenario</label>
     <select class="inp" id="calcPairSelect" style="margin-bottom:14px">
@@ -264,36 +246,44 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
     <div class="calc-row">
       <div>
-        <label class="lbl">Nilai/Pip saat Tes ($)</label>
+        <label class="lbl">Nilai/Pip ($)</label>
         <input type="number" class="inp" id="calcPipValue" value="0.1" step="0.01">
       </div>
       <div>
-        <label class="lbl">Lot saat Tes <span style="color:#5C4818;font-size:9px">🔒 tetap</span></label>
+        <label class="lbl">Lot <span style="color:#5C4818;font-size:9px">🔒 fix, semua pair</span></label>
         <input type="number" class="inp" id="calcLotTest" value="0.01" step="0.01" readonly style="margin-bottom:2px;opacity:0.65;cursor:not-allowed">
-        <div style="font-size:9px;color:#5C4818;font-family:'JetBrains Mono',monospace">acuan rumus analisa, jangan diubah</div>
       </div>
     </div>
 
     <div class="calc-hero" style="margin-top:16px">
-      <div class="calc-hero-lbl">Lot Rekomendasi untuk Investor Ini</div>
-      <div class="calc-hero-val" id="calcOutLot">0.000</div>
-      <div class="calc-hero-note" id="calcOutLotNote">= lot tes × faktor skala</div>
-      <div style="font-size:10px;color:#7A5D1F;margin-top:4px">*Sekadar acuan — lot aktual tetap pilihan masing-masing investor</div>
+      <div class="calc-hero-lbl">Risk $ per Transaksi (lot 0,01)</div>
+      <div class="calc-hero-val" id="calcOutRiskHero">$0.00</div>
+      <div class="calc-hero-note" id="calcOutRiskNote">= SL pips × nilai/pip</div>
       <div class="calc-risk-track"><div class="calc-risk-fill" id="calcRiskBar" style="width:15%"></div></div>
-      <div class="calc-risk-labels"><span>0%</span><span id="calcRiskBarLabel">1.5% dari modal</span><span>10%</span></div>
+      <div class="calc-risk-labels"><span>0%</span><span id="calcRiskBarLabel">0% dari modal</span><span>10%</span></div>
     </div>
 
     <div class="bal-grid" style="margin-bottom:14px">
-      <div class="bal-box"><div class="bal-box-val cr" id="calcOutRisk">$0.00</div><div class="bal-box-lbl">Risk $</div></div>
       <div class="bal-box"><div class="bal-box-val cg" id="calcOutReward">$0.00</div><div class="bal-box-lbl">Reward $</div></div>
       <div class="bal-box"><div class="bal-box-val cy" id="calcOutBE">0%</div><div class="bal-box-lbl">BE Win Rate</div></div>
+      <div class="bal-box"><div class="bal-box-val" id="calcOutRR" style="color:#D4AF37">1:0</div><div class="bal-box-lbl">RR</div></div>
     </div>
 
-    <div style="font-size:10px;font-weight:700;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Worst-Case Loss Beruntun</div>
+    <label class="lbl" style="margin-bottom:4px">Target Max Drawdown per Bulan (%)</label>
+    <input type="number" class="inp" id="calcTargetDD" value="50" step="1" style="margin-bottom:14px">
+
+    <div class="calc-hero" style="background:linear-gradient(135deg,#2A1010,#161A0F 70%);border-color:#8A2020">
+      <div class="calc-hero-lbl" style="color:#F87171">Berhenti Trading Setelah</div>
+      <div class="calc-hero-val" id="calcOutLossCount" style="color:#FF8080">0x loss</div>
+      <div class="calc-hero-note" id="calcOutLossPips">= 0 pips total, sampai −0% modal</div>
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px">Worst-Case Loss Beruntun (pair ini, lot 0,01)</div>
     <div class="calc-wc-row"><span class="n">5x loss</span><span class="v" id="calcWc5">$0.00 (0%)</span></div>
     <div class="calc-wc-row"><span class="n">10x loss</span><span class="v" id="calcWc10">$0.00 (0%)</span></div>
     <div class="calc-wc-row"><span class="n">15x loss</span><span class="v" id="calcWc15">$0.00 (0%)</span></div>
-    <div class="calc-wc-row" style="border-top:1px solid #2A2E1F;margin-top:4px;padding-top:10px"><span class="n">⚠️ Bangkrut jika kalah beruntun terus</span><span class="v" id="calcMonthsBankrupt" style="color:#F87171">2 bulan</span></div>
+
+    <div style="font-size:10px;color:#7A5D1F;margin-top:12px;line-height:1.5">*Lot fix 0,01 untuk semua pair (sesuai rumusan analisa). Karena SL pips beda tiap pair, risk $ dan jumlah loss beruntun sampai batas drawdown otomatis ikut beda per pair — bukan angka tetap yang sama untuk semua.</div>
 
   </div>
 </div>
@@ -301,7 +291,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  const modalEl=$('calcModal'), lossCountEl=$('calcLossCount'), targetDDEl=$('calcTargetDD'),
+  const modalEl=$('calcModal'), targetDDEl=$('calcTargetDD'),
         slEl=$('calcSL'), tpEl=$('calcTP'),
         pipvalueEl=$('calcPipValue'), lottestEl=$('calcLotTest'), pairSelectEl=$('calcPairSelect');
 
@@ -316,46 +306,46 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
   function calcRun(){
     const modal=parseFloat(modalEl.value)||0;
-    const lossCount=parseFloat(lossCountEl.value)||1;
     const targetDD=(parseFloat(targetDDEl.value)||0)/100;
-    const riskPct = lossCount>0 ? targetDD/lossCount : 0;
-    $('calcRiskAuto').textContent = (riskPct*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
     const sl=parseFloat(slEl.value)||0;
     const tp=parseFloat(tpEl.value)||0;
     const pipvalue=parseFloat(pipvalueEl.value)||0;
-    const lottest=parseFloat(lottestEl.value)||0;
+    const lot=parseFloat(lottestEl.value)||0.01;
 
-    $('calcStopPips').textContent = (sl*lossCount).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})+' pips';
-
+    // Risk $ nyata dari lot fix (BUKAN target/asumsi)
+    const riskDollar = sl*pipvalue; // lot referensi sudah melekat di nilai pipvalue 0,1 utk lot 0,01
     const rr = sl>0 ? tp/sl : 0;
+    const rewardDollar = riskDollar*rr;
     const beWinRate = rr>0 ? 1/(1+rr) : 0;
-    const riskTarget = modal*riskPct;
-    const rewardTarget = riskTarget*rr;
-    const slDollarTest = sl*pipvalue;
-    const scaleFactor = slDollarTest>0 ? riskTarget/slDollarTest : 0;
-    const lotInvestor = lottest*scaleFactor;
+    const riskPct = modal>0 ? riskDollar/modal : 0;
 
-    $('calcOutLot').textContent = lotInvestor.toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3});
-    $('calcOutLotNote').textContent = `= ${lottest} × ${scaleFactor.toFixed(3)} (faktor skala)`;
-    $('calcOutRisk').textContent = fmtUSD(riskTarget);
-    $('calcOutReward').textContent = fmtUSD(rewardTarget);
+    $('calcOutRiskHero').textContent = fmtUSD(riskDollar);
+    $('calcOutRiskNote').textContent = `${sl} pips × $${pipvalue}/pip (lot ${lot})`;
+    $('calcOutReward').textContent = fmtUSD(rewardDollar);
     $('calcOutBE').textContent = fmtPct(beWinRate);
+    $('calcOutRR').textContent = `1:${rr.toFixed(2)}`;
 
     const barPct = Math.min(riskPct*100,10);
     $('calcRiskBar').style.width = (barPct/10*100)+'%';
     $('calcRiskBarLabel').textContent = fmtPct(riskPct)+' dari modal';
 
     [5,10,15].forEach(n=>{
-      const total=riskTarget*n;
+      const total=riskDollar*n;
       const pct=modal>0?total/modal:0;
       $('calcWc'+n).textContent = `${fmtUSD(total)} (${fmtPct(pct)})`;
     });
 
-    const monthsToBankrupt = targetDD>0 ? Math.ceil(1/targetDD) : 0;
-    $('calcMonthsBankrupt').textContent = monthsToBankrupt+' bulan';
+    // Loss beruntun sampai kena target drawdown -- DIHITUNG, bukan diinput
+    const targetDollar = modal*targetDD;
+    const lossCountToStop = riskDollar>0 ? Math.ceil(targetDollar/riskDollar) : 0;
+    const totalPips = lossCountToStop*sl;
+    const actualPctAtStop = modal>0 ? (lossCountToStop*riskDollar)/modal : 0;
+
+    $('calcOutLossCount').textContent = lossCountToStop+'x loss';
+    $('calcOutLossPips').textContent = `= ${totalPips.toLocaleString('en-US',{maximumFractionDigits:2})} pips total, ≈ −${fmtPct(actualPctAtStop)} modal`;
   }
 
-  [modalEl,lossCountEl,targetDDEl,tpEl,slEl,pipvalueEl,lottestEl].forEach(el=>el.addEventListener('input',calcRun));
+  [modalEl,targetDDEl,tpEl,slEl,pipvalueEl].forEach(el=>el.addEventListener('input',calcRun));
   calcRun();
 })();
 </script>
