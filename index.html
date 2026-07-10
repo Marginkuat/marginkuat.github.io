@@ -202,16 +202,51 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   <div class="graph-card">
 
     <label class="lbl">Modal Investor ($)</label>
-    <input type="number" class="inp" id="calcModal" value="176" step="1">
+    <input type="number" class="inp" id="calcModal" value="170" step="1">
 
-    <label class="lbl">Risk per Transaksi (% dari modal)</label>
-    <input type="number" class="inp" id="calcRisk" value="1.5" step="0.1" style="margin-bottom:14px">
-
-    <label class="lbl">Skenario SL</label>
-    <div class="calc-seg" id="calcSeg">
-      <button data-sl="166.66" data-tp="500" class="active">A · 166,66 pips (RR 1:3)</button>
-      <button data-sl="250" data-tp="500">B · 250 pips (RR 1:2)</button>
+    <label class="lbl" style="margin-bottom:4px">Aturan Risiko: Loss Beruntun = Batas Drawdown</label>
+    <div class="calc-row" style="margin-bottom:6px">
+      <div>
+        <label class="lbl" style="font-size:10px;color:#7A5D1F">Loss Beruntun (x)</label>
+        <input type="number" class="inp" id="calcLossCount" value="5" step="1" style="margin-bottom:0">
+      </div>
+      <div>
+        <label class="lbl" style="font-size:10px;color:#7A5D1F">Target Max Drawdown (%)</label>
+        <input type="number" class="inp" id="calcTargetDD" value="50" step="1" style="margin-bottom:0">
+      </div>
     </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-bottom:14px">
+      → Risk per transaksi (otomatis): <span id="calcRiskAuto" style="color:#FFD700;font-weight:700">10.0%</span>
+    </div>
+
+    <label class="lbl">Pilih Pair / Skenario</label>
+    <select class="inp" id="calcPairSelect" style="margin-bottom:14px">
+      <optgroup label="XAUUSD">
+        <option value="166.66|500" selected>XAUUSD — Skenario A (166,66 pips, RR 1:3)</option>
+        <option value="250|500">XAUUSD — Skenario B (250 pips, RR 1:2)</option>
+      </optgroup>
+      <optgroup label="Forex — RR 1:2 (SL 20 pips)">
+        <option value="20|40">AUDUSD (20 pips)</option>
+        <option value="20|40">EURGBP (20 pips)</option>
+        <option value="20|40">NZDUSD (20 pips)</option>
+        <option value="20|40">USDCHF (20 pips)</option>
+      </optgroup>
+      <optgroup label="Forex — RR 1:2 (SL 30 pips)">
+        <option value="30|60">AUDJPY (30 pips)</option>
+        <option value="30|60">CADJPY (30 pips)</option>
+        <option value="30|60">EURUSD (30 pips)</option>
+        <option value="30|60">GBPUSD (30 pips)</option>
+        <option value="30|60">NZDJPY (30 pips)</option>
+        <option value="30|60">USDCAD (30 pips)</option>
+        <option value="30|60">CHFJPY (30 pips)</option>
+      </optgroup>
+      <optgroup label="Forex — RR 1:2 (SL 40 pips)">
+        <option value="40|80">EURJPY (40 pips)</option>
+        <option value="40|80">EURNZD (40 pips)</option>
+        <option value="40|80">GBPJPY (40 pips)</option>
+        <option value="40|80">USDJPY (40 pips)</option>
+      </optgroup>
+    </select>
 
     <div class="calc-row">
       <div>
@@ -253,6 +288,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="calc-wc-row"><span class="n">5x loss</span><span class="v" id="calcWc5">$0.00 (0%)</span></div>
     <div class="calc-wc-row"><span class="n">10x loss</span><span class="v" id="calcWc10">$0.00 (0%)</span></div>
     <div class="calc-wc-row"><span class="n">15x loss</span><span class="v" id="calcWc15">$0.00 (0%)</span></div>
+    <div class="calc-wc-row" style="border-top:1px solid #2A2E1F;margin-top:4px;padding-top:10px"><span class="n">⚠️ Bangkrut jika kalah beruntun terus</span><span class="v" id="calcMonthsBankrupt" style="color:#F87171">2 bulan</span></div>
 
   </div>
 </div>
@@ -260,16 +296,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  const modalEl=$('calcModal'), riskEl=$('calcRisk'), slEl=$('calcSL'), tpEl=$('calcTP'),
-        pipvalueEl=$('calcPipValue'), lottestEl=$('calcLotTest'), segBtns=document.querySelectorAll('#calcSeg button');
+  const modalEl=$('calcModal'), lossCountEl=$('calcLossCount'), targetDDEl=$('calcTargetDD'),
+        slEl=$('calcSL'), tpEl=$('calcTP'),
+        pipvalueEl=$('calcPipValue'), lottestEl=$('calcLotTest'), pairSelectEl=$('calcPairSelect');
 
-  segBtns.forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      segBtns.forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      slEl.value=btn.dataset.sl; tpEl.value=btn.dataset.tp;
-      calcRun();
-    });
+  pairSelectEl.addEventListener('change', ()=>{
+    const [sl, tp] = pairSelectEl.value.split('|');
+    slEl.value=sl; tpEl.value=tp;
+    calcRun();
   });
 
   function fmtUSD(n){return '$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -277,7 +311,10 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
   function calcRun(){
     const modal=parseFloat(modalEl.value)||0;
-    const riskPct=(parseFloat(riskEl.value)||0)/100;
+    const lossCount=parseFloat(lossCountEl.value)||1;
+    const targetDD=(parseFloat(targetDDEl.value)||0)/100;
+    const riskPct = lossCount>0 ? targetDD/lossCount : 0;
+    $('calcRiskAuto').textContent = (riskPct*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
     const sl=parseFloat(slEl.value)||0;
     const tp=parseFloat(tpEl.value)||0;
     const pipvalue=parseFloat(pipvalueEl.value)||0;
@@ -306,9 +343,12 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       const pct=modal>0?total/modal:0;
       $('calcWc'+n).textContent = `${fmtUSD(total)} (${fmtPct(pct)})`;
     });
+
+    const monthsToBankrupt = targetDD>0 ? Math.ceil(1/targetDD) : 0;
+    $('calcMonthsBankrupt').textContent = monthsToBankrupt+' bulan';
   }
 
-  [modalEl,riskEl,tpEl,slEl,pipvalueEl,lottestEl].forEach(el=>el.addEventListener('input',calcRun));
+  [modalEl,lossCountEl,targetDDEl,tpEl,slEl,pipvalueEl,lottestEl].forEach(el=>el.addEventListener('input',calcRun));
   calcRun();
 })();
 </script>
