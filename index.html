@@ -268,15 +268,17 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         <input type="number" class="inp" id="calcPipValue" value="0.1" step="0.01">
       </div>
       <div>
-        <label class="lbl">Lot saat Tes</label>
-        <input type="number" class="inp" id="calcLotTest" value="0.01" step="0.01" style="margin-bottom:0">
+        <label class="lbl">Lot saat Tes <span style="color:#5C4818;font-size:9px">🔒 tetap</span></label>
+        <input type="number" class="inp" id="calcLotTest" value="0.01" step="0.01" readonly style="margin-bottom:2px;opacity:0.65;cursor:not-allowed">
+        <div style="font-size:9px;color:#5C4818;font-family:'JetBrains Mono',monospace">acuan rumus analisa, jangan diubah</div>
       </div>
     </div>
 
     <div class="calc-hero" style="margin-top:16px">
-      <div class="calc-hero-lbl">Lot untuk Investor Ini</div>
+      <div class="calc-hero-lbl">Lot Rekomendasi untuk Investor Ini</div>
       <div class="calc-hero-val" id="calcOutLot">0.000</div>
       <div class="calc-hero-note" id="calcOutLotNote">= lot tes × faktor skala</div>
+      <div style="font-size:10px;color:#7A5D1F;margin-top:4px">*Sekadar acuan — lot aktual tetap pilihan masing-masing investor</div>
       <div class="calc-risk-track"><div class="calc-risk-fill" id="calcRiskBar" style="width:15%"></div></div>
       <div class="calc-risk-labels"><span>0%</span><span id="calcRiskBarLabel">1.5% dari modal</span><span>10%</span></div>
     </div>
