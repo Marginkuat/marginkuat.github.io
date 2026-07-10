@@ -215,6 +215,9 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         <input type="number" class="inp" id="calcTargetDD" value="50" step="1" style="margin-bottom:0">
       </div>
     </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-bottom:6px">
+      → Berhenti trading jika total loss mencapai: <span id="calcStopPips" style="color:#F87171;font-weight:700">0 pips</span>
+    </div>
     <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-bottom:14px">
       → Risk per transaksi (otomatis): <span id="calcRiskAuto" style="color:#FFD700;font-weight:700">10.0%</span>
     </div>
@@ -319,6 +322,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const tp=parseFloat(tpEl.value)||0;
     const pipvalue=parseFloat(pipvalueEl.value)||0;
     const lottest=parseFloat(lottestEl.value)||0;
+
+    $('calcStopPips').textContent = (sl*lossCount).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})+' pips';
 
     const rr = sl>0 ? tp/sl : 0;
     const beWinRate = rr>0 ? 1/(1+rr) : 0;
