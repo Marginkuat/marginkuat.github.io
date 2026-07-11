@@ -334,6 +334,12 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   <div class="graph-card">
     <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.5">Cukup input Pips + Hasil (Win/Loss) — VP dihitung otomatis dari multiplier tiap pair. Ringkasan per pair otomatis terhitung. Tersimpan di browser ini.</div>
 
+    <label class="lbl">Channel</label>
+    <div class="calc-seg" id="channelSeg" style="margin-bottom:14px">
+      <button data-channel="xauusd" class="active">🥇 Datuk EURUSD (XAUUSD)</button>
+      <button data-channel="forex">💱 Datuk Crypto 89 (Forex)</button>
+    </div>
+
     <div id="pinGate">
       <label class="lbl">🔒 Masukkan PIN untuk buka form input</label>
       <div class="calc-row" style="align-items:end">
@@ -345,24 +351,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
     <div id="logFormContent" style="display:none">
     <label class="lbl">Pair</label>
-    <select class="inp" id="logPair">
-      <option value="XAUUSD">XAUUSD</option>
-      <option value="AUDUSD">AUDUSD</option>
-      <option value="EURGBP">EURGBP</option>
-      <option value="NZDUSD">NZDUSD</option>
-      <option value="USDCHF">USDCHF</option>
-      <option value="AUDJPY">AUDJPY</option>
-      <option value="CADJPY">CADJPY</option>
-      <option value="EURUSD">EURUSD</option>
-      <option value="GBPUSD">GBPUSD</option>
-      <option value="NZDJPY">NZDJPY</option>
-      <option value="USDCAD">USDCAD</option>
-      <option value="CHFJPY">CHFJPY</option>
-      <option value="EURJPY">EURJPY</option>
-      <option value="EURNZD">EURNZD</option>
-      <option value="GBPJPY">GBPJPY</option>
-      <option value="USDJPY">USDJPY</option>
-    </select>
+    <select class="inp" id="logPair"></select>
 
     <label class="lbl">Hasil</label>
     <div class="calc-seg" id="logResultSeg">
@@ -386,20 +375,21 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <input type="date" class="inp" id="logDate" style="margin-bottom:14px">
 
     <button class="btn btn-p" id="logAddBtn">+ Tambah Trade</button>
-    <button class="btn btn-ghost" id="logClearBtn" style="margin-top:0">🗑 Hapus Semua Log</button>
+    <button class="btn btn-ghost" id="logClearBtn" style="margin-top:0">🗑 Hapus Semua Log (channel ini)</button>
     </div>
   </div>
 </div>
 
 <div class="section">
-  <div class="sec-title">📊 Ringkasan per Pair</div>
+  <div class="sec-title">📊 Ringkasan per Pair <span id="summaryChannelLabel" style="color:#8A6B26;font-size:11px;font-weight:400">— Datuk EURUSD</span></div>
   <div class="graph-card">
     <div id="summaryPerPair" style="font-size:12px;color:#8A6B26">Belum ada data.</div>
   </div>
 </div>
 
+
 <div class="section">
-  <div class="sec-title">📈 Ringkasan Total</div>
+  <div class="sec-title">📈 Ringkasan Total <span id="totalChannelLabel" style="color:#8A6B26;font-size:11px;font-weight:400">— Datuk EURUSD</span></div>
   <div class="graph-card">
     <div class="bal-grid">
       <div class="bal-box"><div class="bal-box-val" id="sumTotal" style="color:#D4AF37">0</div><div class="bal-box-lbl">Total Trade</div></div>
@@ -410,7 +400,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <div class="section">
-  <div class="sec-title">🗒 Riwayat Trade (terbaru dulu)</div>
+  <div class="sec-title">🗒 Riwayat Trade <span id="historyChannelLabel" style="color:#8A6B26;font-size:11px;font-weight:400">— Datuk EURUSD</span></div>
   <div class="graph-card">
     <div id="logHistory" style="font-size:12px;color:#8A6B26">Belum ada trade dicatat.</div>
   </div>
@@ -419,7 +409,79 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  const STORAGE_KEY = 'datukTradeLog';
+
+  const CHANNEL_NAMES = { xauusd: 'Datuk EURUSD', forex: 'Datuk Crypto 89' };
+  const PAIRS_BY_CHANNEL = {
+    xauusd: ['XAUUSD'],
+    forex: ['AUDUSD','EURGBP','NZDUSD','USDCHF','AUDJPY','CADJPY','EURUSD','GBPUSD','NZDJPY','USDCAD','CHFJPY','EURJPY','EURNZD','GBPJPY','USDJPY']
+  };
+  let currentChannel = localStorage.getItem('datukActiveChannel') || 'xauusd';
+
+  // ── MIGRASI DATA LAMA (sebelum channel dipisah) ──
+  // Data lama disortir ulang berdasarkan pair: XAUUSD -> channel xauusd, sisanya -> forex.
+  // Juga membersihkan entri XAUUSD yang sempat nyasar ke channel forex dari migrasi sebelumnya.
+  (function migrateOldLog(){
+    try{
+      function mergeInto(key, entries){
+        if(entries.length===0) return;
+        const raw = localStorage.getItem(key);
+        const existing = raw ? JSON.parse(raw) : [];
+        const existingIds = new Set(existing.map(t=>t.id));
+        const merged = existing.concat(entries.filter(t=>!existingIds.has(t.id)));
+        localStorage.setItem(key, JSON.stringify(merged));
+      }
+
+      let pool = [];
+
+      // key lama (sebelum channel ada sama sekali)
+      const oldRaw = localStorage.getItem('datukTradeLog');
+      if(oldRaw){
+        const oldLog = JSON.parse(oldRaw);
+        if(Array.isArray(oldLog)) pool = pool.concat(oldLog);
+        localStorage.removeItem('datukTradeLog');
+      }
+
+      // bersihkan XAUUSD yang nyasar di channel forex (dari migrasi versi sebelumnya)
+      const forexRaw = localStorage.getItem('datukTradeLog_forex');
+      let forexLog = forexRaw ? JSON.parse(forexRaw) : [];
+      const strandedXau = forexLog.filter(t=>t.pair==='XAUUSD');
+      if(strandedXau.length>0){
+        pool = pool.concat(strandedXau);
+        forexLog = forexLog.filter(t=>t.pair!=='XAUUSD');
+        localStorage.setItem('datukTradeLog_forex', JSON.stringify(forexLog));
+      }
+
+      if(pool.length>0){
+        const xauEntries = pool.filter(t=>t.pair==='XAUUSD');
+        const forexEntries = pool.filter(t=>t.pair!=='XAUUSD');
+        mergeInto('datukTradeLog_xauusd', xauEntries);
+        mergeInto('datukTradeLog_forex', forexEntries);
+      }
+    }catch(e){}
+  })();
+
+  function getStorageKey(){ return 'datukTradeLog_' + currentChannel; }
+
+  const channelBtns = document.querySelectorAll('#channelSeg button');
+  function applyChannelUI(){
+    channelBtns.forEach(b=>b.classList.toggle('active', b.dataset.channel===currentChannel));
+    const name = CHANNEL_NAMES[currentChannel];
+    $('summaryChannelLabel').textContent = '— '+name;
+    $('totalChannelLabel').textContent = '— '+name;
+    $('historyChannelLabel').textContent = '— '+name;
+    // isi ulang dropdown pair sesuai channel
+    const pairSelect = $('logPair');
+    pairSelect.innerHTML = PAIRS_BY_CHANNEL[currentChannel].map(p=>`<option value="${p}">${p}</option>`).join('');
+  }
+  channelBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentChannel = btn.dataset.channel;
+      localStorage.setItem('datukActiveChannel', currentChannel);
+      applyChannelUI();
+      updateVPPreview();
+      render();
+    });
+  });
 
   // ── GERBANG PIN ──
   // Ganti PIN di bawah ini kapan saja (cari LOG_PIN di kode)
@@ -452,6 +514,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     CHFJPY: 1, EURJPY: 1, GBPJPY: 1, EURNZD: 1, USDJPY: 1
   };
 
+  applyChannelUI();
+
   function updateVPPreview(){
     const pips = parseFloat(pipsEl.value)||0;
     const mult = VP_MULTIPLIER[pairEl.value] || 1;
@@ -473,12 +537,12 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
   function loadLog(){
     try{
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(getStorageKey());
       return raw ? JSON.parse(raw) : [];
     }catch(e){ return []; }
   }
   function saveLog(log){
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(log)); }catch(e){}
+    try{ localStorage.setItem(getStorageKey(), JSON.stringify(log)); }catch(e){}
   }
 
   function fmtPct(n){return (n*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
@@ -573,7 +637,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   });
 
   clearBtn.addEventListener('click', ()=>{
-    if(confirm('Hapus semua log trading? Tindakan ini tidak bisa dibatalkan.')){
+    if(confirm(`Hapus semua log trading channel ${CHANNEL_NAMES[currentChannel]}? Tindakan ini tidak bisa dibatalkan.`)){
       saveLog([]);
       render();
     }
