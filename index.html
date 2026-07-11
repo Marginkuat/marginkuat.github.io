@@ -202,7 +202,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   <div class="graph-card">
 
     <label class="lbl">Modal Investor ($)</label>
-    <input type="number" class="inp" id="calcModal" value="170" step="1">
+    <input type="number" class="inp" id="calcModal" value="176" step="1">
 
     <label class="lbl">Pilih Pair / Skenario</label>
     <select class="inp" id="calcPairSelect" style="margin-bottom:14px">
@@ -223,9 +223,9 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         <option value="30|60">GBPUSD (30 pips)</option>
         <option value="30|60">NZDJPY (30 pips)</option>
         <option value="30|60">USDCAD (30 pips)</option>
-        <option value="30|60">CHFJPY (30 pips)</option>
       </optgroup>
       <optgroup label="Forex — RR 1:2 (SL 40 pips)">
+        <option value="40|80">CHFJPY (40 pips)</option>
         <option value="40|80">EURJPY (40 pips)</option>
         <option value="40|80">EURNZD (40 pips)</option>
         <option value="40|80">GBPJPY (40 pips)</option>
@@ -270,7 +270,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     </div>
 
     <label class="lbl" style="margin-bottom:4px">Target Max Drawdown per Bulan (%)</label>
-    <input type="number" class="inp" id="calcTargetDD" value="50" step="1" style="margin-bottom:14px">
+    <input type="number" class="inp" id="calcTargetDD" value="100" step="1" style="margin-bottom:14px">
 
     <div class="calc-hero" style="background:linear-gradient(135deg,#2A1010,#161A0F 70%);border-color:#8A2020">
       <div class="calc-hero-lbl" style="color:#F87171">Berhenti Trading Setelah</div>
@@ -287,6 +287,257 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
   </div>
 </div>
+
+<!-- WARNING BATAS PIPS -->
+<div class="section">
+  <div class="sec-title">⚠️ Warning: Batas Berhenti Trading</div>
+  <div class="graph-card" style="border-color:#8A2020">
+    <div style="font-size:11px;color:#C89090;margin-bottom:14px;line-height:1.5">Berdasarkan Modal & Target Drawdown di kalkulator atas. Lot fix 0,01 untuk semua.</div>
+    <div id="warnList"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const modalEl=$('calcModal'), targetDDEl=$('calcTargetDD');
+  const pipvalue = 0.1;
+  const scenarios = [
+    {label:'XAUUSD — Skenario A', sl:166.66},
+    {label:'XAUUSD — Skenario B', sl:250},
+    {label:'Forex — SL 20 pips', sl:20},
+    {label:'Forex — SL 30 pips', sl:30},
+    {label:'Forex — SL 40 pips', sl:40},
+  ];
+
+  function warnRun(){
+    const modal = parseFloat(modalEl.value)||0;
+    const targetDD = (parseFloat(targetDDEl.value)||0)/100;
+    const targetDollar = modal*targetDD;
+    let html='';
+    scenarios.forEach(s=>{
+      const riskDollar = s.sl*pipvalue;
+      const lossCount = riskDollar>0 ? Math.floor(targetDollar/riskDollar) : 0;
+      const totalPips = lossCount*s.sl;
+      html += `<div class="calc-wc-row"><span class="n">${s.label}</span><span class="v" style="color:#FF8080">${totalPips.toLocaleString('en-US',{maximumFractionDigits:2})} pips (${lossCount}x)</span></div>`;
+    });
+    $('warnList').innerHTML = html;
+  }
+  [modalEl,targetDDEl].forEach(el=>el.addEventListener('input',warnRun));
+  warnRun();
+})();
+</script>
+
+<!-- LOG TRADING + RINGKASAN PER PAIR -->
+<div class="section">
+  <div class="sec-title">📝 Log Trading & Ringkasan per Pair</div>
+  <div class="graph-card">
+    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.5">Catat tiap hasil trade beneran. Ringkasan per pair (win rate, net pips, net VP) otomatis terhitung. Tersimpan di browser ini.</div>
+
+    <div id="pinGate">
+      <label class="lbl">🔒 Masukkan PIN untuk buka form input</label>
+      <div class="calc-row" style="align-items:end">
+        <input type="password" class="inp" id="pinInput" placeholder="PIN" style="margin-bottom:0" inputmode="numeric">
+        <button class="btn btn-p" id="pinBtn" style="margin-bottom:0">Buka</button>
+      </div>
+      <div id="pinError" style="font-size:11px;color:#F87171;margin-top:6px;display:none">PIN salah, coba lagi.</div>
+    </div>
+
+    <div id="logFormContent" style="display:none">
+    <label class="lbl">Pair</label>
+    <select class="inp" id="logPair">
+      <option value="XAUUSD">XAUUSD</option>
+      <option value="AUDUSD">AUDUSD</option>
+      <option value="EURGBP">EURGBP</option>
+      <option value="NZDUSD">NZDUSD</option>
+      <option value="USDCHF">USDCHF</option>
+      <option value="AUDJPY">AUDJPY</option>
+      <option value="CADJPY">CADJPY</option>
+      <option value="EURUSD">EURUSD</option>
+      <option value="GBPUSD">GBPUSD</option>
+      <option value="NZDJPY">NZDJPY</option>
+      <option value="USDCAD">USDCAD</option>
+      <option value="CHFJPY">CHFJPY</option>
+      <option value="EURJPY">EURJPY</option>
+      <option value="EURNZD">EURNZD</option>
+      <option value="GBPJPY">GBPJPY</option>
+      <option value="USDJPY">USDJPY</option>
+    </select>
+
+    <label class="lbl">Hasil</label>
+    <div class="calc-seg" id="logResultSeg">
+      <button data-result="W" class="active">✅ Win</button>
+      <button data-result="L">❌ Loss</button>
+    </div>
+
+    <div class="calc-row" style="margin-top:12px">
+      <div>
+        <label class="lbl">Pips</label>
+        <input type="number" class="inp" id="logPips" value="0" step="0.1" min="0" style="margin-bottom:0">
+      </div>
+      <div>
+        <label class="lbl">VP</label>
+        <input type="number" class="inp" id="logVP" value="0" step="0.1" min="0" style="margin-bottom:0">
+      </div>
+    </div>
+
+    <label class="lbl" style="margin-top:12px">Tanggal</label>
+    <input type="date" class="inp" id="logDate" style="margin-bottom:14px">
+
+    <button class="btn btn-p" id="logAddBtn">+ Tambah Trade</button>
+    <button class="btn btn-ghost" id="logClearBtn" style="margin-top:0">🗑 Hapus Semua Log</button>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-title">📊 Ringkasan per Pair</div>
+  <div class="graph-card">
+    <div id="summaryPerPair" style="font-size:12px;color:#8A6B26">Belum ada data.</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-title">📈 Ringkasan Total</div>
+  <div class="graph-card">
+    <div class="bal-grid">
+      <div class="bal-box"><div class="bal-box-val" id="sumTotal" style="color:#D4AF37">0</div><div class="bal-box-lbl">Total Trade</div></div>
+      <div class="bal-box"><div class="bal-box-val" id="sumWinRate" style="color:#D4AF37">0%</div><div class="bal-box-lbl">Win Rate</div></div>
+      <div class="bal-box"><div class="bal-box-val" id="sumNetVP">0</div><div class="bal-box-lbl">Net VP</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-title">🗒 Riwayat Trade (terbaru dulu)</div>
+  <div class="graph-card">
+    <div id="logHistory" style="font-size:12px;color:#8A6B26">Belum ada trade dicatat.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const STORAGE_KEY = 'datukTradeLog';
+
+  // ── GERBANG PIN ──
+  // Ganti PIN di bawah ini kapan saja (cari LOG_PIN di kode)
+  const LOG_PIN = '2607';
+  const pinInput=$('pinInput'), pinBtn=$('pinBtn'), pinError=$('pinError'),
+        pinGate=$('pinGate'), logFormContent=$('logFormContent');
+
+  function tryUnlock(){
+    if(pinInput.value === LOG_PIN){
+      pinGate.style.display='none';
+      logFormContent.style.display='block';
+      pinError.style.display='none';
+    } else {
+      pinError.style.display='block';
+      pinInput.value='';
+    }
+  }
+  pinBtn.addEventListener('click', tryUnlock);
+  pinInput.addEventListener('keypress', e=>{ if(e.key==='Enter') tryUnlock(); });
+
+  const pairEl=$('logPair'), pipsEl=$('logPips'), vpEl=$('logVP'), dateEl=$('logDate'),
+        addBtn=$('logAddBtn'), clearBtn=$('logClearBtn'), resultBtns=document.querySelectorAll('#logResultSeg button');
+  let currentResult = 'W';
+
+  dateEl.value = new Date().toISOString().split('T')[0];
+
+  resultBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      resultBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentResult = btn.dataset.result;
+    });
+  });
+
+  function loadLog(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){ return []; }
+  }
+  function saveLog(log){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(log)); }catch(e){}
+  }
+
+  function fmtPct(n){return (n*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
+
+  function render(){
+    const log = loadLog();
+
+    // Ringkasan Total
+    const total = log.length;
+    const wins = log.filter(t=>t.result==='W').length;
+    const winRate = total>0 ? wins/total : 0;
+    const netVP = log.reduce((s,t)=> s + (t.result==='W' ? t.vp : -t.vp), 0);
+    $('sumTotal').textContent = total;
+    $('sumWinRate').textContent = fmtPct(winRate);
+    $('sumNetVP').textContent = netVP.toLocaleString('en-US',{maximumFractionDigits:2});
+    $('sumNetVP').className = 'bal-box-val ' + (netVP>=0?'cg':'cr');
+
+    // Ringkasan per Pair
+    const byPair = {};
+    log.forEach(t=>{
+      if(!byPair[t.pair]) byPair[t.pair]={w:0,l:0,pips:0,vp:0};
+      if(t.result==='W'){ byPair[t.pair].w++; byPair[t.pair].pips+=t.pips; byPair[t.pair].vp+=t.vp; }
+      else { byPair[t.pair].l++; byPair[t.pair].pips-=t.pips; byPair[t.pair].vp-=t.vp; }
+    });
+    const pairKeys = Object.keys(byPair).sort();
+    if(pairKeys.length===0){
+      $('summaryPerPair').innerHTML = 'Belum ada data.';
+    } else {
+      let html = '';
+      pairKeys.forEach(p=>{
+        const d = byPair[p];
+        const t = d.w+d.l;
+        const wr = t>0 ? d.w/t : 0;
+        const pipsColor = d.pips>=0 ? '#4ADE80' : '#FF8080';
+        const vpColor = d.vp>=0 ? '#4ADE80' : '#FF8080';
+        html += `<div class="calc-wc-row"><span class="n">${p} · ${d.w}W/${d.l}L (${fmtPct(wr)})</span><span class="v" style="color:${pipsColor}">${d.pips.toLocaleString('en-US',{maximumFractionDigits:2})}p</span></div>`;
+      });
+      $('summaryPerPair').innerHTML = html;
+    }
+
+    // Riwayat
+    if(log.length===0){
+      $('logHistory').innerHTML = 'Belum ada trade dicatat.';
+    } else {
+      const sorted = [...log].sort((a,b)=> b.date.localeCompare(a.date) || b.id-a.id);
+      let html = '';
+      sorted.forEach(t=>{
+        const resultColor = t.result==='W' ? '#4ADE80' : '#FF8080';
+        const resultLabel = t.result==='W' ? 'WIN' : 'LOSS';
+        html += `<div class="calc-wc-row"><span class="n">${t.date} · ${t.pair} · <span style="color:${resultColor};font-weight:700">${resultLabel}</span></span><span class="v" style="color:${resultColor}">${t.pips}p / ${t.vp}VP</span></div>`;
+      });
+      $('logHistory').innerHTML = html;
+    }
+  }
+
+  addBtn.addEventListener('click', ()=>{
+    const pips = parseFloat(pipsEl.value)||0;
+    const vp = parseFloat(vpEl.value)||0;
+    const pair = pairEl.value;
+    const date = dateEl.value || new Date().toISOString().split('T')[0];
+    const log = loadLog();
+    log.push({ id: Date.now(), pair, result: currentResult, pips, vp, date });
+    saveLog(log);
+    pipsEl.value = 0; vpEl.value = 0;
+    render();
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    if(confirm('Hapus semua log trading? Tindakan ini tidak bisa dibatalkan.')){
+      saveLog([]);
+      render();
+    }
+  });
+
+  render();
+})();
+</script>
 
 <script>
 (function(){
@@ -337,7 +588,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
     // Loss beruntun sampai kena target drawdown -- DIHITUNG, bukan diinput
     const targetDollar = modal*targetDD;
-    const lossCountToStop = riskDollar>0 ? Math.ceil(targetDollar/riskDollar) : 0;
+    const lossCountToStop = riskDollar>0 ? Math.floor(targetDollar/riskDollar) : 0;
     const totalPips = lossCountToStop*sl;
     const actualPctAtStop = modal>0 ? (lossCountToStop*riskDollar)/modal : 0;
 
