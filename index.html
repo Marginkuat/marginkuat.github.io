@@ -196,15 +196,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
-<!-- KALKULATOR RISIKO PER PAIR (LOT FIX 0,01) -->
+<!-- KALKULATOR RISIKO PER PAIR (UMUM) -->
 <div class="section">
   <div class="sec-title">🧮 Kalkulator Risiko per Pair</div>
   <div class="graph-card">
+    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.5">Isi bebas — tentukan sendiri berapa pips yang dipertaruhkan (SL), target (TP), dan lot. Hasil $ dan VP terhitung otomatis.</div>
 
-    <label class="lbl">Modal Investor ($)</label>
-    <input type="number" class="inp" id="calcModal" value="176" step="1">
-
-    <label class="lbl">Pilih Pair / Skenario</label>
+    <label class="lbl">Pilih Pair</label>
     <select class="inp" id="calcPairSelect" style="margin-bottom:14px">
       <optgroup label="XAUUSD">
         <option value="166.66|500" selected>XAUUSD — Skenario A (166,66 pips, RR 1:3)</option>
@@ -235,11 +233,11 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
     <div class="calc-row">
       <div>
-        <label class="lbl">SL (pips)</label>
+        <label class="lbl">Pips Dipertaruhkan (SL)</label>
         <input type="number" class="inp" id="calcSL" value="166.66" step="0.01">
       </div>
       <div>
-        <label class="lbl">TP (pips)</label>
+        <label class="lbl">Pips Target (TP)</label>
         <input type="number" class="inp" id="calcTP" value="500" step="0.01">
       </div>
     </div>
@@ -250,17 +248,15 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         <input type="number" class="inp" id="calcPipValue" value="0.1" step="0.01">
       </div>
       <div>
-        <label class="lbl">Lot <span style="color:#5C4818;font-size:9px">🔒 fix, semua pair</span></label>
-        <input type="number" class="inp" id="calcLotTest" value="0.01" step="0.01" readonly style="margin-bottom:2px;opacity:0.65;cursor:not-allowed">
+        <label class="lbl">Lot</label>
+        <input type="number" class="inp" id="calcLotTest" value="0.01" step="0.01">
       </div>
     </div>
 
     <div class="calc-hero" style="margin-top:16px">
-      <div class="calc-hero-lbl">Risk $ per Transaksi (lot 0,01)</div>
+      <div class="calc-hero-lbl">Risk $ per Transaksi</div>
       <div class="calc-hero-val" id="calcOutRiskHero">$0.00</div>
-      <div class="calc-hero-note" id="calcOutRiskNote">= SL pips × nilai/pip</div>
-      <div class="calc-risk-track"><div class="calc-risk-fill" id="calcRiskBar" style="width:15%"></div></div>
-      <div class="calc-risk-labels"><span>0%</span><span id="calcRiskBarLabel">0% dari modal</span><span>10%</span></div>
+      <div class="calc-hero-note" id="calcOutRiskNote">= SL pips × nilai/pip × lot</div>
     </div>
 
     <div class="bal-grid" style="margin-bottom:14px">
@@ -269,21 +265,10 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <div class="bal-box"><div class="bal-box-val" id="calcOutRR" style="color:#D4AF37">1:0</div><div class="bal-box-lbl">RR</div></div>
     </div>
 
-    <label class="lbl" style="margin-bottom:4px">Target Max Drawdown per Bulan (%)</label>
-    <input type="number" class="inp" id="calcTargetDD" value="100" step="1" style="margin-bottom:14px">
-
-    <div class="calc-hero" style="background:linear-gradient(135deg,#2A1010,#161A0F 70%);border-color:#8A2020">
-      <div class="calc-hero-lbl" style="color:#F87171">Berhenti Trading Setelah</div>
-      <div class="calc-hero-val" id="calcOutLossCount" style="color:#FF8080">0x loss</div>
-      <div class="calc-hero-note" id="calcOutLossPips">= 0 pips total, sampai −0% modal</div>
+    <div class="bal-grid">
+      <div class="bal-box"><div class="bal-box-val cr" id="calcOutRiskVP">0</div><div class="bal-box-lbl">Risiko VP</div></div>
+      <div class="bal-box"><div class="bal-box-val cg" id="calcOutRewardVP">0</div><div class="bal-box-lbl">Target VP</div></div>
     </div>
-
-    <div style="font-size:10px;font-weight:700;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px">Worst-Case Loss Beruntun (pair ini, lot 0,01)</div>
-    <div class="calc-wc-row"><span class="n">5x loss</span><span class="v" id="calcWc5">$0.00 (0%)</span></div>
-    <div class="calc-wc-row"><span class="n">10x loss</span><span class="v" id="calcWc10">$0.00 (0%)</span></div>
-    <div class="calc-wc-row"><span class="n">15x loss</span><span class="v" id="calcWc15">$0.00 (0%)</span></div>
-
-    <div style="font-size:10px;color:#7A5D1F;margin-top:12px;line-height:1.5">*Lot fix 0,01 untuk semua pair (sesuai rumusan analisa). Karena SL pips beda tiap pair, risk $ dan jumlah loss beruntun sampai batas drawdown otomatis ikut beda per pair — bukan angka tetap yang sama untuk semua.</div>
 
   </div>
 </div>
@@ -292,7 +277,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <div class="section">
   <div class="sec-title">⚠️ Warning: Batas Berhenti Trading</div>
   <div class="graph-card" style="border-color:#8A2020">
-    <div style="font-size:11px;color:#C89090;margin-bottom:14px;line-height:1.5">Berdasarkan Modal & Target Drawdown di kalkulator atas. Lot fix 0,01 untuk semua.</div>
+    <div style="font-size:11px;color:#C89090;margin-bottom:14px;line-height:1.5">Lot fix 0,01 untuk semua pair.</div>
+
+    <label class="lbl">Modal Investor ($)</label>
+    <input type="number" class="inp" id="calcModal" value="176" step="1">
+
+    <label class="lbl">Target Max Drawdown per Bulan (%)</label>
+    <input type="number" class="inp" id="calcTargetDD" value="100" step="1" style="margin-bottom:14px">
+
     <div id="warnList"></div>
   </div>
 </div>
@@ -383,8 +375,11 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <div class="section">
   <div class="sec-title">📊 Ringkasan per Pair <span id="summaryChannelLabel" style="color:#8A6B26;font-size:11px;font-weight:400">— Datuk EURUSD</span></div>
   <div class="graph-card">
-    <label class="lbl">Batas Stop per Pair (pips)</label>
-    <input type="number" class="inp" id="stopThreshold" value="200" step="1" style="margin-bottom:14px">
+    <label class="lbl">Total Batas Trading Channel (pips)</label>
+    <input type="number" class="inp" id="totalBudgetPips" value="1700" step="1" style="margin-bottom:6px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-bottom:14px">
+      → Batas per pair (otomatis): <span id="perPairThresholdOut" style="color:#FFD700;font-weight:700">0 pips</span> <span id="perPairThresholdNote" style="color:#5C4818"></span>
+    </div>
     <div id="summaryPerPair" style="font-size:12px;color:#8A6B26">Belum ada data.</div>
   </div>
 </div>
@@ -563,7 +558,11 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     $('sumNetVP').className = 'bal-box-val ' + (netVP>=0?'cg':'cr');
 
     // Ringkasan per Pair — format tabel
-    const stopThreshold = Math.abs(parseFloat($('stopThreshold').value)) || 0;
+    const totalBudget = Math.abs(parseFloat($('totalBudgetPips').value)) || 0;
+    const pairCount = PAIRS_BY_CHANNEL[currentChannel].length;
+    const stopThreshold = pairCount>0 ? totalBudget/pairCount : 0;
+    $('perPairThresholdOut').textContent = stopThreshold.toLocaleString('en-US',{maximumFractionDigits:1})+' pips';
+    $('perPairThresholdNote').textContent = `(${totalBudget} ÷ ${pairCount} pair)`;
     const byPair = {};
     log.forEach(t=>{
       if(!byPair[t.pair]) byPair[t.pair]={w:0,l:0,pips:0,vp:0};
@@ -656,7 +655,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     }
   });
 
-  $('stopThreshold').addEventListener('input', render);
+  $('totalBudgetPips').addEventListener('input', render);
   render();
 })();
 </script>
@@ -664,9 +663,22 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  const modalEl=$('calcModal'), targetDDEl=$('calcTargetDD'),
-        slEl=$('calcSL'), tpEl=$('calcTP'),
+  const slEl=$('calcSL'), tpEl=$('calcTP'),
         pipvalueEl=$('calcPipValue'), lottestEl=$('calcLotTest'), pairSelectEl=$('calcPairSelect');
+
+  const VP_MULTIPLIER = {
+    XAUUSD: 0.2,
+    AUDUSD: 2, EURGBP: 2, NZDUSD: 2, USDCHF: 2,
+    AUDJPY: 1.5, CADJPY: 1.5, EURUSD: 1.5, GBPUSD: 1.5, NZDJPY: 1.5, USDCAD: 1.5,
+    CHFJPY: 1, EURJPY: 1, GBPJPY: 1, EURNZD: 1, USDJPY: 1
+  };
+
+  function currentPairName(){
+    const opt = pairSelectEl.options[pairSelectEl.selectedIndex];
+    const text = opt ? opt.textContent : '';
+    const match = Object.keys(VP_MULTIPLIER).find(p=>text.includes(p));
+    return match || 'XAUUSD';
+  }
 
   pairSelectEl.addEventListener('change', ()=>{
     const [sl, tp] = pairSelectEl.value.split('|');
@@ -678,47 +690,28 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   function fmtPct(n){return (n*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
 
   function calcRun(){
-    const modal=parseFloat(modalEl.value)||0;
-    const targetDD=(parseFloat(targetDDEl.value)||0)/100;
     const sl=parseFloat(slEl.value)||0;
     const tp=parseFloat(tpEl.value)||0;
     const pipvalue=parseFloat(pipvalueEl.value)||0;
     const lot=parseFloat(lottestEl.value)||0.01;
 
-    // Risk $ nyata dari lot fix (BUKAN target/asumsi)
-    const riskDollar = sl*pipvalue; // lot referensi sudah melekat di nilai pipvalue 0,1 utk lot 0,01
+    const riskDollar = sl*pipvalue*(lot/0.01);
     const rr = sl>0 ? tp/sl : 0;
     const rewardDollar = riskDollar*rr;
     const beWinRate = rr>0 ? 1/(1+rr) : 0;
-    const riskPct = modal>0 ? riskDollar/modal : 0;
 
     $('calcOutRiskHero').textContent = fmtUSD(riskDollar);
-    $('calcOutRiskNote').textContent = `${sl} pips × $${pipvalue}/pip (lot ${lot})`;
+    $('calcOutRiskNote').textContent = `${sl} pips × $${pipvalue}/pip × lot ${lot}`;
     $('calcOutReward').textContent = fmtUSD(rewardDollar);
     $('calcOutBE').textContent = fmtPct(beWinRate);
     $('calcOutRR').textContent = `1:${rr.toFixed(2)}`;
 
-    const barPct = Math.min(riskPct*100,10);
-    $('calcRiskBar').style.width = (barPct/10*100)+'%';
-    $('calcRiskBarLabel').textContent = fmtPct(riskPct)+' dari modal';
-
-    [5,10,15].forEach(n=>{
-      const total=riskDollar*n;
-      const pct=modal>0?total/modal:0;
-      $('calcWc'+n).textContent = `${fmtUSD(total)} (${fmtPct(pct)})`;
-    });
-
-    // Loss beruntun sampai kena target drawdown -- DIHITUNG, bukan diinput
-    const targetDollar = modal*targetDD;
-    const lossCountToStop = riskDollar>0 ? Math.floor(targetDollar/riskDollar) : 0;
-    const totalPips = lossCountToStop*sl;
-    const actualPctAtStop = modal>0 ? (lossCountToStop*riskDollar)/modal : 0;
-
-    $('calcOutLossCount').textContent = lossCountToStop+'x loss';
-    $('calcOutLossPips').textContent = `= ${totalPips.toLocaleString('en-US',{maximumFractionDigits:2})} pips total, ≈ −${fmtPct(actualPctAtStop)} modal`;
+    const mult = VP_MULTIPLIER[currentPairName()] || 1;
+    $('calcOutRiskVP').textContent = (sl*mult).toLocaleString('en-US',{maximumFractionDigits:2});
+    $('calcOutRewardVP').textContent = (tp*mult).toLocaleString('en-US',{maximumFractionDigits:2});
   }
 
-  [modalEl,targetDDEl,tpEl,slEl,pipvalueEl].forEach(el=>el.addEventListener('input',calcRun));
+  [tpEl,slEl,pipvalueEl,lottestEl].forEach(el=>el.addEventListener('input',calcRun));
   calcRun();
 })();
 </script>
