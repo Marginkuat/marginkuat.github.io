@@ -383,6 +383,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <div class="section">
   <div class="sec-title">📊 Ringkasan per Pair <span id="summaryChannelLabel" style="color:#8A6B26;font-size:11px;font-weight:400">— Datuk EURUSD</span></div>
   <div class="graph-card">
+    <label class="lbl">Batas Stop per Pair (pips)</label>
+    <input type="number" class="inp" id="stopThreshold" value="200" step="1" style="margin-bottom:14px">
     <div id="summaryPerPair" style="font-size:12px;color:#8A6B26">Belum ada data.</div>
   </div>
 </div>
@@ -561,6 +563,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     $('sumNetVP').className = 'bal-box-val ' + (netVP>=0?'cg':'cr');
 
     // Ringkasan per Pair — format tabel
+    const stopThreshold = Math.abs(parseFloat($('stopThreshold').value)) || 0;
     const byPair = {};
     log.forEach(t=>{
       if(!byPair[t.pair]) byPair[t.pair]={w:0,l:0,pips:0,vp:0};
@@ -577,6 +580,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
           <th style="text-align:center;padding:6px 4px;color:#8A6B26;font-weight:700">W/L</th>
           <th style="text-align:right;padding:6px 4px;color:#8A6B26;font-weight:700">PIPS</th>
           <th style="text-align:right;padding:6px 4px;color:#8A6B26;font-weight:700">VP</th>
+          <th style="text-align:center;padding:6px 4px;color:#8A6B26;font-weight:700">STATUS</th>
         </tr>`;
       pairKeys.forEach(p=>{
         const d = byPair[p];
@@ -584,14 +588,23 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         const wr = t>0 ? d.w/t : 0;
         const pipsColor = d.pips>=0 ? '#4ADE80' : '#FF8080';
         const vpColor = d.vp>=0 ? '#4ADE80' : '#FF8080';
-        html += `<tr style="border-bottom:1px solid #1E2312">
+        const isStop = stopThreshold>0 && d.pips <= -stopThreshold;
+        const statusHtml = isStop
+          ? `<span style="color:#FF3B3B;font-weight:800">🛑 STOP</span>`
+          : `<span style="color:#4ADE80">✅</span>`;
+        html += `<tr style="border-bottom:1px solid #1E2312;${isStop?'background:rgba(255,59,59,0.08)':''}">
           <td style="padding:8px 4px;color:#D4AF37;font-weight:700">${p}</td>
           <td style="text-align:center;padding:8px 4px;color:#8A6B26">${d.w}/${d.l}</td>
           <td style="text-align:right;padding:8px 4px;color:${pipsColor}">${d.pips.toLocaleString('en-US',{maximumFractionDigits:2})}</td>
           <td style="text-align:right;padding:8px 4px;color:${vpColor}">${d.vp.toLocaleString('en-US',{maximumFractionDigits:2})}</td>
+          <td style="text-align:center;padding:8px 4px">${statusHtml}</td>
         </tr>`;
       });
       html += '</table>';
+      const stoppedPairs = pairKeys.filter(p => byPair[p].pips <= -stopThreshold && stopThreshold>0);
+      if(stoppedPairs.length>0){
+        html += `<div style="margin-top:14px;padding:10px;background:rgba(255,59,59,0.12);border:1px solid #8A2020;border-radius:8px;font-size:12px;color:#FF8080;font-weight:700">⚠️ KAMU HARUS BERHENTI TRADING DI PAIR INI: ${stoppedPairs.join(', ')}</div>`;
+      }
       $('summaryPerPair').innerHTML = html;
     }
 
@@ -643,6 +656,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     }
   });
 
+  $('stopThreshold').addEventListener('input', render);
   render();
 })();
 </script>
