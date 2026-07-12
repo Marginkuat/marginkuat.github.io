@@ -587,13 +587,32 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     $('sumNetVP').textContent = netVP.toLocaleString('en-US',{maximumFractionDigits:2});
     $('sumNetVP').className = 'bal-box-val ' + (netVP>=0?'cg':'cr');
 
-    // Ringkasan per Pair — format tabel (threshold = SL pair x target loss count)
+    // Ringkasan per Pair — threshold beda logika per channel
+    // Forex: threshold pair = SL pair x target loss count (input manual)
+    // XAUUSD: threshold = floor(TOTAL_BUDGET / SL aktif di Kalkulator atas) x SL aktif — cuma 1 pair, pakai jatah penuh
+    const TOTAL_BUDGET_XAUUSD = 1700;
     const targetLossCount = Math.abs(parseFloat($('targetLossCount').value)) || 0;
     const channelPairs = PAIRS_BY_CHANNEL[currentChannel];
+    const isXauChannel = currentChannel === 'xauusd';
+    const activeXauSL = parseFloat(document.getElementById('calcSL').value) || PAIR_SL['XAUUSD'];
+    const xauMaxX = activeXauSL>0 ? Math.floor(TOTAL_BUDGET_XAUUSD/activeXauSL) : 0;
+
+    function thresholdFor(pair){
+      if(isXauChannel) return { maxX: xauMaxX, pips: xauMaxX*activeXauSL };
+      const slPair = PAIR_SL[pair] || 0;
+      return { maxX: targetLossCount, pips: slPair*targetLossCount };
+    }
+
     let totalBudget = 0;
-    channelPairs.forEach(p=>{ totalBudget += (PAIR_SL[p]||0) * targetLossCount; });
-    $('totalBudgetOut').textContent = totalBudget.toLocaleString('en-US',{maximumFractionDigits:1})+' pips';
-    $('totalBudgetNote').textContent = `(jumlah semua batas pair, target ${targetLossCount}x loss)`;
+    if(isXauChannel){
+      totalBudget = xauMaxX*activeXauSL;
+      $('totalBudgetOut').textContent = totalBudget.toLocaleString('en-US',{maximumFractionDigits:1})+' pips';
+      $('totalBudgetNote').textContent = `(1700 ÷ SL aktif ${activeXauSL} pips di Kalkulator atas = ${xauMaxX}x)`;
+    } else {
+      channelPairs.forEach(p=>{ totalBudget += (PAIR_SL[p]||0) * targetLossCount; });
+      $('totalBudgetOut').textContent = totalBudget.toLocaleString('en-US',{maximumFractionDigits:1})+' pips';
+      $('totalBudgetNote').textContent = `(jumlah semua batas pair, target ${targetLossCount}x loss)`;
+    }
 
     const byPair = {};
     log.forEach(t=>{
@@ -620,9 +639,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         const wr = t>0 ? d.w/t : 0;
         const pipsColor = d.pips>=0 ? '#4ADE80' : '#FF8080';
         const vpColor = d.vp>=0 ? '#4ADE80' : '#FF8080';
-        const slPair = PAIR_SL[p] || 0;
-        const pairThreshold = slPair * targetLossCount;
-        const isStop = pairThreshold>0 && d.pips <= -pairThreshold;
+        const th = thresholdFor(p);
+        const isStop = th.pips>0 && d.pips <= -th.pips;
         const statusHtml = isStop
           ? `<span style="color:#FF3B3B;font-weight:800">🛑 STOP</span>`
           : `<span style="color:#4ADE80">✅</span>`;
@@ -631,15 +649,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
           <td style="text-align:center;padding:8px 4px;color:#8A6B26">${d.w}/${d.l}</td>
           <td style="text-align:right;padding:8px 4px;color:${pipsColor}">${d.pips.toLocaleString('en-US',{maximumFractionDigits:2})}</td>
           <td style="text-align:right;padding:8px 4px;color:${vpColor}">${d.vp.toLocaleString('en-US',{maximumFractionDigits:2})}</td>
-          <td style="text-align:center;padding:8px 4px;color:#C8A84B">${targetLossCount}x <span style="color:#5C4818">(${pairThreshold}p)</span></td>
+          <td style="text-align:center;padding:8px 4px;color:#C8A84B">${th.maxX}x <span style="color:#5C4818">(${th.pips.toLocaleString('en-US',{maximumFractionDigits:1})}p)</span></td>
           <td style="text-align:center;padding:8px 4px">${statusHtml}</td>
         </tr>`;
       });
       html += '</table>';
       const stoppedPairs = pairKeys.filter(p => {
-        const slPair = PAIR_SL[p] || 0;
-        const th = slPair*targetLossCount;
-        return th>0 && byPair[p].pips <= -th;
+        const th = thresholdFor(p);
+        return th.pips>0 && byPair[p].pips <= -th.pips;
       });
       if(stoppedPairs.length>0){
         html += `<div style="margin-top:14px;padding:10px;background:rgba(255,59,59,0.12);border:1px solid #8A2020;border-radius:8px;font-size:12px;color:#FF8080;font-weight:700">⚠️ KAMU HARUS BERHENTI TRADING DI PAIR INI: ${stoppedPairs.join(', ')}</div>`;
@@ -696,6 +713,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   });
 
   $('targetLossCount').addEventListener('input', render);
+  document.addEventListener('datukCalcChanged', render);
   render();
 })();
 </script>
@@ -749,6 +767,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const mult = VP_MULTIPLIER[currentPairName()] || 1;
     $('calcOutRiskVP').textContent = (sl*mult).toLocaleString('en-US',{maximumFractionDigits:2});
     $('calcOutRewardVP').textContent = (tp*mult).toLocaleString('en-US',{maximumFractionDigits:2});
+
+    document.dispatchEvent(new CustomEvent('datukCalcChanged'));
   }
 
   [tpEl,slEl,pipvalueEl,lottestEl].forEach(el=>el.addEventListener('input',calcRun));
