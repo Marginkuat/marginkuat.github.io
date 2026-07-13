@@ -407,10 +407,19 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       </div>
     </div>
 
-    <label class="lbl" style="margin-top:12px">Tanggal</label>
-    <input type="date" class="inp" id="logDate" style="margin-bottom:14px">
+    <div class="calc-row">
+      <div>
+        <label class="lbl" style="margin-top:12px">Tanggal</label>
+        <input type="date" class="inp" id="logDate" style="margin-bottom:14px">
+      </div>
+      <div>
+        <label class="lbl" style="margin-top:12px">Jam</label>
+        <input type="time" class="inp" id="logTime" style="margin-bottom:14px">
+      </div>
+    </div>
 
     <button class="btn btn-p" id="logAddBtn">+ Tambah Trade</button>
+    <button class="btn btn-ghost" id="logCancelEditBtn" style="margin-top:0;display:none">✖ Batal Edit</button>
     <button class="btn btn-ghost" id="logClearBtn" style="margin-top:0">🗑 Hapus Semua Log (channel ini)</button>
     </div>
   </div>
@@ -543,9 +552,11 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   pinBtn.addEventListener('click', tryUnlock);
   pinInput.addEventListener('keypress', e=>{ if(e.key==='Enter') tryUnlock(); });
 
-  const pairEl=$('logPair'), pipsEl=$('logPips'), vpPreviewEl=$('logVPPreview'), dateEl=$('logDate'),
-        addBtn=$('logAddBtn'), clearBtn=$('logClearBtn'), resultBtns=document.querySelectorAll('#logResultSeg button');
+  const pairEl=$('logPair'), pipsEl=$('logPips'), vpPreviewEl=$('logVPPreview'), dateEl=$('logDate'), timeEl=$('logTime'),
+        addBtn=$('logAddBtn'), clearBtn=$('logClearBtn'), cancelEditBtn=$('logCancelEditBtn'),
+        resultBtns=document.querySelectorAll('#logResultSeg button');
   let currentResult = 'W';
+  let editingId = null;
 
   // Multiplier VP per pair (VP = pips × multiplier)
   const VP_MULTIPLIER = {
@@ -575,6 +586,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   updateVPPreview();
 
   dateEl.value = new Date().toISOString().split('T')[0];
+  timeEl.value = new Date().toTimeString().slice(0,5);
 
   resultBtns.forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -690,24 +702,29 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     if(log.length===0){
       $('logHistory').innerHTML = 'Belum ada trade dicatat.';
     } else {
-      const sorted = [...log].sort((a,b)=> b.date.localeCompare(a.date) || b.id-a.id);
-      let html = `<table style="width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:11px">
+      const sorted = [...log].sort((a,b)=> b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||'') || b.id-a.id);
+      let html = `<table style="width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:10px">
         <tr style="border-bottom:1px solid #2A2E1F">
-          <th style="text-align:left;padding:6px 4px;color:#8A6B26;font-weight:700">TANGGAL</th>
-          <th style="text-align:left;padding:6px 4px;color:#8A6B26;font-weight:700">PAIR</th>
-          <th style="text-align:center;padding:6px 4px;color:#8A6B26;font-weight:700">HASIL</th>
-          <th style="text-align:right;padding:6px 4px;color:#8A6B26;font-weight:700">PIPS</th>
-          <th style="text-align:right;padding:6px 4px;color:#8A6B26;font-weight:700">VP</th>
+          <th style="text-align:left;padding:6px 3px;color:#8A6B26;font-weight:700">TGL / JAM</th>
+          <th style="text-align:left;padding:6px 3px;color:#8A6B26;font-weight:700">PAIR</th>
+          <th style="text-align:center;padding:6px 3px;color:#8A6B26;font-weight:700">HASIL</th>
+          <th style="text-align:right;padding:6px 3px;color:#8A6B26;font-weight:700">PIPS</th>
+          <th style="text-align:right;padding:6px 3px;color:#8A6B26;font-weight:700">VP</th>
+          <th style="text-align:center;padding:6px 3px;color:#8A6B26;font-weight:700">AKSI</th>
         </tr>`;
       sorted.forEach(t=>{
         const resultColor = t.result==='W' ? '#4ADE80' : '#FF8080';
         const resultLabel = t.result==='W' ? 'WIN' : 'LOSS';
         html += `<tr style="border-bottom:1px solid #1E2312">
-          <td style="padding:8px 4px;color:#8A6B26">${t.date}</td>
-          <td style="padding:8px 4px;color:#D4AF37;font-weight:700">${t.pair}</td>
-          <td style="text-align:center;padding:8px 4px;color:${resultColor};font-weight:700">${resultLabel}</td>
-          <td style="text-align:right;padding:8px 4px;color:${resultColor}">${t.pips}</td>
-          <td style="text-align:right;padding:8px 4px;color:${resultColor}">${t.vp.toLocaleString('en-US',{maximumFractionDigits:2})}</td>
+          <td style="padding:8px 3px;color:#8A6B26">${t.date}${t.time ? '<br>'+t.time : ''}</td>
+          <td style="padding:8px 3px;color:#D4AF37;font-weight:700">${t.pair}</td>
+          <td style="text-align:center;padding:8px 3px;color:${resultColor};font-weight:700">${resultLabel}</td>
+          <td style="text-align:right;padding:8px 3px;color:${resultColor}">${t.pips}</td>
+          <td style="text-align:right;padding:8px 3px;color:${resultColor}">${t.vp.toLocaleString('en-US',{maximumFractionDigits:2})}</td>
+          <td style="text-align:center;padding:8px 3px;white-space:nowrap">
+            <span onclick="window.datukStartEdit(${t.id})" style="cursor:pointer;padding:2px 4px">✏️</span>
+            <span onclick="window.datukDeleteTrade(${t.id})" style="cursor:pointer;padding:2px 4px">🗑️</span>
+          </td>
         </tr>`;
       });
       html += '</table>';
@@ -715,21 +732,70 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     }
   }
 
+  function resetForm(){
+    pipsEl.value = 0; updateVPPreview();
+    dateEl.value = new Date().toISOString().split('T')[0];
+    timeEl.value = new Date().toTimeString().slice(0,5);
+    editingId = null;
+    addBtn.textContent = '+ Tambah Trade';
+    cancelEditBtn.style.display = 'none';
+  }
+
+  function startEdit(id){
+    const log = loadLog();
+    const trade = log.find(t=>t.id===id);
+    if(!trade) return;
+    pairEl.value = trade.pair;
+    resultBtns.forEach(b=>b.classList.toggle('active', b.dataset.result===trade.result));
+    currentResult = trade.result;
+    pipsEl.value = trade.pips;
+    vpPreviewEl.value = trade.vp;
+    dateEl.value = trade.date;
+    timeEl.value = trade.time || '00:00';
+    editingId = id;
+    addBtn.textContent = '💾 Simpan Perubahan';
+    cancelEditBtn.style.display = 'block';
+    window.scrollTo({top: document.getElementById('logPair').getBoundingClientRect().top + window.scrollY - 100, behavior:'smooth'});
+  }
+
+  function deleteTrade(id){
+    if(!confirm('Hapus trade ini?')) return;
+    let log = loadLog();
+    log = log.filter(t=>t.id!==id);
+    saveLog(log);
+    if(editingId===id) resetForm();
+    render();
+  }
+
+  // dipanggil dari tombol Edit/Hapus di tabel riwayat (lihat renderHistoryTable)
+  window.datukStartEdit = startEdit;
+  window.datukDeleteTrade = deleteTrade;
+
+  cancelEditBtn.addEventListener('click', resetForm);
+
   addBtn.addEventListener('click', ()=>{
     const pips = parseFloat(pipsEl.value)||0;
     const pair = pairEl.value;
     const vp = parseFloat(vpPreviewEl.value)||0;
     const date = dateEl.value || new Date().toISOString().split('T')[0];
+    const time = timeEl.value || '00:00';
     const log = loadLog();
-    log.push({ id: Date.now(), pair, result: currentResult, pips, vp, date });
-    saveLog(log);
-    pipsEl.value = 0; updateVPPreview();
+    if(editingId){
+      const idx = log.findIndex(t=>t.id===editingId);
+      if(idx>-1){ log[idx] = { id: editingId, pair, result: currentResult, pips, vp, date, time }; }
+      saveLog(log);
+    } else {
+      log.push({ id: Date.now(), pair, result: currentResult, pips, vp, date, time });
+      saveLog(log);
+    }
+    resetForm();
     render();
   });
 
   clearBtn.addEventListener('click', ()=>{
     if(confirm(`Hapus semua log trading channel ${CHANNEL_NAMES[currentChannel]}? Tindakan ini tidak bisa dibatalkan.`)){
       saveLog([]);
+      resetForm();
       render();
     }
   });
