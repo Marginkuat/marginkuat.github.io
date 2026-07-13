@@ -421,6 +421,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <button class="btn btn-p" id="logAddBtn">+ Tambah Trade</button>
     <button class="btn btn-ghost" id="logCancelEditBtn" style="margin-top:0;display:none">✖ Batal Edit</button>
     <button class="btn btn-ghost" id="logClearBtn" style="margin-top:0">🗑 Hapus Semua Log (channel ini)</button>
+
+    <div style="height:1px;background:#2A2E1F;margin:16px 0"></div>
+    <button class="btn btn-g" id="logExportBtn" style="margin-top:0">📤 Export Data Channel Ini (untuk Publish)</button>
+    <div id="exportArea" style="display:none;margin-top:10px">
+      <div style="font-size:10px;color:#8A6B26;margin-bottom:6px;line-height:1.5">Copy teks di bawah, simpan sebagai file <b id="exportFileName" style="color:#D4AF37">data-xauusd.json</b> di repo (folder sama dengan index.html) via GitHub, lalu commit. Setelah itu semua orang bisa lihat data ini tanpa perlu PIN.</div>
+      <textarea id="exportOutput" readonly style="width:100%;min-height:120px;background:#0D0F0A;color:#4ADE80;border:1px solid #2A2E1F;border-radius:8px;padding:10px;font-family:'JetBrains Mono',monospace;font-size:10px"></textarea>
+      <button class="btn btn-p" id="exportCopyBtn" style="margin-top:8px">📋 Copy Teks</button>
+    </div>
     </div>
   </div>
 </div>
@@ -529,6 +537,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       localStorage.setItem('datukActiveChannel', currentChannel);
       applyChannelUI();
       updateVPPreview();
+      const ea = document.getElementById('exportArea');
+      if(ea) ea.style.display = 'none';
       render();
     });
   });
@@ -799,6 +809,45 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       render();
     }
   });
+
+  // ── EXPORT DATA UNTUK PUBLISH ──
+  const exportBtn=$('logExportBtn'), exportArea=$('exportArea'), exportOutput=$('exportOutput'),
+        exportCopyBtn=$('exportCopyBtn'), exportFileName=$('exportFileName');
+  exportBtn.addEventListener('click', ()=>{
+    const log = loadLog();
+    exportOutput.value = JSON.stringify(log, null, 2);
+    exportFileName.textContent = `data-${currentChannel}.json`;
+    exportArea.style.display = exportArea.style.display==='none' ? 'block' : 'none';
+  });
+  exportCopyBtn.addEventListener('click', ()=>{
+    exportOutput.select();
+    document.execCommand('copy');
+    exportCopyBtn.textContent = '✅ Tercopy!';
+    setTimeout(()=>{ exportCopyBtn.textContent = '📋 Copy Teks'; }, 1500);
+  });
+
+  // ── AMBIL DATA PUBLIK (data-xauusd.json / data-forex.json) UNTUK PENGUNJUNG LAIN ──
+  // Kalau browser pengunjung belum punya data sendiri, isi dari file publik ini (read-only bagi mereka).
+  async function seedFromPublishedData(){
+    for(const ch of ['xauusd','forex']){
+      const key = 'datukTradeLog_'+ch;
+      const existing = localStorage.getItem(key);
+      const existingArr = existing ? JSON.parse(existing) : [];
+      if(existingArr.length===0){
+        try{
+          const res = await fetch('./data-'+ch+'.json', {cache:'no-store'});
+          if(res.ok){
+            const data = await res.json();
+            if(Array.isArray(data) && data.length>0){
+              localStorage.setItem(key, JSON.stringify(data));
+            }
+          }
+        }catch(e){}
+      }
+    }
+    render();
+  }
+  seedFromPublishedData();
 
   $('targetLossCount').addEventListener('input', render);
   document.addEventListener('datukCalcChanged', render);
