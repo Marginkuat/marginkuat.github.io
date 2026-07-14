@@ -376,6 +376,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <button data-channel="forex">💱 Datuk Crypto 89 (Forex)</button>
     </div>
 
+    <div id="dbStatus" style="font-size:11px;color:#8A6B26;text-align:center;margin-bottom:14px">🔄 Menyambungkan ke database...</div>
+
     <div id="pinGate">
       <label class="lbl">🔒 Masukkan PIN untuk buka form input</label>
       <div class="calc-row" style="align-items:end">
@@ -423,7 +425,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <button class="btn btn-ghost" id="logClearBtn" style="margin-top:0">🗑 Hapus Semua Log (channel ini)</button>
 
     <div style="height:1px;background:#2A2E1F;margin:16px 0"></div>
-    <div id="dbStatus" style="font-size:11px;color:#8A6B26;text-align:center">🔄 Menyambungkan ke database...</div>
+    <button class="btn btn-g" id="logMigrateBtn" style="margin-top:0">⬆️ Migrasi Data Lama dari HP Ini</button>
+    <div style="font-size:9px;color:#5C4818;margin-top:4px;line-height:1.5">Ambil data dari HP yang dulu dipakai input (sebelum pindah ke database). Aman diklik berkali-kali — data yang sama otomatis nggak dobel.</div>
     </div>
   </div>
 </div>
@@ -651,6 +654,53 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const batch = window.datukDB.batch();
     cachedTrades.forEach(t=> batch.delete(window.datukDB.collection('trades').doc(t.firestoreId)) );
     batch.commit().then(resetForm).catch(err=>alert('Gagal hapus semua: '+err.message));
+  });
+
+  // ── MIGRASI DATA LAMA (localStorage -> Firestore) ──
+  // ID dokumen dibuat deterministik dari ID asli tiap trade, jadi migrasi ulang cuma "menimpa" data yang sama, bukan menggandakan.
+  const migrateBtn = $('logMigrateBtn');
+  migrateBtn.addEventListener('click', ()=>{
+    if(!window.datukDB){ alert('Database belum siap, coba refresh halaman.'); return; }
+    let pool = [];
+    ['xauusd','forex'].forEach(ch=>{
+      try{
+        const raw = localStorage.getItem('datukTradeLog_'+ch);
+        const arr = raw ? JSON.parse(raw) : [];
+        arr.forEach(t=> pool.push({ docId: `${ch}_${t.id}`, channel: ch, pair: t.pair, result: t.result, pips: t.pips, vp: t.vp, date: t.date, time: t.time || '00:00' }));
+      }catch(e){}
+    });
+    // cek juga key lama sebelum channel dipisah (kalau masih ada, dianggap forex)
+    try{
+      const oldRaw = localStorage.getItem('datukTradeLog');
+      const oldArr = oldRaw ? JSON.parse(oldRaw) : [];
+      oldArr.forEach(t=>{
+        const ch = t.pair==='XAUUSD' ? 'xauusd' : 'forex';
+        pool.push({ docId: `${ch}_${t.id}`, channel: ch, pair: t.pair, result: t.result, pips: t.pips, vp: t.vp, date: t.date, time: t.time || '00:00' });
+      });
+    }catch(e){}
+
+    if(pool.length===0){
+      alert('Tidak ada data lama ditemukan di HP ini. Migrasi hanya bisa jalan dari HP yang dulu dipakai input data.');
+      return;
+    }
+    if(!confirm(`Ditemukan ${pool.length} trade lama di HP ini. Upload semua ke database sekarang? (Aman diklik berkali-kali — data yang sama tidak akan dobel.)`)) return;
+
+    migrateBtn.disabled = true;
+    migrateBtn.textContent = '⏳ Mengupload...';
+    const batch = window.datukDB.batch();
+    pool.forEach(t=>{
+      const { docId, ...data } = t;
+      const ref = window.datukDB.collection('trades').doc(docId);
+      batch.set(ref, data);
+    });
+    batch.commit().then(()=>{
+      migrateBtn.textContent = '✅ Migrasi Selesai ('+pool.length+' trade)';
+      alert(`Berhasil! ${pool.length} trade lama sudah masuk ke database dan langsung terlihat semua orang.`);
+    }).catch(err=>{
+      alert('Gagal migrasi: '+err.message);
+      migrateBtn.disabled = false;
+      migrateBtn.textContent = '⬆️ Migrasi Data Lama dari HP Ini';
+    });
   });
 
   function render(){
