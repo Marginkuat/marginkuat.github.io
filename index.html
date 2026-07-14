@@ -423,12 +423,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <button class="btn btn-ghost" id="logClearBtn" style="margin-top:0">🗑 Hapus Semua Log (channel ini)</button>
 
     <div style="height:1px;background:#2A2E1F;margin:16px 0"></div>
-    <button class="btn btn-g" id="logExportBtn" style="margin-top:0">📤 Export Data Channel Ini (untuk Publish)</button>
-    <div id="exportArea" style="display:none;margin-top:10px">
-      <div style="font-size:10px;color:#8A6B26;margin-bottom:6px;line-height:1.5">Copy teks di bawah, simpan sebagai file <b id="exportFileName" style="color:#D4AF37">data-xauusd.json</b> di repo (folder sama dengan index.html) via GitHub, lalu commit. Setelah itu semua orang bisa lihat data ini tanpa perlu PIN.</div>
-      <textarea id="exportOutput" readonly style="width:100%;min-height:120px;background:#0D0F0A;color:#4ADE80;border:1px solid #2A2E1F;border-radius:8px;padding:10px;font-family:'JetBrains Mono',monospace;font-size:10px"></textarea>
-      <button class="btn btn-p" id="exportCopyBtn" style="margin-top:8px">📋 Copy Teks</button>
-    </div>
+    <div id="dbStatus" style="font-size:11px;color:#8A6B26;text-align:center">🔄 Menyambungkan ke database...</div>
     </div>
   </div>
 </div>
@@ -464,6 +459,22 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- FIREBASE: database live untuk publish otomatis -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAker4D4k1ueustizZ9QdWwEgcyP3M0NZI",
+    authDomain: "marginkuat.firebaseapp.com",
+    projectId: "marginkuat",
+    storageBucket: "marginkuat.firebasestorage.app",
+    messagingSenderId: "869921372716",
+    appId: "1:869921372716:web:88718ae6a0c4231277af89"
+  };
+  firebase.initializeApp(firebaseConfig);
+  window.datukDB = firebase.firestore();
+</script>
+
 <script>
 (function(){
   const $ = id => document.getElementById(id);
@@ -475,51 +486,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   };
   let currentChannel = localStorage.getItem('datukActiveChannel') || 'xauusd';
 
-  // ── MIGRASI DATA LAMA (sebelum channel dipisah) ──
-  // Data lama disortir ulang berdasarkan pair: XAUUSD -> channel xauusd, sisanya -> forex.
-  // Juga membersihkan entri XAUUSD yang sempat nyasar ke channel forex dari migrasi sebelumnya.
-  (function migrateOldLog(){
-    try{
-      function mergeInto(key, entries){
-        if(entries.length===0) return;
-        const raw = localStorage.getItem(key);
-        const existing = raw ? JSON.parse(raw) : [];
-        const existingIds = new Set(existing.map(t=>t.id));
-        const merged = existing.concat(entries.filter(t=>!existingIds.has(t.id)));
-        localStorage.setItem(key, JSON.stringify(merged));
-      }
-
-      let pool = [];
-
-      // key lama (sebelum channel ada sama sekali)
-      const oldRaw = localStorage.getItem('datukTradeLog');
-      if(oldRaw){
-        const oldLog = JSON.parse(oldRaw);
-        if(Array.isArray(oldLog)) pool = pool.concat(oldLog);
-        localStorage.removeItem('datukTradeLog');
-      }
-
-      // bersihkan XAUUSD yang nyasar di channel forex (dari migrasi versi sebelumnya)
-      const forexRaw = localStorage.getItem('datukTradeLog_forex');
-      let forexLog = forexRaw ? JSON.parse(forexRaw) : [];
-      const strandedXau = forexLog.filter(t=>t.pair==='XAUUSD');
-      if(strandedXau.length>0){
-        pool = pool.concat(strandedXau);
-        forexLog = forexLog.filter(t=>t.pair!=='XAUUSD');
-        localStorage.setItem('datukTradeLog_forex', JSON.stringify(forexLog));
-      }
-
-      if(pool.length>0){
-        const xauEntries = pool.filter(t=>t.pair==='XAUUSD');
-        const forexEntries = pool.filter(t=>t.pair!=='XAUUSD');
-        mergeInto('datukTradeLog_xauusd', xauEntries);
-        mergeInto('datukTradeLog_forex', forexEntries);
-      }
-    }catch(e){}
-  })();
-
-  function getStorageKey(){ return 'datukTradeLog_' + currentChannel; }
-
   const channelBtns = document.querySelectorAll('#channelSeg button');
   function applyChannelUI(){
     channelBtns.forEach(b=>b.classList.toggle('active', b.dataset.channel===currentChannel));
@@ -527,28 +493,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     $('summaryChannelLabel').textContent = '— '+name;
     $('totalChannelLabel').textContent = '— '+name;
     $('historyChannelLabel').textContent = '— '+name;
-    // isi ulang dropdown pair sesuai channel
     const pairSelect = $('logPair');
     pairSelect.innerHTML = PAIRS_BY_CHANNEL[currentChannel].map(p=>`<option value="${p}">${p}</option>`).join('');
   }
-  channelBtns.forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      currentChannel = btn.dataset.channel;
-      localStorage.setItem('datukActiveChannel', currentChannel);
-      applyChannelUI();
-      updateVPPreview();
-      const ea = document.getElementById('exportArea');
-      if(ea) ea.style.display = 'none';
-      render();
-    });
-  });
 
   // ── GERBANG PIN ──
-  // Ganti PIN di bawah ini kapan saja (cari LOG_PIN di kode)
   const LOG_PIN = '2607';
   const pinInput=$('pinInput'), pinBtn=$('pinBtn'), pinError=$('pinError'),
         pinGate=$('pinGate'), logFormContent=$('logFormContent');
-
   function tryUnlock(){
     if(pinInput.value === LOG_PIN){
       pinGate.style.display='none';
@@ -566,17 +518,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         addBtn=$('logAddBtn'), clearBtn=$('logClearBtn'), cancelEditBtn=$('logCancelEditBtn'),
         resultBtns=document.querySelectorAll('#logResultSeg button');
   let currentResult = 'W';
-  let editingId = null;
+  let editingId = null; // firestoreId dokumen yang lagi diedit
 
-  // Multiplier VP per pair (VP = pips × multiplier)
   const VP_MULTIPLIER = {
     XAUUSD: 0.2,
     AUDUSD: 2, EURGBP: 2, NZDUSD: 2, USDCHF: 2,
     AUDJPY: 1.5, CADJPY: 1.5, EURUSD: 1.5, GBPUSD: 1.5, NZDJPY: 1.5, USDCAD: 1.5,
     CHFJPY: 1, EURJPY: 1, GBPJPY: 1, EURNZD: 1, USDJPY: 1
   };
-
-  // SL standar per pair (dipakai untuk hitung batas stop = SL x target loss count)
   const PAIR_SL = {
     XAUUSD: 166.66,
     AUDUSD: 20, EURGBP: 20, NZDUSD: 20, USDCHF: 20,
@@ -606,20 +555,106 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     });
   });
 
-  function loadLog(){
-    try{
-      const raw = localStorage.getItem(getStorageKey());
-      return raw ? JSON.parse(raw) : [];
-    }catch(e){ return []; }
-  }
-  function saveLog(log){
-    try{ localStorage.setItem(getStorageKey(), JSON.stringify(log)); }catch(e){}
-  }
-
+  function fmtUSD(n){const sign=n<0?'-':''; return sign+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
   function fmtPct(n){return (n*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
 
+  // ── DATA LIVE DARI FIRESTORE ──
+  let cachedTrades = []; // trade channel yang lagi aktif, auto-update via onSnapshot
+  let unsubscribe = null;
+  const dbStatusEl = $('dbStatus');
+
+  function subscribeToChannel(ch){
+    if(unsubscribe) unsubscribe();
+    if(!window.datukDB){
+      dbStatusEl.textContent = '⚠️ Database belum siap, coba refresh halaman';
+      return;
+    }
+    unsubscribe = window.datukDB.collection('trades').where('channel','==',ch)
+      .onSnapshot(snapshot=>{
+        cachedTrades = snapshot.docs.map(d=>({ firestoreId: d.id, ...d.data() }));
+        dbStatusEl.textContent = '🟢 Live — data ke-sync otomatis untuk semua orang';
+        render();
+      }, err=>{
+        console.error(err);
+        dbStatusEl.textContent = '⚠️ Gagal sambung database: '+err.message;
+      });
+  }
+
+  channelBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentChannel = btn.dataset.channel;
+      localStorage.setItem('datukActiveChannel', currentChannel);
+      applyChannelUI();
+      updateVPPreview();
+      resetForm();
+      subscribeToChannel(currentChannel);
+    });
+  });
+
+  function resetForm(){
+    pipsEl.value = 0; updateVPPreview();
+    dateEl.value = new Date().toISOString().split('T')[0];
+    timeEl.value = new Date().toTimeString().slice(0,5);
+    editingId = null;
+    addBtn.textContent = '+ Tambah Trade';
+    cancelEditBtn.style.display = 'none';
+  }
+
+  function startEdit(firestoreId){
+    const trade = cachedTrades.find(t=>t.firestoreId===firestoreId);
+    if(!trade) return;
+    pairEl.value = trade.pair;
+    resultBtns.forEach(b=>b.classList.toggle('active', b.dataset.result===trade.result));
+    currentResult = trade.result;
+    pipsEl.value = trade.pips;
+    vpPreviewEl.value = trade.vp;
+    dateEl.value = trade.date;
+    timeEl.value = trade.time || '00:00';
+    editingId = firestoreId;
+    addBtn.textContent = '💾 Simpan Perubahan';
+    cancelEditBtn.style.display = 'block';
+    window.scrollTo({top: document.getElementById('logPair').getBoundingClientRect().top + window.scrollY - 100, behavior:'smooth'});
+  }
+
+  function deleteTrade(firestoreId){
+    if(!confirm('Hapus trade ini? Perubahan langsung ke semua orang.')) return;
+    window.datukDB.collection('trades').doc(firestoreId).delete().catch(err=>alert('Gagal hapus: '+err.message));
+    if(editingId===firestoreId) resetForm();
+  }
+
+  window.datukStartEdit = startEdit;
+  window.datukDeleteTrade = deleteTrade;
+
+  cancelEditBtn.addEventListener('click', resetForm);
+
+  addBtn.addEventListener('click', ()=>{
+    if(!window.datukDB){ alert('Database belum siap, coba refresh halaman.'); return; }
+    const pips = parseFloat(pipsEl.value)||0;
+    const pair = pairEl.value;
+    const vp = parseFloat(vpPreviewEl.value)||0;
+    const date = dateEl.value || new Date().toISOString().split('T')[0];
+    const time = timeEl.value || '00:00';
+    const data = { channel: currentChannel, pair, result: currentResult, pips, vp, date, time };
+
+    addBtn.disabled = true;
+    const finish = ()=>{ addBtn.disabled=false; resetForm(); };
+
+    if(editingId){
+      window.datukDB.collection('trades').doc(editingId).update(data).then(finish).catch(err=>{ alert('Gagal simpan: '+err.message); addBtn.disabled=false; });
+    } else {
+      window.datukDB.collection('trades').add(data).then(finish).catch(err=>{ alert('Gagal tambah: '+err.message); addBtn.disabled=false; });
+    }
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    if(!confirm(`Hapus SEMUA log trading channel ${CHANNEL_NAMES[currentChannel]}? Ini langsung ke semua orang dan tidak bisa dibatalkan.`)) return;
+    const batch = window.datukDB.batch();
+    cachedTrades.forEach(t=> batch.delete(window.datukDB.collection('trades').doc(t.firestoreId)) );
+    batch.commit().then(resetForm).catch(err=>alert('Gagal hapus semua: '+err.message));
+  });
+
   function render(){
-    const log = loadLog();
+    const log = cachedTrades;
 
     // Ringkasan Total
     const total = log.length;
@@ -631,9 +666,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     $('sumNetVP').textContent = netVP.toLocaleString('en-US',{maximumFractionDigits:2});
     $('sumNetVP').className = 'bal-box-val ' + (netVP>=0?'cg':'cr');
 
-    // Ringkasan per Pair — threshold beda logika per channel
-    // Forex: threshold pair = SL pair x target loss count (input manual)
-    // XAUUSD: threshold = floor(TOTAL_BUDGET / SL aktif di Kalkulator atas) x SL aktif — cuma 1 pair, pakai jatah penuh
+    // Threshold: forex = SL x target loss count, xauusd = floor(1700/SL aktif) x SL aktif
     const TOTAL_BUDGET_XAUUSD = 1700;
     const targetLossCount = Math.abs(parseFloat($('targetLossCount').value)) || 0;
     const channelPairs = PAIRS_BY_CHANNEL[currentChannel];
@@ -658,6 +691,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       $('totalBudgetNote').textContent = `(jumlah semua batas pair, target ${targetLossCount}x loss)`;
     }
 
+    // Ringkasan per Pair
     const byPair = {};
     log.forEach(t=>{
       if(!byPair[t.pair]) byPair[t.pair]={w:0,l:0,pips:0,vp:0};
@@ -679,8 +713,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         </tr>`;
       pairKeys.forEach(p=>{
         const d = byPair[p];
-        const t = d.w+d.l;
-        const wr = t>0 ? d.w/t : 0;
         const pipsColor = d.pips>=0 ? '#4ADE80' : '#FF8080';
         const vpColor = d.vp>=0 ? '#4ADE80' : '#FF8080';
         const th = thresholdFor(p);
@@ -708,11 +740,11 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       $('summaryPerPair').innerHTML = html;
     }
 
-    // Riwayat — format tabel
+    // Riwayat
     if(log.length===0){
       $('logHistory').innerHTML = 'Belum ada trade dicatat.';
     } else {
-      const sorted = [...log].sort((a,b)=> b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||'') || b.id-a.id);
+      const sorted = [...log].sort((a,b)=> b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||''));
       let html = `<table style="width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:10px">
         <tr style="border-bottom:1px solid #2A2E1F">
           <th style="text-align:left;padding:6px 3px;color:#8A6B26;font-weight:700">TGL / JAM</th>
@@ -732,8 +764,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
           <td style="text-align:right;padding:8px 3px;color:${resultColor}">${t.pips}</td>
           <td style="text-align:right;padding:8px 3px;color:${resultColor}">${t.vp.toLocaleString('en-US',{maximumFractionDigits:2})}</td>
           <td style="text-align:center;padding:8px 3px;white-space:nowrap">
-            <span onclick="window.datukStartEdit(${t.id})" style="cursor:pointer;padding:2px 4px">✏️</span>
-            <span onclick="window.datukDeleteTrade(${t.id})" style="cursor:pointer;padding:2px 4px">🗑️</span>
+            <span onclick="window.datukStartEdit('${t.firestoreId}')" style="cursor:pointer;padding:2px 4px">✏️</span>
+            <span onclick="window.datukDeleteTrade('${t.firestoreId}')" style="cursor:pointer;padding:2px 4px">🗑️</span>
           </td>
         </tr>`;
       });
@@ -742,116 +774,10 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     }
   }
 
-  function resetForm(){
-    pipsEl.value = 0; updateVPPreview();
-    dateEl.value = new Date().toISOString().split('T')[0];
-    timeEl.value = new Date().toTimeString().slice(0,5);
-    editingId = null;
-    addBtn.textContent = '+ Tambah Trade';
-    cancelEditBtn.style.display = 'none';
-  }
-
-  function startEdit(id){
-    const log = loadLog();
-    const trade = log.find(t=>t.id===id);
-    if(!trade) return;
-    pairEl.value = trade.pair;
-    resultBtns.forEach(b=>b.classList.toggle('active', b.dataset.result===trade.result));
-    currentResult = trade.result;
-    pipsEl.value = trade.pips;
-    vpPreviewEl.value = trade.vp;
-    dateEl.value = trade.date;
-    timeEl.value = trade.time || '00:00';
-    editingId = id;
-    addBtn.textContent = '💾 Simpan Perubahan';
-    cancelEditBtn.style.display = 'block';
-    window.scrollTo({top: document.getElementById('logPair').getBoundingClientRect().top + window.scrollY - 100, behavior:'smooth'});
-  }
-
-  function deleteTrade(id){
-    if(!confirm('Hapus trade ini?')) return;
-    let log = loadLog();
-    log = log.filter(t=>t.id!==id);
-    saveLog(log);
-    if(editingId===id) resetForm();
-    render();
-  }
-
-  // dipanggil dari tombol Edit/Hapus di tabel riwayat (lihat renderHistoryTable)
-  window.datukStartEdit = startEdit;
-  window.datukDeleteTrade = deleteTrade;
-
-  cancelEditBtn.addEventListener('click', resetForm);
-
-  addBtn.addEventListener('click', ()=>{
-    const pips = parseFloat(pipsEl.value)||0;
-    const pair = pairEl.value;
-    const vp = parseFloat(vpPreviewEl.value)||0;
-    const date = dateEl.value || new Date().toISOString().split('T')[0];
-    const time = timeEl.value || '00:00';
-    const log = loadLog();
-    if(editingId){
-      const idx = log.findIndex(t=>t.id===editingId);
-      if(idx>-1){ log[idx] = { id: editingId, pair, result: currentResult, pips, vp, date, time }; }
-      saveLog(log);
-    } else {
-      log.push({ id: Date.now(), pair, result: currentResult, pips, vp, date, time });
-      saveLog(log);
-    }
-    resetForm();
-    render();
-  });
-
-  clearBtn.addEventListener('click', ()=>{
-    if(confirm(`Hapus semua log trading channel ${CHANNEL_NAMES[currentChannel]}? Tindakan ini tidak bisa dibatalkan.`)){
-      saveLog([]);
-      resetForm();
-      render();
-    }
-  });
-
-  // ── EXPORT DATA UNTUK PUBLISH ──
-  const exportBtn=$('logExportBtn'), exportArea=$('exportArea'), exportOutput=$('exportOutput'),
-        exportCopyBtn=$('exportCopyBtn'), exportFileName=$('exportFileName');
-  exportBtn.addEventListener('click', ()=>{
-    const log = loadLog();
-    exportOutput.value = JSON.stringify(log, null, 2);
-    exportFileName.textContent = `data-${currentChannel}.json`;
-    exportArea.style.display = exportArea.style.display==='none' ? 'block' : 'none';
-  });
-  exportCopyBtn.addEventListener('click', ()=>{
-    exportOutput.select();
-    document.execCommand('copy');
-    exportCopyBtn.textContent = '✅ Tercopy!';
-    setTimeout(()=>{ exportCopyBtn.textContent = '📋 Copy Teks'; }, 1500);
-  });
-
-  // ── AMBIL DATA PUBLIK (data-xauusd.json / data-forex.json) UNTUK PENGUNJUNG LAIN ──
-  // Kalau browser pengunjung belum punya data sendiri, isi dari file publik ini (read-only bagi mereka).
-  async function seedFromPublishedData(){
-    for(const ch of ['xauusd','forex']){
-      const key = 'datukTradeLog_'+ch;
-      const existing = localStorage.getItem(key);
-      const existingArr = existing ? JSON.parse(existing) : [];
-      if(existingArr.length===0){
-        try{
-          const res = await fetch('./data-'+ch+'.json', {cache:'no-store'});
-          if(res.ok){
-            const data = await res.json();
-            if(Array.isArray(data) && data.length>0){
-              localStorage.setItem(key, JSON.stringify(data));
-            }
-          }
-        }catch(e){}
-      }
-    }
-    render();
-  }
-  seedFromPublishedData();
+  subscribeToChannel(currentChannel);
 
   $('targetLossCount').addEventListener('input', render);
   document.addEventListener('datukCalcChanged', render);
-  render();
 })();
 </script>
 
