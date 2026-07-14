@@ -391,7 +391,18 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <label class="lbl">Pair</label>
     <select class="inp" id="logPair"></select>
 
-    <label class="lbl">Hasil</label>
+    <div class="calc-row">
+      <div>
+        <label class="lbl">Signal ID</label>
+        <input type="text" class="inp" id="logSignalId" placeholder="#21858994" style="margin-bottom:0">
+      </div>
+      <div>
+        <label class="lbl">No. Order</label>
+        <input type="text" class="inp" id="logOrderNo" placeholder="83919136" style="margin-bottom:0">
+      </div>
+    </div>
+
+    <label class="lbl" style="margin-top:12px">Hasil</label>
     <div class="calc-seg" id="logResultSeg">
       <button data-result="W" class="active">✅ Win</button>
       <button data-result="L">❌ Loss</button>
@@ -409,16 +420,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       </div>
     </div>
 
-    <div class="calc-row">
-      <div>
-        <label class="lbl" style="margin-top:12px">Tanggal</label>
-        <input type="date" class="inp" id="logDate" style="margin-bottom:14px">
-      </div>
-      <div>
-        <label class="lbl" style="margin-top:12px">Jam</label>
-        <input type="time" class="inp" id="logTime" style="margin-bottom:14px">
-      </div>
-    </div>
+    <label class="lbl" style="margin-top:12px">Created at</label>
+    <input type="datetime-local" class="inp" id="logCreatedAt" style="margin-bottom:14px">
+
+    <label class="lbl">Opened at</label>
+    <input type="datetime-local" class="inp" id="logOpenedAt" style="margin-bottom:14px">
+
+    <label class="lbl">Closed at <span style="color:#5C4818;font-size:9px">(dipakai buat urutan riwayat)</span></label>
+    <input type="datetime-local" class="inp" id="logClosedAt" style="margin-bottom:14px">
 
     <button class="btn btn-p" id="logAddBtn">+ Tambah Trade</button>
     <button class="btn btn-ghost" id="logCancelEditBtn" style="margin-top:0;display:none">✖ Batal Edit</button>
@@ -517,7 +526,9 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   pinBtn.addEventListener('click', tryUnlock);
   pinInput.addEventListener('keypress', e=>{ if(e.key==='Enter') tryUnlock(); });
 
-  const pairEl=$('logPair'), pipsEl=$('logPips'), vpPreviewEl=$('logVPPreview'), dateEl=$('logDate'), timeEl=$('logTime'),
+  const pairEl=$('logPair'), pipsEl=$('logPips'), vpPreviewEl=$('logVPPreview'),
+        signalIdEl=$('logSignalId'), orderNoEl=$('logOrderNo'),
+        createdAtEl=$('logCreatedAt'), openedAtEl=$('logOpenedAt'), closedAtEl=$('logClosedAt'),
         addBtn=$('logAddBtn'), clearBtn=$('logClearBtn'), cancelEditBtn=$('logCancelEditBtn'),
         resultBtns=document.querySelectorAll('#logResultSeg button');
   let currentResult = 'W';
@@ -547,8 +558,12 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   pipsEl.addEventListener('input', updateVPPreview);
   updateVPPreview();
 
-  dateEl.value = new Date().toISOString().split('T')[0];
-  timeEl.value = new Date().toTimeString().slice(0,5);
+  function nowLocal(){
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0,16);
+  }
+  closedAtEl.value = nowLocal();
 
   resultBtns.forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -596,8 +611,9 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
   function resetForm(){
     pipsEl.value = 0; updateVPPreview();
-    dateEl.value = new Date().toISOString().split('T')[0];
-    timeEl.value = new Date().toTimeString().slice(0,5);
+    signalIdEl.value = ''; orderNoEl.value = '';
+    createdAtEl.value = ''; openedAtEl.value = '';
+    closedAtEl.value = nowLocal();
     editingId = null;
     addBtn.textContent = '+ Tambah Trade';
     cancelEditBtn.style.display = 'none';
@@ -611,8 +627,11 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     currentResult = trade.result;
     pipsEl.value = trade.pips;
     vpPreviewEl.value = trade.vp;
-    dateEl.value = trade.date;
-    timeEl.value = trade.time || '00:00';
+    signalIdEl.value = trade.signalId || '';
+    orderNoEl.value = trade.orderNo || '';
+    createdAtEl.value = trade.createdAt || '';
+    openedAtEl.value = trade.openedAt || '';
+    closedAtEl.value = trade.closedAt || (trade.date ? trade.date+'T'+(trade.time||'00:00') : nowLocal());
     editingId = firestoreId;
     addBtn.textContent = '💾 Simpan Perubahan';
     cancelEditBtn.style.display = 'block';
@@ -635,9 +654,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const pips = parseFloat(pipsEl.value)||0;
     const pair = pairEl.value;
     const vp = parseFloat(vpPreviewEl.value)||0;
-    const date = dateEl.value || new Date().toISOString().split('T')[0];
-    const time = timeEl.value || '00:00';
-    const data = { channel: currentChannel, pair, result: currentResult, pips, vp, date, time };
+    const closedAt = closedAtEl.value || nowLocal();
+    const data = {
+      channel: currentChannel, pair, result: currentResult, pips, vp,
+      signalId: signalIdEl.value.trim(), orderNo: orderNoEl.value.trim(),
+      createdAt: createdAtEl.value, openedAt: openedAtEl.value, closedAt,
+      date: closedAt.split('T')[0], time: closedAt.split('T')[1] || '00:00'
+    };
 
     addBtn.disabled = true;
     const finish = ()=>{ addBtn.disabled=false; resetForm(); };
