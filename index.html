@@ -495,6 +495,209 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 })();
 </script>
 
+<!-- FIREBASE: performance showcase otomatis -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAker4D4k1ueustizZ9QdWwEgcyP3M0NZI",
+    authDomain: "marginkuat.firebaseapp.com",
+    projectId: "marginkuat",
+    storageBucket: "marginkuat.firebasestorage.app",
+    messagingSenderId: "869921372716",
+    appId: "1:869921372716:web:88718ae6a0c4231277af89"
+  };
+  firebase.initializeApp(firebaseConfig);
+  window.datukDB = firebase.firestore();
+</script>
+
+<!-- PERFORMANCE SHOWCASE -->
+<div class="section">
+  <div class="sec-title">📊 Performance Showcase</div>
+  <div class="graph-card">
+    <div id="pfDbStatus" style="font-size:11px;color:#8A6B26;text-align:center;margin-bottom:14px">🔄 Menyambungkan ke database...</div>
+
+    <div id="pfPinGate">
+      <label class="lbl">🔒 Masukkan PIN untuk buka form input</label>
+      <div class="calc-row" style="align-items:end">
+        <input type="password" class="inp" id="pfPinInput" placeholder="PIN" style="margin-bottom:0" inputmode="numeric">
+        <button class="btn btn-p" id="pfPinBtn" style="margin-bottom:0">Buka</button>
+      </div>
+      <div id="pfPinError" style="font-size:11px;color:#F87171;margin-top:6px;display:none">PIN salah, coba lagi.</div>
+    </div>
+
+    <div id="pfFormContent" style="display:none">
+      <div class="calc-row">
+        <div>
+          <label class="lbl">Tanggal</label>
+          <input type="date" class="inp" id="pfDate" style="margin-bottom:0">
+        </div>
+        <div>
+          <label class="lbl">Profit/Loss ($)</label>
+          <input type="number" class="inp" id="pfPL" placeholder="cth: 250 atau -80" step="0.01" style="margin-bottom:0">
+        </div>
+      </div>
+      <div style="font-size:9px;color:#5C4818;margin:6px 0 14px">Isi angka positif kalau profit, negatif kalau loss (cth: -80)</div>
+
+      <button class="btn btn-p" id="pfAddBtn">+ Tambah Trade</button>
+      <button class="btn btn-ghost" id="pfClearBtn" style="margin-top:0">🗑 Hapus Semua Data</button>
+    </div>
+  </div>
+
+  <div class="graph-card" style="margin-top:14px">
+    <div style="font-size:10px;font-weight:700;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Equity Curve</div>
+    <div id="pfChartWrap" style="width:100%;height:140px;margin:10px 0">
+      <svg id="pfChart" viewBox="0 0 300 100" preserveAspectRatio="none" style="width:100%;height:100%">
+        <polyline id="pfChartLine" points="" fill="none" stroke="#4ADE80" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div id="pfChartEmpty" style="font-size:12px;color:#8A6B26;text-align:center">Belum ada data.</div>
+
+    <div class="bal-grid" style="margin-top:16px">
+      <div class="bal-box"><div class="bal-box-val" id="pfWinRate" style="color:#D4AF37">0%</div><div class="bal-box-lbl">Win Rate</div></div>
+      <div class="bal-box"><div class="bal-box-val" id="pfProfitFactor" style="color:#D4AF37">0</div><div class="bal-box-lbl">Profit Factor</div></div>
+      <div class="bal-box"><div class="bal-box-val" id="pfTotalTrade" style="color:#D4AF37">0</div><div class="bal-box-lbl">Total Trade</div></div>
+      <div class="bal-box"><div class="bal-box-val" id="pfDrawdown" style="color:#FF8080">0%</div><div class="bal-box-lbl">Equity Drawdown</div></div>
+      <div class="bal-box"><div class="bal-box-val" id="pfRecovery" style="color:#D4AF37">0</div><div class="bal-box-lbl">Recovery Factor</div></div>
+      <div class="bal-box"><div class="bal-box-val cg" id="pfAvgProfit">$0</div><div class="bal-box-lbl">Avg Profit</div></div>
+      <div class="bal-box"><div class="bal-box-val cr" id="pfAvgLoss">-$0</div><div class="bal-box-lbl">Avg Loss</div></div>
+      <div class="bal-box"><div class="bal-box-val" id="pfNetProfit" style="color:#D4AF37">$0</div><div class="bal-box-lbl">Net Profit</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const LOG_PIN = '2607';
+  const pinInput=$('pfPinInput'), pinBtn=$('pfPinBtn'), pinError=$('pfPinError'),
+        pinGate=$('pfPinGate'), formContent=$('pfFormContent');
+
+  function tryUnlock(){
+    if(pinInput.value === LOG_PIN){
+      pinGate.style.display='none';
+      formContent.style.display='block';
+      pinError.style.display='none';
+    } else {
+      pinError.style.display='block';
+      pinInput.value='';
+    }
+  }
+  pinBtn.addEventListener('click', tryUnlock);
+  pinInput.addEventListener('keypress', e=>{ if(e.key==='Enter') tryUnlock(); });
+
+  const dateEl=$('pfDate'), plEl=$('pfPL'), addBtn=$('pfAddBtn'), clearBtn=$('pfClearBtn');
+  dateEl.value = new Date().toISOString().split('T')[0];
+
+  let cachedData = [];
+  const dbStatusEl = $('pfDbStatus');
+
+  function subscribe(){
+    if(!window.datukDB){ dbStatusEl.textContent = '⚠️ Database belum siap, coba refresh halaman'; return; }
+    window.datukDB.collection('showcase_trades').orderBy('date','asc')
+      .onSnapshot(snapshot=>{
+        cachedData = snapshot.docs.map(d=>({ firestoreId: d.id, ...d.data() }));
+        dbStatusEl.textContent = '🟢 Live — data ke-sync otomatis untuk semua orang';
+        render();
+      }, err=>{
+        console.error(err);
+        dbStatusEl.textContent = '⚠️ Gagal sambung database: '+err.message;
+      });
+  }
+
+  addBtn.addEventListener('click', ()=>{
+    if(!window.datukDB){ alert('Database belum siap, coba refresh halaman.'); return; }
+    const date = dateEl.value || new Date().toISOString().split('T')[0];
+    const pl = parseFloat(plEl.value);
+    if(isNaN(pl)){ alert('Isi Profit/Loss dulu.'); return; }
+    addBtn.disabled = true;
+    window.datukDB.collection('showcase_trades').add({ date, pl }).then(()=>{
+      plEl.value = '';
+      dateEl.value = new Date().toISOString().split('T')[0];
+      addBtn.disabled = false;
+    }).catch(err=>{ alert('Gagal tambah: '+err.message); addBtn.disabled = false; });
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    if(!confirm('Hapus SEMUA data performance showcase? Langsung ke semua orang, tidak bisa dibatalkan.')) return;
+    const batch = window.datukDB.batch();
+    cachedData.forEach(t=> batch.delete(window.datukDB.collection('showcase_trades').doc(t.firestoreId)) );
+    batch.commit().catch(err=>alert('Gagal hapus: '+err.message));
+  });
+
+  function fmtUSD(n){ const s=n<0?'-':''; return s+'$'+Math.abs(n).toLocaleString('en-US',{maximumFractionDigits:2}); }
+
+  function render(){
+    const data = cachedData;
+    const total = data.length;
+    $('pfTotalTrade').textContent = total;
+
+    if(total===0){
+      $('pfChartEmpty').style.display='block';
+      $('pfChart').style.display='none';
+      $('pfWinRate').textContent='0%'; $('pfProfitFactor').textContent='0';
+      $('pfDrawdown').textContent='0%'; $('pfRecovery').textContent='0';
+      $('pfAvgProfit').textContent='$0'; $('pfAvgLoss').textContent='-$0';
+      $('pfNetProfit').textContent='$0';
+      return;
+    }
+    $('pfChartEmpty').style.display='none';
+    $('pfChart').style.display='block';
+
+    const wins = data.filter(t=>t.pl>0);
+    const losses = data.filter(t=>t.pl<0);
+    const winRate = wins.length/total;
+    const grossProfit = wins.reduce((s,t)=>s+t.pl,0);
+    const grossLoss = Math.abs(losses.reduce((s,t)=>s+t.pl,0));
+    const profitFactor = grossLoss>0 ? grossProfit/grossLoss : (grossProfit>0?999:0);
+    const avgProfit = wins.length>0 ? grossProfit/wins.length : 0;
+    const avgLoss = losses.length>0 ? grossLoss/losses.length : 0;
+    const netProfit = grossProfit - grossLoss;
+
+    // equity curve kumulatif
+    let cum = 0; const curve = [0];
+    data.forEach(t=>{ cum += t.pl; curve.push(cum); });
+
+    // max drawdown (%) dari puncak tertinggi
+    let peak = curve[0], maxDD = 0;
+    curve.forEach(v=>{
+      if(v>peak) peak = v;
+      const dd = peak>0 ? (peak-v)/peak : 0;
+      if(dd>maxDD) maxDD = dd;
+    });
+    const maxDDDollar = (()=>{
+      let pk=curve[0], mdd=0;
+      curve.forEach(v=>{ if(v>pk) pk=v; const d=pk-v; if(d>mdd) mdd=d; });
+      return mdd;
+    })();
+    const recoveryFactor = maxDDDollar>0 ? netProfit/maxDDDollar : (netProfit>0?999:0);
+
+    $('pfWinRate').textContent = (winRate*100).toLocaleString('en-US',{maximumFractionDigits:1})+'%';
+    $('pfProfitFactor').textContent = profitFactor.toLocaleString('en-US',{maximumFractionDigits:2});
+    $('pfDrawdown').textContent = (maxDD*100).toLocaleString('en-US',{maximumFractionDigits:2})+'%';
+    $('pfRecovery').textContent = recoveryFactor.toLocaleString('en-US',{maximumFractionDigits:2});
+    $('pfAvgProfit').textContent = fmtUSD(avgProfit);
+    $('pfAvgLoss').textContent = '-'+fmtUSD(avgLoss).replace('$','$');
+    $('pfNetProfit').textContent = fmtUSD(netProfit);
+    $('pfNetProfit').style.color = netProfit>=0 ? '#4ADE80' : '#FF8080';
+
+    // gambar SVG equity curve
+    const minV = Math.min(...curve), maxV = Math.max(...curve);
+    const range = (maxV-minV)||1;
+    const w = 300, h = 100, pad = 4;
+    const points = curve.map((v,i)=>{
+      const x = (i/(curve.length-1))*w;
+      const y = h - pad - ((v-minV)/range)*(h-pad*2);
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    }).join(' ');
+    $('pfChartLine').setAttribute('points', points);
+    $('pfChartLine').setAttribute('stroke', netProfit>=0 ? '#4ADE80' : '#FF8080');
+  }
+
+  subscribe();
+})();
+</script>
+
 <!-- GRAFIK BULANAN -->
 <div class="section">
   <div class="sec-title">📈 Grafik Kinerja Bulanan</div>
