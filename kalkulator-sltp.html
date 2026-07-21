@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator SL / TP</title>
+<style>
+  :root{
+    --bg:#0b120d;
+    --panel:#0f1a12;
+    --panel-2:#111f15;
+    --border:#243026;
+    --gold:#e8b04b;
+    --gold-dim:#a9843a;
+    --text:#e9ede8;
+    --text-dim:#8fa392;
+    --green:#5fd68a;
+    --red:#e8697a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    padding:20px 16px 60px;
+  }
+  .wrap{max-width:480px;margin:0 auto;}
+  h1{
+    font-size:15px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin:0 0 18px;
+    font-weight:700;
+  }
+  .row{display:flex;gap:12px;margin-bottom:16px;}
+  .field{flex:1;}
+  label{
+    display:block;
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--gold-dim);
+    margin-bottom:6px;
+    font-weight:600;
+  }
+  input[type=text], input[type=number], select{
+    width:100%;
+    background:#0a1310;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px 14px;
+    color:var(--text);
+    font-family:'SFMono-Regular',Consolas,'Courier New',monospace;
+    font-size:18px;
+    outline:none;
+  }
+  select{
+    appearance:none;
+    -webkit-appearance:none;
+    background-image:linear-gradient(45deg, transparent 50%, var(--gold) 50%), linear-gradient(135deg, var(--gold) 50%, transparent 50%);
+    background-position:calc(100% - 18px) center, calc(100% - 13px) center;
+    background-size:5px 5px, 5px 5px;
+    background-repeat:no-repeat;
+    font-family:'Segoe UI',system-ui,sans-serif;
+    font-size:15px;
+  }
+  input:focus, select:focus{border-color:var(--gold);}
+
+  .selisih-box{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:#0a1310;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 14px;
+    margin-top:8px;
+    font-size:13px;
+    color:var(--text-dim);
+  }
+  .selisih-box b{
+    color:var(--gold);
+    font-family:Consolas,monospace;
+    font-size:14px;
+  }
+
+  .toggle{display:flex;gap:10px;}
+  .toggle button{
+    flex:1;
+    padding:14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#0a1310;
+    color:var(--text-dim);
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+  }
+  .toggle button.active.buy{background:var(--gold);color:#1a1204;border-color:var(--gold);}
+  .toggle button.active.sell{background:var(--gold);color:#1a1204;border-color:var(--gold);}
+
+  .note{
+    font-size:12.5px;
+    color:var(--text-dim);
+    line-height:1.5;
+    margin:20px 0 14px;
+    padding:12px 14px;
+    background:#0d1712;
+    border-radius:10px;
+    border:1px solid var(--border);
+  }
+  .note span{margin-right:6px;}
+
+  .box{
+    border-radius:12px;
+    padding:16px;
+    margin-bottom:14px;
+    border:1px solid var(--border);
+    background:var(--panel-2);
+  }
+  .box.sl{border-color:#5a2530;background:#1a0d10;}
+  .box.tp{border-color:#1f4a34;background:#0d1712;}
+  .box-label{
+    font-size:12px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:6px;
+  }
+  .box.sl .box-label{color:var(--red);}
+  .box.tp .box-label{color:var(--green);}
+  .box-value{
+    font-family:Consolas,monospace;
+    font-size:26px;
+    font-weight:700;
+  }
+  .box.sl .box-value{color:var(--red);}
+  .box.tp .box-value{color:var(--green);}
+  .box-sub{
+    font-size:12.5px;
+    color:var(--text-dim);
+    margin-top:4px;
+    font-family:Consolas,monospace;
+  }
+  .tp-row{display:flex;justify-content:space-between;align-items:center;}
+  .tp-row .box-sub{text-align:right;}
+
+  .risk-box{
+    border:1px solid var(--gold-dim);
+    border-radius:14px;
+    padding:22px 16px;
+    text-align:center;
+    background:#141006;
+  }
+  .risk-box .lab{
+    font-size:12px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--gold-dim);
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  .risk-box .val{
+    font-family:Consolas,monospace;
+    font-size:38px;
+    font-weight:800;
+    color:var(--gold);
+  }
+  .risk-box .formula{
+    font-size:12.5px;
+    color:var(--text-dim);
+    margin-top:8px;
+    font-family:Consolas,monospace;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Kalkulator SL / TP</h1>
+
+  <div class="row">
+    <div class="field">
+      <label>SL Pips</label>
+      <input type="number" id="slPips" value="10" step="0.1">
+    </div>
+    <div class="field">
+      <label>SL (VP)</label>
+      <input type="number" id="slVp" value="20" step="1">
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Nilai / Pip ($)</label>
+      <input type="number" id="pipValue" value="0.1" step="0.01">
+    </div>
+    <div class="field">
+      <label>Lot</label>
+      <input type="number" id="lot" value="0.01" step="0.01">
+    </div>
+  </div>
+
+  <div class="note">
+    <span>🎯</span>Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1, 1:2, dan 1:3 sekaligus (pakai SL pips di atas sebagai basis).
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Entry Price</label>
+      <input type="text" id="entryPrice" value="4022">
+    </div>
+    <div class="field">
+      <label>Tipe</label>
+      <div class="toggle">
+        <button id="btnBuy" class="active buy" onclick="setType('buy')">▲ Buy</button>
+        <button id="btnSell" class="sell" onclick="setType('sell')">▼ Sell</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==== FITUR BARU: PAIR + SELISIH (di bawah Entry Price, berlaku utk Buy & Sell) ==== -->
+  <div class="row">
+    <div class="field">
+      <label>Pilih Pair (Selisih)</label>
+      <select id="pairSelect">
+        <option value="">— pilih pair —</option>
+        <optgroup label="20.0 Pips">
+          <option data-pips="20">CHFJPY</option>
+          <option data-pips="20">USDJPY</option>
+          <option data-pips="20">EURJPY</option>
+          <option data-pips="20">GBPJPY</option>
+          <option data-pips="20">EURNZD</option>
+        </optgroup>
+        <optgroup label="15.0 Pips">
+          <option data-pips="15">USDCAD</option>
+          <option data-pips="15">EURUSD</option>
+          <option data-pips="15">GBPUSD</option>
+          <option data-pips="15">NZDJPY</option>
+          <option data-pips="15">CADJPY</option>
+          <option data-pips="15">AUDJPY</option>
+        </optgroup>
+        <optgroup label="10.0 Pips">
+          <option data-pips="10">NZDUSD</option>
+          <option data-pips="10">AUDUSD</option>
+          <option data-pips="10">EURGBP</option>
+          <option data-pips="10">USDCHF</option>
+        </optgroup>
+      </select>
+    </div>
+  </div>
+  <div class="selisih-box" id="selisihInfo">
+    Harga sesungguhnya (selisih) pair terpilih: <b id="selisihVal">–</b>
+  </div>
+  <!-- ==== END FITUR BARU ==== -->
+
+  <div class="box sl">
+    <div class="box-label">⬤ Stop Loss (sama untuk semua RR)</div>
+    <div class="box-value" id="slPrice">-</div>
+    <div class="box-sub" id="slSub">-</div>
+  </div>
+
+  <div class="box tp">
+    <div class="tp-row">
+      <div>
+        <div class="box-label">🎯 TP — RR 1:1</div>
+        <div class="box-value" id="tp1">-</div>
+      </div>
+      <div class="box-sub" id="tp1Sub">-</div>
+    </div>
+  </div>
+
+  <div class="box tp">
+    <div class="tp-row">
+      <div>
+        <div class="box-label">🎯 TP — RR 1:2</div>
+        <div class="box-value" id="tp2">-</div>
+      </div>
+      <div class="box-sub" id="tp2Sub">-</div>
+    </div>
+  </div>
+
+  <div class="box tp">
+    <div class="tp-row">
+      <div>
+        <div class="box-label">🎯 TP — RR 1:3</div>
+        <div class="box-value" id="tp3">-</div>
+      </div>
+      <div class="box-sub" id="tp3Sub">-</div>
+    </div>
+  </div>
+
+  <div class="risk-box">
+    <div class="lab">Risk $ per Transaksi</div>
+    <div class="val" id="riskVal">-</div>
+    <div class="formula" id="riskFormula">-</div>
+  </div>
+</div>
+
+<script>
+const PIP_SIZE = 0.0001;
+let type = 'buy';
+
+function setType(t){
+  type = t;
+  document.getElementById('btnBuy').classList.toggle('active', t==='buy');
+  document.getElementById('btnSell').classList.toggle('active', t==='sell');
+  calc();
+}
+
+document.getElementById('pairSelect').addEventListener('change', function(){
+  const opt = this.options[this.selectedIndex];
+  const pips = opt.getAttribute('data-pips');
+  const infoEl = document.getElementById('selisihVal');
+  if(pips){
+    document.getElementById('slPips').value = pips;
+    document.getElementById('slVp').value = pips * 2;
+    infoEl.textContent = pips + '.0 Pips (' + opt.text + ')';
+  } else {
+    infoEl.textContent = '–';
+  }
+  calc();
+});
+
+function fmt(n, d=5){
+  return n.toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+}
+
+function calc(){
+  const slPips = parseFloat(document.getElementById('slPips').value) || 0;
+  const pipValue = parseFloat(document.getElementById('pipValue').value.toString().replace(',','.')) || 0;
+  const lot = parseFloat(document.getElementById('lot').value.toString().replace(',','.')) || 0;
+  const entry = parseFloat(document.getElementById('entryPrice').value.toString().replace(',','.')) || 0;
+
+  const dir = (type === 'buy') ? 1 : -1;
+  const slPrice = entry - dir * slPips * PIP_SIZE;
+  const tp1Price = entry + dir * slPips * 1 * PIP_SIZE;
+  const tp2Price = entry + dir * slPips * 2 * PIP_SIZE;
+  const tp3Price = entry + dir * slPips * 3 * PIP_SIZE;
+
+  document.getElementById('slPrice').textContent = fmt(slPrice);
+  document.getElementById('slSub').textContent = slPips.toFixed(0) + ' pips · ' + (slPips*2).toFixed(0) + ' VP';
+
+  document.getElementById('tp1').textContent = fmt(tp1Price);
+  document.getElementById('tp1Sub').textContent = slPips.toFixed(0) + ' pips  ' + (slPips*2).toFixed(0) + ' VP';
+
+  document.getElementById('tp2').textContent = fmt(tp2Price);
+  document.getElementById('tp2Sub').textContent = (slPips*2).toFixed(0) + ' pips  ' + (slPips*4).toFixed(0) + ' VP';
+
+  document.getElementById('tp3').textContent = fmt(tp3Price);
+  document.getElementById('tp3Sub').textContent = (slPips*3).toFixed(0) + ' pips  ' + (slPips*6).toFixed(0) + ' VP';
+
+  const risk = slPips * pipValue * (lot/0.01);
+  document.getElementById('riskVal').textContent = '$' + risk.toFixed(2);
+  document.getElementById('riskFormula').textContent =
+    slPips.toFixed(0) + ' pips × $' + pipValue + '/pip × lot ' + lot;
+}
+
+['slPips','slVp','pipValue','lot','entryPrice'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', calc);
+});
+
+calc();
+</script>
+</body>
+</html>
