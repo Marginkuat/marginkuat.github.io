@@ -298,6 +298,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
     <div id="rrLevelsOut" style="margin-top:16px"></div>
 
+    <div id="pendingOut" style="margin-top:16px"></div>
+
     <div class="calc-hero" style="margin-top:16px">
       <div class="calc-hero-lbl">Risk $ per Transaksi</div>
       <div class="calc-hero-val" id="calcOutRiskHero">$0.00</div>
@@ -370,6 +372,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     if(!entry || slPips<=0){
       $('rrLevelsOut').innerHTML = '';
       $('selisihOut').innerHTML = '';
+      $('pendingOut').innerHTML = '';
       return;
     }
 
@@ -425,6 +428,42 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     });
 
     $('rrLevelsOut').innerHTML = html;
+
+    // ── Perbandingan harga: MT4/5 (langsung) vs Trading Family (pending order) ──
+    // Trading Family pakai pending order, jadi semua level (Entry, SL, TP) digeser
+    // maju sebesar 1x selisih (SL pips) pair yang dipilih, searah arah Buy/Sell.
+    const entryB = entry + dir*slPips*factor;
+    const slB = entry; // = entryB mundur 1x selisih, sama dengan entry asli
+
+    const pendRow = (label, valA, valB) => `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:9px;text-align:center">
+          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmtPrice(valA, decimals)}</div>
+        </div>
+        <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:9px;text-align:center">
+          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmtPrice(valB, decimals)}</div>
+        </div>
+      </div>`;
+
+    let pendingHtml = `<div style="font-size:11px;color:#8A6B26;margin-bottom:10px;line-height:1.5">📋 Dua opsi harga — kiri untuk eksekusi langsung (MT4/5), kanan untuk pending order (mis. Trading Family):</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
+        <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">MT4/5 (Langsung)</div>
+        <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">Trading Family (Pending)</div>
+      </div>`;
+
+    pendingHtml += pendRow(entryType==='buy'?'Buy':'Sell', entry, entryB);
+    pendingHtml += pendRow('Stop Loss', slPrice, slB);
+
+    tpList.forEach(tpPips=>{
+      const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
+      const tpA = entry + dir*tpPips*factor;
+      const tpB = entry + dir*(slPips+tpPips)*factor;
+      pendingHtml += pendRow(`TP RR 1:${rrLabel}`, tpA, tpB);
+    });
+
+    $('pendingOut').innerHTML = pendingHtml;
   }
 
   pairSelectEl.addEventListener('change', ()=>{
