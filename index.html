@@ -475,20 +475,42 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       const ke1 = entryB; // level pending utama (sama seperti kolom Trading Family di atas)
       const ke2 = entry - dir*100*factor; // level ke-2, tetap berjarak 100 pips dari entry, arah berlawanan
 
-      $('xauGridOut').innerHTML = `<div style="background:#161A0F;border:1px solid #4A3A12;border-radius:10px;padding:12px">
+      const slKe1 = ke1 - dir*slPips*factor;
+      const slKe2 = ke2 - dir*slPips*factor;
+
+      const gridRow = (label, valA, valB) => `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div style="background:#0D0F0A;border-radius:8px;padding:9px;text-align:center">
+            <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:#D4AF37;font-weight:700">${fmtPrice(valA, decimals)}</div>
+          </div>
+          <div style="background:#0D0F0A;border-radius:8px;padding:9px;text-align:center">
+            <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:#D4AF37;font-weight:700">${fmtPrice(valB, decimals)}</div>
+          </div>
+        </div>`;
+
+      let gridHtml = `<div style="background:#161A0F;border:1px solid #4A3A12;border-radius:10px;padding:12px">
         <div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚡ Opsi Tambahan — Grid 100 Pips (Khusus XAUUSD)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div style="background:#0D0F0A;border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${orderLabel} — Ke 1</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#D4AF37;font-weight:700">${fmtPrice(ke1, decimals)}</div>
-          </div>
-          <div style="background:#0D0F0A;border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${orderLabel} — Ke 2</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#D4AF37;font-weight:700">${fmtPrice(ke2, decimals)}</div>
-          </div>
-        </div>
-        <div style="font-size:10px;color:#8A6B26;margin-top:8px;line-height:1.4">Ke 1 = level pending searah trade (breakout). Ke 2 = 100 pips dari entry di sisi berlawanan (pullback). Otomatis berbalik arah kalau tipe diganti ke Sell.</div>
-      </div>`;
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
+          <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">${orderLabel} — Ke 1 (Breakout)</div>
+          <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">${orderLabel} — Ke 2 (Pullback)</div>
+        </div>`;
+
+      gridHtml += gridRow('Entry', ke1, ke2);
+      gridHtml += gridRow('Stop Loss', slKe1, slKe2);
+
+      tpList.forEach(tpPips=>{
+        const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
+        const tp1 = ke1 + dir*tpPips*factor;
+        const tp2 = ke2 + dir*tpPips*factor;
+        gridHtml += gridRow(`TP RR 1:${rrLabel}`, tp1, tp2);
+      });
+
+      gridHtml += `<div style="font-size:10px;color:#8A6B26;margin-top:4px;line-height:1.4">Ke 1 = level pending searah trade (breakout), SL & TP-nya sama seperti kolom Trading Family di atas. Ke 2 = 100 pips dari entry di sisi berlawanan (pullback), SL & TP dihitung dari level Ke 2 dengan jarak pips yang sama. Otomatis berbalik arah kalau tipe diganti ke Sell.</div>`;
+      gridHtml += `</div>`;
+
+      $('xauGridOut').innerHTML = gridHtml;
     } else {
       $('xauGridOut').innerHTML = '';
     }
