@@ -301,6 +301,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
     <div id="pendingOut" style="margin-top:16px"></div>
 
+    <div id="xauGridOut" style="margin-top:16px"></div>
+
     <div class="calc-hero" style="margin-top:16px">
       <div class="calc-hero-lbl">Risk $ per Transaksi</div>
       <div class="calc-hero-val" id="calcOutRiskHero">$0.00</div>
@@ -374,6 +376,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       $('rrLevelsOut').innerHTML = '';
       $('selisihOut').innerHTML = '';
       $('pendingOut').innerHTML = '';
+      $('xauGridOut').innerHTML = '';
       return;
     }
 
@@ -465,6 +468,30 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     });
 
     $('pendingOut').innerHTML = pendingHtml;
+
+    // ── Opsi ke-3: Grid 100 pips — KHUSUS XAUUSD (tidak berlaku untuk pair forex) ──
+    if(pairName === 'XAUUSD'){
+      const orderLabel = entryType==='buy' ? 'Buy' : 'Sell';
+      const ke1 = entryB; // level pending utama (sama seperti kolom Trading Family di atas)
+      const ke2 = entry - dir*100*factor; // level ke-2, tetap berjarak 100 pips dari entry, arah berlawanan
+
+      $('xauGridOut').innerHTML = `<div style="background:#161A0F;border:1px solid #4A3A12;border-radius:10px;padding:12px">
+        <div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚡ Opsi Tambahan — Grid 100 Pips (Khusus XAUUSD)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:#0D0F0A;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${orderLabel} — Ke 1</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#D4AF37;font-weight:700">${fmtPrice(ke1, decimals)}</div>
+          </div>
+          <div style="background:#0D0F0A;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${orderLabel} — Ke 2</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#D4AF37;font-weight:700">${fmtPrice(ke2, decimals)}</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:#8A6B26;margin-top:8px;line-height:1.4">Ke 1 = level pending searah trade (breakout). Ke 2 = 100 pips dari entry di sisi berlawanan (pullback). Otomatis berbalik arah kalau tipe diganti ke Sell.</div>
+      </div>`;
+    } else {
+      $('xauGridOut').innerHTML = '';
+    }
   }
 
   pairSelectEl.addEventListener('change', ()=>{
