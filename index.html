@@ -246,9 +246,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <label class="lbl">Pilih Pair</label>
     <select class="inp" id="calcPairSelect" style="margin-bottom:0">
       <optgroup label="XAUUSD">
-        <option value="30|60">XAUUSD Standar (30 pips)</option>
-        <option value="166.66|500" selected>XAUUSD Normal (166,66 pips)</option>
-        <option value="200|500">XAUUSD Medium (200 pips)</option>
+        <option value="166.66|500" selected>XAUUSD Standar (166,66 pips)</option>
+        <option value="250|450">XAUUSD Medium (250 pips)</option>
         <option value="500|500">XAUUSD Hard (500 pips)</option>
       </optgroup>
       <optgroup label="Forex Standar (SL 10 pips)">
@@ -343,6 +342,18 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     return match || 'XAUUSD';
   }
 
+  // Selisih (spread) ASLI broker per pair — dipakai untuk harga Buy/Sell & titik pending order.
+  // Ini TIDAK sama dengan SL preset (Standar/Medium/Hard) yang dipilih untuk ukuran risiko.
+  const PAIR_SPREAD = {
+    XAUUSD: 30,
+    NZDUSD: 10, AUDUSD: 10, EURGBP: 10, USDCHF: 10,
+    USDCAD: 15, EURUSD: 15, GBPUSD: 15, NZDJPY: 15, CADJPY: 15, AUDJPY: 15,
+    CHFJPY: 20, USDJPY: 20, EURJPY: 20, GBPJPY: 20, EURNZD: 20
+  };
+  function pairSpread(pairName){
+    return PAIR_SPREAD[pairName] != null ? PAIR_SPREAD[pairName] : (parseFloat(slEl.value)||0);
+  }
+
   // Faktor konversi pips -> pergerakan harga, tergantung jenis pair
   function pipPriceFactor(pairName){
     if(pairName==='XAUUSD') return 0.1;
@@ -380,11 +391,12 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       return;
     }
 
-    // ── Selisih (Sell & Buy) — dihitung dari SL pips pair yang dipilih, tidak tergantung toggle Buy/Sell ──
-    const sellPrice = entry - slPips*factor;
-    const buyPrice = entry + slPips*factor;
+    // ── Selisih (Sell & Buy) — pakai spread ASLI pair (bukan SL preset), tidak tergantung toggle Buy/Sell ──
+    const spread = pairSpread(pairName);
+    const sellPrice = entry - spread*factor;
+    const buyPrice = entry + spread*factor;
     $('selisihOut').innerHTML = `<div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:12px">
-      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">↔️ Selisih ${slPips} pips (${pairName})</div>
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">↔️ Selisih ${spread} pips (${pairName})</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div style="background:#0D0F0A;border-radius:8px;padding:8px;text-align:center">
           <div style="font-size:9px;color:#F87171;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Sell</div>
@@ -434,10 +446,10 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     $('rrLevelsOut').innerHTML = html;
 
     // ── Perbandingan harga: MT4/5 (langsung) vs Trading Family (pending order) ──
-    // Trading Family pakai pending order, jadi semua level (Entry, SL, TP) digeser
-    // maju sebesar 1x selisih (SL pips) pair yang dipilih, searah arah Buy/Sell.
-    const entryB = entry + dir*slPips*factor;
-    const slB = entry; // = entryB mundur 1x selisih, sama dengan entry asli
+    // Trading Family pakai pending order, jadi Entry digeser sebesar SPREAD ASLI pair
+    // (bukan SL preset), searah arah Buy/Sell. SL & TP tetap pakai SL preset yang dipilih.
+    const entryB = entry + dir*spread*factor;
+    const slB = entry; // = entryB mundur 1x spread, sama dengan entry asli
 
     const pendRow = (label, valA, valB) => `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
@@ -463,51 +475,45 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     tpList.forEach(tpPips=>{
       const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
       const tpA = entry + dir*tpPips*factor;
-      const tpB = entry + dir*(slPips+tpPips)*factor;
+      const tpB = entryB + dir*tpPips*factor;
       pendingHtml += pendRow(`TP RR 1:${rrLabel}`, tpA, tpB);
     });
 
     $('pendingOut').innerHTML = pendingHtml;
 
-    // ── Opsi ke-3: Grid 100 pips — KHUSUS XAUUSD (tidak berlaku untuk pair forex) ──
+    // ── Pending order — KHUSUS XAUUSD, dibatasi maksimal 2x ──
     if(pairName === 'XAUUSD'){
       const orderLabel = entryType==='buy' ? 'Buy' : 'Sell';
-      const ke1 = entryB; // level pending utama (sama seperti kolom Trading Family di atas)
-      const ke2 = entry - dir*100*factor; // level ke-2, tetap berjarak 100 pips dari entry, arah berlawanan
+      const kes = [
+        { label: 'Ke 1 (Pending 1)', entry: entryB },
+        { label: 'Ke 2 (Pending 2)', entry: entryB - dir*100*factor }
+      ];
+      kes.forEach(k=>{ k.sl = k.entry - dir*slPips*factor; });
 
-      const slKe1 = ke1 - dir*slPips*factor;
-      const slKe2 = ke2 - dir*slPips*factor;
-
-      const gridRow = (label, valA, valB) => `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div style="background:#0D0F0A;border-radius:8px;padding:9px;text-align:center">
-            <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:#D4AF37;font-weight:700">${fmtPrice(valA, decimals)}</div>
-          </div>
-          <div style="background:#0D0F0A;border-radius:8px;padding:9px;text-align:center">
-            <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:#D4AF37;font-weight:700">${fmtPrice(valB, decimals)}</div>
-          </div>
+      const gridRow = (label, vals) => `
+        <div style="display:grid;grid-template-columns:repeat(${vals.length},1fr);gap:6px;margin-bottom:8px">
+          ${vals.map(v=>`
+          <div style="background:#0D0F0A;border-radius:8px;padding:7px 4px;text-align:center">
+            <div style="font-size:8.5px;color:#8A6B26;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px">${label}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#D4AF37;font-weight:700">${fmtPrice(v, decimals)}</div>
+          </div>`).join('')}
         </div>`;
 
       let gridHtml = `<div style="background:#161A0F;border:1px solid #4A3A12;border-radius:10px;padding:12px">
-        <div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚡ Opsi Tambahan — Grid 100 Pips (Khusus XAUUSD)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
-          <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">${orderLabel} — Ke 1 (Breakout)</div>
-          <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">${orderLabel} — Ke 2 (Pullback)</div>
+        <div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚡ Pending Order (Khusus XAUUSD, maks. 2x)</div>
+        <div style="display:grid;grid-template-columns:repeat(${kes.length},1fr);gap:6px;margin-bottom:4px">
+          ${kes.map(k=>`<div style="text-align:center;font-size:9px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.3px">${orderLabel} — ${k.label}</div>`).join('')}
         </div>`;
 
-      gridHtml += gridRow('Entry', ke1, ke2);
-      gridHtml += gridRow('Stop Loss', slKe1, slKe2);
+      gridHtml += gridRow('Entry', kes.map(k=>k.entry));
+      gridHtml += gridRow('Stop Loss', kes.map(k=>k.sl));
 
       tpList.forEach(tpPips=>{
         const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
-        const tp1 = ke1 + dir*tpPips*factor;
-        const tp2 = ke2 + dir*tpPips*factor;
-        gridHtml += gridRow(`TP RR 1:${rrLabel}`, tp1, tp2);
+        gridHtml += gridRow(`TP RR 1:${rrLabel}`, kes.map(k=>k.entry + dir*tpPips*factor));
       });
 
-      gridHtml += `<div style="font-size:10px;color:#8A6B26;margin-top:4px;line-height:1.4">Ke 1 = level pending searah trade (breakout), SL & TP-nya sama seperti kolom Trading Family di atas. Ke 2 = 100 pips dari entry di sisi berlawanan (pullback), SL & TP dihitung dari level Ke 2 dengan jarak pips yang sama. Otomatis berbalik arah kalau tipe diganti ke Sell.</div>`;
+      gridHtml += `<div style="font-size:10px;color:#8A6B26;margin-top:4px;line-height:1.4">Ke 1 = titik pending pertama (entry ± ${spread} pips selisih spread ${pairName}). Ke 2 = Ke 1 − 100 pips (aturan Trading Family: jarak antar pending 100 pips, maksimal 2 order). SL & TP tiap level pakai jarak pips dari SL preset yang dipilih (${slPips} pips). Otomatis berbalik arah kalau tipe diganti ke Sell.</div>`;
       gridHtml += `</div>`;
 
       $('xauGridOut').innerHTML = gridHtml;
