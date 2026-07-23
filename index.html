@@ -292,6 +292,27 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         <option value="40|80">GBPJPY Medium (40 pips)</option>
         <option value="40|80">USDJPY Medium (40 pips)</option>
       </optgroup>
+      <optgroup label="Forex Hard (SL 30 pips)">
+        <option value="30|30">AUDUSD Hard (30 pips)</option>
+        <option value="30|30">EURGBP Hard (30 pips)</option>
+        <option value="30|30">NZDUSD Hard (30 pips)</option>
+        <option value="30|30">USDCHF Hard (30 pips)</option>
+      </optgroup>
+      <optgroup label="Forex Hard (SL 45 pips)">
+        <option value="45|45">AUDJPY Hard (45 pips)</option>
+        <option value="45|45">CADJPY Hard (45 pips)</option>
+        <option value="45|45">EURUSD Hard (45 pips)</option>
+        <option value="45|45">GBPUSD Hard (45 pips)</option>
+        <option value="45|45">NZDJPY Hard (45 pips)</option>
+        <option value="45|45">USDCAD Hard (45 pips)</option>
+      </optgroup>
+      <optgroup label="Forex Hard (SL 60 pips)">
+        <option value="60|60">CHFJPY Hard (60 pips)</option>
+        <option value="60|60">EURJPY Hard (60 pips)</option>
+        <option value="60|60">EURNZD Hard (60 pips)</option>
+        <option value="60|60">GBPJPY Hard (60 pips)</option>
+        <option value="60|60">USDJPY Hard (60 pips)</option>
+      </optgroup>
     </select>
 
     <div id="selisihOut" style="margin-top:12px"></div>
@@ -340,6 +361,16 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const text = opt ? opt.textContent : '';
     const match = Object.keys(VP_MULTIPLIER).find(p=>text.includes(p));
     return match || 'XAUUSD';
+  }
+
+  // Tier (Standar/Medium/Hard) diambil dari teks opsi yang dipilih, dipakai untuk membedakan
+  // tampilan RR meski nilai SL pips-nya sama dengan tier lain (mis. Hard 30 pips vs Medium 30 pips).
+  function currentTier(){
+    const opt = pairSelectEl.options[pairSelectEl.selectedIndex];
+    const text = opt ? opt.textContent : '';
+    if(text.includes('Hard')) return 'hard';
+    if(text.includes('Medium')) return 'medium';
+    return 'standar';
   }
 
   // Selisih (spread) ASLI broker per pair — dipakai untuk harga Buy/Sell & titik pending order.
@@ -426,7 +457,12 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       250: [500],
       500: [500]
     };
-    const tpList = CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2, slPips*3];
+    const tier = currentTier();
+    // Forex "Hard" selalu RR 1:1 (TP = SL), walaupun angka SL-nya kebetulan sama dengan preset lain
+    // (mis. Hard 30 pips vs Medium 30 pips) — dibedakan lewat tier, bukan cuma angka SL.
+    const tpList = pairName==='XAUUSD'
+      ? (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2, slPips*3])
+      : (tier==='hard' ? [slPips] : [slPips*1, slPips*2, slPips*3]);
 
     tpList.forEach(tpPips=>{
       const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
