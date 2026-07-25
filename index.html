@@ -271,6 +271,9 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         <option value="20|40">GBPJPY Standar (20 pips)</option>
         <option value="20|40">USDJPY Standar (20 pips)</option>
       </optgroup>
+      <optgroup label="BTCUSD">
+        <option value="300|600">BTCUSD Standar (300 poin)</option>
+      </optgroup>
       <optgroup label="Forex Medium (SL 20 pips)">
         <option value="20|40">AUDUSD Medium (20 pips)</option>
         <option value="20|40">EURGBP Medium (20 pips)</option>
@@ -353,7 +356,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     XAUUSD: 0.2,
     AUDUSD: 2, EURGBP: 2, NZDUSD: 2, USDCHF: 2,
     AUDJPY: 1.5, CADJPY: 1.5, EURUSD: 1.5, GBPUSD: 1.5, NZDJPY: 1.5, USDCAD: 1.5,
-    CHFJPY: 1, EURJPY: 1, GBPJPY: 1, EURNZD: 1, USDJPY: 1
+    CHFJPY: 1, EURJPY: 1, GBPJPY: 1, EURNZD: 1, USDJPY: 1,
+    BTCUSD: 1
   };
 
   function currentPairName(){
@@ -388,6 +392,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   // Faktor konversi pips -> pergerakan harga, tergantung jenis pair
   function pipPriceFactor(pairName){
     if(pairName==='XAUUSD') return 0.1;
+    if(pairName==='BTCUSD') return 1;
     if(pairName.includes('JPY')) return 0.01;
     return 0.0001;
   }
@@ -412,7 +417,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const pairName = currentPairName();
     const mult = VP_MULTIPLIER[pairName] || 1;
     const factor = pipPriceFactor(pairName);
-    const decimals = pairName==='XAUUSD' ? 2 : (pairName.includes('JPY') ? 3 : 5);
+    const decimals = (pairName==='XAUUSD'||pairName==='BTCUSD') ? 2 : (pairName.includes('JPY') ? 3 : 5);
 
     if(!entry || slPips<=0){
       $('rrLevelsOut').innerHTML = '';
