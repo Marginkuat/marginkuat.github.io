@@ -448,11 +448,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const dir = entryType==='buy' ? 1 : -1;
     const slPrice = entry - dir*slPips*factor;
     const slVP = slPips*mult;
+    const unitLabel = pairName==='BTCUSD' ? 'poin' : 'pips';
+    const showVP = pairName!=='BTCUSD';
 
     let html = `<div style="background:#0D0F0A;border:1px solid #8A2020;border-radius:10px;padding:12px;margin-bottom:10px">
       <div style="font-size:10px;color:#C89090;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🛑 Stop Loss (sama untuk semua RR)</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:18px;color:#FF8080;font-weight:700">${fmtPrice(slPrice, decimals)}</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-top:4px">${slPips} pips · ${slVP.toLocaleString('en-US',{maximumFractionDigits:2})} VP</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-top:4px">${slPips} ${unitLabel}${showVP ? ' · '+slVP.toLocaleString('en-US',{maximumFractionDigits:2})+' VP' : ''}</div>
     </div>`;
 
     // Set TP custom per SL tertentu (XAUUSD). Kalau SL tidak ada di daftar, pakai default x1/x2/x3.
@@ -479,7 +481,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
           <div style="font-family:'JetBrains Mono',monospace;font-size:18px;color:#4ADE80;font-weight:700">${fmtPrice(tpPrice, decimals)}</div>
         </div>
         <div style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26">
-          ${tpPips.toLocaleString('en-US',{maximumFractionDigits:2})} pips<br>${tpVP.toLocaleString('en-US',{maximumFractionDigits:2})} VP
+          ${tpPips.toLocaleString('en-US',{maximumFractionDigits:2})} ${unitLabel}${showVP ? '<br>'+tpVP.toLocaleString('en-US',{maximumFractionDigits:2})+' VP' : ''}
         </div>
       </div>`;
     });
