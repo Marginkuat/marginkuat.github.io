@@ -482,11 +482,12 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       500: [500]
     };
     const tier = currentTier();
-    // Forex "Hard" selalu RR 1:1 (TP = SL), walaupun angka SL-nya kebetulan sama dengan preset lain
-    // (mis. Hard 30 pips vs Medium 30 pips) — dibedakan lewat tier, bukan cuma angka SL.
+    // Forex: Standar = RR1,2,3 · Medium = RR1,2 saja · Hard = RR1 saja.
+    // Dibedakan lewat tier (bukan cuma angka SL) supaya SL yang kebetulan sama nilainya antar tier
+    // (mis. Hard 30 pips vs Medium 30 pips) tidak saling menimpa tampilan.
     const tpList = pairName==='XAUUSD'
       ? (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2, slPips*3])
-      : (tier==='hard' ? [slPips] : [slPips*1, slPips*2, slPips*3]);
+      : (tier==='hard' ? [slPips] : tier==='medium' ? [slPips*1, slPips*2] : [slPips*1, slPips*2, slPips*3]);
 
     tpList.forEach(tpPips=>{
       const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
