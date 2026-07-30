@@ -256,6 +256,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <label class="lbl">Pilih Pair</label>
     <select class="inp" id="calcPairSelect" style="margin-bottom:0">
       <optgroup label="XAUUSD">
+        <option value="100|300">XAUUSD Kerdil (100 pips)</option>
         <option value="166.66|500" selected>XAUUSD Standar (166,66 pips)</option>
         <option value="250|500">XAUUSD Medium (250 pips)</option>
         <option value="500|500">XAUUSD Hard (500 pips)</option>
@@ -1041,6 +1042,66 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <input class="inp" id="kasKet" placeholder="Contoh: untuk keperluan mendesak keluarga">
 
     <button class="btn btn-p" onclick="simpanKas()">💾 Simpan Catatan</button>
+  </div>
+</div>
+
+<div class="section" id="artikelEdukasi" style="padding-top:6px">
+  <div style="font-size:15px;font-weight:800;color:#D4AF37;margin-bottom:4px">📘 Belajar Dari Pengalaman</div>
+  <div style="font-size:11px;color:#8A6B26;margin-bottom:14px">Catatan edukasi trading — ditulis dari pengalaman pribadi memakai kalkulator ini</div>
+
+  <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:16px;margin-bottom:12px">
+    <div style="font-size:14px;font-weight:700;color:#4ADE80;margin-bottom:8px">1. Kenapa Saya Pakai Level SL Tetap (Standar / Medium / Hard)</div>
+    <div style="font-size:12.5px;color:#C9C9B8;line-height:1.7">
+      Dulu SL saya asal-asalan, kadang kena "cut" cuma karena noise kecil, kadang malah kebablasan sampai rugi besar.
+      Sekarang saya bagi jadi 3 level tetap per pair — <b>Standar</b> untuk kondisi normal, <b>Medium</b> kalau volatilitas
+      lagi naik, <b>Hard</b> kalau saya yakin arah tapi butuh ruang lebih lebar. SL yang konsisten bikin saya nggak lagi
+      "menebak-nebak" tiap kali entry — [tulis pengalaman kamu di sini: kapan biasanya kamu pilih Standar vs Medium vs Hard?]
+    </div>
+  </div>
+
+  <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:16px;margin-bottom:12px">
+    <div style="font-size:14px;font-weight:700;color:#4ADE80;margin-bottom:8px">2. Kenapa RR 1:1, 1:2, 1:3 Selalu Saya Hitung Sekaligus</div>
+    <div style="font-size:12.5px;color:#C9C9B8;line-height:1.7">
+      Sebelum entry, saya selalu lihat tiga skenario TP sekaligus, bukan cuma satu target. Ini bantu saya mikir realistis:
+      seberapa besar peluang harga sampai ke RR 1:3, dan apakah masuk akal ambil profit lebih awal di RR 1:1 kalau market
+      terasa tidak stabil. [tulis contoh kejadian nyata: kapan kamu tutup di RR 1:1 dan ternyata itu keputusan yang tepat/salah?]
+    </div>
+  </div>
+
+  <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:16px;margin-bottom:12px">
+    <div style="font-size:14px;font-weight:700;color:#4ADE80;margin-bottom:8px">3. Kenapa Saya Selalu Hitung Kerugian dalam $ Sebelum Entry</div>
+    <div style="font-size:12.5px;color:#C9C9B8;line-height:1.7">
+      Melihat angka pips saja kadang nggak "kerasa". Begitu saya ubah ke nilai dolar — misalnya SL 250 pips XAUUSD itu sama
+      dengan risiko $25 — saya jadi lebih sadar apakah lot yang saya pakai sudah sesuai modal atau kebesaran.
+      [tulis pengalaman kamu: pernah kena floating loss yang bikin kaget karena nggak dihitung $ dulu?]
+    </div>
+  </div>
+
+  <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:16px;margin-bottom:12px">
+    <div style="font-size:14px;font-weight:700;color:#4ADE80;margin-bottom:8px">4. Kelebihan &amp; Kekurangan Sistem RR yang Saya Pakai</div>
+    <div style="font-size:12.5px;color:#C9C9B8;line-height:1.7">
+      Secara umum, sistem RR 1:1, 1:2, 1:3 ini enak dipakai karena SL-nya tetap dan sudah dihitung otomatis, jadi saya
+      nggak perlu repot mikir ulang tiap mau entry — tinggal pilih pair dan level, langsung kelihatan semua target.
+      Tapi bukan berarti tanpa kelemahan: makin tinggi target RR (misalnya 1:3), makin jarang juga harga benar-benar
+      sampai ke sana, jadi win rate-nya cenderung lebih kecil dibanding RR 1:1. Sebaliknya, RR 1:1 lebih sering kena
+      TP, tapi profitnya juga lebih tipis kalau dibanding risikonya.<br><br>
+      Saat ini saya masih tahap uji coba khusus di <b>RR 1:2</b>, dan hasilnya saya catat setiap hari biar bisa lihat
+      pola yang sebenarnya — bukan cuma feeling. Baru dari catatan harian itu saya bisa tahu apakah RR 1:2 ini memang
+      cocok buat gaya trading saya, atau perlu disesuaikan lagi ke depannya.
+    </div>
+  </div>
+
+  <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:16px;margin-bottom:12px">
+    <div style="font-size:14px;font-weight:700;color:#4ADE80;margin-bottom:8px">5. Pelajaran Terbesar Saya Sejauh Ini</div>
+    <div style="font-size:12.5px;color:#C9C9B8;line-height:1.7">
+      [Tulis di sini pelajaran paling berharga dari perjalanan trading kamu — bisa soal disiplin SL, soal psikologi
+      saat rugi beruntun, atau soal kenapa akhirnya kamu bikin kalkulator ini sendiri.]
+    </div>
+  </div>
+
+  <div style="font-size:10.5px;color:#5A5A3A;margin-top:14px;line-height:1.6">
+    ⚠️ Catatan: tulisan ini murni pengalaman &amp; pendapat pribadi, bukan rekomendasi atau saran finansial. Trading
+    forex/komoditas/crypto mengandung risiko kehilangan modal.
   </div>
 </div>
 
