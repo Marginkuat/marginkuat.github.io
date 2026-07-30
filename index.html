@@ -357,6 +357,87 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<div class="section" id="sinyalGapSection">
+  <div style="font-size:15px;font-weight:800;color:#D4AF37;margin-bottom:4px">↔️ Selisih Signal 1 ke Signal 2</div>
+  <div style="font-size:11px;color:#8A6B26;margin-bottom:14px">Jarak minimal sebelum boleh buka posisi ke-2 di pair yang sama (khusus forex, XAUUSD tidak berlaku)</div>
+
+  <label>Harga Signal 1</label>
+  <input class="inp" id="sgEntry" type="text" inputmode="decimal" placeholder="Contoh: 1.08050">
+
+  <label style="margin-top:10px">Pilih Pair</label>
+  <select class="inp" id="sgPairSelect" style="margin-bottom:0">
+    <optgroup label="Jarak Minimal 50 pips">
+      <option value="50">NZDUSD</option>
+      <option value="50">AUDUSD</option>
+      <option value="50">EURGBP</option>
+      <option value="50">USDCHF</option>
+    </optgroup>
+    <optgroup label="Jarak Minimal 75 pips">
+      <option value="75">USDCAD</option>
+      <option value="75">EURUSD</option>
+      <option value="75">GBPUSD</option>
+      <option value="75">NZDJPY</option>
+      <option value="75">CADJPY</option>
+      <option value="75">AUDJPY</option>
+    </optgroup>
+    <optgroup label="Jarak Minimal 100 pips">
+      <option value="100">CHFJPY</option>
+      <option value="100">USDJPY</option>
+      <option value="100">EURJPY</option>
+      <option value="100">GBPJPY</option>
+      <option value="100">EURNZD</option>
+    </optgroup>
+  </select>
+
+  <div id="sgOut" style="margin-top:12px"></div>
+</div>
+
+<script>
+(function(){
+  const sgEntryEl = document.getElementById('sgEntry');
+  const sgPairEl = document.getElementById('sgPairSelect');
+  const sgOutEl = document.getElementById('sgOut');
+
+  function sgPairName(){
+    const opt = sgPairEl.options[sgPairEl.selectedIndex];
+    return opt ? opt.textContent.trim() : '';
+  }
+  function sgFactor(pairName){
+    return pairName.includes('JPY') ? 0.01 : 0.0001;
+  }
+  function sgDecimals(pairName){
+    return pairName.includes('JPY') ? 3 : 5;
+  }
+  function sgRun(){
+    const entry = parseFloat(sgEntryEl.value);
+    if(!entry || entry<=0){ sgOutEl.innerHTML=''; return; }
+    const gapPips = parseFloat(sgPairEl.value)||0;
+    const pairName = sgPairName();
+    const factor = sgFactor(pairName);
+    const decimals = sgDecimals(pairName);
+    const gap = gapPips*factor;
+    const up = (entry+gap).toFixed(decimals);
+    const down = (entry-gap).toFixed(decimals);
+    sgOutEl.innerHTML = `
+      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:12px">
+        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">↔️ Jarak Minimal ${gapPips.toFixed(1)} pips (${pairName})</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:#0D0F0A;border:1px solid #8A2020;border-radius:9px;padding:9px;text-align:center">
+            <div style="font-size:9px;color:#C89090;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Signal 2 (Bawah)</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:#FF8080;font-weight:700">${down}</div>
+          </div>
+          <div style="background:#0D0F0A;border:1px solid #1F6B3A;border-radius:9px;padding:9px;text-align:center">
+            <div style="font-size:9px;color:#8CC9A0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Signal 2 (Atas)</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:#4ADE80;font-weight:700">${up}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  sgEntryEl.addEventListener('input', sgRun);
+  sgPairEl.addEventListener('change', sgRun);
+})();
+</script>
+
 <script>
 (function(){
   const $ = id => document.getElementById(id);
