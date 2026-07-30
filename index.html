@@ -511,7 +511,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     // Trading Family pakai pending order, jadi Entry digeser sebesar SPREAD ASLI pair
     // (bukan SL preset), searah arah Buy/Sell. SL & TP tetap pakai SL preset yang dipilih.
     const entryB = entry + dir*spread*factor;
-    const slB = entry; // = entryB mundur 1x spread, sama dengan entry asli
+    const slB = entryB - dir*slPips*factor; // SL pending = entryB mundur sejauh SL preset yang dipilih (Standar/Medium/Hard)
 
     const pendRow = (label, valA, valB) => pairName==='BTCUSD' ? `
       <div style="margin-bottom:8px">
