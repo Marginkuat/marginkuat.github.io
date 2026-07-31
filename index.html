@@ -424,6 +424,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   function sgDecimals(pairName){
     return pairName.includes('JPY') ? 3 : 5;
   }
+  // Spread asli broker per pair (dipakai untuk hitung harga pending Trading Family)
+  const SG_SPREAD = {
+    NZDUSD:10, AUDUSD:10, EURGBP:10, USDCHF:10,
+    USDCAD:15, EURUSD:15, GBPUSD:15, NZDJPY:15, CADJPY:15, AUDJPY:15,
+    CHFJPY:20, USDJPY:20, EURJPY:20, GBPJPY:20, EURNZD:20
+  };
+
   function sgRun(){
     const entry = parseFloat(sgEntryEl.value);
     if(!entry || entry<=0){ sgOutEl.innerHTML=''; return; }
@@ -434,15 +441,59 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const gap = gapPips*factor;
     // Signal 2 searah trend: Buy -> harga naik, Sell -> harga turun
     const dir = sgType==='buy' ? 1 : -1;
-    const signal2 = (entry + dir*gap).toFixed(decimals);
+    const signal2 = entry + dir*gap;
+
+    // SL & TP RR 1:2 mengikuti jarak minimal yang dipilih (mis. USDJPY 100 pips -> SL 100, TP 200)
+    const slPips = gapPips;
+    const tpPips = gapPips*2;
+    const slPrice = signal2 - dir*slPips*factor;
+    const tpPrice = signal2 + dir*tpPips*factor;
+
+    // Harga pending Trading Family: Signal 2 digeser 1x spread asli broker
+    const spread = SG_SPREAD[pairName] || 0;
+    const entryB = signal2 + dir*spread*factor;
+    const slB = entryB - dir*slPips*factor;
+    const tpB = entryB + dir*tpPips*factor;
+
+    const fmt = v => v.toFixed(decimals);
+
     sgOutEl.innerHTML = `
-      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:12px">
+      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:12px;margin-bottom:10px">
         <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">↔️ Jarak Minimal ${gapPips.toFixed(1)} pips (${pairName})</div>
         <div style="background:#0D0F0A;border:1px solid ${sgType==='buy'?'#1F6B3A':'#8A2020'};border-radius:9px;padding:12px;text-align:center">
           <div style="font-size:9px;color:${sgType==='buy'?'#8CC9A0':'#C89090'};text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Signal 2 (${sgType==='buy'?'Buy':'Sell'})</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:20px;color:${sgType==='buy'?'#4ADE80':'#FF8080'};font-weight:700">${signal2}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:20px;color:${sgType==='buy'?'#4ADE80':'#FF8080'};font-weight:700">${fmt(signal2)}</div>
         </div>
-      </div>`;
+      </div>
+
+      <div style="background:#0D0F0A;border:1px solid #8A2020;border-radius:10px;padding:12px;margin-bottom:8px">
+        <div style="font-size:10px;color:#C89090;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🛑 Stop Loss</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#FF8080;font-weight:700">${fmt(slPrice)}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-top:2px">${slPips.toFixed(1)} pips</div>
+      </div>
+      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:12px;margin-bottom:10px">
+        <div style="font-size:10px;color:#4ADE80;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🎯 TP — RR 1:2</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#4ADE80;font-weight:700">${fmt(tpPrice)}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-top:2px">${tpPips.toFixed(1)} pips</div>
+      </div>
+
+      <div style="font-size:11px;color:#8A6B26;margin-bottom:8px;line-height:1.5">📋 Dua opsi harga — kiri untuk eksekusi langsung (MT4/5), kanan untuk pending order (mis. Trading Family):</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
+        <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">MT4/5 (Langsung)</div>
+        <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">Trading Family (Pending)</div>
+      </div>
+      ${[[sgType==='buy'?'Buy':'Sell', signal2, entryB],['Stop Loss', slPrice, slB],['TP RR 1:2', tpPrice, tpB]].map(([label,a,b])=>`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:9px;text-align:center">
+            <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmt(a)}</div>
+          </div>
+          <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:9px;text-align:center">
+            <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmt(b)}</div>
+          </div>
+        </div>`).join('')}
+    `;
   }
   sgEntryEl.addEventListener('input', sgRun);
   sgPairEl.addEventListener('change', sgRun);
