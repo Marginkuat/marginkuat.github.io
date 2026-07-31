@@ -395,6 +395,12 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     </optgroup>
   </select>
 
+  <label class="lbl" style="margin-top:10px">Jarak</label>
+  <div class="calc-seg" id="sgModeSeg">
+    <button data-mode="full" class="active">Penuh (100%)</button>
+    <button data-mode="half">Setengah (50%)</button>
+  </div>
+
   <div id="sgOut" style="margin-top:12px"></div>
 </div>
 
@@ -404,13 +410,23 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   const sgPairEl = document.getElementById('sgPairSelect');
   const sgOutEl = document.getElementById('sgOut');
   const sgTypeSeg = document.getElementById('sgTypeSeg');
+  const sgModeSeg = document.getElementById('sgModeSeg');
   let sgType = 'buy';
+  let sgMode = 'full';
 
   sgTypeSeg.addEventListener('click', e=>{
     const btn = e.target.closest('button[data-type]');
     if(!btn) return;
     sgType = btn.dataset.type;
     sgTypeSeg.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===btn));
+    sgRun();
+  });
+
+  sgModeSeg.addEventListener('click', e=>{
+    const btn = e.target.closest('button[data-mode]');
+    if(!btn) return;
+    sgMode = btn.dataset.mode;
+    sgModeSeg.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===btn));
     sgRun();
   });
 
@@ -441,7 +457,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   function sgRun(){
     const entry = parseFloat(sgEntryEl.value);
     if(!entry || entry<=0){ sgOutEl.innerHTML=''; return; }
-    const gapPips = parseFloat(sgPairEl.value)||0;
+    const gapPips = (parseFloat(sgPairEl.value)||0) * (sgMode==='half' ? 0.5 : 1);
     const pairName = sgPairName();
     const factor = sgFactor(pairName);
     const decimals = sgDecimals(pairName);
