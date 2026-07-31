@@ -424,6 +424,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   function sgDecimals(pairName){
     return pairName.includes('JPY') ? 3 : 5;
   }
+  // VP Multiplier per pair — sama seperti kalkulator utama
+  const SG_VP = {
+    AUDUSD:2, EURGBP:2, NZDUSD:2, USDCHF:2,
+    AUDJPY:1.5, CADJPY:1.5, EURUSD:1.5, GBPUSD:1.5, NZDJPY:1.5, USDCAD:1.5,
+    CHFJPY:1, EURJPY:1, GBPJPY:1, EURNZD:1, USDJPY:1
+  };
+
   // Spread asli broker per pair (dipakai untuk hitung harga pending Trading Family)
   const SG_SPREAD = {
     NZDUSD:10, AUDUSD:10, EURGBP:10, USDCHF:10,
@@ -459,16 +466,22 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const sl1Price = entry - dir*slPips*factor;
     const tp1Price = entry + dir*tpPips*factor;
 
+    const vpMult = SG_VP[pairName] || 1;
+    const slVP = slPips*vpMult;
+    const tpVP = tpPips*vpMult;
+
     const fmt = v => v.toFixed(decimals);
-    const sgRow = (label, v1, v2, color) => `
+    const sgRow = (label, v1, v2, color, vp) => `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:10px;text-align:center">
           <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:${color};font-weight:700">${fmt(v1)}</div>
+          ${vp!=null ? `<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A6B26;margin-top:2px">${vp.toLocaleString('en-US',{maximumFractionDigits:2})} VP</div>` : ''}
         </div>
         <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:10px;text-align:center">
           <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:${color};font-weight:700">${fmt(v2)}</div>
+          ${vp!=null ? `<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A6B26;margin-top:2px">${vp.toLocaleString('en-US',{maximumFractionDigits:2})} VP</div>` : ''}
         </div>
       </div>`;
 
@@ -477,9 +490,9 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         <div style="text-align:center;font-size:11px;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:.5px">📍 Signal 1</div>
         <div style="text-align:center;font-size:11px;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:.5px">📍 Signal 2</div>
       </div>
-      ${sgRow('Entri', entry, signal2, '#D4AF37')}
-      ${sgRow('Stop Loss', sl1Price, slPrice, '#FF8080')}
-      ${sgRow(`TP RR 1:2 (${tpPips.toFixed(1)} pips)`, tp1Price, tpPrice, '#4ADE80')}
+      ${sgRow('Entri', entry, signal2, '#D4AF37', null)}
+      ${sgRow('Stop Loss', sl1Price, slPrice, '#FF8080', slVP)}
+      ${sgRow(`TP RR 1:2 (${tpPips.toFixed(1)} pips)`, tp1Price, tpPrice, '#4ADE80', tpVP)}
 
       <div style="font-size:11px;color:#8A6B26;margin:14px 0 8px;line-height:1.5">📋 Signal 2 — dua opsi harga: kiri eksekusi langsung (MT4/5), kanan pending order (mis. Trading Family):</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
