@@ -2225,6 +2225,38 @@ async function loadLotRekomendasi(){
         <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Tabel Kenaikan Lot</div>
         ${tabelHtml}
         <div style="font-size:8px;color:#5C4818;text-align:center;margin-top:6px">Aturan: tiap naik kelipatan 300 (Sen/Std), lot naik 0.01 — biar buffer 30x loss beruntun tetap terjaga di setiap tahap modal</div>
+      </div>
+
+      <div style="background:#1E2312;border-radius:10px;padding:12px;margin-top:10px;text-align:center">
+        <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Sistem: RR 1:2 (100:200 pips)</div>
+        <div style="display:flex;justify-content:center;gap:20px;margin-bottom:10px">
+          <div>
+            <div style="font-size:9px;color:#F87171;font-weight:700">SL (Risiko)</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#F87171">100 pips</div>
+            <div style="font-size:8px;color:#7A5D1F">($10 / 10 Sen)</div>
+          </div>
+          <div style="width:1px;background:#2A2E1F"></div>
+          <div>
+            <div style="font-size:9px;color:#4ADE80;font-weight:700">TP (Target)</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#4ADE80">200 pips</div>
+            <div style="font-size:8px;color:#7A5D1F">($20 / 20 Sen)</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid #2A2E1F;padding-top:10px">
+          <div style="font-size:9px;color:#8A6B26;font-weight:700;margin-bottom:2px">Breakeven Win Rate</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#D4AF37">33.3%</div>
+          <div style="font-size:8px;color:#5C4818;margin-top:2px">Minimal harus menang 1 dari 3 trade biar nggak rugi (RR 1:2 → butuh win rate ≥33.3%)</div>
+        </div>
+      </div>
+
+      <div style="background:#241414;border:1px solid #5C2E2E;border-radius:10px;padding:12px;margin-top:10px">
+        <div style="font-size:10px;font-weight:700;color:#F87171;margin-bottom:6px">⚠️ Peringatan Penting</div>
+        <div style="font-size:9px;color:#C89494;line-height:1.6;text-align:left">
+          • Perhitungan ini HANYA berlaku selama sistem trading tetap pakai <b>lot 0.01</b> di modal dasar dan <b>RR 1:2 (SL 100 pips : TP 200 pips)</b>.<br>
+          • Kalau lot dinaikkan di luar tabel ini, atau SL/TP diubah, semua angka buffer (30x/60x/100x loss) jadi <b>tidak valid lagi</b> dan harus dihitung ulang.<br>
+          • Ini bukan jaminan profit atau bebas risiko — market tetap bisa bergerak di luar histori manapun.<br>
+          • Past performance tidak menjamin hasil ke depan.
+        </div>
       </div>`;
   }catch(e){
     console.error(e);
