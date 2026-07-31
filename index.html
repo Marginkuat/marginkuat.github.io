@@ -206,6 +206,24 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- SCORE DASHBOARD -->
+<div class="section">
+  <div class="sec-title">🏆 Score Dashboard</div>
+  <div class="graph-card">
+    <div id="scoreDashboard" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
+<!-- MODAL INFO SKOR -->
+<div class="modal" id="mInfoSkor">
+  <div class="modal-box">
+    <div class="modal-bar"></div>
+    <div class="modal-title" id="infoSkorTitle">Info</div>
+    <div id="infoSkorBody" style="font-size:13px;line-height:1.6;color:#C8A84B;white-space:pre-line"></div>
+    <button class="btn btn-ghost" onclick="closeModal('mInfoSkor')" style="margin-top:10px">Tutup</button>
+  </div>
+</div>
+
 <!-- KALKULATOR RISIKO PER PAIR (UMUM) -->
 <div class="section">
   <div class="sec-title">🧮 Kalkulator Risiko per Pair</div>
@@ -1098,14 +1116,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
-<!-- SCORE DASHBOARD -->
-<div class="section">
-  <div class="sec-title">🏆 Score Dashboard</div>
-  <div class="graph-card">
-    <div id="scoreDashboard" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
-  </div>
-</div>
-
 <!-- KALENDER -->
 <div class="section">
   <div class="sec-title">📅 Kalender Trading</div>
@@ -1838,7 +1848,7 @@ async function loadScore(){
   try{
     const now=new Date();
     const cutoff=new Date(now.getFullYear(),now.getMonth()-5,1); // 6 bulan terakhir
-    const rows=await api(`saldo_harian?select=tanggal,profit,gross_profit,gross_loss&order=tanggal.asc`);
+    const rows=await api(`saldo_harian?select=tanggal,profit,gross_profit,gross_loss,saldo_mt4&order=tanggal.asc`);
     const r6=rows.filter(r=>new Date(r.tanggal)>=cutoff);
 
     // ── Profit Factor ──
@@ -1889,9 +1899,18 @@ async function loadScore(){
     const rfLabel=rfSkor>=3?'High':rfSkor>=2?'Medium':'Low';
     const rfLabelColor=rfSkor>=3?'#4ADE80':rfSkor>=2?'#C8A84B':'#F87171';
 
+    // ── Max DD vs Modal (%) ──
+    // Modal awal periode = saldo_mt4 hari pertama tercatat dikurangi profit hari itu
+    const saldoAwalPeriode = r6.length ? parseFloat(r6[0].saldo_mt4||0)-parseFloat(r6[0].profit||0) : 0;
+    const ddPct = saldoAwalPeriode>0 ? (maxDd/saldoAwalPeriode*100) : 0;
+    let ddSkor=0;
+    if(ddPct<=10)ddSkor=4;else if(ddPct<=20)ddSkor=3;else if(ddPct<=35)ddSkor=2;else if(ddPct<=50)ddSkor=1;
+    const ddLabel=ddSkor>=3?'High':ddSkor>=2?'Medium':'Low';
+    const ddLabelColor=ddSkor>=3?'#4ADE80':ddSkor>=2?'#C8A84B':'#F87171';
+
     // ── Total Score & Speedometer ──
-    const totalSkor=pfSkor+pmSkor+mlrSkor+rfSkor;
-    const maxSkor=16;
+    const totalSkor=pfSkor+pmSkor+mlrSkor+rfSkor+ddSkor;
+    const maxSkor=20;
     const skorNorm=(totalSkor/maxSkor)*4;
 
     // Render speedometer SVG
@@ -1921,10 +1940,10 @@ async function loadScore(){
         <circle cx="${cx}" cy="${cy}" r="5" fill="#D4AF37"/>
         <!-- Labels -->
         <text x="28" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">0</text>
-        <text x="212" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">16</text>
+        <text x="212" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">20</text>
         <!-- Score -->
         <text x="120" y="90" font-size="22" font-weight="800" fill="#D4AF37" text-anchor="middle">${totalSkor}</text>
-        <text x="120" y="108" font-size="10" fill="#8A6B26" text-anchor="middle">dari 16 poin</text>
+        <text x="120" y="108" font-size="10" fill="#8A6B26" text-anchor="middle">dari 20 poin</text>
       </svg>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -1932,13 +1951,82 @@ async function loadScore(){
         ${scoreCard('Monthly Loss Ratio', mlr.toFixed(1)+'%', mlrSkor, mlrLabel, mlrLabelColor)}
         ${scoreCard('Profit Months', bulanProfit+' Bulan', pmSkor, pmLabel, pmLabelColor)}
         ${scoreCard('Recovery Factor', rfVal.toFixed(2), rfSkor, rfLabel, rfLabelColor)}
+        ${scoreCard('Max DD vs Modal', ddPct.toFixed(1)+'%', ddSkor, ddLabel, ddLabelColor)}
       </div>`;
   }catch(e){console.error(e);}
 }
 
+const infoSkorData={
+  'Profit Factor':`Perbandingan antara total keuntungan dari transaksi yang profit (Gross Profit) dengan total kerugian dari transaksi yang loss (Gross Loss).
+
+Semakin besar nilai profit factor, semakin besar skor yang diperoleh.
+
+Rumus Profit Factor = Gross Profit 6 bulan terakhir : Gross Loss 6 bulan terakhir
+
+Skor :
+• ≥2,1 = 4 poin
+• 1,7 - 2,09 = 3 poin
+• 1,4 - 1,69 = 2 poin
+• 1,1 - 1,39 = 1 poin
+• 0 - 1,09 = 0 poin`,
+  'Monthly Loss Ratio':`Perbandingan antara loss terbesar dalam 6 bulan terakhir dengan rata-rata profit 6 bulan terakhir.
+
+Semakin kecil persentase monthly loss ratio, semakin besar skor yang diperoleh.
+
+Rumus Monthly Loss Ratio = (Loss terbesar 6 bulan terakhir : Rata-rata profit 6 bulan terakhir) x 100%
+
+Skor :
+• 0% - 10% = 4 poin
+• 10,1% - 50% = 3 poin
+• 50,1% - 100% = 2 poin
+• 100,1% - 150% = 1 poin
+• ≥150,1% = 0 poin`,
+  'Profit Months':`Jumlah bulan profit dalam 6 bulan terakhir.
+
+Semakin banyak jumlah bulan profit, semakin besar skor yang diperoleh.
+
+Skor :
+• 6 = 4 poin
+• 5 = 3 poin
+• 3 - 4 = 2 poin
+• 2 = 1 poin
+• 0 - 1 = 0 poin`,
+  'Recovery Factor':`Tingkat kemampuan akun untuk pulih (recovery) dari kerugian yang dialami dalam periode 6 bulan terakhir.
+
+Semakin besar nilai recovery factor, maka semakin besar skor yang diperoleh.
+
+Rumus Recovery Factor = Nett P/L 6 bulan terakhir : Drawdown terbesar dalam 6 bulan terakhir
+
+Skor :
+• ≥8,00 = 4 poin
+• 5,00 - 7,99 = 3 poin
+• 1,01 - 4,99 = 2 poin
+• 0,01 - 1,00 = 1 poin
+• ≤0,00 = 0 poin`,
+  'Max DD vs Modal':`Perbandingan antara drawdown terbesar (Max DD) dalam 6 bulan terakhir dengan modal awal periode tersebut.
+
+Semakin kecil persentase Max DD terhadap modal, semakin besar skor yang diperoleh — artinya modal lebih aman menahan floating loss terdalam.
+
+Rumus Max DD vs Modal = (Max Drawdown 6 bulan terakhir : Modal awal periode) x 100%
+
+Skor :
+• 0% - 10% = 4 poin
+• 10,1% - 20% = 3 poin
+• 20,1% - 35% = 2 poin
+• 35,1% - 50% = 1 poin
+• ≥50,1% = 0 poin`
+};
+function showInfoSkor(title){
+  document.getElementById('infoSkorTitle').textContent=title;
+  document.getElementById('infoSkorBody').textContent=infoSkorData[title]||'Belum ada penjelasan.';
+  openModal('mInfoSkor');
+}
 function scoreCard(title, val, skor, label, labelColor){
   return `<div style="background:#1E2312;border:1px solid #2A2E1F;border-radius:12px;padding:12px">
-    <div style="font-size:10px;font-weight:700;color:#9C7A2E;margin-bottom:4px">${title}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="font-size:10px;font-weight:700;color:#9C7A2E">${title}</div>
+      <button onclick="showInfoSkor('${title}')" style="width:16px;height:16px;border-radius:50%;border:1px solid #5C4818;background:transparent;color:#9C7A2E;font-size:9px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">i</button>
+    </div>
     <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#D4AF37;margin-bottom:6px">${val}</div>
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div style="font-size:16px;font-weight:800;color:#D4AF37">${skor}<span style="font-size:11px;color:#5A5A3A"> / 4</span></div>
