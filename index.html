@@ -1885,12 +1885,13 @@ async function loadScore(){
     const mlrLabelColor=mlrSkor>=3?'#4ADE80':mlrSkor>=2?'#C8A84B':'#F87171';
 
     // ── Recovery Factor ──
-    let peak=0,maxDd=0,cumPL=0;
+    let peak=0,maxDd=0,cumPL=0,currentDd=0;
     r6.forEach(r=>{
       cumPL+=parseFloat(r.profit||0);
       if(cumPL>peak)peak=cumPL;
       const dd=peak-cumPL;
       if(dd>maxDd)maxDd=dd;
+      currentDd=dd; // dd di baris terakhir = drawdown saat ini (belum tentu recovery)
     });
     const totalNetPL=r6.reduce((s,r)=>s+parseFloat(r.profit||0),0);
     const rfVal=maxDd>0?totalNetPL/maxDd:0;
@@ -1908,9 +1909,18 @@ async function loadScore(){
     const ddLabel=ddSkor>=3?'High':ddSkor>=2?'Medium':'Low';
     const ddLabelColor=ddSkor>=3?'#4ADE80':ddSkor>=2?'#C8A84B':'#F87171';
 
+    // ── Current Drawdown (real-time, %) ──
+    // Modal saat ini = saldo_mt4 hari TERAKHIR tercatat (mengikuti WD/deposit terbaru)
+    const currentModal = r6.length ? parseFloat(r6[r6.length-1].saldo_mt4||0) : 0;
+    const curDdPct = currentModal>0 ? (currentDd/currentModal*100) : 0;
+    let curDdSkor=0;
+    if(curDdPct<=10)curDdSkor=4;else if(curDdPct<=20)curDdSkor=3;else if(curDdPct<=35)curDdSkor=2;else if(curDdPct<=50)curDdSkor=1;
+    const curDdLabel=curDdSkor>=3?'High':curDdSkor>=2?'Medium':'Low';
+    const curDdLabelColor=curDdSkor>=3?'#4ADE80':curDdSkor>=2?'#C8A84B':'#F87171';
+
     // ── Total Score & Speedometer ──
-    const totalSkor=pfSkor+pmSkor+mlrSkor+rfSkor+ddSkor;
-    const maxSkor=20;
+    const totalSkor=pfSkor+pmSkor+mlrSkor+rfSkor+ddSkor+curDdSkor;
+    const maxSkor=24;
     const skorNorm=(totalSkor/maxSkor)*4;
 
     // Render speedometer SVG
@@ -1940,10 +1950,10 @@ async function loadScore(){
         <circle cx="${cx}" cy="${cy}" r="5" fill="#D4AF37"/>
         <!-- Labels -->
         <text x="28" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">0</text>
-        <text x="212" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">20</text>
+        <text x="212" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">24</text>
         <!-- Score -->
         <text x="120" y="90" font-size="22" font-weight="800" fill="#D4AF37" text-anchor="middle">${totalSkor}</text>
-        <text x="120" y="108" font-size="10" fill="#8A6B26" text-anchor="middle">dari 20 poin</text>
+        <text x="120" y="108" font-size="10" fill="#8A6B26" text-anchor="middle">dari 24 poin</text>
       </svg>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -1952,6 +1962,7 @@ async function loadScore(){
         ${scoreCard('Profit Months', bulanProfit+' Bulan', pmSkor, pmLabel, pmLabelColor)}
         ${scoreCard('Recovery Factor', rfVal.toFixed(2), rfSkor, rfLabel, rfLabelColor)}
         ${scoreCard('Max DD vs Modal', ddPct.toFixed(1)+'%', ddSkor, ddLabel, ddLabelColor)}
+        ${scoreCard('Current Drawdown', curDdPct.toFixed(1)+'%', curDdSkor, curDdLabel, curDdLabelColor)}
       </div>`;
   }catch(e){console.error(e);}
 }
@@ -2008,6 +2019,20 @@ Skor :
 Semakin kecil persentase Max DD terhadap modal, semakin besar skor yang diperoleh — artinya modal lebih aman menahan floating loss terdalam.
 
 Rumus Max DD vs Modal = (Max Drawdown 6 bulan terakhir : Modal awal periode) x 100%
+
+Skor :
+• 0% - 10% = 4 poin
+• 10,1% - 20% = 3 poin
+• 20,1% - 35% = 2 poin
+• 35,1% - 50% = 1 poin
+• ≥50,1% = 0 poin`,
+  'Current Drawdown':`Seberapa jauh saldo SEKARANG dari puncak (peak) tertinggi yang pernah dicapai dalam 6 bulan terakhir, dibandingkan dengan modal yang sedang aktif ditradingkan saat ini (mengikuti WD/deposit terbaru).
+
+Beda dengan Max DD (histori), ini menunjukkan kondisi akun HARI INI — apakah sedang floating minus dalam, atau sudah recover ke titik aman.
+
+Semakin kecil persentase Current Drawdown, semakin sehat kondisi akun saat ini.
+
+Rumus Current Drawdown = (Peak tertinggi - Saldo kumulatif saat ini) : Modal saat ini (mengikuti WD terbaru) x 100%
 
 Skor :
 • 0% - 10% = 4 poin
