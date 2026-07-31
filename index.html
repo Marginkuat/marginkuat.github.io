@@ -460,47 +460,28 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const tp1Price = entry + dir*tpPips*factor;
 
     const fmt = v => v.toFixed(decimals);
+    const sgRow = (label, v1, v2, color) => `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:10px;text-align:center">
+          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:${color};font-weight:700">${fmt(v1)}</div>
+        </div>
+        <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:10px;text-align:center">
+          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:${color};font-weight:700">${fmt(v2)}</div>
+        </div>
+      </div>`;
 
     sgOutEl.innerHTML = `
-      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:12px;margin-bottom:10px">
-        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📍 Signal 1 (${sgType==='buy'?'Buy':'Sell'})</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#D4AF37;font-weight:700;margin-bottom:8px">${fmt(entry)}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div style="background:#0D0F0A;border:1px solid #8A2020;border-radius:9px;padding:9px;text-align:center">
-            <div style="font-size:9px;color:#C89090;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Stop Loss</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#FF8080;font-weight:700">${fmt(sl1Price)}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A6B26;margin-top:2px">${slPips.toFixed(1)} pips</div>
-          </div>
-          <div style="background:#0D0F0A;border:1px solid #1F6B3A;border-radius:9px;padding:9px;text-align:center">
-            <div style="font-size:9px;color:#8CC9A0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">TP RR 1:2</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#4ADE80;font-weight:700">${fmt(tp1Price)}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A6B26;margin-top:2px">${tpPips.toFixed(1)} pips</div>
-          </div>
-        </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
+        <div style="text-align:center;font-size:11px;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:.5px">📍 Signal 1</div>
+        <div style="text-align:center;font-size:11px;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:.5px">📍 Signal 2</div>
       </div>
+      ${sgRow('Entri', entry, signal2, '#D4AF37')}
+      ${sgRow('Stop Loss', sl1Price, slPrice, '#FF8080')}
+      ${sgRow(`TP RR 1:2 (${tpPips.toFixed(1)} pips)`, tp1Price, tpPrice, '#4ADE80')}
 
-      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:12px;margin-bottom:10px">
-        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">↔️ Jarak Minimal ${gapPips.toFixed(1)} pips (${pairName})</div>
-        <div style="background:#0D0F0A;border:1px solid ${sgType==='buy'?'#1F6B3A':'#8A2020'};border-radius:9px;padding:12px;text-align:center">
-          <div style="font-size:9px;color:${sgType==='buy'?'#8CC9A0':'#C89090'};text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Signal 2 (${sgType==='buy'?'Buy':'Sell'})</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:20px;color:${sgType==='buy'?'#4ADE80':'#FF8080'};font-weight:700">${fmt(signal2)}</div>
-        </div>
-      </div>
-
-      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📍 Signal 2 — SL &amp; TP</div>
-
-      <div style="background:#0D0F0A;border:1px solid #8A2020;border-radius:10px;padding:12px;margin-bottom:8px">
-        <div style="font-size:10px;color:#C89090;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🛑 Stop Loss</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#FF8080;font-weight:700">${fmt(slPrice)}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-top:2px">${slPips.toFixed(1)} pips</div>
-      </div>
-      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:12px;margin-bottom:10px">
-        <div style="font-size:10px;color:#4ADE80;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🎯 TP — RR 1:2</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#4ADE80;font-weight:700">${fmt(tpPrice)}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-top:2px">${tpPips.toFixed(1)} pips</div>
-      </div>
-
-      <div style="font-size:11px;color:#8A6B26;margin-bottom:8px;line-height:1.5">📋 Dua opsi harga — kiri untuk eksekusi langsung (MT4/5), kanan untuk pending order (mis. Trading Family):</div>
+      <div style="font-size:11px;color:#8A6B26;margin:14px 0 8px;line-height:1.5">📋 Signal 2 — dua opsi harga: kiri eksekusi langsung (MT4/5), kanan pending order (mis. Trading Family):</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
         <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">MT4/5 (Langsung)</div>
         <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">Trading Family (Pending)</div>
