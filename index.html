@@ -224,6 +224,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- REKOMENDASI MODAL MINIMAL -->
+<div class="section">
+  <div class="sec-title">💰 Rekomendasi Modal Minimal</div>
+  <div class="graph-card">
+    <div id="modalMinimal" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
 <!-- KALKULATOR RISIKO PER PAIR (UMUM) -->
 <div class="section">
   <div class="sec-title">🧮 Kalkulator Risiko per Pair</div>
@@ -1393,7 +1401,7 @@ window.onload=async()=>{
 };
 
 async function loadAll(){
-  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore()]);
+  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore(),loadModalMinimal()]);
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
   allSaldoData=await api('saldo_harian?select=tanggal,profit,saldo_mt4&order=tanggal.asc');
   renderKalender();
@@ -2058,6 +2066,101 @@ function scoreCard(title, val, skor, label, labelColor){
       <div style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:${labelColor}22;color:${labelColor}">${label}</div>
     </div>
   </div>`;
+}
+
+// ══ REKOMENDASI MODAL MINIMAL ══
+async function loadModalMinimal(){
+  try{
+    const now=new Date();
+    const cutoff=new Date(now.getFullYear(),now.getMonth()-5,1);
+    const rows=await api(`saldo_harian?select=tanggal,profit,saldo_mt4&order=tanggal.asc`);
+    const r6=rows.filter(r=>new Date(r.tanggal)>=cutoff);
+    const el=document.getElementById('modalMinimal');
+
+    if(!r6.length){
+      el.innerHTML='<div style="padding:10px">Belum ada data 6 bulan terakhir.</div>';
+      return;
+    }
+
+    // Max DD historis (raw ¢, sama seperti di Score Dashboard)
+    let peak=0,maxDd=0,cumPL=0;
+    r6.forEach(r=>{
+      cumPL+=parseFloat(r.profit||0);
+      if(cumPL>peak)peak=cumPL;
+      const dd=peak-cumPL;
+      if(dd>maxDd)maxDd=dd;
+    });
+
+    // Versi Cent (real, akun ini) = raw ¢ ÷ 100
+    const maxDdCent = maxDd/100;
+    const modalSaatIniCent = r6.length ? parseFloat(r6[r6.length-1].saldo_mt4||0)/100 : 0;
+    // Versi Standard (setara) = versi cent x 100, karena lot 0.01 di akun standard
+    // menghasilkan pip value 100x lebih besar dari akun cent (lihat penjelasan di modal info)
+    const maxDdStd = maxDdCent*100;
+    const modalSaatIniStd = modalSaatIniCent*100;
+
+    const tiers=[
+      {label:'Konservatif',pct:0.10,color:'#4ADE80'},
+      {label:'Moderat',pct:0.20,color:'#C8A84B'},
+      {label:'Agresif',pct:0.30,color:'#F87171'}
+    ];
+
+    if(maxDdCent<=0){
+      el.innerHTML='<div style="padding:10px">Belum cukup data drawdown untuk menghitung rekomendasi.</div>';
+      return;
+    }
+
+    let rowsHtml=tiers.map(t=>{
+      const centMin=maxDdCent/t.pct;
+      const stdMin=maxDdStd/t.pct;
+      return `<div style="background:#1E2312;border-radius:10px;padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="text-align:left">
+            <div style="font-size:11px;font-weight:700;color:#D4AF37">${t.label}</div>
+            <div style="font-size:9px;color:#7A5D1F">toleransi DD ≤${(t.pct*100).toFixed(0)}% modal</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:#0D0F0A;border-radius:8px;padding:6px 8px;text-align:center">
+            <div style="font-size:8px;color:#7A5D1F;margin-bottom:2px">AKUN CENT</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:${t.color}">$${centMin.toFixed(2)}</div>
+          </div>
+          <div style="background:#0D0F0A;border-radius:8px;padding:6px 8px;text-align:center">
+            <div style="font-size:8px;color:#7A5D1F;margin-bottom:2px">AKUN STANDARD</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:${t.color}">$${stdMin.toFixed(2)}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const amanCent = modalSaatIniCent>=maxDdCent/0.30;
+    const statusModal = amanCent ? {t:'Modal saat ini sudah di atas batas Agresif',c:'#4ADE80'} : {t:'Modal saat ini di bawah rekomendasi minimal',c:'#F87171'};
+
+    el.innerHTML=`
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Max DD Historis (6 Bulan)</div>
+        <div style="display:flex;justify-content:center;gap:16px">
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:#F87171">$${maxDdCent.toFixed(2)}</div>
+            <div style="font-size:8px;color:#7A5D1F">Akun Cent</div>
+          </div>
+          <div style="color:#3A3A22;font-size:16px;padding-top:2px">≈</div>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:#F87171">$${maxDdStd.toFixed(2)}</div>
+            <div style="font-size:8px;color:#7A5D1F">Akun Standard</div>
+          </div>
+        </div>
+      </div>
+      ${rowsHtml}
+      <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid #2A2E1F">
+        <div style="font-size:9px;color:#7A5D1F;margin-bottom:2px">Modal Saat Ini: $${modalSaatIniCent.toFixed(2)} (Cent) ≈ $${modalSaatIniStd.toFixed(2)} (Standard)</div>
+        <div style="font-size:10px;font-weight:700;color:${statusModal.c}">${statusModal.t}</div>
+        <div style="font-size:8px;color:#5C4818;margin-top:4px">Rasio 1:100 berlaku untuk lot 0.01 di XAUUSD (pip value $10 Standard = 10¢ Cent)</div>
+      </div>`;
+  }catch(e){
+    console.error(e);
+    document.getElementById('modalMinimal').innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat.</div>';
+  }
 }
 
 </script>
