@@ -699,6 +699,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <!-- FIREBASE: performance showcase otomatis -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyAker4D4k1ueustizZ9QdWwEgcyP3M0NZI",
@@ -1015,6 +1016,24 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <div class="section">
   <div class="sec-title">📊 Profit Per Bulan</div>
   <div id="profitBulananList"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+</div>
+
+<!-- EKSPOR LAPORAN BULANAN -->
+<div class="section">
+  <div class="sec-title">📁 Ekspor Laporan Bulanan</div>
+  <div class="graph-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <button class="cal-nav-btn" onclick="exportPrev()">‹</button>
+      <div id="exportMonthLabel" style="font-size:14px;font-weight:700;color:#D4AF37">-</div>
+      <button class="cal-nav-btn" onclick="exportNext()">›</button>
+    </div>
+    <div style="font-size:10px;color:#7A5D1F;text-align:center;margin-bottom:14px">Download catatan harian bulan ini untuk arsip pribadi atau review</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-p" onclick="exportLaporanCSV()" style="margin-bottom:0">⬇️ CSV</button>
+      <button class="btn btn-p" onclick="exportLaporanPDF()" style="margin-bottom:0">⬇️ PDF</button>
+    </div>
+    <div id="exportStatus" style="font-size:10px;color:#7A5D1F;margin-top:10px;text-align:center"></div>
+  </div>
 </div>
 
 <!-- RIWAYAT -->
@@ -2087,12 +2106,23 @@ async function loadStatPair(){
   const el=document.getElementById('statPair');
   if(!el)return;
   try{
-    let rows=await api('saldo_harian?select=tanggal,profit,gross_profit,gross_loss,saldo_mt4,pair&order=tanggal.asc');
+    let rows, hasPairCol=true;
+    try{
+      rows=await api('saldo_harian?select=tanggal,profit,gross_profit,gross_loss,saldo_mt4,pair&order=tanggal.asc');
+    }catch(e){
+      // Kolom 'pair' belum ada di Supabase — fallback: anggap semua data XAUUSD supaya tetap tampil
+      hasPairCol=false;
+      rows=await api('saldo_harian?select=tanggal,profit,gross_profit,gross_loss,saldo_mt4&order=tanggal.asc');
+      rows=rows.map(r=>({...r,pair:'XAUUSD'}));
+    }
     if(currentPairFilter!=='ALL'){
       rows=rows.filter(r=>(r.pair||'XAUUSD')===currentPairFilter);
     }
+    const warnHtml = !hasPairCol
+      ? '<div style="font-size:9px;color:#F87171;margin-top:10px;line-height:1.6">⚠️ Kolom <b>pair</b> belum ada di tabel saldo_harian (Supabase), jadi semua data untuk sementara dianggap XAUUSD. Tambahkan kolom text bernama <b>pair</b> (default XAUUSD) di Supabase supaya filter BTCUSD/Forex berfungsi penuh.</div>'
+      : '';
     if(!rows.length){
-      el.innerHTML='<div style="padding:14px">Belum ada data'+(currentPairFilter!=='ALL'?' untuk pair '+currentPairFilter:'')+'.<br><span style="font-size:9px;color:#5C4818">Catatan: fitur ini butuh kolom <b>pair</b> di tabel saldo_harian (Supabase). Kalau belum ada, tambahkan kolom text bernama pair, default XAUUSD.</span></div>';
+      el.innerHTML='<div style="padding:14px">Belum ada data'+(currentPairFilter!=='ALL'?' untuk pair '+currentPairFilter:'')+'.</div>'+warnHtml;
       return;
     }
     const hariProfit=rows.filter(r=>parseFloat(r.profit||0)>0).length;
@@ -2117,7 +2147,7 @@ async function loadStatPair(){
         <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:16px;color:${totalProfit>=0?'#4ADE80':'#F87171'}">${totalProfit>=0?'+':''}${fc(totalProfit)}</div><div class="bal-box-lbl">Total Profit</div></div>
         <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:16px;color:#F87171">${fc(maxDd)}</div><div class="bal-box-lbl">Max Drawdown</div></div>
       </div>
-      <div style="font-size:9px;color:#5C4818">Berdasarkan ${rows.length} hari tercatat${currentPairFilter!=='ALL'?' — pair '+currentPairFilter:' — semua pair'}</div>`;
+      <div style="font-size:9px;color:#5C4818">Berdasarkan ${rows.length} hari tercatat${currentPairFilter!=='ALL'?' — pair '+currentPairFilter:' — semua pair'}</div>${warnHtml}`;
   }catch(e){
     console.error(e);
     el.innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat statistik per pair.</div>';
@@ -2337,6 +2367,110 @@ async function importCSV(){
     statusEl.textContent='❌ Gagal membaca/import file: '+(e.message||'').slice(0,150);
   }
 }
+
+// ══ EKSPOR LAPORAN BULANAN (CSV / PDF) ══
+const bulanNamaFull=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+let exportYear=new Date().getFullYear(), exportMonth=new Date().getMonth();
+function renderExportLabel(){
+  const el=document.getElementById('exportMonthLabel');
+  if(el) el.textContent=`${bulanNamaFull[exportMonth]} ${exportYear}`;
+}
+function exportPrev(){exportMonth--;if(exportMonth<0){exportMonth=11;exportYear--;}renderExportLabel();}
+function exportNext(){exportMonth++;if(exportMonth>11){exportMonth=0;exportYear++;}renderExportLabel();}
+async function getExportRows(){
+  const rows=await api('saldo_harian?select=*&order=tanggal.asc');
+  return rows.filter(r=>{
+    const d=new Date(r.tanggal);
+    return d.getFullYear()===exportYear && d.getMonth()===exportMonth;
+  });
+}
+async function exportLaporanCSV(){
+  const statusEl=document.getElementById('exportStatus');
+  statusEl.textContent='⏳ Menyiapkan CSV...';
+  try{
+    const rows=await getExportRows();
+    if(!rows.length){statusEl.textContent='❌ Tidak ada data tercatat di bulan ini.';return;}
+    const header=['tanggal','saldo_mt4','profit','gross_profit','gross_loss','jumlah_signal','pair','catatan'];
+    let csv=header.join(',')+'\n';
+    rows.forEach(r=>{
+      const line=header.map(h=>{
+        let v=r[h]==null?'':r[h];
+        v=String(v).replace(/"/g,'""');
+        if(v.includes(',')||v.includes('"')||v.includes('\n')) v=`"${v}"`;
+        return v;
+      }).join(',');
+      csv+=line+'\n';
+    });
+    const filename=`Laporan_${bulanNamaFull[exportMonth]}_${exportYear}.csv`;
+    const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    statusEl.textContent='✅ CSV berhasil diunduh: '+filename;
+  }catch(e){
+    console.error(e);
+    statusEl.textContent='❌ Gagal ekspor CSV: '+(e.message||'').slice(0,150);
+  }
+}
+async function exportLaporanPDF(){
+  const statusEl=document.getElementById('exportStatus');
+  statusEl.textContent='⏳ Menyiapkan PDF...';
+  try{
+    if(typeof window.jspdf==='undefined'){statusEl.textContent='❌ Library PDF gagal dimuat, cek koneksi internet lalu coba lagi.';return;}
+    const rows=await getExportRows();
+    if(!rows.length){statusEl.textContent='❌ Tidak ada data tercatat di bulan ini.';return;}
+
+    const { jsPDF }=window.jspdf;
+    const doc=new jsPDF();
+    const judul=`Laporan Trading — ${bulanNamaFull[exportMonth]} ${exportYear}`;
+
+    let totalProfit=0, hariProfit=0;
+    rows.forEach(r=>{ const p=parseFloat(r.profit||0); totalProfit+=p; if(p>0)hariProfit++; });
+    const winRate=(hariProfit/rows.length*100).toFixed(1);
+
+    doc.setFontSize(14);
+    doc.text(judul,14,16);
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text('MARGINKUAT — Trading Emas di MT4',14,22);
+    doc.setTextColor(0);
+    doc.text(`Total hari tercatat: ${rows.length}   |   Win Rate: ${winRate}%   |   Total Profit: ${totalProfit>=0?'+':''}${fc(totalProfit)}`,14,29);
+
+    let y=40;
+    doc.setFontSize(9);
+    doc.setFont(undefined,'bold');
+    doc.text('Tanggal',14,y);
+    doc.text('Saldo',58,y);
+    doc.text('P/L',90,y);
+    doc.text('Pair',118,y);
+    doc.text('Catatan',145,y);
+    doc.setFont(undefined,'normal');
+    y+=4;
+    doc.setDrawColor(200);
+    doc.line(14,y,196,y);
+    y+=6;
+
+    rows.forEach(r=>{
+      if(y>282){doc.addPage();y=20;}
+      const p=parseFloat(r.profit||0);
+      doc.text(String(r.tanggal),14,y);
+      doc.text(fc(r.saldo_mt4),58,y);
+      doc.text((p>=0?'+':'')+fc(p),90,y);
+      doc.text(r.pair||'-',118,y);
+      doc.text(String(r.catatan||'-').slice(0,22),145,y);
+      y+=6;
+    });
+
+    const filename=`Laporan_${bulanNamaFull[exportMonth]}_${exportYear}.pdf`;
+    doc.save(filename);
+    statusEl.textContent='✅ PDF berhasil diunduh: '+filename;
+  }catch(e){
+    console.error(e);
+    statusEl.textContent='❌ Gagal ekspor PDF: '+(e.message||'').slice(0,150);
+  }
+}
+renderExportLabel();
 </script>
 </body>
 </html>
