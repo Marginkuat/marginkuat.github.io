@@ -117,6 +117,10 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 .pair-tab{padding:7px 14px;border-radius:20px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#8A6B26;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
 .pair-tab.active{border-color:#B8860B;background:#2A2410;color:#D4AF37}
 .zoom-btn{width:30px;height:30px;border-radius:8px;border:1px solid #2A2E1F;background:#0D0F0A;color:#C8A84B;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.progress-track{width:100%;height:14px;border-radius:8px;background:#0D0F0A;border:1px solid #2A2E1F;overflow:hidden}
+.progress-fill{height:100%;border-radius:8px;transition:width .4s ease}
+.mood-btn{padding:10px 4px;border-radius:10px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#8A6B26;font-size:20px;cursor:pointer;text-align:center;line-height:1.3}
+.mood-btn.active{border-color:#B8860B;background:#2A2410}
 
 /* ADMIN PANEL */
 .admin-panel{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px;display:none}
@@ -240,6 +244,38 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <button class="pair-tab" data-pair="FOREX" onclick="setPairFilter('FOREX')">Forex</button>
     </div>
     <div id="statPair" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
+<!-- RISK REWARD ANALYSIS -->
+<div class="section">
+  <div class="sec-title">⚖️ Risk Reward Analysis</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Dihitung dari rata-rata profit/loss harian (data tercatat per hari, bukan per trade individual)</div>
+    <div id="rrAnalysis" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
+<!-- PSIKOLOGI TRADING (MOOD TRACKER) -->
+<div class="section">
+  <div class="sec-title">🧠 Psikologi Trading (Mood vs Profit)</div>
+  <div class="graph-card">
+    <div id="moodStats" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
+<!-- PERFORMANCE VS BENCHMARK -->
+<div class="section">
+  <div class="sec-title">📈 Performance vs Benchmark</div>
+  <div class="graph-card">
+    <div style="display:flex;gap:6px;margin-bottom:14px" id="benchTabs">
+      <button class="pair-tab active" data-b="pax-gold" onclick="setBenchmark('pax-gold')">vs XAUUSD</button>
+      <button class="pair-tab" data-b="bitcoin" onclick="setBenchmark('bitcoin')">vs BTCUSD</button>
+    </div>
+    <div id="benchWrap">
+      <div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    </div>
+    <div style="font-size:9px;color:#5C4818;margin-top:12px;line-height:1.6">Harga XAUUSD didekati dari token PAXG (Pax Gold, dipatok 1:1 ke harga emas spot) via CoinGecko — bisa sedikit berbeda dari harga broker MT4 kamu.</div>
   </div>
 </div>
 
@@ -713,6 +749,16 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="graph-total" id="graphTotal">¢0.00</div>
     <div class="graph-pct" id="graphPct">0%</div>
     <div id="graphSvgWrap" style="position:relative"></div>
+
+    <div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">🎯 Target Bulan Ini</div>
+        <span onclick="editTargetBulanan()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Target</span>
+      </div>
+      <div id="targetProgressWrap">
+        <div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -750,6 +796,49 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <div class="section">
   <div class="sec-title">📊 Profit Per Bulan</div>
   <div id="profitBulananList"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+</div>
+
+<!-- MONTHLY TARGET & PROGRESS BAR -->
+<div class="section">
+  <div class="sec-title">🎯 Target Bulanan &amp; Progress</div>
+  <div class="graph-card">
+    <div style="display:flex;gap:8px;align-items:end;margin-bottom:14px">
+      <div style="flex:1">
+        <label class="lbl" style="margin-bottom:6px">Target Profit Bulan Ini (¢)</label>
+        <input class="inp" type="number" id="inpTargetBulanan" placeholder="cth: 500" step="1" style="margin-bottom:0">
+      </div>
+      <button class="btn btn-p" onclick="simpanTargetBulanan()" style="margin-bottom:0;padding:11px 16px;white-space:nowrap">Simpan</button>
+    </div>
+    <div id="targetProgressWrap"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+  </div>
+</div>
+
+<!-- RISK REWARD ANALYSIS -->
+<div class="section">
+  <div class="sec-title">📐 Risk Reward Analysis</div>
+  <div class="graph-card">
+    <div id="rrAnalysis" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
+<!-- PSIKOLOGI TRADING -->
+<div class="section">
+  <div class="sec-title">🧠 Psikologi Trading (Mood vs Profit)</div>
+  <div class="graph-card">
+    <div id="moodVsProfit" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
+<!-- PERFORMANCE VS BENCHMARK -->
+<div class="section">
+  <div class="sec-title">📈 Performance vs Benchmark</div>
+  <div class="graph-card">
+    <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto" id="benchTabs">
+      <button class="pair-tab active" data-b="XAUUSD" onclick="setBenchmark('XAUUSD')">vs XAUUSD</button>
+      <button class="pair-tab" data-b="BTCUSD" onclick="setBenchmark('BTCUSD')">vs BTCUSD</button>
+    </div>
+    <div id="benchWrap"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+  </div>
 </div>
 
 <!-- EKSPOR LAPORAN BULANAN -->
@@ -803,6 +892,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <option value="FOREX">Forex (EUR/GBP/dll)</option>
     </select>
 
+    <label class="lbl">Mood Hari Ini</label>
+    <select class="inp" id="inpMood">
+      <option value="tenang">😊 Tenang</option>
+      <option value="biasa">😐 Biasa Saja</option>
+      <option value="cemas">😰 Cemas</option>
+      <option value="frustasi">😡 Frustasi</option>
+    </select>
+
     <label class="lbl">Saldo MT4 (tulis angka dari MT4)</label>
     <input class="inp" type="number" id="inpSaldo" placeholder="565.48" step="0.01" oninput="previewSaldo()">
     <div class="preview-box" id="pvBox">
@@ -832,6 +929,15 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
     <label class="lbl">Gross Loss Hari Ini (total dari transaksi yang rugi, angka positif)</label>
     <input class="inp" type="number" id="inpGrossLoss" placeholder="0.00" step="0.01" min="0">
+
+    <label class="lbl">Mood Trading Hari Ini</label>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px" id="moodPicker">
+      <button type="button" class="mood-btn" data-mood="tenang" onclick="pilihMood('tenang')">😊<div style="font-size:8px;margin-top:2px">Tenang</div></button>
+      <button type="button" class="mood-btn" data-mood="biasa" onclick="pilihMood('biasa')">😐<div style="font-size:8px;margin-top:2px">Biasa</div></button>
+      <button type="button" class="mood-btn" data-mood="cemas" onclick="pilihMood('cemas')">😰<div style="font-size:8px;margin-top:2px">Cemas</div></button>
+      <button type="button" class="mood-btn" data-mood="frustasi" onclick="pilihMood('frustasi')">😡<div style="font-size:8px;margin-top:2px">Frustasi</div></button>
+    </div>
+    <input type="hidden" id="inpMood" value="">
 
     <label class="lbl">Catatan (opsional)</label>
     <input class="inp" id="inpCatatan" placeholder="Contoh: Setelah WD 600">
@@ -971,12 +1077,13 @@ window.onload=async()=>{
 };
 
 async function loadAll(){
-  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore(),loadModalMinimal(),loadLotRekomendasi(),loadStatPair()]);
+  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore(),loadModalMinimal(),loadLotRekomendasi(),loadStatPair(),loadRRAnalysis(),loadMoodStats()]);
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
   allSaldoData=await api('saldo_harian?select=tanggal,profit,saldo_mt4&order=tanggal.asc');
   renderKalender();
   renderGraph();
   renderEquity();
+  loadBenchmark();
 }
 
 // ══ BALANCE HERO ══
@@ -1057,6 +1164,7 @@ function renderGraph(){
     set('graphPct','0%');
     document.getElementById('graphPct').style.color='#8A6B26';
     wrap.innerHTML='<div style="text-align:center;padding:30px 0;color:#7A5D1F;font-size:12px">Belum ada data bulan ini</div>';
+    renderTargetProgress(0);
     return;
   }
 
@@ -1125,6 +1233,44 @@ function renderGraph(){
     </div>`;
 
   setupGraphInteraction(points, dailyInfo, xFor, yFor, mainColor, W, pad);
+  renderTargetProgress(total);
+}
+
+// ══ TARGET PROFIT BULANAN & PROGRESS BAR ══
+function getTargetBulanan(){
+  const v=parseFloat(localStorage.getItem('mk_target_bulanan'));
+  return isNaN(v)?500:v; // default target 500 sen/bulan
+}
+function editTargetBulanan(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah target');return;}
+  const cur=getTargetBulanan();
+  const input=prompt('Target profit bulanan (dalam ¢ / sen):', cur);
+  if(input===null)return;
+  const v=parseFloat(input);
+  if(isNaN(v)||v<=0){toast('❌ Angka target tidak valid');return;}
+  localStorage.setItem('mk_target_bulanan', v);
+  toast('✅ Target bulanan diperbarui');
+  renderGraph();
+}
+function renderTargetProgress(totalBulanIni){
+  const wrap=document.getElementById('targetProgressWrap');
+  if(!wrap)return;
+  const target=getTargetBulanan();
+  const progress=Math.max(0, totalBulanIni);
+  const pct=Math.min(100, (progress/target)*100);
+  const tercapai=totalBulanIni>=target;
+  const barColor=tercapai?'#4ADE80':'#D4AF37';
+  wrap.innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#C8A84B;margin-bottom:6px">
+      <span>Target: ${fc(target)}</span>
+      <span style="color:${totalBulanIni>=0?'#4ADE80':'#F87171'}">${totalBulanIni>=0?'+':''}${fc(totalBulanIni)}</span>
+    </div>
+    <div style="background:#1E2312;border-radius:20px;height:14px;overflow:hidden;position:relative">
+      <div style="background:${barColor};height:100%;width:${pct}%;border-radius:20px;transition:width .3s"></div>
+    </div>
+    <div style="text-align:center;font-size:10px;color:#7A5D1F;margin-top:6px">
+      ${tercapai?'🎉 Target tercapai!':'Progress: '+pct.toFixed(1)+'%'}
+    </div>`;
 }
 function setupGraphInteraction(points, dailyInfo, xFor, yFor, mainColor, W, pad){
   const svg=document.getElementById('graphSvg');
@@ -1394,6 +1540,7 @@ async function simpanSaldo(){
   const grossProfit=parseFloat(document.getElementById('inpGrossProfit').value)||0;
   const grossLoss=parseFloat(document.getElementById('inpGrossLoss').value)||0;
   const pair=document.getElementById('inpPair').value||'XAUUSD';
+  const mood=document.getElementById('inpMood').value||'biasa';
   if(!saldo){toast('❌ Isi saldo MT4');return;}
   if(!tgl){toast('❌ Isi tanggal');return;}
   try{
@@ -1404,12 +1551,25 @@ async function simpanSaldo(){
       catatan: catatan || null,
       gross_profit: grossProfit||null,
       gross_loss: grossLoss||null,
-      pair: pair
+      pair: pair,
+      mood: mood
     };
-    const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
-    if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyData);
-    else await api('saldo_harian','POST',{tanggal:tgl,...bodyData});
-    toast('✅ Catatan tersimpan');
+    let savedOk=false, moodSaved=true;
+    try{
+      const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
+      if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyData);
+      else await api('saldo_harian','POST',{tanggal:tgl,...bodyData});
+      savedOk=true;
+    }catch(errMood){
+      // Kemungkinan kolom 'mood' belum ada di Supabase — coba lagi tanpa mood
+      moodSaved=false;
+      const { mood:_drop, ...bodyNoMood } = bodyData;
+      const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
+      if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyNoMood);
+      else await api('saldo_harian','POST',{tanggal:tgl,...bodyNoMood});
+      savedOk=true;
+    }
+    toast(savedOk&&moodSaved?'✅ Catatan tersimpan':'⚠️ Tersimpan, tapi kolom mood belum ada di Supabase');
     document.getElementById('inpSaldo').value='';
     document.getElementById('inpProfit').value='';
     document.getElementById('inpSignal').value='';
@@ -1826,6 +1986,212 @@ async function loadLotRekomendasi(){
   }catch(e){
     console.error(e);
     document.getElementById('lotRekomendasi').innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat.</div>';
+  }
+}
+
+// ══ RISK REWARD ANALYSIS (PER TRADE, PROXY HARIAN) ══
+function getTargetRR(){
+  const v=parseFloat(localStorage.getItem('mk_target_rr'));
+  return isNaN(v)?2:v; // default rencana RR 1:2
+}
+function editTargetRR(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah target RR');return;}
+  const cur=getTargetRR();
+  const input=prompt('Target Risk-Reward Ratio rencana (contoh: isi 2 untuk RR 1:2):', cur);
+  if(input===null)return;
+  const v=parseFloat(input);
+  if(isNaN(v)||v<=0){toast('❌ Angka RR tidak valid');return;}
+  localStorage.setItem('mk_target_rr', v);
+  toast('✅ Target RR diperbarui');
+  loadRRAnalysis();
+}
+async function loadRRAnalysis(){
+  const el=document.getElementById('rrAnalysis');
+  if(!el)return;
+  try{
+    const rows=await api('saldo_harian?select=profit&order=tanggal.asc');
+    const gains=rows.map(r=>parseFloat(r.profit||0)).filter(p=>p>0);
+    const losses=rows.map(r=>parseFloat(r.profit||0)).filter(p=>p<0);
+    if(!gains.length && !losses.length){
+      el.innerHTML='<div style="padding:14px">Belum ada data.</div>';
+      return;
+    }
+    const avgRisk=losses.length?Math.abs(losses.reduce((a,b)=>a+b,0)/losses.length):0;
+    const avgReward=gains.length?gains.reduce((a,b)=>a+b,0)/gains.length:0;
+    const rrReal=avgRisk>0?avgReward/avgRisk:(avgReward>0?99:0);
+    const targetRR=getTargetRR();
+    const statusColor=rrReal>=targetRR?'#4ADE80':'#F87171';
+    const statusText=rrReal>=targetRR?'Sesuai / melebihi rencana 👍':'Di bawah rencana ⚠️';
+
+    el.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:15px">-${fc(avgRisk)}</div><div class="bal-box-lbl">Avg Risk/Hari</div></div>
+        <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:15px">+${fc(avgReward)}</div><div class="bal-box-lbl">Avg Reward/Hari</div></div>
+      </div>
+      <div class="bal-box" style="background:#1E2312;margin-bottom:10px">
+        <div class="bal-box-val" style="font-size:20px;color:#D4AF37">1 : ${rrReal>=99?'∞':rrReal.toFixed(2)}</div>
+        <div class="bal-box-lbl">Risk-Reward Ratio Real</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8A6B26;border-top:1px solid #2A2E1F;padding-top:10px">
+        <span>Rencana: 1 : ${targetRR}</span>
+        <span onclick="editTargetRR()" style="color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah</span>
+      </div>
+      <div style="text-align:center;margin-top:8px;font-size:11px;color:${statusColor};font-weight:700">${statusText}</div>`;
+  }catch(e){
+    console.error(e);
+    el.innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat analisa risk-reward.</div>';
+  }
+}
+
+// ══ PERFORMANCE VS BENCHMARK ══
+let benchmarkAsset='pax-gold';
+function setBenchmark(a){
+  benchmarkAsset=a;
+  document.querySelectorAll('#benchTabs .pair-tab').forEach(b=>b.classList.toggle('active', b.dataset.b===a));
+  loadBenchmark();
+}
+async function loadBenchmark(){
+  const wrap=document.getElementById('benchWrap');
+  if(!wrap)return;
+  wrap.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat data harga...</div>';
+  try{
+    if(!allSaldoData||allSaldoData.length<2){
+      wrap.innerHTML='<div style="padding:14px;text-align:center;color:#7A5D1F;font-size:12px">Butuh minimal 2 hari data tercatat untuk membandingkan performa.</div>';
+      return;
+    }
+    const firstDate=new Date(allSaldoData[0].tanggal);
+    const daysSpan=Math.min(365, Math.max(7, Math.ceil((Date.now()-firstDate.getTime())/86400000)));
+
+    const res=await fetch(`https://api.coingecko.com/api/v3/coins/${benchmarkAsset}/market_chart?vs_currency=usd&days=${daysSpan}&interval=daily`);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const prices=(data.prices||[]).map(p=>p[1]);
+    if(!prices.length) throw new Error('Data harga kosong');
+
+    // Performa akun Anda (% return dari modal awal)
+    const portoAwal=parseFloat(allSaldoData[0].saldo_mt4||0)-parseFloat(allSaldoData[0].profit||0);
+    let cum=0;
+    const yourCurve=allSaldoData.map(r=>{ cum+=parseFloat(r.profit||0); return portoAwal>0?(cum/portoAwal*100):0; });
+    const yourPct=yourCurve[yourCurve.length-1];
+
+    const benchPct=((prices[prices.length-1]-prices[0])/prices[0])*100;
+    const benchCurve=prices.map(p=>((p-prices[0])/prices[0])*100);
+
+    const assetLabel=benchmarkAsset==='pax-gold'?'XAUUSD':'BTCUSD';
+    const youWin=yourPct>=benchPct;
+
+    // gambar 2 garis dinormalisasi ke lebar yang sama (index-based)
+    const W=300,H=130,padX=6,padY=10;
+    const allVals=[...yourCurve,...benchCurve];
+    const minV=Math.min(0,...allVals), maxV=Math.max(0,...allVals);
+    const range=(maxV-minV)||1;
+    const yFor=v=>H-padY-((v-minV)/range)*(H-padY*2);
+    const pathFor=(arr)=>{
+      const step=arr.length>1?(W-padX*2)/(arr.length-1):0;
+      return arr.map((v,i)=>`${i===0?'M':'L'} ${(padX+i*step).toFixed(1)} ${yFor(v).toFixed(1)}`).join(' ');
+    };
+    const zeroY=yFor(0).toFixed(1);
+
+    wrap.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="bal-box" style="background:#1E2312;${youWin?'border:1px solid #4ADE80':''}">
+          <div class="bal-box-val" style="font-size:16px;color:${yourPct>=0?'#4ADE80':'#F87171'}">${yourPct>=0?'+':''}${yourPct.toFixed(1)}%</div>
+          <div class="bal-box-lbl">Performa Anda</div>
+        </div>
+        <div class="bal-box" style="background:#1E2312;${!youWin?'border:1px solid #D4AF37':''}">
+          <div class="bal-box-val" style="font-size:16px;color:${benchPct>=0?'#4ADE80':'#F87171'}">${benchPct>=0?'+':''}${benchPct.toFixed(1)}%</div>
+          <div class="bal-box-lbl">${assetLabel} (Buy &amp; Hold)</div>
+        </div>
+      </div>
+      <div style="background:#1E2312;border-radius:10px;padding:8px 4px">
+        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:130px;display:block">
+          <line x1="${padX}" y1="${zeroY}" x2="${W-padX}" y2="${zeroY}" stroke="#2A2E1F" stroke-width="1"/>
+          <path d="${pathFor(benchCurve)}" fill="none" stroke="#8A6B26" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="${pathFor(yourCurve)}" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div style="display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:9px;color:#8A6B26">
+        <span><span style="color:#4ADE80">●</span> Performa Anda</span>
+        <span><span style="color:#8A6B26">●</span> ${assetLabel}</span>
+      </div>
+      <div style="text-align:center;margin-top:10px;font-size:11px;font-weight:700;color:${youWin?'#4ADE80':'#F87171'}">
+        ${youWin?'🎉 Anda mengungguli '+assetLabel:'⚠️ '+assetLabel+' unggul dari performa Anda'}
+      </div>`;
+  }catch(e){
+    console.error(e);
+    wrap.innerHTML='<div style="padding:14px;text-align:center;color:#F87171;font-size:12px">Gagal memuat data harga benchmark. Cek koneksi internet lalu coba lagi.</div>';
+  }
+}
+
+// ══ PSIKOLOGI TRADING (MOOD VS PROFIT) ══
+const moodMeta={
+  tenang:{emoji:'😊',label:'Tenang'},
+  biasa:{emoji:'😐',label:'Biasa Saja'},
+  cemas:{emoji:'😰',label:'Cemas'},
+  frustasi:{emoji:'😡',label:'Frustasi'}
+};
+async function loadMoodStats(){
+  const el=document.getElementById('moodStats');
+  if(!el)return;
+  try{
+    let rows, hasMoodCol=true;
+    try{
+      rows=await api('saldo_harian?select=tanggal,profit,mood&order=tanggal.asc');
+    }catch(e){
+      hasMoodCol=false;
+      rows=await api('saldo_harian?select=tanggal,profit&order=tanggal.asc');
+    }
+    const warnHtml = !hasMoodCol
+      ? '<div style="font-size:9px;color:#F87171;margin-top:10px;line-height:1.6">⚠️ Kolom <b>mood</b> belum ada di tabel saldo_harian (Supabase). Tambahkan kolom text bernama <b>mood</b> di Supabase supaya fitur ini bisa mencatat mood harian.</div>'
+      : '';
+    const withMood=rows.filter(r=>r.mood);
+    if(!withMood.length){
+      el.innerHTML='<div style="padding:14px">Belum ada data mood tercatat. Isi "Mood Hari Ini" waktu input saldo harian di Admin Panel.</div>'+warnHtml;
+      return;
+    }
+    const groups={};
+    withMood.forEach(r=>{
+      const m=r.mood;
+      if(!groups[m])groups[m]={total:0,count:0,win:0};
+      const p=parseFloat(r.profit||0);
+      groups[m].total+=p;
+      groups[m].count++;
+      if(p>0)groups[m].win++;
+    });
+    const order=['tenang','biasa','cemas','frustasi'];
+    let bestMood=null,bestAvg=-Infinity;
+    order.forEach(m=>{
+      if(groups[m]){
+        const avg=groups[m].total/groups[m].count;
+        if(avg>bestAvg){bestAvg=avg;bestMood=m;}
+      }
+    });
+    let html='<div style="display:flex;flex-direction:column;gap:8px">';
+    order.forEach(m=>{
+      const g=groups[m];
+      if(!g)return;
+      const meta=moodMeta[m];
+      const avg=g.total/g.count;
+      const winRate=(g.win/g.count*100).toFixed(0);
+      const color=avg>=0?'#4ADE80':'#F87171';
+      html+=`
+        <div style="background:#1E2312;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center${m===bestMood?';border:1px solid #B8860B':''}">
+          <div style="text-align:left">
+            <div style="font-size:13px;color:#D4AF37;font-weight:700">${meta.emoji} ${meta.label}${m===bestMood?' 👑':''}</div>
+            <div style="font-size:9px;color:#7A5D1F;margin-top:2px">${g.count} hari · Win Rate ${winRate}%</div>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:${color}">${avg>=0?'+':''}${fc(avg)}</div>
+        </div>`;
+    });
+    html+='</div>';
+    if(bestMood){
+      html+=`<div style="font-size:10px;color:#7A5D1F;margin-top:12px;text-align:center">Rata-rata profit terbaik saat mood <b style="color:#D4AF37">${moodMeta[bestMood].label}</b></div>`;
+    }
+    html+=warnHtml;
+    el.innerHTML=html;
+  }catch(e){
+    console.error(e);
+    el.innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat data mood.</div>';
   }
 }
 
