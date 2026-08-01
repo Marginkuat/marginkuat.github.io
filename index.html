@@ -256,6 +256,15 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- CONSISTENCY SCORE & SHARPE RATIO -->
+<div class="section">
+  <div class="sec-title">📐 Consistency Score &amp; Sharpe Ratio</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Dihitung dari standar deviasi profit harian — semakin stabil profitnya, semakin tinggi skornya</div>
+    <div id="consistencySharpe" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
 <!-- PSIKOLOGI TRADING (MOOD TRACKER) -->
 <div class="section">
   <div class="sec-title">🧠 Psikologi Trading (Mood vs Profit)</div>
@@ -762,6 +771,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- MONTHLY COMPARISON -->
+<div class="section">
+  <div class="sec-title">📊 Perbandingan Bulanan</div>
+  <div class="graph-card">
+    <div id="monthlyComparison" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
 <!-- KALENDER -->
 <div class="section">
   <div class="sec-title">📅 Kalender Trading</div>
@@ -786,6 +803,31 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- KALENDER DRAWDOWN -->
+<div class="section">
+  <div class="sec-title">🗓️ Kalender Drawdown</div>
+  <div>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="ddCalPrev()">‹</button>
+      <div class="cal-month" id="ddCalTitle">-</div>
+      <button class="cal-nav-btn" onclick="ddCalNext()">›</button>
+    </div>
+    <div class="cal-days">
+      <div class="cal-day-lbl">Min</div><div class="cal-day-lbl">Sen</div>
+      <div class="cal-day-lbl">Sel</div><div class="cal-day-lbl">Rab</div>
+      <div class="cal-day-lbl">Kam</div><div class="cal-day-lbl">Jum</div>
+      <div class="cal-day-lbl">Sab</div>
+    </div>
+    <div class="cal-grid" id="ddCalGrid"></div>
+    <div class="cal-legend">
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#132D0E"></div>DD &lt; 10%</div>
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#3D3208"></div>DD 10-20%</div>
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#2D0E0E"></div>DD &gt; 20%</div>
+    </div>
+    <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">Drawdown dihitung dari jarak equity ke puncak tertinggi, dibanding modal awal</div>
+  </div>
+</div>
+
 <!-- ALIRAN UANG -->
 <div class="section">
   <div class="sec-title">💸 Aliran Uang Masuk &amp; Keluar</div>
@@ -796,49 +838,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <div class="section">
   <div class="sec-title">📊 Profit Per Bulan</div>
   <div id="profitBulananList"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
-</div>
-
-<!-- MONTHLY TARGET & PROGRESS BAR -->
-<div class="section">
-  <div class="sec-title">🎯 Target Bulanan &amp; Progress</div>
-  <div class="graph-card">
-    <div style="display:flex;gap:8px;align-items:end;margin-bottom:14px">
-      <div style="flex:1">
-        <label class="lbl" style="margin-bottom:6px">Target Profit Bulan Ini (¢)</label>
-        <input class="inp" type="number" id="inpTargetBulanan" placeholder="cth: 500" step="1" style="margin-bottom:0">
-      </div>
-      <button class="btn btn-p" onclick="simpanTargetBulanan()" style="margin-bottom:0;padding:11px 16px;white-space:nowrap">Simpan</button>
-    </div>
-    <div id="targetProgressWrap"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
-  </div>
-</div>
-
-<!-- RISK REWARD ANALYSIS -->
-<div class="section">
-  <div class="sec-title">📐 Risk Reward Analysis</div>
-  <div class="graph-card">
-    <div id="rrAnalysis" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
-  </div>
-</div>
-
-<!-- PSIKOLOGI TRADING -->
-<div class="section">
-  <div class="sec-title">🧠 Psikologi Trading (Mood vs Profit)</div>
-  <div class="graph-card">
-    <div id="moodVsProfit" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
-  </div>
-</div>
-
-<!-- PERFORMANCE VS BENCHMARK -->
-<div class="section">
-  <div class="sec-title">📈 Performance vs Benchmark</div>
-  <div class="graph-card">
-    <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto" id="benchTabs">
-      <button class="pair-tab active" data-b="XAUUSD" onclick="setBenchmark('XAUUSD')">vs XAUUSD</button>
-      <button class="pair-tab" data-b="BTCUSD" onclick="setBenchmark('BTCUSD')">vs BTCUSD</button>
-    </div>
-    <div id="benchWrap"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
-  </div>
 </div>
 
 <!-- EKSPOR LAPORAN BULANAN -->
@@ -929,15 +928,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
     <label class="lbl">Gross Loss Hari Ini (total dari transaksi yang rugi, angka positif)</label>
     <input class="inp" type="number" id="inpGrossLoss" placeholder="0.00" step="0.01" min="0">
-
-    <label class="lbl">Mood Trading Hari Ini</label>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px" id="moodPicker">
-      <button type="button" class="mood-btn" data-mood="tenang" onclick="pilihMood('tenang')">😊<div style="font-size:8px;margin-top:2px">Tenang</div></button>
-      <button type="button" class="mood-btn" data-mood="biasa" onclick="pilihMood('biasa')">😐<div style="font-size:8px;margin-top:2px">Biasa</div></button>
-      <button type="button" class="mood-btn" data-mood="cemas" onclick="pilihMood('cemas')">😰<div style="font-size:8px;margin-top:2px">Cemas</div></button>
-      <button type="button" class="mood-btn" data-mood="frustasi" onclick="pilihMood('frustasi')">😡<div style="font-size:8px;margin-top:2px">Frustasi</div></button>
-    </div>
-    <input type="hidden" id="inpMood" value="">
 
     <label class="lbl">Catatan (opsional)</label>
     <input class="inp" id="inpCatatan" placeholder="Contoh: Setelah WD 600">
@@ -1085,6 +1075,10 @@ async function loadAll(){
   loadRRAnalysis();
   loadMoodStats();
   renderKalender();
+  computeDrawdownMap();
+  renderDDKalender();
+  loadConsistencySharpe();
+  loadMonthlyComparison();
   renderGraph();
   renderEquity();
   loadBenchmark();
@@ -1172,6 +1166,59 @@ function renderKalender(){
 }
 function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderKalender();}
 function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderKalender();}
+
+// ══ KALENDER DRAWDOWN ══
+let ddCalYear=new Date().getFullYear(), ddCalMonth=new Date().getMonth();
+let ddByDate={};
+function computeDrawdownMap(){
+  ddByDate={};
+  if(!allSaldoData||!allSaldoData.length)return;
+  const portoAwal=parseFloat(allSaldoData[0].saldo_mt4||0)-parseFloat(allSaldoData[0].profit||0);
+  let cum=0, peak=0;
+  allSaldoData.forEach(r=>{
+    cum+=parseFloat(r.profit||0);
+    if(cum>peak)peak=cum;
+    const ddAbs=peak-cum;
+    const ddPct=portoAwal>0?(ddAbs/portoAwal*100):0;
+    ddByDate[r.tanggal]=ddPct;
+  });
+}
+function renderDDKalender(){
+  const bulanNama=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const titleEl=document.getElementById('ddCalTitle');
+  const grid=document.getElementById('ddCalGrid');
+  if(!titleEl||!grid)return;
+  titleEl.textContent=`${bulanNama[ddCalMonth]} ${ddCalYear}`;
+  grid.innerHTML='';
+
+  const firstDay=new Date(ddCalYear,ddCalMonth,1).getDay();
+  const daysInMonth=new Date(ddCalYear,ddCalMonth+1,0).getDate();
+  const today=new Date();
+  const isThisMonth = today.getFullYear()===ddCalYear && today.getMonth()===ddCalMonth;
+
+  for(let i=0;i<firstDay;i++){
+    const c=document.createElement('div');c.className='cal-cell empty';grid.appendChild(c);
+  }
+  for(let d=1;d<=daysInMonth;d++){
+    const pad=n=>String(n).padStart(2,'0');
+    const dateStr=`${ddCalYear}-${pad(ddCalMonth+1)}-${pad(d)}`;
+    const dd=ddByDate[dateStr];
+    const c=document.createElement('div');
+    c.className='cal-cell'+(isThisMonth&&d===today.getDate()?' today':'');
+    let amtHtml='';
+    if(dd!==undefined){
+      let bg='',color='';
+      if(dd<10){c.style.background='#132D0E';color='#4ADE80';}
+      else if(dd<20){c.style.background='#3D3208';color='#D4AF37';}
+      else{c.style.background='#2D0E0E';color='#F87171';}
+      amtHtml=`<div class="cal-amt" style="color:${color}">${dd.toFixed(1)}%</div>`;
+    }
+    c.innerHTML=`<div class="cal-num">${d}</div>${amtHtml}`;
+    grid.appendChild(c);
+  }
+}
+function ddCalPrev(){ddCalMonth--;if(ddCalMonth<0){ddCalMonth=11;ddCalYear--;}renderDDKalender();}
+function ddCalNext(){ddCalMonth++;if(ddCalMonth>11){ddCalMonth=0;ddCalYear++;}renderDDKalender();}
 
 // ══ GRAFIK BULANAN ══
 function renderGraph(){
@@ -1299,6 +1346,66 @@ function renderTargetProgress(totalBulanIni){
     <div style="text-align:center;font-size:10px;color:#7A5D1F;margin-top:6px">
       ${tercapai?'🎉 Target tercapai!':'Progress: '+pct.toFixed(1)+'%'}
     </div>`;
+}
+
+// ══ MONTHLY COMPARISON ══
+function loadMonthlyComparison(){
+  const el=document.getElementById('monthlyComparison');
+  if(!el)return;
+  try{
+    const rows=allSaldoData||[];
+    if(!rows.length){
+      el.innerHTML='<div style="padding:14px">Belum ada data.</div>';
+      return;
+    }
+    const now=new Date();
+    const monthTotal=(offset)=>{
+      const y=now.getFullYear(), m=now.getMonth()-offset;
+      const target=new Date(y,m,1);
+      return rows.filter(r=>{
+        const d=new Date(r.tanggal);
+        return d.getFullYear()===target.getFullYear() && d.getMonth()===target.getMonth();
+      }).reduce((s,r)=>s+parseFloat(r.profit||0),0);
+    };
+    const bulanIni=monthTotal(0);
+    const bulanLalu=monthTotal(1);
+    const rata3Bulan=(monthTotal(0)+monthTotal(1)+monthTotal(2))/3;
+
+    const bulanNamaSingkat=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const labelIni=bulanNamaSingkat[now.getMonth()];
+    const dLalu=new Date(now.getFullYear(),now.getMonth()-1,1);
+    const labelLalu=bulanNamaSingkat[dLalu.getMonth()];
+
+    const bars=[
+      {label:labelIni+' (Ini)', val:bulanIni},
+      {label:labelLalu+' (Lalu)', val:bulanLalu},
+      {label:'Avg 3 Bulan', val:rata3Bulan}
+    ];
+    const maxAbs=Math.max(1,...bars.map(b=>Math.abs(b.val)));
+
+    let html='<div style="display:flex;align-items:flex-end;justify-content:space-around;height:130px;gap:10px;padding:0 4px">';
+    bars.forEach(b=>{
+      const h=Math.max(3,(Math.abs(b.val)/maxAbs)*100);
+      const color=b.val>=0?'#4ADE80':'#F87171';
+      html+=`
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;flex:1">
+          <div style="font-size:10px;color:${color};font-weight:700;margin-bottom:4px">${b.val>=0?'+':''}${fc(b.val)}</div>
+          <div style="width:60%;height:${h}%;background:${color};border-radius:6px 6px 0 0;min-height:3px"></div>
+        </div>`;
+    });
+    html+='</div>';
+    html+='<div style="display:flex;justify-content:space-around;margin-top:8px">';
+    bars.forEach(b=>{ html+=`<div style="flex:1;text-align:center;font-size:9px;color:#7A5D1F">${b.label}</div>`; });
+    html+='</div>';
+
+    const trend = bulanIni>=bulanLalu ? '📈 Performa meningkat dibanding bulan lalu' : '📉 Performa menurun dibanding bulan lalu';
+    html+=`<div style="text-align:center;margin-top:12px;font-size:11px;color:#8A6B26">${trend}</div>`;
+
+    el.innerHTML=html;
+  }catch(e){
+    console.error(e);
+    el.innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat perbandingan bulanan.</div>';
+  }
 }
 function setupGraphInteraction(points, dailyInfo, xFor, yFor, mainColor, W, pad){
   const svg=document.getElementById('graphSvg');
@@ -2071,6 +2178,49 @@ async function loadRRAnalysis(){
   }
 }
 
+// ══ CONSISTENCY SCORE & SHARPE RATIO ══
+async function loadConsistencySharpe(){
+  const el=document.getElementById('consistencySharpe');
+  if(!el)return;
+  try{
+    const rows=allSaldoData||[];
+    const profits=rows.map(r=>parseFloat(r.profit||0));
+    if(profits.length<2){
+      el.innerHTML='<div style="padding:14px">Butuh minimal 2 hari data untuk menghitung.</div>';
+      return;
+    }
+    const n=profits.length;
+    const mean=profits.reduce((a,b)=>a+b,0)/n;
+    const variance=profits.reduce((s,p)=>s+Math.pow(p-mean,2),0)/n;
+    const stdDev=Math.sqrt(variance);
+
+    const meanAbs=Math.abs(mean);
+    const cv=meanAbs>0?(stdDev/meanAbs):(stdDev>0?Infinity:0);
+    const consistencyScore=Math.max(0, Math.min(100, 100-cv*100));
+
+    const sharpe=stdDev>0?(mean/stdDev):(mean>0?99:0);
+    const sharpeLabel=sharpe>=2?'Sangat Baik':sharpe>=1?'Baik':sharpe>=0?'Cukup':'Buruk';
+    const sharpeColor=sharpe>=1?'#4ADE80':(sharpe>=0?'#D4AF37':'#F87171');
+    const consColor=consistencyScore>=70?'#4ADE80':(consistencyScore>=40?'#D4AF37':'#F87171');
+
+    el.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="bal-box" style="background:#1E2312">
+          <div class="bal-box-val" style="font-size:18px;color:${consColor}">${consistencyScore.toFixed(0)}%</div>
+          <div class="bal-box-lbl">Consistency Score</div>
+        </div>
+        <div class="bal-box" style="background:#1E2312">
+          <div class="bal-box-val" style="font-size:18px;color:${sharpeColor}">${sharpe>=99?'∞':sharpe.toFixed(2)}</div>
+          <div class="bal-box-lbl">Sharpe Ratio</div>
+        </div>
+      </div>
+      <div style="font-size:9px;color:#7A5D1F;margin-top:10px">${sharpeLabel} — berdasarkan ${n} hari tercatat</div>`;
+  }catch(e){
+    console.error(e);
+    el.innerHTML='<div style="padding:10px;color:#F87171">Gagal menghitung consistency/sharpe.</div>';
+  }
+}
+
 // ══ PERFORMANCE VS BENCHMARK ══
 let benchmarkAsset='pax-gold';
 function setBenchmark(a){
@@ -2287,6 +2437,7 @@ function renderEquity(){
 
   let cum=0,peak=0,maxDd=0;
   const points=[];
+  const peakPoints=[];
   const dailyInfo=[];
   const profits=[];
   allSaldoData.forEach(r=>{
@@ -2296,6 +2447,7 @@ function renderEquity(){
     const dd=peak-cum;
     if(dd>maxDd)maxDd=dd;
     points.push(cum);
+    peakPoints.push(peak);
     dailyInfo.push({tanggal:r.tanggal, profit:p, cum:cum});
     profits.push(p);
   });
@@ -2316,14 +2468,27 @@ function renderEquity(){
     ? linePath+` L ${xFor(points.length-1).toFixed(1)} ${H} L ${xFor(0).toFixed(1)} ${H} Z`
     : '';
 
+  // Zona drawdown: area merah di antara garis equity dan puncak tertinggi (peak) sejauh ini
+  let ddZonePath='';
+  if(points.length>1){
+    const forward=points.map((v,i)=>`${i===0?'M':'L'} ${xFor(i).toFixed(1)} ${yFor(v).toFixed(1)}`).join(' ');
+    const backward=peakPoints.map((v,i)=>`L ${xFor(points.length-1-i).toFixed(1)} ${yFor(peakPoints[points.length-1-i]).toFixed(1)}`).join(' ');
+    ddZonePath=forward+' '+backward+' Z';
+  }
+
   wrap.innerHTML=`
     <svg id="equitySvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:140px;display:block;touch-action:none;cursor:pointer">
       ${areaPath?`<path d="${areaPath}" fill="rgba(74,222,128,0.14)" stroke="none"></path>`:''}
+      ${ddZonePath?`<path d="${ddZonePath}" fill="rgba(248,113,113,0.28)" stroke="none"></path>`:''}
       <path d="${linePath}" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"></path>
       <line id="equityIndicatorLine" x1="0" y1="0" x2="0" y2="${H}" class="graph-dashed" style="display:none"/>
       <circle id="equityIndicatorDot" r="4" class="graph-dot-outer" stroke="#4ADE80" style="display:none"/>
       <circle id="equityIndicatorDotInner" r="2" class="graph-dot-inner" fill="#4ADE80" style="display:none"/>
     </svg>
+    <div style="display:flex;justify-content:center;gap:14px;margin-top:6px;font-size:9px;color:#8A6B26">
+      <span><span style="color:#4ADE80">●</span> Equity</span>
+      <span><span style="color:#F87171">■</span> Zona Drawdown</span>
+    </div>
     <div class="graph-tooltip" id="equityTooltip">
       <div class="graph-tooltip-date" id="equityTooltipDate">-</div>
       <div class="graph-tooltip-val" id="equityTooltipVal">¢0.00</div>
