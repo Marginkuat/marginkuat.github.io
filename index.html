@@ -214,7 +214,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   <div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:14px;text-align:left">
     <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">📈 Equity Curve</div>
     <div style="background:#1E2312;border-radius:10px;padding:10px 6px 4px">
-      <svg id="equitySvg" viewBox="0 0 300 140" preserveAspectRatio="none" style="width:100%;height:140px;display:block"></svg>
+      <div id="equitySvgWrap" style="position:relative"></div>
     </div>
     <div id="equityEmpty" style="display:none;text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada data untuk digambar.</div>
     <div id="equityStats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px"></div>
@@ -2124,26 +2124,26 @@ async function loadStatPair(){
   }
 }
 
-// ══ EQUITY CURVE REAL-TIME (SVG) ══
+// ══ EQUITY CURVE REAL-TIME (SVG, interaktif) ══
 function eqStat(label,val,color){
   return `<div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:13px;color:${color}">${val}</div><div class="bal-box-lbl">${label}</div></div>`;
 }
 function renderEquity(){
-  const svg=document.getElementById('equitySvg');
+  const wrap=document.getElementById('equitySvgWrap');
   const emptyEl=document.getElementById('equityEmpty');
   const statsEl=document.getElementById('equityStats');
-  if(!svg)return;
+  if(!wrap)return;
   if(!allSaldoData||!allSaldoData.length){
-    svg.style.display='none';
+    wrap.innerHTML='';
     if(emptyEl)emptyEl.style.display='block';
     if(statsEl)statsEl.innerHTML='';
     return;
   }
-  svg.style.display='block';
   if(emptyEl)emptyEl.style.display='none';
 
   let cum=0,peak=0,maxDd=0;
   const points=[];
+  const dailyInfo=[];
   const profits=[];
   allSaldoData.forEach(r=>{
     const p=parseFloat(r.profit||0);
@@ -2152,10 +2152,11 @@ function renderEquity(){
     const dd=peak-cum;
     if(dd>maxDd)maxDd=dd;
     points.push(cum);
+    dailyInfo.push({tanggal:r.tanggal, profit:p, cum:cum});
     profits.push(p);
   });
 
-  const W=300,H=140,padX=4,padY=10;
+  const W=300,H=140,padX=6,padY=10;
   const minV=Math.min(...points,0),maxV=Math.max(...points,0);
   const range=(maxV-minV)||1;
   const stepX=points.length>1?(W-padX*2)/(points.length-1):0;
@@ -2171,11 +2172,20 @@ function renderEquity(){
     ? linePath+` L ${xFor(points.length-1).toFixed(1)} ${H} L ${xFor(0).toFixed(1)} ${H} Z`
     : '';
 
-  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
-  svg.innerHTML = `
-    ${areaPath?`<path d="${areaPath}" fill="rgba(74,222,128,0.14)" stroke="none"></path>`:''}
-    <path d="${linePath}" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"></path>
-  `;
+  wrap.innerHTML=`
+    <svg id="equitySvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:140px;display:block;touch-action:none;cursor:pointer">
+      ${areaPath?`<path d="${areaPath}" fill="rgba(74,222,128,0.14)" stroke="none"></path>`:''}
+      <path d="${linePath}" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"></path>
+      <line id="equityIndicatorLine" x1="0" y1="0" x2="0" y2="${H}" class="graph-dashed" style="display:none"/>
+      <circle id="equityIndicatorDot" r="4" class="graph-dot-outer" stroke="#4ADE80" style="display:none"/>
+      <circle id="equityIndicatorDotInner" r="2" class="graph-dot-inner" fill="#4ADE80" style="display:none"/>
+    </svg>
+    <div class="graph-tooltip" id="equityTooltip">
+      <div class="graph-tooltip-date" id="equityTooltipDate">-</div>
+      <div class="graph-tooltip-val" id="equityTooltipVal">¢0.00</div>
+    </div>`;
+
+  setupEquityInteraction(points, dailyInfo, xFor, yFor, W);
 
   const gp=profits.filter(p=>p>0);
   const gl=profits.filter(p=>p<0);
@@ -2197,6 +2207,59 @@ function renderEquity(){
       ${eqStat('Net Profit', (netProfit>=0?'+':'')+fc(netProfit), netProfit>=0?'#4ADE80':'#F87171')}
     `;
   }
+}
+function setupEquityInteraction(points, dailyInfo, xFor, yFor, W){
+  const svg=document.getElementById('equitySvg');
+  const wrap=document.getElementById('equitySvgWrap');
+  const tooltip=document.getElementById('equityTooltip');
+  const tooltipDate=document.getElementById('equityTooltipDate');
+  const tooltipVal=document.getElementById('equityTooltipVal');
+  const line=document.getElementById('equityIndicatorLine');
+  const dot=document.getElementById('equityIndicatorDot');
+  const dotInner=document.getElementById('equityIndicatorDotInner');
+  if(!svg||!points.length)return;
+
+  function showAt(clientX){
+    const rect=svg.getBoundingClientRect();
+    const relX=clientX-rect.left;
+    const svgX=(relX/rect.width)*W;
+    let idx=0,bestDist=Infinity;
+    points.forEach((v,i)=>{
+      const d=Math.abs(xFor(i)-svgX);
+      if(d<bestDist){bestDist=d;idx=i;}
+    });
+    const info=dailyInfo[idx];
+    const px=xFor(idx), py=yFor(points[idx]);
+
+    line.setAttribute('x1',px);line.setAttribute('x2',px);line.style.display='block';
+    dot.setAttribute('cx',px);dot.setAttribute('cy',py);dot.style.display='block';
+    dotInner.setAttribute('cx',px);dotInner.setAttribute('cy',py);dotInner.style.display='block';
+
+    const p=info.profit;
+    const pColor=p>0?'#4ADE80':(p<0?'#F87171':'#8A6B26');
+    tooltipDate.textContent=fd(info.tanggal);
+    tooltipVal.innerHTML=`${fc(info.cum)}<br><span style="font-size:9px;color:${pColor}">${p>=0?'+':''}${fc(p)} hari itu</span>`;
+
+    const rectWrap=wrap.getBoundingClientRect();
+    const pxPercent=px/W;
+    let leftPx=pxPercent*rectWrap.width;
+    tooltip.style.display='block';
+    const tooltipWidth=tooltip.offsetWidth||110;
+    leftPx=Math.max(4,Math.min(rectWrap.width-tooltipWidth-4,leftPx-tooltipWidth/2));
+    tooltip.style.left=leftPx+'px';
+  }
+  function hideTooltip(){
+    tooltip.style.display='none';
+    line.style.display='none';
+    dot.style.display='none';
+    dotInner.style.display='none';
+  }
+
+  let dragging=false;
+  svg.addEventListener('pointerdown',e=>{dragging=true;showAt(e.clientX);});
+  svg.addEventListener('pointermove',e=>{if(dragging)showAt(e.clientX);});
+  window.addEventListener('pointerup',()=>{dragging=false;});
+  svg.addEventListener('pointerleave',()=>{if(!dragging)hideTooltip();});
 }
 
 // ══ AUTO-COPY DATA DARI MT4 (IMPORT CSV) ══
