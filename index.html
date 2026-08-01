@@ -212,21 +212,12 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
   <!-- EQUITY CURVE REAL-TIME (gabung dengan Saldo MT4) -->
   <div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:14px;text-align:left">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">📈 Equity Curve</div>
-      <div style="display:flex;gap:6px">
-        <button class="zoom-btn" onclick="zoomEquity(1.4)">➕</button>
-        <button class="zoom-btn" onclick="zoomEquity(0.7)">➖</button>
-        <button class="zoom-btn" onclick="resetZoomEquity()" style="font-size:12px">↺</button>
-      </div>
-    </div>
-    <div id="equityScroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;background:#1E2312;border-radius:10px;padding:8px 4px">
-      <div id="equityInner" style="height:180px;position:relative">
-        <canvas id="equityCanvas"></canvas>
-      </div>
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">📈 Equity Curve</div>
+    <div style="background:#1E2312;border-radius:10px;padding:10px 6px 4px">
+      <svg id="equitySvg" viewBox="0 0 300 140" preserveAspectRatio="none" style="width:100%;height:140px;display:block"></svg>
     </div>
     <div id="equityEmpty" style="display:none;text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada data untuk digambar.</div>
-    <div style="font-size:9px;color:#5C4818;margin-top:6px;text-align:center">Geser untuk scroll →</div>
+    <div id="equityStats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px"></div>
   </div>
 </div>
 
@@ -708,7 +699,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <!-- FIREBASE: performance showcase otomatis -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyAker4D4k1ueustizZ9QdWwEgcyP3M0NZI",
@@ -2134,84 +2124,79 @@ async function loadStatPair(){
   }
 }
 
-// ══ EQUITY CURVE REAL-TIME (Chart.js) ══
-let equityChart=null;
-let equityZoom=1;
+// ══ EQUITY CURVE REAL-TIME (SVG) ══
+function eqStat(label,val,color){
+  return `<div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:13px;color:${color}">${val}</div><div class="bal-box-lbl">${label}</div></div>`;
+}
 function renderEquity(){
-  const canvas=document.getElementById('equityCanvas');
-  const inner=document.getElementById('equityInner');
+  const svg=document.getElementById('equitySvg');
   const emptyEl=document.getElementById('equityEmpty');
-  if(!canvas||!inner||typeof Chart==='undefined')return;
+  const statsEl=document.getElementById('equityStats');
+  if(!svg)return;
   if(!allSaldoData||!allSaldoData.length){
-    inner.style.display='none';
+    svg.style.display='none';
     if(emptyEl)emptyEl.style.display='block';
+    if(statsEl)statsEl.innerHTML='';
     return;
   }
-  inner.style.display='block';
+  svg.style.display='block';
   if(emptyEl)emptyEl.style.display='none';
 
-  let cum=0;
-  const labels=[];
-  const data=[];
+  let cum=0,peak=0,maxDd=0;
+  const points=[];
+  const profits=[];
   allSaldoData.forEach(r=>{
-    cum+=parseFloat(r.profit||0);
-    const d=new Date(r.tanggal);
-    labels.push(d.getDate()+'/'+(d.getMonth()+1));
-    data.push(parseFloat(cum.toFixed(2)));
+    const p=parseFloat(r.profit||0);
+    cum+=p;
+    if(cum>peak)peak=cum;
+    const dd=peak-cum;
+    if(dd>maxDd)maxDd=dd;
+    points.push(cum);
+    profits.push(p);
   });
 
-  const scrollWrap=document.getElementById('equityScroll');
-  const baseWidth=Math.max(280,(scrollWrap.clientWidth||320)-8);
-  inner.style.width=(baseWidth*equityZoom)+'px';
+  const W=300,H=140,padX=4,padY=10;
+  const minV=Math.min(...points,0),maxV=Math.max(...points,0);
+  const range=(maxV-minV)||1;
+  const stepX=points.length>1?(W-padX*2)/(points.length-1):0;
+  const xFor=i=>padX+i*stepX;
+  const yFor=v=>H-padY-((v-minV)/range)*(H-padY*2);
 
-  if(equityChart){ equityChart.destroy(); equityChart=null; }
-  equityChart=new Chart(canvas,{
-    type:'line',
-    data:{
-      labels:labels,
-      datasets:[{
-        label:'Equity (¢)',
-        data:data,
-        borderColor:'#D4AF37',
-        backgroundColor:'rgba(212,175,55,0.12)',
-        pointRadius:0,
-        pointHoverRadius:4,
-        borderWidth:2,
-        tension:0.25,
-        fill:true
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      animation:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'#0D0F0A',
-          titleColor:'#9C7A2E',
-          bodyColor:'#D4AF37',
-          borderColor:'#2A2E1F',
-          borderWidth:1,
-          callbacks:{ label:(ctx)=>' ¢'+ctx.parsed.y.toFixed(2) }
-        }
-      },
-      scales:{
-        x:{ ticks:{ color:'#7A5D1F', font:{size:9}, maxRotation:0, autoSkip:true }, grid:{ color:'#1E2312' } },
-        y:{ ticks:{ color:'#7A5D1F', font:{size:9}, callback:(v)=>'¢'+v }, grid:{ color:'#1E2312' } }
-      }
-    }
+  let linePath='';
+  points.forEach((v,i)=>{
+    const x=xFor(i),y=yFor(v);
+    linePath+= i===0?`M ${x.toFixed(1)} ${y.toFixed(1)}`:` L ${x.toFixed(1)} ${y.toFixed(1)}`;
   });
-}
-function zoomEquity(factor){
-  equityZoom=Math.max(1,Math.min(6,equityZoom*factor));
-  renderEquity();
-  const scrollEl=document.getElementById('equityScroll');
-  if(scrollEl) scrollEl.scrollLeft=scrollEl.scrollWidth;
-}
-function resetZoomEquity(){
-  equityZoom=1;
-  renderEquity();
+  const areaPath = points.length>1
+    ? linePath+` L ${xFor(points.length-1).toFixed(1)} ${H} L ${xFor(0).toFixed(1)} ${H} Z`
+    : '';
+
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.innerHTML = `
+    ${areaPath?`<path d="${areaPath}" fill="rgba(74,222,128,0.14)" stroke="none"></path>`:''}
+    <path d="${linePath}" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"></path>
+  `;
+
+  const gp=profits.filter(p=>p>0);
+  const gl=profits.filter(p=>p<0);
+  const totalGP=gp.reduce((a,b)=>a+b,0);
+  const totalGL=Math.abs(gl.reduce((a,b)=>a+b,0));
+  const pf=totalGL>0?totalGP/totalGL:(totalGP>0?99:0);
+  const netProfit=cum;
+  const rf=maxDd>0?netProfit/maxDd:0;
+  const avgProfit=gp.length?totalGP/gp.length:0;
+  const avgLoss=gl.length?(gl.reduce((a,b)=>a+b,0)/gl.length):0;
+
+  if(statsEl){
+    statsEl.innerHTML=`
+      ${eqStat('Profit Factor', pf>=99?'∞':pf.toFixed(2), '#D4AF37')}
+      ${eqStat('Recovery Factor', rf.toFixed(2), '#D4AF37')}
+      ${eqStat('Max Drawdown', fc(maxDd), '#F87171')}
+      ${eqStat('Avg Profit/Hari', fc(avgProfit), '#4ADE80')}
+      ${eqStat('Avg Loss/Hari', '-'+fc(Math.abs(avgLoss)), '#F87171')}
+      ${eqStat('Net Profit', (netProfit>=0?'+':'')+fc(netProfit), netProfit>=0?'#4ADE80':'#F87171')}
+    `;
+  }
 }
 
 // ══ AUTO-COPY DATA DARI MT4 (IMPORT CSV) ══
