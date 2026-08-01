@@ -209,6 +209,23 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="bal-box"><div class="bal-box-val cy" id="bHari">0</div><div class="bal-box-lbl">Hari Trading</div></div>
     <div class="bal-box"><div class="bal-box-val cg" id="bProfit">¢0</div><div class="bal-box-lbl">Total Profit</div></div>
   </div>
+
+  <!-- EQUITY CURVE REAL-TIME (gabung dengan Saldo MT4) -->
+  <div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:14px;text-align:left">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">📈 Equity Curve</div>
+      <div style="display:flex;gap:6px">
+        <button class="zoom-btn" onclick="zoomEquity(1.4)">➕</button>
+        <button class="zoom-btn" onclick="zoomEquity(0.7)">➖</button>
+        <button class="zoom-btn" onclick="resetZoomEquity()" style="font-size:12px">↺</button>
+      </div>
+    </div>
+    <div id="equityScroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;background:#1E2312;border-radius:10px;padding:8px 4px">
+      <canvas id="equityCanvas" height="180"></canvas>
+    </div>
+    <div id="equityEmpty" style="display:none;text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada data untuk digambar.</div>
+    <div style="font-size:9px;color:#5C4818;margin-top:6px;text-align:center">Geser untuk scroll →</div>
+  </div>
 </div>
 
 <!-- SCORE DASHBOARD (sepaket langsung di bawah Saldo MT4) -->
@@ -230,25 +247,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <button class="pair-tab" data-pair="FOREX" onclick="setPairFilter('FOREX')">Forex</button>
     </div>
     <div id="statPair" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
-  </div>
-</div>
-
-<!-- EQUITY CURVE REAL-TIME -->
-<div class="section">
-  <div class="sec-title">📈 Equity Curve Real-Time</div>
-  <div class="graph-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:9px;color:#7A5D1F">Geser grafik untuk scroll →</div>
-      <div style="display:flex;gap:6px">
-        <button class="zoom-btn" onclick="zoomEquity(1.4)">➕</button>
-        <button class="zoom-btn" onclick="zoomEquity(0.7)">➖</button>
-        <button class="zoom-btn" onclick="resetZoomEquity()" style="font-size:12px">↺</button>
-      </div>
-    </div>
-    <div id="equityScroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;background:#1E2312;border-radius:10px;padding:8px 4px">
-      <canvas id="equityCanvas" height="180"></canvas>
-    </div>
-    <div id="equityEmpty" style="display:none;text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada data untuk digambar.</div>
   </div>
 </div>
 
