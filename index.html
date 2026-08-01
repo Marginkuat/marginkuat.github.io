@@ -221,7 +221,9 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       </div>
     </div>
     <div id="equityScroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;background:#1E2312;border-radius:10px;padding:8px 4px">
-      <canvas id="equityCanvas" height="180"></canvas>
+      <div id="equityInner" style="height:180px;position:relative">
+        <canvas id="equityCanvas"></canvas>
+      </div>
     </div>
     <div id="equityEmpty" style="display:none;text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada data untuk digambar.</div>
     <div style="font-size:9px;color:#5C4818;margin-top:6px;text-align:center">Geser untuk scroll →</div>
@@ -2137,14 +2139,15 @@ let equityChart=null;
 let equityZoom=1;
 function renderEquity(){
   const canvas=document.getElementById('equityCanvas');
+  const inner=document.getElementById('equityInner');
   const emptyEl=document.getElementById('equityEmpty');
-  if(!canvas||typeof Chart==='undefined')return;
+  if(!canvas||!inner||typeof Chart==='undefined')return;
   if(!allSaldoData||!allSaldoData.length){
-    canvas.style.display='none';
+    inner.style.display='none';
     if(emptyEl)emptyEl.style.display='block';
     return;
   }
-  canvas.style.display='block';
+  inner.style.display='block';
   if(emptyEl)emptyEl.style.display='none';
 
   let cum=0;
@@ -2157,11 +2160,12 @@ function renderEquity(){
     data.push(parseFloat(cum.toFixed(2)));
   });
 
-  const baseWidth=document.getElementById('equityScroll').clientWidth||320;
-  canvas.style.width=(baseWidth*equityZoom)+'px';
+  const scrollWrap=document.getElementById('equityScroll');
+  const baseWidth=Math.max(280,(scrollWrap.clientWidth||320)-8);
+  inner.style.width=(baseWidth*equityZoom)+'px';
 
-  if(equityChart){ equityChart.destroy(); }
-  equityChart=new Chart(canvas.getContext('2d'),{
+  if(equityChart){ equityChart.destroy(); equityChart=null; }
+  equityChart=new Chart(canvas,{
     type:'line',
     data:{
       labels:labels,
@@ -2178,7 +2182,7 @@ function renderEquity(){
       }]
     },
     options:{
-      responsive:false,
+      responsive:true,
       maintainAspectRatio:false,
       animation:false,
       plugins:{
