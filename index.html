@@ -1077,13 +1077,41 @@ window.onload=async()=>{
 };
 
 async function loadAll(){
-  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore(),loadModalMinimal(),loadLotRekomendasi(),loadStatPair(),loadRRAnalysis(),loadMoodStats()]);
+  // Ambil data utama SEKALI SAJA, dipakai bareng oleh beberapa section (hemat request, lebih cepat di koneksi lambat)
+  await fetchSharedSaldoData();
+  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore(),loadModalMinimal(),loadLotRekomendasi()]);
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
-  allSaldoData=await api('saldo_harian?select=tanggal,profit,saldo_mt4&order=tanggal.asc');
+  loadStatPair();
+  loadRRAnalysis();
+  loadMoodStats();
   renderKalender();
   renderGraph();
   renderEquity();
   loadBenchmark();
+}
+let hasPairCol=true, hasMoodCol=true;
+async function fetchSharedSaldoData(){
+  const base='tanggal,profit,saldo_mt4,gross_profit,gross_loss';
+  try{
+    allSaldoData=await api(`saldo_harian?select=${base},pair,mood&order=tanggal.asc`);
+    hasPairCol=true; hasMoodCol=true;
+    return;
+  }catch(e1){}
+  try{
+    allSaldoData=await api(`saldo_harian?select=${base},pair&order=tanggal.asc`);
+    allSaldoData=allSaldoData.map(r=>({...r,mood:null}));
+    hasPairCol=true; hasMoodCol=false;
+    return;
+  }catch(e2){}
+  try{
+    allSaldoData=await api(`saldo_harian?select=${base},mood&order=tanggal.asc`);
+    allSaldoData=allSaldoData.map(r=>({...r,pair:'XAUUSD'}));
+    hasPairCol=false; hasMoodCol=true;
+    return;
+  }catch(e3){}
+  allSaldoData=await api(`saldo_harian?select=${base}&order=tanggal.asc`);
+  allSaldoData=allSaldoData.map(r=>({...r,pair:'XAUUSD',mood:null}));
+  hasPairCol=false; hasMoodCol=false;
 }
 
 // ══ BALANCE HERO ══
@@ -2009,7 +2037,7 @@ async function loadRRAnalysis(){
   const el=document.getElementById('rrAnalysis');
   if(!el)return;
   try{
-    const rows=await api('saldo_harian?select=profit&order=tanggal.asc');
+    const rows=allSaldoData||[];
     const gains=rows.map(r=>parseFloat(r.profit||0)).filter(p=>p>0);
     const losses=rows.map(r=>parseFloat(r.profit||0)).filter(p=>p<0);
     if(!gains.length && !losses.length){
@@ -2134,13 +2162,7 @@ async function loadMoodStats(){
   const el=document.getElementById('moodStats');
   if(!el)return;
   try{
-    let rows, hasMoodCol=true;
-    try{
-      rows=await api('saldo_harian?select=tanggal,profit,mood&order=tanggal.asc');
-    }catch(e){
-      hasMoodCol=false;
-      rows=await api('saldo_harian?select=tanggal,profit&order=tanggal.asc');
-    }
+    const rows=allSaldoData||[];
     const warnHtml = !hasMoodCol
       ? '<div style="font-size:9px;color:#F87171;margin-top:10px;line-height:1.6">⚠️ Kolom <b>mood</b> belum ada di tabel saldo_harian (Supabase). Tambahkan kolom text bernama <b>mood</b> di Supabase supaya fitur ini bisa mencatat mood harian.</div>'
       : '';
@@ -2206,15 +2228,7 @@ async function loadStatPair(){
   const el=document.getElementById('statPair');
   if(!el)return;
   try{
-    let rows, hasPairCol=true;
-    try{
-      rows=await api('saldo_harian?select=tanggal,profit,gross_profit,gross_loss,saldo_mt4,pair&order=tanggal.asc');
-    }catch(e){
-      // Kolom 'pair' belum ada di Supabase — fallback: anggap semua data XAUUSD supaya tetap tampil
-      hasPairCol=false;
-      rows=await api('saldo_harian?select=tanggal,profit,gross_profit,gross_loss,saldo_mt4&order=tanggal.asc');
-      rows=rows.map(r=>({...r,pair:'XAUUSD'}));
-    }
+    let rows=(allSaldoData||[]).map(r=>({...r}));
     if(currentPairFilter!=='ALL'){
       rows=rows.filter(r=>(r.pair||'XAUUSD')===currentPairFilter);
     }
