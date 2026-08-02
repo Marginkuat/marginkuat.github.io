@@ -881,6 +881,21 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- LAPORAN KEUANGAN -->
+<div class="section">
+  <div class="sec-title">📑 Laporan Keuangan</div>
+  <div class="graph-card">
+    <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px" id="lapKeuTabs">
+      <button class="pair-tab active" data-lk="neraca" onclick="setLapKeu('neraca')">Neraca</button>
+      <button class="pair-tab" data-lk="labarugi" onclick="setLapKeu('labarugi')">Laba Rugi</button>
+      <button class="pair-tab" data-lk="aruskas" onclick="setLapKeu('aruskas')">Arus Kas</button>
+    </div>
+    <div id="lapKeuWrap">
+      <div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    </div>
+  </div>
+</div>
+
 <!-- EKSPOR LAPORAN KEUANGAN -->
 <div class="section">
   <div class="sec-title">📁 Ekspor Laporan Keuangan</div>
@@ -1324,6 +1339,7 @@ async function loadAll(){
   renderKasRingkasan();
   renderKasRekap();
   renderKasChart();
+  renderLapKeu();
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
   loadStatPair();
   loadRRAnalysis();
@@ -1910,6 +1926,7 @@ async function simpanKas(){
     renderKasRingkasan();
     renderKasRekap();
     renderKasChart();
+    renderLapKeu();
   }catch(e){
     console.error(e);
     toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,200));
@@ -2072,6 +2089,176 @@ function renderKasChart(){
     <span><span style="color:#F87171">■</span> Keluar</span>
   </div>`;
   el.innerHTML=html;
+}
+
+// ══ LAPORAN KEUANGAN: NERACA, LABA RUGI, ARUS KAS ══
+let lapKeuTab='neraca';
+function setLapKeu(tab){
+  lapKeuTab=tab;
+  document.querySelectorAll('#lapKeuTabs .pair-tab').forEach(b=>b.classList.toggle('active', b.dataset.lk===tab));
+  renderLapKeu();
+}
+function renderLapKeu(){
+  const wrap=document.getElementById('lapKeuWrap');
+  if(!wrap)return;
+  if(lapKeuTab==='neraca') renderNeraca(wrap);
+  else if(lapKeuTab==='labarugi') renderLabaRugi(wrap);
+  else renderArusKasFormal(wrap);
+}
+
+// ── NERACA (BALANCE SHEET) ──
+function getAsetLain(){
+  try{ return JSON.parse(localStorage.getItem('mk_aset_lain')||'[]'); }catch(e){ return []; }
+}
+function getKewajiban(){
+  try{ return JSON.parse(localStorage.getItem('mk_kewajiban')||'[]'); }catch(e){ return []; }
+}
+function tambahAsetLain(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const nama=prompt('Nama aset (contoh: Saldo Rekening Bank, Motor, Emas, dll):');
+  if(!nama)return;
+  const jumlahStr=prompt('Nilai aset (dalam Rupiah, contoh: 5000000):');
+  const jumlah=parseFloat(jumlahStr);
+  if(isNaN(jumlah)||jumlah<0){toast('❌ Nilai tidak valid');return;}
+  const list=getAsetLain();
+  list.push({nama, jumlah});
+  localStorage.setItem('mk_aset_lain', JSON.stringify(list));
+  toast('✅ Aset ditambahkan');
+  renderLapKeu();
+}
+function hapusAsetLain(idx){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const list=getAsetLain();
+  list.splice(idx,1);
+  localStorage.setItem('mk_aset_lain', JSON.stringify(list));
+  renderLapKeu();
+}
+function tambahKewajiban(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const nama=prompt('Nama kewajiban/hutang (contoh: Cicilan Motor, Pinjaman, dll):');
+  if(!nama)return;
+  const jumlahStr=prompt('Nilai kewajiban (dalam Rupiah, contoh: 2000000):');
+  const jumlah=parseFloat(jumlahStr);
+  if(isNaN(jumlah)||jumlah<0){toast('❌ Nilai tidak valid');return;}
+  const list=getKewajiban();
+  list.push({nama, jumlah});
+  localStorage.setItem('mk_kewajiban', JSON.stringify(list));
+  toast('✅ Kewajiban ditambahkan');
+  renderLapKeu();
+}
+function hapusKewajiban(idx){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const list=getKewajiban();
+  list.splice(idx,1);
+  localStorage.setItem('mk_kewajiban', JSON.stringify(list));
+  renderLapKeu();
+}
+function renderNeraca(wrap){
+  const saldoMt4Cent = allSaldoData&&allSaldoData.length ? parseFloat(allSaldoData[allSaldoData.length-1].saldo_mt4||0) : 0;
+  const saldoMt4Rp = Math.round(saldoMt4Cent/100*K);
+  const asetLain=getAsetLain();
+  const kewajiban=getKewajiban();
+  const totalAsetLain=asetLain.reduce((s,a)=>s+a.jumlah,0);
+  const totalAset=saldoMt4Rp+totalAsetLain;
+  const totalKewajiban=kewajiban.reduce((s,a)=>s+a.jumlah,0);
+  const ekuitas=totalAset-totalKewajiban;
+  const rp=v=>'Rp '+Math.round(v).toLocaleString('id-ID');
+
+  let html=`<div style="font-size:9px;color:#5C4818;margin-bottom:12px">Per ${fd(new Date().toISOString().slice(0,10))} · Saldo MT4 otomatis, aset lain &amp; kewajiban diisi manual oleh Admin</div>`;
+
+  html+=`<div style="font-size:11px;font-weight:700;color:#4ADE80;margin-bottom:8px">ASET (HARTA)</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Saldo MT4 (Trading)</span><span style="color:#D4AF37">${rp(saldoMt4Rp)}</span></div>`;
+  asetLain.forEach((a,i)=>{
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#D4AF37">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusAsetLain(${i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
+  });
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#4ADE80">Total Aset</span><span style="color:#4ADE80">${rp(totalAset)}</span></div>`;
+  if(isAdmin) html+=`<div onclick="tambahAsetLain()" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin:8px 0 18px">+ Tambah Aset</div>`;
+  else html+='<div style="margin-bottom:18px"></div>';
+
+  html+=`<div style="font-size:11px;font-weight:700;color:#F87171;margin-bottom:8px">KEWAJIBAN (HUTANG)</div>`;
+  if(!kewajiban.length){
+    html+=`<div style="font-size:11px;color:#7A5D1F;padding:4px 0">Tidak ada kewajiban tercatat.</div>`;
+  }
+  kewajiban.forEach((a,i)=>{
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#F87171">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusKewajiban(${i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
+  });
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#F87171">Total Kewajiban</span><span style="color:#F87171">${rp(totalKewajiban)}</span></div>`;
+  if(isAdmin) html+=`<div onclick="tambahKewajiban()" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin:8px 0 4px">+ Tambah Kewajiban</div>`;
+
+  html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${ekuitas>=0?'#4ADE80':'#F87171'}">${rp(ekuitas)}</div><div class="bal-box-lbl">EKUITAS (Kekayaan Bersih) = Aset − Kewajiban</div></div>`;
+
+  wrap.innerHTML=html;
+}
+
+// ── LABA RUGI (INCOME STATEMENT) ──
+let labaRugiYear=new Date().getFullYear(), labaRugiMonth=new Date().getMonth();
+function labaRugiPrev(){labaRugiMonth--;if(labaRugiMonth<0){labaRugiMonth=11;labaRugiYear--;}renderLapKeu();}
+function labaRugiNext(){labaRugiMonth++;if(labaRugiMonth>11){labaRugiMonth=0;labaRugiYear++;}renderLapKeu();}
+function renderLabaRugi(wrap){
+  const bulanNama=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const rowsKas=(allKasData||[]).filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===labaRugiYear && d.getMonth()===labaRugiMonth; });
+  const rowsTrading=(allSaldoData||[]).filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===labaRugiYear && d.getMonth()===labaRugiMonth; });
+
+  const pendapatanAktifCent=rowsKas.filter(r=>r.kategori==='pendapatan').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const profitTradingCent=rowsTrading.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+  const bebanCent=rowsKas.filter(r=>['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+
+  const totalPendapatan=pendapatanAktifCent+profitTradingCent;
+  const labaRugi=totalPendapatan-bebanCent;
+
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <button class="cal-nav-btn" onclick="labaRugiPrev()">‹</button>
+    <div style="font-size:14px;font-weight:700;color:#D4AF37">${bulanNama[labaRugiMonth]} ${labaRugiYear}</div>
+    <button class="cal-nav-btn" onclick="labaRugiNext()">›</button>
+  </div>`;
+
+  if(!rowsKas.length && !rowsTrading.length){
+    html+='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Tidak ada data bulan ini.</div>';
+    wrap.innerHTML=html;
+    return;
+  }
+
+  html+=`<div style="font-size:11px;font-weight:700;color:#4ADE80;margin-bottom:8px">PENDAPATAN</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Aktif (gaji, dll)</span><span style="color:#D4AF37">${fc(pendapatanAktifCent)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Pasif (Profit Trading MT4)</span><span style="color:${profitTradingCent>=0?'#D4AF37':'#F87171'}">${fc(profitTradingCent)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#4ADE80">Total Pendapatan</span><span style="color:#4ADE80">${fc(totalPendapatan)}</span></div>`;
+
+  html+=`<div style="font-size:11px;font-weight:700;color:#F87171;margin:16px 0 8px">BEBAN</div>`;
+  ['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'].forEach(k=>{
+    const total=rowsKas.filter(r=>r.kategori===k).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+    if(!total)return;
+    const km=kategoriMeta[k];
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:${km.color}">${km.dot} ${km.label}</span><span style="color:#F87171">${fc(total)}</span></div>`;
+  });
+  if(!bebanCent){
+    html+='<div style="font-size:11px;color:#7A5D1F;padding:4px 0">Tidak ada beban tercatat.</div>';
+  }
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#F87171">Total Beban</span><span style="color:#F87171">${fc(bebanCent)}</span></div>`;
+
+  html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${labaRugi>=0?'#4ADE80':'#F87171'}">${labaRugi>=0?'+':''}${fc(labaRugi)}</div><div class="bal-box-lbl">${labaRugi>=0?'LABA':'RUGI'} BERSIH = Pendapatan − Beban</div></div>`;
+  if(!hasKategoriCol){
+    html+='<div style="font-size:9px;color:#F87171;margin-top:10px">⚠️ Kolom kategori belum ada di Supabase, jadi Pendapatan Aktif & Beban belum bisa dipilah otomatis.</div>';
+  }
+
+  wrap.innerHTML=html;
+}
+
+// ── ARUS KAS (CASH FLOW, ringkas — detail lengkap ada di section Aliran Uang) ──
+function renderArusKasFormal(wrap){
+  const rows=allKasData||[];
+  let masuk=0,keluar=0;
+  rows.forEach(r=>{
+    const arah=kasArah(r);
+    const j=parseFloat(r.jumlah||0);
+    if(arah==='masuk')masuk+=j; else if(arah==='keluar')keluar+=j;
+  });
+  const bersih=masuk-keluar;
+  let html=`<div style="font-size:9px;color:#5C4818;margin-bottom:14px">Ringkasan sepanjang waktu tercatat</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#C8A84B">Kas Masuk</span><span style="color:#4ADE80">+${fc(masuk)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid #2A2E1F"><span style="color:#C8A84B">Kas Keluar</span><span style="color:#F87171">-${fc(keluar)}</span></div>`;
+  html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</div><div class="bal-box-lbl">SALDO KAS BERSIH</div></div>`;
+  html+='<div style="font-size:10px;color:#7A5D1F;text-align:center;margin-top:14px">Rekap bulanan &amp; grafik lengkap ada di section 💸 "Aliran Uang Masuk &amp; Keluar" di atas</div>';
+  wrap.innerHTML=html;
 }
 
 // ══ EKSPOR LAPORAN KEUANGAN (KAS) ══
