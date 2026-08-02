@@ -850,7 +850,48 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <!-- ALIRAN UANG -->
 <div class="section">
   <div class="sec-title">💸 Aliran Uang Masuk &amp; Keluar</div>
+  <div class="graph-card" style="margin-bottom:12px">
+    <div id="kasSaldoRingkasan">
+      <div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    </div>
+    <div id="kasNotifMenipis" style="display:none;margin-top:10px;background:#2D0E0E;border:1px solid #F87171;border-radius:8px;padding:10px 12px;font-size:11px;color:#F87171"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:8px">
+      <span onclick="editKasThreshold()" style="font-size:9px;color:#8A6B26;cursor:pointer;text-decoration:underline">Atur batas peringatan</span>
+    </div>
+  </div>
   <div id="kasList"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+</div>
+
+<!-- REKAP & GRAFIK ARUS KAS -->
+<div class="section">
+  <div class="sec-title">📊 Rekap &amp; Grafik Arus Kas</div>
+  <div class="graph-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <button class="cal-nav-btn" onclick="kasRekapPrev()">‹</button>
+      <div id="kasRekapLabel" style="font-size:14px;font-weight:700;color:#D4AF37">-</div>
+      <button class="cal-nav-btn" onclick="kasRekapNext()">›</button>
+    </div>
+    <div id="kasRekapBulan" style="margin-bottom:16px">
+      <div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    </div>
+    <div style="border-top:1px solid #2A2E1F;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Masuk vs Keluar — 6 Bulan Terakhir</div>
+      <div id="kasChart"><div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- EKSPOR LAPORAN KEUANGAN -->
+<div class="section">
+  <div class="sec-title">📁 Ekspor Laporan Keuangan</div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#7A5D1F;text-align:center;margin-bottom:14px">Download riwayat aliran uang masuk &amp; keluar untuk arsip pribadi</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-p" onclick="exportKasCSV()" style="margin-bottom:0">⬇️ CSV</button>
+      <button class="btn btn-p" onclick="exportKasPDF()" style="margin-bottom:0">⬇️ PDF</button>
+    </div>
+    <div id="kasExportStatus" style="font-size:10px;color:#7A5D1F;margin-top:10px;text-align:center"></div>
+  </div>
 </div>
 
 <!-- PROFIT PER BULAN -->
@@ -1270,6 +1311,10 @@ async function loadAll(){
   // Ambil data utama SEKALI SAJA, dipakai bareng oleh beberapa section (hemat request, lebih cepat di koneksi lambat)
   await fetchSharedSaldoData();
   await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore(),loadModalMinimal(),loadLotRekomendasi()]);
+  await fetchAllKasData();
+  renderKasRingkasan();
+  renderKasRekap();
+  renderKasChart();
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
   loadStatPair();
   loadRRAnalysis();
@@ -1733,6 +1778,24 @@ function escapeHtml(s){
 }
 
 // ══ KAS PRIBADI (DEPOSIT & WD) ══
+// ══ ARUS KAS: helper & data bersama ══
+function kasArah(r){
+  const keText=(r.ke||'').toLowerCase();
+  const dariText=(r.dari||'').toLowerCase();
+  if(keText.includes('mt4')) return 'masuk';   // uang masuk ke saldo MT4
+  if(dariText.includes('mt4')) return 'keluar'; // uang keluar dari saldo MT4
+  return 'lain';
+}
+let allKasData=[];
+async function fetchAllKasData(){
+  try{
+    allKasData=await api('kas_pribadi?select=tanggal,dari,ke,jumlah,keterangan&order=tanggal.asc');
+  }catch(e){
+    console.error(e);
+    allKasData=[];
+  }
+}
+
 async function loadKas(){
   try{
     const rows=await api('kas_pribadi?select=*&order=tanggal.desc,created_at.desc&limit=50');
@@ -1800,9 +1863,236 @@ async function simpanKas(){
     document.getElementById('kasNominalAsli').value='';
     document.getElementById('kasKet').value='';
     await loadKas();
+    await fetchAllKasData();
+    renderKasRingkasan();
+    renderKasRekap();
+    renderKasChart();
   }catch(e){
     console.error(e);
     toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,200));
+  }
+}
+
+// ══ SALDO AKHIR OTOMATIS + NOTIFIKASI SALDO MENIPIS ══
+function getKasThreshold(){
+  const v=parseFloat(localStorage.getItem('mk_kas_threshold'));
+  return isNaN(v)?100:v; // default batas peringatan 100 sen
+}
+function editKasThreshold(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah batas');return;}
+  const cur=getKasThreshold();
+  const input=prompt('Batas peringatan saldo menipis (dalam ¢ / sen):', cur);
+  if(input===null)return;
+  const v=parseFloat(input);
+  if(isNaN(v)||v<0){toast('❌ Angka tidak valid');return;}
+  localStorage.setItem('mk_kas_threshold', v);
+  toast('✅ Batas peringatan diperbarui');
+  renderKasRingkasan();
+}
+function renderKasRingkasan(){
+  const el=document.getElementById('kasSaldoRingkasan');
+  const notifEl=document.getElementById('kasNotifMenipis');
+  if(!el)return;
+  const rows=allKasData||[];
+  let totalMasuk=0, totalKeluar=0;
+  rows.forEach(r=>{
+    const arah=kasArah(r);
+    const j=parseFloat(r.jumlah||0);
+    if(arah==='masuk')totalMasuk+=j;
+    else if(arah==='keluar')totalKeluar+=j;
+  });
+  const saldoBersih=totalMasuk-totalKeluar;
+
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(totalMasuk)}</div><div class="bal-box-lbl">Total Masuk</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:14px">-${fc(totalKeluar)}</div><div class="bal-box-lbl">Total Keluar</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:${saldoBersih>=0?'#4ADE80':'#F87171'}">${fc(saldoBersih)}</div><div class="bal-box-lbl">Saldo Bersih</div></div>
+    </div>`;
+
+  const threshold=getKasThreshold();
+  if(notifEl){
+    if(saldoBersih<threshold){
+      notifEl.style.display='block';
+      notifEl.innerHTML=`⚠️ Saldo bersih (${fc(saldoBersih)}) di bawah batas peringatan (${fc(threshold)}). Pertimbangkan untuk menambah dana atau kurangi pengeluaran.`;
+    }else{
+      notifEl.style.display='none';
+    }
+  }
+}
+
+// ══ REKAP BULANAN & GRAFIK ARUS KAS ══
+let kasRekapYear=new Date().getFullYear(), kasRekapMonth=new Date().getMonth();
+function kasRekapPrev(){kasRekapMonth--;if(kasRekapMonth<0){kasRekapMonth=11;kasRekapYear--;}renderKasRekap();}
+function kasRekapNext(){kasRekapMonth++;if(kasRekapMonth>11){kasRekapMonth=0;kasRekapYear++;}renderKasRekap();}
+function renderKasRekap(){
+  const bulanNama=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const labelEl=document.getElementById('kasRekapLabel');
+  const el=document.getElementById('kasRekapBulan');
+  if(!labelEl||!el)return;
+  labelEl.textContent=`${bulanNama[kasRekapMonth]} ${kasRekapYear}`;
+
+  const rows=(allKasData||[]).filter(r=>{
+    const d=new Date(r.tanggal);
+    return d.getFullYear()===kasRekapYear && d.getMonth()===kasRekapMonth;
+  });
+  if(!rows.length){
+    el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Tidak ada transaksi bulan ini.</div>';
+    return;
+  }
+  let masuk=0,keluar=0;
+  rows.forEach(r=>{
+    const arah=kasArah(r);
+    const j=parseFloat(r.jumlah||0);
+    if(arah==='masuk')masuk+=j;
+    else if(arah==='keluar')keluar+=j;
+  });
+  const bersih=masuk-keluar;
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(masuk)}</div><div class="bal-box-lbl">Masuk Bulan Ini</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:14px">-${fc(keluar)}</div><div class="bal-box-lbl">Keluar Bulan Ini</div></div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#8A6B26">${rows.length} transaksi · Selisih bersih: <span style="color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</span></div>`;
+}
+function renderKasChart(){
+  const el=document.getElementById('kasChart');
+  if(!el)return;
+  const rows=allKasData||[];
+  if(!rows.length){
+    el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Belum ada data.</div>';
+    return;
+  }
+  const now=new Date();
+  const bulanSingkat=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const bulanList=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(now.getFullYear(), now.getMonth()-i, 1);
+    bulanList.push({y:d.getFullYear(), m:d.getMonth(), label:bulanSingkat[d.getMonth()]});
+  }
+  const data=bulanList.map(b=>{
+    let masuk=0,keluar=0;
+    rows.forEach(r=>{
+      const d=new Date(r.tanggal);
+      if(d.getFullYear()===b.y && d.getMonth()===b.m){
+        const arah=kasArah(r);
+        const j=parseFloat(r.jumlah||0);
+        if(arah==='masuk')masuk+=j;
+        else if(arah==='keluar')keluar+=j;
+      }
+    });
+    return {...b, masuk, keluar};
+  });
+  const maxVal=Math.max(1,...data.map(d=>Math.max(d.masuk,d.keluar)));
+
+  let html='<div style="display:flex;align-items:flex-end;justify-content:space-around;height:130px;gap:6px;padding:0 2px">';
+  data.forEach(d=>{
+    const hMasuk=Math.max(2,(d.masuk/maxVal)*100);
+    const hKeluar=Math.max(2,(d.keluar/maxVal)*100);
+    html+=`
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;flex:1">
+        <div style="display:flex;align-items:flex-end;gap:2px;height:100%">
+          <div style="width:10px;height:${hMasuk}%;background:#4ADE80;border-radius:3px 3px 0 0;min-height:2px"></div>
+          <div style="width:10px;height:${hKeluar}%;background:#F87171;border-radius:3px 3px 0 0;min-height:2px"></div>
+        </div>
+      </div>`;
+  });
+  html+='</div>';
+  html+='<div style="display:flex;justify-content:space-around;margin-top:6px">';
+  data.forEach(d=>{ html+=`<div style="flex:1;text-align:center;font-size:9px;color:#7A5D1F">${d.label}</div>`; });
+  html+='</div>';
+  html+=`<div style="display:flex;justify-content:center;gap:16px;margin-top:10px;font-size:9px;color:#8A6B26">
+    <span><span style="color:#4ADE80">■</span> Masuk</span>
+    <span><span style="color:#F87171">■</span> Keluar</span>
+  </div>`;
+  el.innerHTML=html;
+}
+
+// ══ EKSPOR LAPORAN KEUANGAN (KAS) ══
+async function exportKasCSV(){
+  const statusEl=document.getElementById('kasExportStatus');
+  statusEl.textContent='⏳ Menyiapkan CSV...';
+  try{
+    const rows=await api('kas_pribadi?select=*&order=tanggal.asc');
+    if(!rows.length){statusEl.textContent='❌ Belum ada data untuk diekspor.';return;}
+    const header=['tanggal','dari','ke','jumlah','mata_uang_asli','nominal_asli','keterangan'];
+    let csv=header.join(',')+'\n';
+    rows.forEach(r=>{
+      const line=header.map(h=>{
+        let v=r[h]==null?'':r[h];
+        v=String(v).replace(/"/g,'""');
+        if(v.includes(',')||v.includes('"')||v.includes('\n')) v=`"${v}"`;
+        return v;
+      }).join(',');
+      csv+=line+'\n';
+    });
+    const filename=`Laporan_Keuangan_${new Date().toISOString().slice(0,10)}.csv`;
+    const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    statusEl.textContent='✅ CSV berhasil diunduh: '+filename;
+  }catch(e){
+    console.error(e);
+    statusEl.textContent='❌ Gagal ekspor CSV: '+(e.message||'').slice(0,150);
+  }
+}
+async function exportKasPDF(){
+  const statusEl=document.getElementById('kasExportStatus');
+  statusEl.textContent='⏳ Menyiapkan PDF...';
+  try{
+    if(typeof window.jspdf==='undefined'){statusEl.textContent='❌ Library PDF gagal dimuat, cek koneksi internet.';return;}
+    const rows=await api('kas_pribadi?select=*&order=tanggal.asc');
+    if(!rows.length){statusEl.textContent='❌ Belum ada data untuk diekspor.';return;}
+
+    const { jsPDF }=window.jspdf;
+    const doc=new jsPDF();
+    doc.setFontSize(14);
+    doc.text('Laporan Keuangan — Aliran Uang',14,16);
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text('MARGINKUAT — Trading Emas di MT4',14,22);
+    doc.setTextColor(0);
+
+    let masuk=0,keluar=0;
+    rows.forEach(r=>{
+      const arah=kasArah(r);
+      const j=parseFloat(r.jumlah||0);
+      if(arah==='masuk')masuk+=j; else if(arah==='keluar')keluar+=j;
+    });
+    doc.text(`Total Masuk: +${fc(masuk)}   |   Total Keluar: -${fc(keluar)}   |   Saldo Bersih: ${fc(masuk-keluar)}`,14,29);
+
+    let y=40;
+    doc.setFontSize(9);
+    doc.setFont(undefined,'bold');
+    doc.text('Tanggal',14,y);
+    doc.text('Dari',48,y);
+    doc.text('Ke',95,y);
+    doc.text('Jumlah',140,y);
+    doc.text('Keterangan',170,y);
+    doc.setFont(undefined,'normal');
+    y+=4;
+    doc.setDrawColor(200);
+    doc.line(14,y,196,y);
+    y+=6;
+
+    rows.forEach(r=>{
+      if(y>282){doc.addPage();y=20;}
+      doc.text(String(r.tanggal),14,y);
+      doc.text(String(r.dari||'-').slice(0,20),48,y);
+      doc.text(String(r.ke||'-').slice(0,18),95,y);
+      doc.text(fc(r.jumlah),140,y);
+      doc.text(String(r.keterangan||'-').slice(0,16),170,y);
+      y+=6;
+    });
+
+    const filename=`Laporan_Keuangan_${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(filename);
+    statusEl.textContent='✅ PDF berhasil diunduh: '+filename;
+  }catch(e){
+    console.error(e);
+    statusEl.textContent='❌ Gagal ekspor PDF: '+(e.message||'').slice(0,150);
   }
 }
 
