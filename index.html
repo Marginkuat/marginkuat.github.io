@@ -1029,6 +1029,15 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <label class="lbl">Ke (tujuan uang)</label>
     <input class="inp" id="kasKe" placeholder="Contoh: Saldo MT4 / Belanja Dapur">
 
+    <label class="lbl">Kategori</label>
+    <select class="inp" id="kasKategori">
+      <option value="pendapatan">🟢 Pendapatan</option>
+      <option value="kebutuhan_pokok">🔴 Kebutuhan Pokok</option>
+      <option value="utilitas">🟡 Utilitas</option>
+      <option value="kesehatan">🔵 Kesehatan</option>
+      <option value="gaya_hidup">🟣 Gaya Hidup</option>
+    </select>
+
     <label class="lbl">Mata Uang Asli (opsional)</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
       <button id="btnMataIDR" onclick="setMataUang('IDR')" style="padding:9px;border-radius:8px;border:1.5px solid #B8860B;background:#2A2410;color:#D4AF37;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">IDR (Rupiah)</button>
@@ -1779,7 +1788,19 @@ function escapeHtml(s){
 
 // ══ KAS PRIBADI (DEPOSIT & WD) ══
 // ══ ARUS KAS: helper & data bersama ══
+const kategoriMeta={
+  pendapatan:{label:'Pendapatan', color:'#4ADE80', dot:'🟢'},
+  kebutuhan_pokok:{label:'Kebutuhan Pokok', color:'#F87171', dot:'🔴'},
+  utilitas:{label:'Utilitas', color:'#EAB308', dot:'🟡'},
+  kesehatan:{label:'Kesehatan', color:'#60A5FA', dot:'🔵'},
+  gaya_hidup:{label:'Gaya Hidup', color:'#C084FC', dot:'🟣'}
+};
 function kasArah(r){
+  // Prioritas: kategori eksplisit kalau ada (lebih akurat)
+  if(r.kategori){
+    return r.kategori==='pendapatan' ? 'masuk' : 'keluar';
+  }
+  // Fallback: tebak dari teks Dari/Ke
   const keText=(r.ke||'').toLowerCase();
   const dariText=(r.dari||'').toLowerCase();
   if(keText.includes('mt4')) return 'masuk';   // uang masuk ke saldo MT4
@@ -1787,12 +1808,20 @@ function kasArah(r){
   return 'lain';
 }
 let allKasData=[];
+let hasKategoriCol=true;
 async function fetchAllKasData(){
   try{
-    allKasData=await api('kas_pribadi?select=tanggal,dari,ke,jumlah,keterangan&order=tanggal.asc');
-  }catch(e){
-    console.error(e);
-    allKasData=[];
+    allKasData=await api('kas_pribadi?select=tanggal,dari,ke,jumlah,keterangan,kategori&order=tanggal.asc');
+    hasKategoriCol=true;
+  }catch(e1){
+    try{
+      allKasData=await api('kas_pribadi?select=tanggal,dari,ke,jumlah,keterangan&order=tanggal.asc');
+      allKasData=allKasData.map(r=>({...r,kategori:null}));
+      hasKategoriCol=false;
+    }catch(e2){
+      console.error(e2);
+      allKasData=[];
+    }
   }
 }
 
@@ -1810,10 +1839,13 @@ async function loadKas(){
           : '$'+parseFloat(r.nominal_asli).toFixed(2);
         kursHtml=`<div class="ri-cat" style="color:#7A5D1F">${nominalFmt} → ${fc(r.jumlah)}</div>`;
       }
+      const km=kategoriMeta[r.kategori];
+      const katHtml=km?`<div class="ri-cat" style="color:${km.color}">${km.dot} ${km.label}</div>`:'';
       return `<div class="riwayat-item">
         <div class="ri-info">
           <div class="ri-date">${fd(r.tanggal)}</div>
           <div class="ri-saldo" style="font-size:12px"><span style="color:#C8A84B">${escapeHtml(r.dari||'-')}</span> → <span style="color:#C8A84B">${escapeHtml(r.ke||'-')}</span></div>
+          ${katHtml}
           ${kursHtml}
           ${r.keterangan?`<div class="ri-cat">${escapeHtml(r.keterangan)}</div>`:''}
         </div>
@@ -1837,6 +1869,7 @@ async function simpanKas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const dari=document.getElementById('kasDari').value.trim();
   const ke=document.getElementById('kasKe').value.trim();
+  const kategori=document.getElementById('kasKategori').value;
   const jumlah=parseFloat(document.getElementById('kasJumlah').value)||0;
   const tgl=document.getElementById('kasTgl').value;
   const ket=document.getElementById('kasKet').value.trim();
@@ -1847,16 +1880,26 @@ async function simpanKas(){
   if(!jumlah){toast('❌ Isi jumlah');return;}
   if(!tgl){toast('❌ Isi tanggal');return;}
   try{
-    await api('kas_pribadi','POST',{
+    const bodyData={
       tanggal: tgl,
       dari: dari,
       ke: ke,
       jumlah: parseFloat(jumlah.toFixed(2)),
       keterangan: ket || null,
       mata_uang_asli: nominalAsli ? mataUang : null,
-      nominal_asli: nominalAsli ? parseFloat(nominalAsli.toFixed(2)) : null
-    });
-    toast('✅ Catatan tersimpan');
+      nominal_asli: nominalAsli ? parseFloat(nominalAsli.toFixed(2)) : null,
+      kategori: kategori
+    };
+    let kategoriSaved=true;
+    try{
+      await api('kas_pribadi','POST',bodyData);
+    }catch(errKat){
+      // Kemungkinan kolom 'kategori' belum ada di Supabase — coba lagi tanpa kategori
+      kategoriSaved=false;
+      const { kategori:_drop, ...bodyNoKat } = bodyData;
+      await api('kas_pribadi','POST',bodyNoKat);
+    }
+    toast(kategoriSaved?'✅ Catatan tersimpan':'⚠️ Tersimpan, tapi kolom kategori belum ada di Supabase');
     document.getElementById('kasDari').value='';
     document.getElementById('kasKe').value='';
     document.getElementById('kasJumlah').value='';
@@ -1948,12 +1991,35 @@ function renderKasRekap(){
     else if(arah==='keluar')keluar+=j;
   });
   const bersih=masuk-keluar;
+
+  // Breakdown per kategori (kalau kolom kategori sudah ada & terisi)
+  const perKategori={};
+  rows.forEach(r=>{
+    if(!r.kategori)return;
+    if(!perKategori[r.kategori])perKategori[r.kategori]=0;
+    perKategori[r.kategori]+=parseFloat(r.jumlah||0);
+  });
+  const kategoriKeys=Object.keys(perKategori);
+  let breakdownHtml='';
+  if(kategoriKeys.length){
+    breakdownHtml='<div style="margin-top:12px;border-top:1px solid #2A2E1F;padding-top:10px">';
+    ['pendapatan','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'].forEach(k=>{
+      if(!perKategori[k])return;
+      const km=kategoriMeta[k];
+      breakdownHtml+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0"><span style="color:${km.color}">${km.dot} ${km.label}</span><span style="color:#D4AF37">${fc(perKategori[k])}</span></div>`;
+    });
+    breakdownHtml+='</div>';
+  }else if(!hasKategoriCol){
+    breakdownHtml='<div style="font-size:9px;color:#5C4818;margin-top:10px">⚠️ Kolom <b>kategori</b> belum ada di tabel kas_pribadi (Supabase). Tambahkan kolom text bernama <b>kategori</b> supaya breakdown per kategori muncul.</div>';
+  }
+
   el.innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
       <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(masuk)}</div><div class="bal-box-lbl">Masuk Bulan Ini</div></div>
       <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:14px">-${fc(keluar)}</div><div class="bal-box-lbl">Keluar Bulan Ini</div></div>
     </div>
-    <div style="text-align:center;font-size:11px;color:#8A6B26">${rows.length} transaksi · Selisih bersih: <span style="color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</span></div>`;
+    <div style="text-align:center;font-size:11px;color:#8A6B26">${rows.length} transaksi · Selisih bersih: <span style="color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</span></div>
+    ${breakdownHtml}`;
 }
 function renderKasChart(){
   const el=document.getElementById('kasChart');
@@ -2015,7 +2081,7 @@ async function exportKasCSV(){
   try{
     const rows=await api('kas_pribadi?select=*&order=tanggal.asc');
     if(!rows.length){statusEl.textContent='❌ Belum ada data untuk diekspor.';return;}
-    const header=['tanggal','dari','ke','jumlah','mata_uang_asli','nominal_asli','keterangan'];
+    const header=['tanggal','dari','ke','kategori','jumlah','mata_uang_asli','nominal_asli','keterangan'];
     let csv=header.join(',')+'\n';
     rows.forEach(r=>{
       const line=header.map(h=>{
