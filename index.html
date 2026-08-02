@@ -1840,14 +1840,14 @@ async function loadKas(){
         kursHtml=`<div class="ri-cat" style="color:#7A5D1F">${nominalFmt} → ${fc(r.jumlah)}</div>`;
       }
       const km=kategoriMeta[r.kategori];
-      const katHtml=km?`<div class="ri-cat" style="color:${km.color}">${km.dot} ${km.label}</div>`:'';
+      const dotHtml=km?`<span style="color:${km.color}">${km.dot}</span>`:'⚪';
+      const katLabel=km?km.label:'Tanpa Kategori';
+      const ketText=r.keterangan?escapeHtml(r.keterangan):'-';
       return `<div class="riwayat-item">
         <div class="ri-info">
-          <div class="ri-date">${fd(r.tanggal)}</div>
-          <div class="ri-saldo" style="font-size:12px"><span style="color:#C8A84B">${escapeHtml(r.dari||'-')}</span> → <span style="color:#C8A84B">${escapeHtml(r.ke||'-')}</span></div>
-          ${katHtml}
+          <div class="ri-saldo" style="font-size:12.5px;color:#D4AF37;font-weight:600">${dotHtml} ${fd(r.tanggal)} | ${katLabel} | ${ketText}</div>
+          <div class="ri-cat" style="color:#7A5D1F">${escapeHtml(r.dari||'-')} → ${escapeHtml(r.ke||'-')}</div>
           ${kursHtml}
-          ${r.keterangan?`<div class="ri-cat">${escapeHtml(r.keterangan)}</div>`:''}
         </div>
         <div class="ri-profit" style="color:#D4AF37">${fc(r.jumlah)}</div>
       </div>`;
