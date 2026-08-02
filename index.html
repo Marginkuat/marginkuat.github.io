@@ -5,6 +5,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#B8860B">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MarginKuat">
 <title>Catatan Trading — Marginkuat</title>
 <meta name="description" content="Marginkuat — kalkulator risk/reward trading pribadi untuk XAUUSD, BTCUSD, dan pasangan forex. Hitung SL, TP, RR, lot, dan VP secara otomatis.">
 <meta name="robots" content="index, follow">
@@ -262,6 +269,15 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Dihitung dari standar deviasi profit harian — semakin stabil profitnya, semakin tinggi skornya</div>
     <div id="consistencySharpe" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
+<!-- RISK OF RUIN -->
+<div class="section">
+  <div class="sec-title">🚨 Risk of Ruin (Peluang Bangkrut)</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Estimasi peluang akun kena Margin Call, dihitung dari win rate & risk/reward historis kamu. Angka ini teoretis — bukan prediksi pasti.</div>
+    <div id="riskOfRuin" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
   </div>
 </div>
 
@@ -858,6 +874,17 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- TRADING JOURNAL VISUAL -->
+<div class="section">
+  <div class="sec-title">🎨 Trading Journal Visual</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Tiap titik = 1 hari. Hijau = profit, Merah = loss. Ukuran titik makin besar kalau jumlah signal hari itu makin banyak.</div>
+    <div id="journalVisualWrap" style="position:relative">
+      <div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    </div>
+  </div>
+</div>
+
 <!-- RIWAYAT -->
 <div class="section">
   <div class="sec-title">📋 Riwayat Harian</div>
@@ -1052,6 +1079,13 @@ function toast(msg){
 }
 function load(on){ /* placeholder for future loading-state hooks */ }
 
+// ══ PWA: registrasi service worker (biar bisa di-install ke home screen) ══
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.error('SW gagal daftar:',err));
+  });
+}
+
 // ══ INIT ══
 window.onload=async()=>{
   try{
@@ -1078,14 +1112,16 @@ async function loadAll(){
   computeDrawdownMap();
   renderDDKalender();
   loadConsistencySharpe();
+  loadRiskOfRuin();
   loadMonthlyComparison();
   renderGraph();
   renderEquity();
+  loadJournalVisual();
   loadBenchmark();
 }
 let hasPairCol=true, hasMoodCol=true;
 async function fetchSharedSaldoData(){
-  const base='tanggal,profit,saldo_mt4,gross_profit,gross_loss';
+  const base='tanggal,profit,saldo_mt4,gross_profit,gross_loss,jumlah_signal';
   try{
     allSaldoData=await api(`saldo_harian?select=${base},pair,mood&order=tanggal.asc`);
     hasPairCol=true; hasMoodCol=true;
@@ -2218,6 +2254,133 @@ async function loadConsistencySharpe(){
   }catch(e){
     console.error(e);
     el.innerHTML='<div style="padding:10px;color:#F87171">Gagal menghitung consistency/sharpe.</div>';
+  }
+}
+
+// ══ RISK OF RUIN CALCULATOR ══
+async function loadRiskOfRuin(){
+  const el=document.getElementById('riskOfRuin');
+  if(!el)return;
+  try{
+    const rows=allSaldoData||[];
+    const profits=rows.map(r=>parseFloat(r.profit||0));
+    const gains=profits.filter(p=>p>0);
+    const losses=profits.filter(p=>p<0);
+    if(gains.length+losses.length<5){
+      el.innerHTML='<div style="padding:14px">Butuh minimal 5 hari data (ada profit &amp; loss) untuk kalkulasi yang bermakna.</div>';
+      return;
+    }
+    const p=gains.length/(gains.length+losses.length); // win rate
+    const q=1-p;
+    const avgWin=gains.length?gains.reduce((a,b)=>a+b,0)/gains.length:0;
+    const avgLoss=losses.length?Math.abs(losses.reduce((a,b)=>a+b,0)/losses.length):0;
+    const modal=rows.length?parseFloat(rows[rows.length-1].saldo_mt4||0):0;
+
+    // ── Formula klasik Risk of Ruin ──
+    let rorFormula, edgeInfo;
+    if(avgLoss<=0){
+      rorFormula=0;
+      edgeInfo='Belum pernah loss tercatat, jadi risiko ruin belum bisa dihitung akurat.';
+    }else{
+      const RR=avgWin/avgLoss;
+      const edge=p*RR-q; // expected value per unit risiko
+      const units=Math.max(1,Math.floor(modal/avgLoss));
+      if(edge<=0){
+        rorFormula=100;
+        edgeInfo='Edge negatif (ekspektasi rugi jangka panjang) — secara matematis akun berisiko habis kalau pola ini terus berulang.';
+      }else{
+        const ratio=(1-edge)/(1+edge);
+        rorFormula=Math.min(100,Math.pow(ratio,units)*100);
+        edgeInfo=`Modal setara ${units} unit risiko (modal ÷ rata-rata loss)`;
+      }
+    }
+
+    // ── Simulasi Monte Carlo sederhana ──
+    let survivalPct=100;
+    if(avgLoss>0 && modal>0){
+      const NSIM=1000, NTRADES=100;
+      let survive=0;
+      for(let s=0;s<NSIM;s++){
+        let capital=modal;
+        let ruined=false;
+        for(let t=0;t<NTRADES;t++){
+          const win=Math.random()<p;
+          capital+= win?avgWin:-avgLoss;
+          if(capital<=0){ruined=true;break;}
+        }
+        if(!ruined)survive++;
+      }
+      survivalPct=survive/NSIM*100;
+    }
+
+    const rorColor=rorFormula<10?'#4ADE80':(rorFormula<30?'#D4AF37':'#F87171');
+    const survColor=survivalPct>=90?'#4ADE80':(survivalPct>=70?'#D4AF37':'#F87171');
+
+    el.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="bal-box" style="background:#1E2312">
+          <div class="bal-box-val" style="font-size:18px;color:${rorColor}">${rorFormula.toFixed(1)}%</div>
+          <div class="bal-box-lbl">Probabilitas Bangkrut</div>
+        </div>
+        <div class="bal-box" style="background:#1E2312">
+          <div class="bal-box-val" style="font-size:18px;color:${survColor}">${survivalPct.toFixed(0)}%</div>
+          <div class="bal-box-lbl">Bertahan (Monte Carlo)</div>
+        </div>
+      </div>
+      <div style="font-size:9px;color:#7A5D1F;line-height:1.6">
+        Win Rate: ${(p*100).toFixed(1)}% · Avg Win: ${fc(avgWin)} · Avg Loss: -${fc(avgLoss)}<br>
+        ${edgeInfo}<br>
+        Simulasi: 1.000x skenario, masing-masing 100 trade berturutan, mulai dari modal saat ini (${fc(modal)}).
+      </div>`;
+  }catch(e){
+    console.error(e);
+    el.innerHTML='<div style="padding:10px;color:#F87171">Gagal menghitung risk of ruin.</div>';
+  }
+}
+
+// ══ TRADING JOURNAL VISUAL (SCATTER PLOT) ══
+function loadJournalVisual(){
+  const wrap=document.getElementById('journalVisualWrap');
+  if(!wrap)return;
+  try{
+    const rows=allSaldoData||[];
+    if(!rows.length){
+      wrap.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada data.</div>';
+      return;
+    }
+    const W=300,H=160,padX=10,padY=14;
+    const profits=rows.map(r=>parseFloat(r.profit||0));
+    const maxAbs=Math.max(1,...profits.map(p=>Math.abs(p)));
+    const signals=rows.map(r=>parseInt(r.jumlah_signal||0)||0);
+    const maxSignal=Math.max(1,...signals);
+
+    const stepX=rows.length>1?(W-padX*2)/(rows.length-1):0;
+    const xFor=i=>padX+i*stepX;
+    const yFor=v=>H/2-((v/maxAbs)*(H/2-padY));
+    const rFor=s=>3+((s/maxSignal)*7);
+
+    const zeroY=yFor(0).toFixed(1);
+    let dots='';
+    rows.forEach((r,i)=>{
+      const p=parseFloat(r.profit||0);
+      const x=xFor(i).toFixed(1), y=yFor(p).toFixed(1), rad=rFor(signals[i]).toFixed(1);
+      const color=p>0?'#4ADE80':(p<0?'#F87171':'#5C4818');
+      dots+=`<circle cx="${x}" cy="${y}" r="${rad}" fill="${color}" fill-opacity="0.75" stroke="${color}" stroke-width="0.6"/>`;
+    });
+
+    wrap.innerHTML=`
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:160px;display:block;background:#1E2312;border-radius:10px">
+        <line x1="${padX}" y1="${zeroY}" x2="${W-padX}" y2="${zeroY}" stroke="#2A2E1F" stroke-width="1"/>
+        ${dots}
+      </svg>
+      <div style="display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:9px;color:#8A6B26">
+        <span><span style="color:#4ADE80">●</span> Profit</span>
+        <span><span style="color:#F87171">●</span> Loss</span>
+        <span>Ukuran = jumlah signal</span>
+      </div>`;
+  }catch(e){
+    console.error(e);
+    wrap.innerHTML='<div style="text-align:center;padding:14px;color:#F87171;font-size:12px">Gagal memuat journal visual.</div>';
   }
 }
 
