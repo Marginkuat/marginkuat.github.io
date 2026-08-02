@@ -893,6 +893,19 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- DISKUSI KOMUNITAS -->
+<div class="section">
+  <div class="sec-title">💬 Diskusi &amp; Komentar</div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#7A5D1F;text-align:center;margin-bottom:14px">Diskusi bebas antar trader — sharing analisa, tanya jawab, atau sekadar curhat market 👇</div>
+    <div id="disqus_thread"></div>
+    <div id="disqusFallback" style="display:none;text-align:center;padding:20px;color:#7A5D1F;font-size:11px;line-height:1.6">
+      Kolom komentar belum aktif. Admin situs perlu daftar shortname gratis di
+      <a href="https://disqus.com" target="_blank" style="color:#C8A84B">disqus.com</a> dulu.
+    </div>
+  </div>
+</div>
+
 <!-- ADMIN PANEL -->
 <div class="section">
   <div class="admin-panel" id="adminPanel">
@@ -1086,6 +1099,27 @@ if('serviceWorker' in navigator){
   });
 }
 
+// ══ DISKUSI KOMUNITAS (DISQUS) ══
+// PENTING: ganti nilai di bawah ini dengan shortname Disqus kamu sendiri
+// (daftar gratis di https://disqus.com -> Get Started -> pilih "I want to install Disqus on my site")
+const DISQUS_SHORTNAME = 'marginkuat';
+function loadDisqus(){
+  if(DISQUS_SHORTNAME==='GANTI_DENGAN_SHORTNAME_DISQUS_KAMU'){
+    const fb=document.getElementById('disqusFallback');
+    if(fb)fb.style.display='block';
+    return;
+  }
+  window.disqus_config=function(){
+    this.page.url=window.location.href;
+    this.page.identifier='marginkuat-diskusi';
+    this.page.title='Diskusi Komunitas MarginKuat';
+  };
+  const s=document.createElement('script');
+  s.src='https://'+DISQUS_SHORTNAME+'.disqus.com/embed.js';
+  s.setAttribute('data-timestamp', String(+new Date()));
+  (document.head||document.body).appendChild(s);
+}
+
 // ══ INIT ══
 window.onload=async()=>{
   try{
@@ -1095,6 +1129,7 @@ window.onload=async()=>{
     document.getElementById('inpTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     document.getElementById('kasTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     await loadAll();
+    loadDisqus();
   }catch(e){
     document.getElementById('loading').innerHTML=`<div style="text-align:center;padding:20px;color:#D4AF37"><div style="font-size:32px;margin-bottom:10px">⚠️</div><div style="font-weight:600;margin-bottom:6px">Gagal konek database</div><div style="font-size:11px;color:#7A5D1F;margin-bottom:14px">Cek koneksi internet atau coba lagi</div><button onclick="location.reload()" style="padding:9px 18px;background:#B8860B;color:#0D0F0A;border:none;border-radius:8px;font-weight:700;cursor:pointer">Coba Lagi</button></div>`;
   }
