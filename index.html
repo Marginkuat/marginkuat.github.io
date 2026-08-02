@@ -191,6 +191,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="brand-sub">Trading emas di MT4</div>
   </div>
   <div class="header-right">
+    <button class="btn-admin" id="btnShare" onclick="shareSite()" style="background:transparent;border:1.5px solid #2A2E1F;color:#C8A84B">📤 Share</button>
     <button class="btn-admin" id="btnAdmin" onclick="openModal('mLogin')">🔑 Masuk</button>
     <button class="btn-logout" id="btnLogout" onclick="logout()">↩ Keluar</button>
   </div>
@@ -1026,6 +1027,22 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- MODAL SHARE -->
+<div class="modal" id="mShare">
+  <div class="modal-box">
+    <div class="modal-bar"></div>
+    <div class="modal-title">📤 Bagikan Situs Ini</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      <button class="btn btn-ghost" onclick="shareVia('whatsapp')" style="text-align:left;margin-bottom:0">💬 WhatsApp</button>
+      <button class="btn btn-ghost" onclick="shareVia('telegram')" style="text-align:left;margin-bottom:0">✈️ Telegram</button>
+      <button class="btn btn-ghost" onclick="shareVia('facebook')" style="text-align:left;margin-bottom:0">📘 Facebook</button>
+      <button class="btn btn-ghost" onclick="shareVia('twitter')" style="text-align:left;margin-bottom:0">🐦 X (Twitter)</button>
+      <button class="btn btn-ghost" onclick="shareVia('copy')" style="text-align:left;margin-bottom:0">🔗 Salin Link</button>
+    </div>
+    <button class="btn btn-ghost" onclick="closeModal('mShare')">Tutup</button>
+  </div>
+</div>
+
 <!-- MODAL GANTI PIN -->
 <div class="modal" id="mGantiPin">
   <div class="modal-box">
@@ -1084,6 +1101,38 @@ function hide(id){document.getElementById(id).style.display='none'}
 function set(id,v){const el=document.getElementById(id);if(el)el.textContent=v}
 function openModal(id){document.getElementById(id).classList.add('open')}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
+
+// ══ SHARE BUTTON ══
+function shareSite(){
+  const url=window.location.href;
+  const title='MarginKuat — Trading Emas di MT4';
+  const text='Cek dashboard trading emas MT4 ini — ada equity curve, kalender drawdown, dan analitik risiko lengkap 👇';
+  if(navigator.share){
+    navigator.share({title,text,url}).catch(()=>{});
+  }else{
+    openModal('mShare');
+  }
+}
+function shareVia(platform){
+  const url=encodeURIComponent(window.location.href);
+  const text=encodeURIComponent('Cek dashboard trading emas MT4 ini 👇');
+  const links={
+    whatsapp:`https://wa.me/?text=${text}%20${url}`,
+    telegram:`https://t.me/share/url?url=${url}&text=${text}`,
+    facebook:`https://www.facebook.com/sharer/sharer.php?u=${url}`,
+    twitter:`https://twitter.com/intent/tweet?url=${url}&text=${text}`
+  };
+  if(platform==='copy'){
+    navigator.clipboard.writeText(window.location.href).then(()=>{
+      toast('✅ Link disalin ke clipboard');
+    }).catch(()=>{
+      toast('❌ Gagal salin link');
+    });
+  }else{
+    window.open(links[platform],'_blank');
+  }
+  closeModal('mShare');
+}
 function toast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
