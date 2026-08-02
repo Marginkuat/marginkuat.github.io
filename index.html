@@ -6,6 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#B8860B">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="favicon-16.png" sizes="16x16" type="image/png">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1009,10 +1011,73 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- TENTANG SAYA -->
+<div class="section" id="secTentang">
+  <div class="sec-title">📝 Tentang Saya</div>
+  <div class="graph-card" style="text-align:left">
+    <p style="font-size:12px;color:#C9C9B8;line-height:1.8;margin-bottom:12px">
+      Halo! Saya trader ritel yang fokus di <b style="color:#D4AF37">XAUUSD (emas)</b> di MT4. Situs ini saya buat sendiri
+      untuk mencatat performa trading harian saya — saldo, profit/loss, drawdown, sampai analitik risiko —
+      supaya saya bisa evaluasi diri secara objektif, bukan cuma berdasarkan feeling.
+    </p>
+    <p style="font-size:12px;color:#C9C9B8;line-height:1.8;margin-bottom:12px">
+      Tujuan situs ini dibuat: sebagai jurnal trading pribadi yang transparan, sekaligus tempat berbagi pengalaman
+      dan berdiskusi bebas dengan trader lain lewat kolom komentar di bawah.
+    </p>
+    <p style="font-size:11px;color:#7A5D1F;line-height:1.7;border-top:1px solid #2A2E1F;padding-top:10px">
+      ⚠️ Ini bukan saran finansial. Semua yang ditampilkan di situs ini adalah catatan pribadi berdasarkan pengalaman
+      trading saya sendiri — bukan ajakan atau rekomendasi untuk mengambil keputusan trading apapun.
+    </p>
+  </div>
+</div>
+
+<!-- KONTAK / FORM PESAN -->
+<div class="section" id="secKontak">
+  <div class="sec-title">📞 Kontak / Kirim Pesan</div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#7A5D1F;text-align:center;margin-bottom:14px">Mau kerja sama, afiliasi, review tools, atau sekadar say hi? Isi form ini.</div>
+    <label class="lbl">Nama</label>
+    <input class="inp" id="kontakNama" placeholder="Nama kamu">
+    <label class="lbl">Email</label>
+    <input class="inp" type="email" id="kontakEmail" placeholder="email@kamu.com">
+    <label class="lbl">Pesan</label>
+    <textarea class="inp" id="kontakPesan" placeholder="Tulis pesan kamu di sini..." style="min-height:90px;resize:vertical;font-family:inherit"></textarea>
+    <button class="btn btn-p" onclick="kirimPesanKontak()">✉️ Kirim Pesan</button>
+    <div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">Tombol ini akan membuka aplikasi email kamu dengan pesan yang sudah terisi otomatis</div>
+  </div>
+</div>
+
+<!-- KEBIJAKAN PRIVASI & DISCLAIMER -->
+<div class="section" id="secPrivasi">
+  <div class="sec-title">📜 Kebijakan Privasi &amp; Disclaimer</div>
+  <div class="graph-card" style="text-align:left">
+    <div style="font-size:11px;font-weight:700;color:#D4AF37;margin-bottom:6px">Disclaimer</div>
+    <p style="font-size:11.5px;color:#C9C9B8;line-height:1.7;margin-bottom:14px">
+      Trading forex, emas, dan aset digital mengandung risiko tinggi dan bisa mengakibatkan kehilangan modal.
+      Seluruh konten di situs ini — termasuk data, grafik, dan analitik — adalah catatan pribadi dan bukan
+      saran atau rekomendasi finansial. Saya tidak bertanggung jawab atas keputusan trading yang Anda ambil
+      berdasarkan informasi di situs ini.
+    </p>
+    <div style="font-size:11px;font-weight:700;color:#D4AF37;margin-bottom:6px">Kebijakan Privasi</div>
+    <p style="font-size:11.5px;color:#C9C9B8;line-height:1.7">
+      Situs ini tidak mengumpulkan atau menyimpan data pribadi pengunjung. Kolom komentar dikelola dan disimpan
+      oleh pihak ketiga (Disqus) sesuai kebijakan privasi mereka sendiri. Jika Anda mengirim pesan lewat form
+      kontak, isi pesan tersebut dikirim langsung lewat aplikasi email Anda — tidak disimpan di server situs ini.
+    </p>
+  </div>
+</div>
+
 <div class="divider"></div>
 <div class="footer">
   Catatan trading pribadi · Dibuat otomatis dari data harian<br>
-  MARGINKUAT — Gold &amp; Multi Asset
+  MARGINKUAT — Gold &amp; Multi Asset<br>
+  <div style="margin-top:10px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;font-size:10px">
+    <a href="#secTentang" style="color:#8A6B26">Tentang</a>
+    <span style="color:#3A3620">·</span>
+    <a href="#secKontak" style="color:#8A6B26">Kontak</a>
+    <span style="color:#3A3620">·</span>
+    <a href="#secPrivasi" style="color:#8A6B26">Privasi &amp; Disclaimer</a>
+  </div>
 </div>
 
 <!-- MODAL LOGIN -->
@@ -1152,6 +1217,23 @@ if('serviceWorker' in navigator){
 // PENTING: ganti nilai di bawah ini dengan shortname Disqus kamu sendiri
 // (daftar gratis di https://disqus.com -> Get Started -> pilih "I want to install Disqus on my site")
 const DISQUS_SHORTNAME = 'marginkuat';
+
+// ══ KONTAK / FORM PESAN ══
+// PENTING: ganti dengan email kamu sendiri
+const ADMIN_EMAIL = 'GANTI_DENGAN_EMAIL_KAMU@gmail.com';
+function kirimPesanKontak(){
+  const nama=document.getElementById('kontakNama').value.trim();
+  const email=document.getElementById('kontakEmail').value.trim();
+  const pesan=document.getElementById('kontakPesan').value.trim();
+  if(!nama||!email||!pesan){toast('❌ Isi nama, email, dan pesan dulu');return;}
+  if(ADMIN_EMAIL==='GANTI_DENGAN_EMAIL_KAMU@gmail.com'){
+    toast('⚠️ Admin belum atur email tujuan. Coba hubungi lewat cara lain dulu.');
+    return;
+  }
+  const subject=encodeURIComponent(`Pesan dari ${nama} (via MarginKuat)`);
+  const body=encodeURIComponent(`Nama: ${nama}\nEmail: ${email}\n\nPesan:\n${pesan}`);
+  window.location.href=`mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`;
+}
 function loadDisqus(){
   if(DISQUS_SHORTNAME==='GANTI_DENGAN_SHORTNAME_DISQUS_KAMU'){
     const fb=document.getElementById('disqusFallback');
