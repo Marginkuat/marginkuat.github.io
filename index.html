@@ -456,6 +456,21 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       </optgroup>
     </select>
 
+    <div class="calc-row" style="margin-top:12px">
+      <div>
+        <label class="lbl">Modal Kamu</label>
+        <input type="number" class="inp" id="calcModal" value="500" step="1" min="0" style="margin-bottom:0">
+      </div>
+      <div>
+        <label class="lbl">Tipe Akun</label>
+        <select class="inp" id="calcAkunType" style="margin-bottom:0">
+          <option value="Sen">Cent (Sen)</option>
+          <option value="$" selected>Standard ($)</option>
+        </select>
+      </div>
+    </div>
+    <div id="calcRekomOut"></div>
+
     <div id="selisihOut" style="margin-top:12px"></div>
 
     <div id="rrLevelsOut" style="margin-top:16px"></div>
@@ -483,7 +498,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
   </div>
 </div>
-
 
 <script>
 (function(){
@@ -756,6 +770,72 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   }
 
   [tpEl,slEl,pipvalueEl,lottestEl].forEach(el=>el.addEventListener('input',calcRun));
+
+  // ══ Rekomendasi otomatis Lot & Buffer, berdasarkan Modal + SL/pipvalue yang sedang aktif di kalkulator ini ══
+  const modalEl=$('calcModal'), akunTypeEl=$('calcAkunType'), rekomOutEl=$('calcRekomOut');
+
+  function levelOf(buffer){
+    if(buffer>=100) return {t:'Konservatif',c:'#4ADE80'};
+    if(buffer>=60) return {t:'Moderat',c:'#C8A84B'};
+    if(buffer>=30) return {t:'Agresif',c:'#F87171'};
+    return {t:'Belum Aman',c:'#F87171'};
+  }
+
+  function computeRekom(){
+    const modal=parseFloat(modalEl.value)||0;
+    const unit=akunTypeEl.value;
+    const sl=parseFloat(slEl.value)||0;
+    const pipvalue=parseFloat(pipvalueEl.value)||0;
+    const lotSaatIni=parseFloat(lottestEl.value)||0.01;
+
+    if(modal<=0 || sl<=0 || pipvalue<=0){ rekomOutEl.innerHTML=''; return; }
+
+    // Lot rekomendasi = lot terbesar yang masih menjaga buffer minimal 30x (level Agresif) di modal ini,
+    // rumus umum (tidak dipatok SL 100 pips): lot = modal / (3000 × SL pips × nilai/pip)
+    let lotRek = Math.floor((modal/(3000*sl*pipvalue))/0.01)*0.01;
+    if(lotRek<0.01) lotRek=0.01;
+    lotRek = Math.round(lotRek*100)/100;
+
+    const costRek = sl*pipvalue*(lotRek/0.01);
+    const bufferRek = costRek>0 ? Math.floor(modal/costRek) : 0;
+
+    const costSaatIni = sl*pipvalue*(lotSaatIni/0.01);
+    const bufferSaatIni = costSaatIni>0 ? Math.floor(modal/costSaatIni) : 0;
+    const lvSaatIni = levelOf(bufferSaatIni);
+
+    rekomOutEl.innerHTML = `
+      <div style="background:#1E2312;border-radius:10px;padding:14px;margin-top:12px">
+        <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;text-align:center;margin-bottom:10px">💡 Rekomendasi Otomatis — Modal ${modal.toLocaleString('en-US')} ${unit}, SL ${sl} pips</div>
+        <div style="display:flex;justify-content:center;gap:20px;text-align:center">
+          <div>
+            <div style="font-size:9px;color:#8A6B26;font-weight:700">Lot Rekomendasi</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#D4AF37">${lotRek.toFixed(2)}</div>
+            <div style="font-size:8px;color:#5C4818">target min. buffer 30x</div>
+          </div>
+          <div style="width:1px;background:#2A2E1F"></div>
+          <div>
+            <div style="font-size:9px;color:#8A6B26;font-weight:700">Buffer Rekomendasi</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#4ADE80">${bufferRek}x</div>
+            <div style="font-size:8px;color:#5C4818">pakai lot ${lotRek.toFixed(2)}</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid #2A2E1F;margin-top:10px;padding-top:10px;text-align:center">
+          <div style="font-size:9px;color:#8A6B26">Kalau pakai Lot yang kamu isi manual sekarang (${lotSaatIni.toFixed(2)}):</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:${lvSaatIni.c};margin-top:2px">${bufferSaatIni}x <span style="font-size:10px;font-weight:400">(${lvSaatIni.t})</span></div>
+        </div>
+        <button type="button" id="calcPakaiLotRekBtn" style="width:100%;margin-top:10px;padding:9px;border:1px solid #D4AF37;border-radius:8px;background:transparent;color:#D4AF37;font-size:11px;font-weight:700;cursor:pointer">Pakai Lot Rekomendasi Ini</button>
+        <div style="font-size:8px;color:#5C4818;text-align:center;margin-top:8px;line-height:1.5">*SL &amp; nilai/pip diambil otomatis dari kalkulator di atas — ganti pair/level atau isi SL manual, rekomendasi ini ikut berubah.</div>
+      </div>`;
+
+    const btn=$('calcPakaiLotRekBtn');
+    if(btn) btn.addEventListener('click', ()=>{ lottestEl.value=lotRek; calcRun(); });
+  }
+
+  modalEl.addEventListener('input', computeRekom);
+  akunTypeEl.addEventListener('change', computeRekom);
+  document.addEventListener('datukCalcChanged', computeRekom);
+  computeRekom();
+
   calcRun();
 })();
 </script>
