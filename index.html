@@ -2006,6 +2006,17 @@ let hasKategoriCol=true;
 async function syncAllHistoricalKas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk sinkron histori');return;}
   const el=document.getElementById('kasBackfillNotif');
+  // Pastikan kolom 'kategori' ada dulu di Supabase, kalau tidak, data akan tersimpan tapi
+  // tidak akan pernah kehitung sebagai "Profit Trading Bersih" (diam-diam gagal, tidak error).
+  await fetchAllKasData();
+  if(!hasKategoriCol){
+    if(el) el.innerHTML=`⚠️ <b>Kolom "kategori" belum ada di tabel kas_pribadi (Supabase)</b>, jadi sinkron tidak bisa jalan dengan benar (data akan tersimpan tapi tidak kehitung).<br><br>
+      Cara benerin (5 menit): buka Supabase → Table Editor → tabel <b>kas_pribadi</b> → tombol "+" tambah kolom baru → nama <code>kategori</code>, tipe <b>text</b> → Save.<br><br>
+      Setelah kolom ditambahkan, kembali ke sini dan tekan lagi tombolnya.
+      <span onclick="syncAllHistoricalKas()" style="display:block;margin-top:8px;font-weight:700;color:#D4AF37;text-decoration:underline;cursor:pointer">🔄 Sudah Saya Tambahkan, Coba Lagi</span>`;
+    toast('❌ Kolom kategori belum ada di Supabase — tambahkan dulu (lihat instruksi)');
+    return;
+  }
   if(el) el.innerHTML='⏳ Menyinkronkan histori trading ke Arus Kas, mohon tunggu...';
   try{
     const rows=(allSaldoData||[]).filter(r=>parseFloat(r.profit||0)!==0);
