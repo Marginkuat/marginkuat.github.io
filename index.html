@@ -1,397 +1,93 @@
-  <script>
-    // ... kode script Anda ...
-  </script>
-</body>
-</html>
 <!DOCTYPE html>
-<<!DOCTYPE html>
+<!-- MARGINKUAT - Catatan Trading Pribadi -->
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0B0E14">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MarginKuat">
-  <meta name="description" content="Kalkulator Trading MarginKuat - Hitung Pips, Lot, Risk/Reward, Position Size, dan Trading Journal">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="https://via.placeholder.com/192x192.png?text=MK">
-  <title>MarginKuat - Smart Trading Calculator & Journal</title>
-  
-  <!-- FontAwesome & Google Fonts -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  
-  <style>
-    :root {
-      --bg-dark: #0B0E14;
-      --bg-card: #151A23;
-      --bg-card-hover: #1C2330;
-      --border-color: #232B3A;
-      --primary: #D4AF37;
-      --primary-hover: #F3E5AB;
-      --accent-green: #4ADE80;
-      --accent-red: #F87171;
-      --text-main: #F3F4F6;
-      --text-muted: #9CA3AF;
-      --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#B8860B">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="favicon-16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MarginKuat">
+<title>Catatan Trading — Marginkuat</title>
+<meta name="description" content="Marginkuat — kalkulator risk/reward trading pribadi untuk XAUUSD, BTCUSD, dan pasangan forex. Hitung SL, TP, RR, lot, dan VP secara otomatis.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://marginkuat.github.io/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Marginkuat — Catatan & Kalkulator Trading">
+<meta property="og:description" content="Kalkulator risk/reward trading pribadi untuk XAUUSD, BTCUSD, dan forex. Hitung SL, TP, RR, lot, dan VP otomatis.">
+<meta property="og:url" content="https://marginkuat.github.io/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Marginkuat — Catatan & Kalkulator Trading">
+<meta name="twitter:description" content="Kalkulator risk/reward trading pribadi untuk XAUUSD, BTCUSD, dan forex.">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:100vh}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background-color: var(--bg-dark);
-      color: var(--text-main);
-      font-family: var(--font-main);
-      line-height: 1.5;
-      padding-bottom: 60px;
-    }
+/* LOADING */
+#loading{position:fixed;inset:0;background:#0D0F0A;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.spin{width:32px;height:32px;border:2px solid #2A2E1F;border-top-color:#B8860B;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 15px;
-    }
+/* HEADER */
+.header{padding:20px 16px 0;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;flex-direction:column}
+.brand-name{font-size:22px;font-weight:800;color:#C8A84B;letter-spacing:.5px;line-height:1.1}
+.brand-sub{font-size:10px;color:#9C7A2E;text-transform:uppercase;letter-spacing:1.5px;margin-top:2px}
+.header-right{display:flex;gap:8px;align-items:center}
+.btn-admin{padding:5px 12px;border-radius:20px;border:1.5px solid #B8860B;background:transparent;color:#C8A84B;font-size:10px;font-weight:700;cursor:pointer}
+.btn-logout{padding:5px 12px;border-radius:20px;border:1.5px solid #555;background:transparent;color:#9C7A2E;font-size:10px;font-weight:700;cursor:pointer;display:none}
 
-    header {
-      text-align: center;
-      padding: 20px 0;
-      border-bottom: 1px solid var(--border-color);
-      margin-bottom: 20px;
-    }
-    .logo {
-      font-size: 24px;
-      font-weight: 800;
-      color: var(--primary);
-      letter-spacing: 1px;
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-    }
+/* SECTION */
+.section{padding:20px 16px 0}
+.sec-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px}
 
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
+/* BALANCE HERO */
+.balance-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:20px;margin:16px;margin-bottom:0;text-align:center}
+.bal-label{font-size:10px;color:#9C7A2E;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px}
+.bal-cent{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:#C8A84B;letter-spacing:-1px}
+.bal-usd{font-size:14px;color:#B8924A;margin-top:4px;font-family:'JetBrains Mono',monospace}
+.bal-rp{font-size:12px;color:#7A5D1F;margin-top:2px;font-family:'JetBrains Mono',monospace;margin-bottom:16px}
+.bal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.bal-box{background:#1E2312;border-radius:10px;padding:10px 6px;text-align:center}
+.bal-box-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
+.bal-box-lbl{font-size:9px;color:#8A6B26;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.cg{color:#4ADE80}.cr{color:#F87171}.cy{color:#C8A84B}
 
-    .card-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 15px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+/* KALENDER */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-nav-btn{width:34px;height:34px;background:#161A0F;border:1px solid #2A2E1F;border-radius:8px;color:#C8A84B;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cal-month{font-size:16px;font-weight:700;color:#C8A84B}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px}
+.cal-day-lbl{text-align:center;font-size:9px;color:#7A5D1F;font-weight:600;padding:4px 0;text-transform:uppercase}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-cell{border-radius:8px;padding:4px 2px;text-align:center;min-height:44px;display:flex;flex-direction:column;justify-content:center;background:#161A0F;border:1px solid #1E2312}
+.cal-cell.profit{background:#132D0E;border-color:#1E4A14}
+.cal-cell.loss{background:#2D0E0E;border-color:#4A1414}
+.cal-cell.today{border-color:#C8A84B;border-width:1.5px}
+.cal-cell.empty{background:transparent;border-color:transparent}
+.cal-num{font-size:11px;font-weight:700;color:#D4AF37}
+.cal-amt{font-size:8px;font-weight:700;margin-top:1px}
+.cal-legend{display:flex;justify-content:center;gap:14px;margin-top:8px}
+.cal-leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#8A6B26}
+.cal-leg-dot{width:8px;height:8px;border-radius:3px}
 
-    .input-group {
-      margin-bottom: 15px;
-    }
-    label {
-      display: block;
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    input, select, textarea {
-      width: 100%;
-      background: var(--bg-dark);
-      border: 1px solid var(--border-color);
-      color: var(--text-main);
-      padding: 10px 12px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-family: var(--font-main);
-      outline: none;
-      transition: all 0.2s;
-    }
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--primary);
-    }
-
-    .btn {
-      width: 100%;
-      padding: 12px;
-      background: var(--primary);
-      color: #000;
-      font-weight: 700;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-    }
-    .btn:hover { background: var(--primary-hover); }
-
-    .result-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin-top: 15px;
-    }
-    .result-box {
-      background: var(--bg-dark);
-      border: 1px solid var(--border-color);
-      padding: 12px;
-      border-radius: 8px;
-      text-align: center;
-    }
-    .result-label { font-size: 11px; color: var(--text-muted); }
-    .result-value { font-size: 16px; font-weight: 700; font-family: var(--font-mono); margin-top: 4px; }
-
-    /* Graph SVG Tooltip */
-    #graphContainer {
-      position: relative;
-      width: 100%;
-      height: 200px;
-      margin-top: 15px;
-    }
-    #graphSvg {
-      width: 100%;
-      height: 100%;
-      overflow: visible;
-    }
-    .graph-tooltip {
-      position: absolute;
-      top: 10px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid var(--border-color);
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      pointer-events: none;
-      display: none;
-      z-index: 10;
-      font-family: var(--font-mono);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-    }
-  </style>
-</head>
-<body>
-
-  <div class="container">
-    <header>
-      <div class="logo">
-        <i class="fa-solid fa-chart-line"></i> MARGINKUAT
-      </div>
-    </header>
-
-    <!-- App Main Content -->
-    <div class="card">
-      <div class="card-title"><i class="fa-solid fa-calculator"></i> Smart Trading Calculator</div>
-      <div class="input-group">
-        <label>Pasangan Mata Uang / Pair</label>
-        <select id="pairSelect">
-          <option value="EURUSD">EUR/USD</option>
-          <option value="GBPUSD">GBP/USD</option>
-          <option value="USDJPY">USD/JPY</option>
-          <option value="XAUUSD">XAU/USD (Emas)</option>
-          <option value="BTCUSD">BTC/USD (Bitcoin)</option>
-        </select>
-      </div>
-      <div class="input-group">
-        <label>Saldo Akun ($)</label>
-        <input type="number" id="balanceInput" value="1000">
-      </div>
-      <div class="input-group">
-        <label>Resiko (%)</label>
-        <input type="number" id="riskInput" value="1" step="0.1">
-      </div>
-      <div class="input-group">
-        <label>Stop Loss (Pips/Poin)</label>
-        <input type="number" id="slInput" value="20">
-      </div>
-      
-      <button class="btn" onclick="calculateRisk()"><i class="fa-solid fa-play"></i> Hitung Position Size</button>
-
-      <div class="result-grid">
-        <div class="result-box">
-          <div class="result-label">Ukuran Lot</div>
-          <div class="result-value" id="resLot" style="color: var(--primary);">0.00</div>
-        </div>
-        <div class="result-box">
-          <div class="result-label">Resiko ($)</div>
-          <div class="result-value" id="resRiskUSD" style="color: var(--accent-red);">$0.00</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Chart / Visual Performance -->
-    <div class="card">
-      <div class="card-title"><i class="fa-solid fa-chart-area"></i> Equity Curve</div>
-      <div id="graphContainer">
-        <div id="graphTooltip" class="graph-tooltip">
-          <div id="graphTooltipDate" style="color: var(--text-muted); font-size: 10px;">--</div>
-          <div id="graphTooltipVal" style="font-weight: bold;">--</div>
-        </div>
-        <svg id="graphSvg" viewBox="0 0 500 200">
-          <defs>
-            <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#4ADE80" stop-opacity="0.3"/>
-              <stop offset="100%" stop-color="#4ADE80" stop-opacity="0.0"/>
-            </linearGradient>
-          </defs>
-          <path id="graphArea" fill="url(#gradGreen)" d="" />
-          <path id="graphLine" fill="none" stroke="#4ADE80" stroke-width="2" d="" />
-          <line id="graphIndicatorLine" x1="0" y1="0" x2="0" y2="200" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="4" style="display:none;" />
-          <circle id="graphIndicatorDot" cx="0" cy="0" r="5" fill="#4ADE80" style="display:none;" />
-          <circle id="graphIndicatorDotInner" cx="0" cy="0" r="2" fill="#0B0E14" style="display:none;" />
-        </svg>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // System Helpers
-    function fd(d) {
-      if(!d) return '--';
-      const dt = new Date(d);
-      return dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-    }
-
-    function fc(val) {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-    }
-
-    function calculateRisk() {
-      const balance = parseFloat(document.getElementById('balanceInput').value) || 0;
-      const riskPct = parseFloat(document.getElementById('riskInput').value) || 0;
-      const slPips = parseFloat(document.getElementById('slInput').value) || 0;
-      const pair = document.getElementById('pairSelect').value;
-
-      const riskUSD = balance * (riskPct / 100);
-      let pipValuePerLot = 10; // Default Standard Lot Forex
-
-      if (pair === 'XAUUSD') pipValuePerLot = 10;
-      else if (pair === 'BTCUSD') pipValuePerLot = 1;
-
-      let lot = 0;
-      if (slPips > 0 && pipValuePerLot > 0) {
-        lot = riskUSD / (slPips * pipValuePerLot);
-      }
-
-      document.getElementById('resLot').textContent = lot.toFixed(2);
-      document.getElementById('resRiskUSD').textContent = fc(riskUSD);
-    }
-
-    // Graph & Interaction Setup (FIXED SYNTAX ERROR)
-    function setupGraphInteraction(points, dailyInfo, xFor, yFor, mainColor, W, pad) {
-      const svg = document.getElementById('graphSvg');
-      const tooltip = document.getElementById('graphTooltip');
-      const tooltipDate = document.getElementById('graphTooltipDate');
-      const tooltipVal = document.getElementById('graphTooltipVal');
-      const line = document.getElementById('graphIndicatorLine');
-      const dot = document.getElementById('graphIndicatorDot');
-      const dotInner = document.getElementById('graphIndicatorDotInner');
-
-      if (!svg) return;
-
-      function handleMove(e) {
-        const rect = svg.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const x = clientX - rect.left;
-        const step = (W - pad * 2) / Math.max(1, (points.length - 1));
-        
-        let idx = Math.round((x - pad) / step);
-        idx = Math.max(0, Math.min(points.length - 1, idx));
-
-        const cx = xFor(idx);
-        const cy = yFor(points[idx]);
-        const val = points[idx];
-        const info = dailyInfo[idx];
-
-        line.setAttribute('x1', cx);
-        line.setAttribute('x2', cx);
-        line.style.display = 'block';
-
-        dot.setAttribute('cx', cx);
-        dot.setAttribute('cy', cy);
-        dot.style.display = 'block';
-
-        dotInner.setAttribute('cx', cx);
-        dotInner.setAttribute('cy', cy);
-        dotInner.style.display = 'block';
-
-        if (info && info.tanggal) {
-          tooltipDate.textContent = fd(info.tanggal) + ` (Profit: ${fc(info.profit)})`;
-        } else {
-          tooltipDate.textContent = 'Awal Bulan';
-        }
-        tooltipVal.textContent = (val >= 0 ? '+' : '') + fc(val);
-        tooltipVal.style.color = val >= 0 ? '#4ADE80' : '#F87171';
-
-        tooltip.style.display = 'block';
-        
-        const tooltipWidth = tooltip.offsetWidth;
-        let leftPos = cx - tooltipWidth / 2;
-        if (leftPos < 0) leftPos = 0;
-        if (leftPos + tooltipWidth > rect.width) leftPos = rect.width - tooltipWidth;
-        tooltip.style.left = leftPos + 'px';
-      }
-
-      function handleLeave() {
-        line.style.display = 'none';
-        dot.style.display = 'none';
-        dotInner.style.display = 'none';
-        tooltip.style.display = 'none';
-      }
-
-      svg.addEventListener('mousemove', handleMove);
-      svg.addEventListener('mouseleave', handleLeave);
-      svg.addEventListener('touchstart', handleMove, { passive: true });
-      svg.addEventListener('touchmove', handleMove, { passive: true });
-      svg.addEventListener('touchend', handleLeave);
-    }
-
-    // Dummy Rendering Graph Demo
-    function renderDemoGraph() {
-      const points = [0, 50, 120, 90, 200, 350, 310, 480];
-      const dailyInfo = [
-        { tanggal: '2025-01-01', profit: 0 },
-        { tanggal: '2025-01-02', profit: 50 },
-        { tanggal: '2025-01-03', profit: 70 },
-        { tanggal: '2025-01-04', profit: -30 },
-        { tanggal: '2025-01-05', profit: 110 },
-        { tanggal: '2025-01-06', profit: 150 },
-        { tanggal: '2025-01-07', profit: -40 },
-        { tanggal: '2025-01-08', profit: 170 }
-      ];
-
-      const W = 500, H = 200, pad = 20;
-      const minV = Math.min(...points);
-      const maxV = Math.max(...points);
-
-      const xFor = (i) => pad + (i * (W - pad * 2)) / (points.length - 1);
-      const yFor = (v) => H - pad - ((v - minV) / ((maxV - minV) || 1)) * (H - pad * 2);
-
-      let dLine = `M ${xFor(0)} ${yFor(points[0])}`;
-      for (let i = 1; i < points.length; i++) {
-        dLine += ` L ${xFor(i)} ${yFor(points[i])}`;
-      }
-
-      let dArea = dLine + ` L ${xFor(points.length - 1)} ${H} L ${xFor(0)} ${H} Z`;
-
-      document.getElementById('graphLine').setAttribute('d', dLine);
-      document.getElementById('graphArea').setAttribute('d', dArea);
-
-      setupGraphInteraction(points, dailyInfo, xFor, yFor, '#4ADE80', W, pad);
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      calculateRisk();
-      renderDemoGraph();
-    });
-  </script>
-</body>
-</html>
+/* GRAFIK BULANAN */
+.graph-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px}
+.graph-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.graph-month{font-size:15px;font-weight:700;color:#D4AF37}
+.graph-signal{font-size:10px;color:#8A6B26;margin-top:2px}
+.graph-total{text-align:center;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;margin-bottom:2px}
+.graph-pct{text-align:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;margin-bottom:12px}
+.graph-tooltip{position:absolute;top:6px;background:#0D0F0A;border:1px solid #2A2E1F;border-radius:9px;padding:7px 11px;pointer-events:none;display:none;white-space:nowrap;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.graph-tooltip-date{font-size:10px;color:#9C7A2E;font-weight:700;margin-bottom:2px}
+.graph-tooltip-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
 .graph-dashed{stroke:#5C4818;stroke-width:1;stroke-dasharray:3,3}
 .graph-dot-outer{fill:none;stroke-width:2}
 .graph-dot-inner{stroke:none}
