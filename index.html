@@ -950,7 +950,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       ⚠️ Ada histori trading yang belum tersinkron ke Arus Kas, jadi profit trading kamu belum terhitung di sini.
       <span onclick="syncAllHistoricalKas()" style="display:block;margin-top:6px;font-weight:700;color:#D4AF37;text-decoration:underline;cursor:pointer">🔄 Sinkron Semua Histori Trading Sekarang</span>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+      <span onclick="syncAllHistoricalKas()" style="font-size:9px;color:#8A6B26;cursor:pointer;text-decoration:underline">🔄 Sinkron Ulang Histori Trading</span>
       <span onclick="editKasThreshold()" style="font-size:9px;color:#8A6B26;cursor:pointer;text-decoration:underline">Atur batas peringatan</span>
     </div>
   </div>
@@ -2195,12 +2196,18 @@ function renderKasRingkasan(){
     </div>
     <div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">Saldo Bersih Riil = Modal Pribadi + Profit Trading Bersih − Pengeluaran Pribadi.<br>Pengeluaran pribadi berwarna netral karena itu wajar (dibiayai dari profit yang sudah di-WD dari saldo MT4) — bukan tanda masalah.<br>Warna <b style="color:#F87171">merah</b> hanya muncul di Saldo Bersih Riil, dan itu cuma terjadi kalau pengeluaran benar-benar melebihi total profit + modal pribadi kamu.</div>`;
 
-  // Deteksi kalau ada hari trading (saldo_harian) yang profit/loss-nya belum pernah tersinkron ke Arus Kas
+  // Deteksi kalau ada hari trading (saldo_harian) yang profit/loss-nya belum pernah tersinkron
+  // DENGAN BENAR ke Arus Kas (harus ada entrinya DAN kategorinya harus terisi, bukan cuma "ada entri").
   const backfillEl=document.getElementById('kasBackfillNotif');
   if(backfillEl){
     const hariAdaProfit=(allSaldoData||[]).filter(r=>parseFloat(r.profit||0)!==0).length;
-    const sudahSinkron=rows.filter(r=>(r.keterangan||'').includes(AUTOSYNC_TAG)).length;
-    backfillEl.style.display=(hariAdaProfit>0 && sudahSinkron<hariAdaProfit) ? 'block' : 'none';
+    const sudahSinkronBenar=rows.filter(r=>(r.keterangan||'').includes(AUTOSYNC_TAG) && r.kategori).length;
+    const belumLengkap = hariAdaProfit>0 && sudahSinkronBenar<hariAdaProfit;
+    backfillEl.style.display = (belumLengkap || !hasKategoriCol) ? 'block' : 'none';
+    if(belumLengkap && hasKategoriCol){
+      backfillEl.innerHTML=`⚠️ Ada ${hariAdaProfit-sudahSinkronBenar} hari trading yang belum tersinkron dengan benar ke Arus Kas (kolom kategori kosong).
+        <span onclick="syncAllHistoricalKas()" style="display:block;margin-top:6px;font-weight:700;color:#D4AF37;text-decoration:underline;cursor:pointer">🔄 Sinkron / Perbaiki Sekarang</span>`;
+    }
   }
 
   const threshold=getKasThreshold();
