@@ -1122,6 +1122,11 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <label class="lbl">Catatan (opsional)</label>
     <input class="inp" id="inpCatatan" placeholder="Contoh: Setelah WD 600">
 
+    <label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:11px;color:#C8A84B;cursor:pointer">
+      <input type="checkbox" id="inpAutoSyncKas" checked onchange="localStorage.setItem('mk_autosync_kas', this.checked?'1':'0')" style="width:16px;height:16px;accent-color:#B8860B">
+      🔄 Sinkron otomatis Profit/Loss hari ini ke Arus Kas Pribadi (kategori "Profit Trading MT4")
+    </label>
+
     <button class="btn btn-p" onclick="simpanSaldo()">💾 Simpan Catatan Hari Ini</button>
     <button class="btn btn-ghost" onclick="openModal('mGantiPin')">🔐 Ganti PIN</button>
 
@@ -1416,6 +1421,7 @@ window.onload=async()=>{
     hide('loading');
     const d=new Date(),pad=n=>String(n).padStart(2,'0');
     document.getElementById('inpTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    document.getElementById('inpAutoSyncKas').checked = localStorage.getItem('mk_autosync_kas')!=='0';
     document.getElementById('kasTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     await loadAll();
     loadDisqus();
@@ -1918,6 +1924,42 @@ function kasArah(r){
   if(keText.includes('mt4')) return 'masuk';   // uang masuk ke saldo MT4
   if(dariText.includes('mt4')) return 'keluar'; // uang keluar dari saldo MT4
   return 'lain';
+}
+// ── AUTO-SYNC: Profit/Loss harian → Arus Kas Pribadi ──
+// Tiap kali Catatan Trading Harian disimpan, entri "Profit Trading MT4" di Arus Kas
+// otomatis dibuat/diperbarui supaya Arus Kas Pribadi selalu mencerminkan hasil trading,
+// bukan cuma pengeluaran pribadi yang dicatat manual.
+const AUTOSYNC_TAG='[Auto-sync harian]';
+async function syncKasFromProfit(tgl, profit){
+  try{
+    const jumlah=parseFloat((profit||0).toFixed(2));
+    const existing=await api(`kas_pribadi?tanggal=eq.${tgl}&kategori=eq.profit_trading&keterangan=eq.${encodeURIComponent(AUTOSYNC_TAG)}`);
+    if(jumlah===0){
+      // Tidak ada profit/loss hari ini — hapus entri auto-sync lama (kalau ada) biar tidak nyangkut.
+      if(existing.length) await api(`kas_pribadi?id=eq.${existing[0].id}`,'DELETE');
+      return;
+    }
+    const bodyData={
+      tanggal: tgl,
+      dari: jumlah>=0 ? 'Profit Trading MT4' : 'Saldo Pribadi',
+      ke: jumlah>=0 ? 'Saldo Pribadi' : 'Menutup Loss MT4',
+      jumlah: jumlah,
+      keterangan: AUTOSYNC_TAG,
+      kategori: 'profit_trading'
+    };
+    try{
+      if(existing.length) await api(`kas_pribadi?id=eq.${existing[0].id}`,'PATCH',bodyData);
+      else await api('kas_pribadi','POST',bodyData);
+    }catch(errKat){
+      // Fallback kalau kolom kategori belum ada di Supabase
+      const { kategori:_drop, ...bodyNoKat } = bodyData;
+      if(existing.length) await api(`kas_pribadi?id=eq.${existing[0].id}`,'PATCH',bodyNoKat);
+      else await api('kas_pribadi','POST',bodyNoKat);
+    }
+  }catch(e){
+    console.error('Gagal sinkron ke Arus Kas:', e);
+    toast('⚠️ Catatan trading tersimpan, tapi sinkron ke Arus Kas gagal');
+  }
 }
 let allKasData=[];
 let hasKategoriCol=true;
@@ -2545,6 +2587,10 @@ async function simpanSaldo(){
       else await api('saldo_harian','POST',{tanggal:tgl,...bodyNoMood});
       savedOk=true;
     }
+    if(document.getElementById('inpAutoSyncKas').checked){
+      await syncKasFromProfit(tgl, profit);
+    }
+
     toast(savedOk&&moodSaved?'✅ Catatan tersimpan':'⚠️ Tersimpan, tapi kolom mood belum ada di Supabase');
     document.getElementById('inpSaldo').value='';
     document.getElementById('inpProfit').value='';
@@ -2554,6 +2600,11 @@ async function simpanSaldo(){
     document.getElementById('inpGrossLoss').value='';
     document.getElementById('pvBox').style.display='none';
     await loadAll();
+    await fetchAllKasData();
+    renderKasRingkasan();
+    renderKasRekap();
+    renderKasChart();
+    renderLapKeu();
   }catch(e){
     console.error(e);
     toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,200));
