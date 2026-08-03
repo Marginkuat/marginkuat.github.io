@@ -1137,7 +1137,9 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
     <label class="lbl">Kategori</label>
     <select class="inp" id="kasKategori">
-      <option value="pendapatan">🟢 Pendapatan</option>
+      <option value="gaji">💼 Gaji</option>
+      <option value="profit_trading">📈 Profit Trading MT4</option>
+      <option value="pendapatan">🟢 Pendapatan Lain</option>
       <option value="kebutuhan_pokok">🔴 Kebutuhan Pokok</option>
       <option value="utilitas">🟡 Utilitas</option>
       <option value="kesehatan">🔵 Kesehatan</option>
@@ -1896,16 +1898,19 @@ function escapeHtml(s){
 // ══ KAS PRIBADI (DEPOSIT & WD) ══
 // ══ ARUS KAS: helper & data bersama ══
 const kategoriMeta={
-  pendapatan:{label:'Pendapatan', color:'#4ADE80', dot:'🟢'},
+  gaji:{label:'Gaji', color:'#4ADE80', dot:'💼'},
+  profit_trading:{label:'Profit Trading MT4', color:'#34D399', dot:'📈'},
+  pendapatan:{label:'Pendapatan Lain', color:'#4ADE80', dot:'🟢'},
   kebutuhan_pokok:{label:'Kebutuhan Pokok', color:'#F87171', dot:'🔴'},
   utilitas:{label:'Utilitas', color:'#EAB308', dot:'🟡'},
   kesehatan:{label:'Kesehatan', color:'#60A5FA', dot:'🔵'},
   gaya_hidup:{label:'Gaya Hidup', color:'#C084FC', dot:'🟣'}
 };
+const KATEGORI_MASUK=['pendapatan','gaji','profit_trading']; // kategori yang dihitung sebagai uang MASUK
 function kasArah(r){
   // Prioritas: kategori eksplisit kalau ada (lebih akurat)
   if(r.kategori){
-    return r.kategori==='pendapatan' ? 'masuk' : 'keluar';
+    return KATEGORI_MASUK.includes(r.kategori) ? 'masuk' : 'keluar';
   }
   // Fallback: tebak dari teks Dari/Ke
   const keText=(r.ke||'').toLowerCase();
@@ -2111,7 +2116,7 @@ function renderKasRekap(){
   let breakdownHtml='';
   if(kategoriKeys.length){
     breakdownHtml='<div style="margin-top:12px;border-top:1px solid #2A2E1F;padding-top:10px">';
-    ['pendapatan','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'].forEach(k=>{
+    ['gaji','profit_trading','pendapatan','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'].forEach(k=>{
       if(!perKategori[k])return;
       const km=kategoriMeta[k];
       breakdownHtml+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0"><span style="color:${km.color}">${km.dot} ${km.label}</span><span style="color:#D4AF37">${fc(perKategori[k])}</span></div>`;
@@ -2290,7 +2295,7 @@ function renderLabaRugi(wrap){
   const rowsKas=(allKasData||[]).filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===labaRugiYear && d.getMonth()===labaRugiMonth; });
   const rowsTrading=(allSaldoData||[]).filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===labaRugiYear && d.getMonth()===labaRugiMonth; });
 
-  const pendapatanAktifCent=rowsKas.filter(r=>r.kategori==='pendapatan').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const pendapatanAktifCent=rowsKas.filter(r=>['gaji','pendapatan'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const profitTradingCent=rowsTrading.reduce((s,r)=>s+parseFloat(r.profit||0),0);
   const bebanCent=rowsKas.filter(r=>['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
 
@@ -2310,7 +2315,7 @@ function renderLabaRugi(wrap){
   }
 
   html+=`<div style="font-size:11px;font-weight:700;color:#4ADE80;margin-bottom:8px">PENDAPATAN</div>`;
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Aktif (gaji, dll)</span><span style="color:#D4AF37">${fc(pendapatanAktifCent)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Aktif (Gaji)</span><span style="color:#D4AF37">${fc(pendapatanAktifCent)}</span></div>`;
   html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Pasif (Profit Trading MT4)</span><span style="color:${profitTradingCent>=0?'#D4AF37':'#F87171'}">${fc(profitTradingCent)}</span></div>`;
   html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#4ADE80">Total Pendapatan</span><span style="color:#4ADE80">${fc(totalPendapatan)}</span></div>`;
 
