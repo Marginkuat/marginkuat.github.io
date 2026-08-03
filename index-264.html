@@ -315,35 +315,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
-<!-- KALKULATOR MODAL & BUFFER -->
-<div class="section">
-  <div class="sec-title">🧮 Kalkulator Modal &amp; Buffer</div>
-  <div class="graph-card">
-    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.5">Masukkan modal kamu, pilih pair &amp; level SL — buffer (tahan berapa kali loss beruntun) dihitung otomatis pakai SL pips yang SAMA dengan dropdown di "Kalkulator Risiko per Pair" (lot 0.01, $0,1/pip). Bukan patokan tetap 100 pips lagi.</div>
-
-    <div class="calc-row">
-      <div>
-        <label class="lbl">Modal Kamu</label>
-        <input type="number" class="inp" id="bufModal" value="500" step="1" min="0">
-      </div>
-      <div>
-        <label class="lbl">Tipe Akun</label>
-        <select class="inp" id="bufAkunType">
-          <option value="Sen">Cent (Sen)</option>
-          <option value="$" selected>Standard ($)</option>
-        </select>
-      </div>
-    </div>
-
-    <div style="margin-top:10px">
-      <label class="lbl">Pair &amp; Level SL</label>
-      <select class="inp" id="bufPairSelect" style="width:100%"></select>
-    </div>
-
-    <div id="bufOut" style="margin-top:14px"></div>
-  </div>
-</div>
-
 <!-- REKOMENDASI LOT SAAT INI -->
 <div class="section">
   <div class="sec-title">📏 Rekomendasi Lot Trading</div>
@@ -510,6 +481,35 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <div class="bal-box"><div class="bal-box-val cg" id="calcOutRewardVP">0</div><div class="bal-box-lbl">Target VP</div></div>
     </div>
 
+  </div>
+</div>
+
+<!-- KALKULATOR MODAL & BUFFER (nempel di bawah Kalkulator Risiko per Pair biar gampang dibaca urut) -->
+<div class="section">
+  <div class="sec-title">🧮 Kalkulator Modal &amp; Buffer</div>
+  <div class="graph-card">
+    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.5">Masukkan modal kamu, pilih pair &amp; level SL yang sama seperti di atas — buffer (tahan berapa kali loss beruntun) dihitung otomatis pakai SL pips level itu (lot 0.01, $0,1/pip). Bukan patokan tetap 100 pips lagi.</div>
+
+    <div class="calc-row">
+      <div>
+        <label class="lbl">Modal Kamu</label>
+        <input type="number" class="inp" id="bufModal" value="500" step="1" min="0">
+      </div>
+      <div>
+        <label class="lbl">Tipe Akun</label>
+        <select class="inp" id="bufAkunType">
+          <option value="Sen">Cent (Sen)</option>
+          <option value="$" selected>Standard ($)</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:10px">
+      <label class="lbl">Pair &amp; Level SL</label>
+      <select class="inp" id="bufPairSelect" style="width:100%"></select>
+    </div>
+
+    <div id="bufOut" style="margin-top:14px"></div>
   </div>
 </div>
 
