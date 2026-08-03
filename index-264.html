@@ -456,6 +456,21 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       </optgroup>
     </select>
 
+    <div class="calc-row" style="margin-top:12px">
+      <div>
+        <label class="lbl">Modal Kamu</label>
+        <input type="number" class="inp" id="calcModal" value="500" step="1" min="0" style="margin-bottom:0">
+      </div>
+      <div>
+        <label class="lbl">Tipe Akun</label>
+        <select class="inp" id="calcAkunType" style="margin-bottom:0">
+          <option value="Sen">Cent (Sen)</option>
+          <option value="$" selected>Standard ($)</option>
+        </select>
+      </div>
+    </div>
+    <div id="calcRekomOut"></div>
+
     <div id="selisihOut" style="margin-top:12px"></div>
 
     <div id="rrLevelsOut" style="margin-top:16px"></div>
@@ -483,36 +498,6 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
   </div>
 </div>
-
-<!-- KALKULATOR MODAL & BUFFER (nempel di bawah Kalkulator Risiko per Pair biar gampang dibaca urut) -->
-<div class="section">
-  <div class="sec-title">🧮 Kalkulator Modal &amp; Buffer</div>
-  <div class="graph-card">
-    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.5">Masukkan modal kamu, pilih pair &amp; level SL yang sama seperti di atas — buffer (tahan berapa kali loss beruntun) dihitung otomatis pakai SL pips level itu (lot 0.01, $0,1/pip). Bukan patokan tetap 100 pips lagi.</div>
-
-    <div class="calc-row">
-      <div>
-        <label class="lbl">Modal Kamu</label>
-        <input type="number" class="inp" id="bufModal" value="500" step="1" min="0">
-      </div>
-      <div>
-        <label class="lbl">Tipe Akun</label>
-        <select class="inp" id="bufAkunType">
-          <option value="Sen">Cent (Sen)</option>
-          <option value="$" selected>Standard ($)</option>
-        </select>
-      </div>
-    </div>
-
-    <div style="margin-top:10px">
-      <label class="lbl">Pair &amp; Level SL</label>
-      <select class="inp" id="bufPairSelect" style="width:100%"></select>
-    </div>
-
-    <div id="bufOut" style="margin-top:14px"></div>
-  </div>
-</div>
-
 
 <script>
 (function(){
@@ -785,6 +770,72 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   }
 
   [tpEl,slEl,pipvalueEl,lottestEl].forEach(el=>el.addEventListener('input',calcRun));
+
+  // ══ Rekomendasi otomatis Lot & Buffer, berdasarkan Modal + SL/pipvalue yang sedang aktif di kalkulator ini ══
+  const modalEl=$('calcModal'), akunTypeEl=$('calcAkunType'), rekomOutEl=$('calcRekomOut');
+
+  function levelOf(buffer){
+    if(buffer>=100) return {t:'Konservatif',c:'#4ADE80'};
+    if(buffer>=60) return {t:'Moderat',c:'#C8A84B'};
+    if(buffer>=30) return {t:'Agresif',c:'#F87171'};
+    return {t:'Belum Aman',c:'#F87171'};
+  }
+
+  function computeRekom(){
+    const modal=parseFloat(modalEl.value)||0;
+    const unit=akunTypeEl.value;
+    const sl=parseFloat(slEl.value)||0;
+    const pipvalue=parseFloat(pipvalueEl.value)||0;
+    const lotSaatIni=parseFloat(lottestEl.value)||0.01;
+
+    if(modal<=0 || sl<=0 || pipvalue<=0){ rekomOutEl.innerHTML=''; return; }
+
+    // Lot rekomendasi = lot terbesar yang masih menjaga buffer minimal 30x (level Agresif) di modal ini,
+    // rumus umum (tidak dipatok SL 100 pips): lot = modal / (3000 × SL pips × nilai/pip)
+    let lotRek = Math.floor((modal/(3000*sl*pipvalue))/0.01)*0.01;
+    if(lotRek<0.01) lotRek=0.01;
+    lotRek = Math.round(lotRek*100)/100;
+
+    const costRek = sl*pipvalue*(lotRek/0.01);
+    const bufferRek = costRek>0 ? Math.floor(modal/costRek) : 0;
+
+    const costSaatIni = sl*pipvalue*(lotSaatIni/0.01);
+    const bufferSaatIni = costSaatIni>0 ? Math.floor(modal/costSaatIni) : 0;
+    const lvSaatIni = levelOf(bufferSaatIni);
+
+    rekomOutEl.innerHTML = `
+      <div style="background:#1E2312;border-radius:10px;padding:14px;margin-top:12px">
+        <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;text-align:center;margin-bottom:10px">💡 Rekomendasi Otomatis — Modal ${modal.toLocaleString('en-US')} ${unit}, SL ${sl} pips</div>
+        <div style="display:flex;justify-content:center;gap:20px;text-align:center">
+          <div>
+            <div style="font-size:9px;color:#8A6B26;font-weight:700">Lot Rekomendasi</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#D4AF37">${lotRek.toFixed(2)}</div>
+            <div style="font-size:8px;color:#5C4818">target min. buffer 30x</div>
+          </div>
+          <div style="width:1px;background:#2A2E1F"></div>
+          <div>
+            <div style="font-size:9px;color:#8A6B26;font-weight:700">Buffer Rekomendasi</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#4ADE80">${bufferRek}x</div>
+            <div style="font-size:8px;color:#5C4818">pakai lot ${lotRek.toFixed(2)}</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid #2A2E1F;margin-top:10px;padding-top:10px;text-align:center">
+          <div style="font-size:9px;color:#8A6B26">Kalau pakai Lot yang kamu isi manual sekarang (${lotSaatIni.toFixed(2)}):</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:${lvSaatIni.c};margin-top:2px">${bufferSaatIni}x <span style="font-size:10px;font-weight:400">(${lvSaatIni.t})</span></div>
+        </div>
+        <button type="button" id="calcPakaiLotRekBtn" style="width:100%;margin-top:10px;padding:9px;border:1px solid #D4AF37;border-radius:8px;background:transparent;color:#D4AF37;font-size:11px;font-weight:700;cursor:pointer">Pakai Lot Rekomendasi Ini</button>
+        <div style="font-size:8px;color:#5C4818;text-align:center;margin-top:8px;line-height:1.5">*SL &amp; nilai/pip diambil otomatis dari kalkulator di atas — ganti pair/level atau isi SL manual, rekomendasi ini ikut berubah.</div>
+      </div>`;
+
+    const btn=$('calcPakaiLotRekBtn');
+    if(btn) btn.addEventListener('click', ()=>{ lottestEl.value=lotRek; calcRun(); });
+  }
+
+  modalEl.addEventListener('input', computeRekom);
+  akunTypeEl.addEventListener('change', computeRekom);
+  document.addEventListener('datukCalcChanged', computeRekom);
+  computeRekom();
+
   calcRun();
 })();
 </script>
@@ -1363,7 +1414,6 @@ window.onload=async()=>{
 async function loadAll(){
   // Ambil data utama SEKALI SAJA, dipakai bareng oleh beberapa section (hemat request, lebih cepat di koneksi lambat)
   await fetchSharedSaldoData();
-  initBufferCalc();
   await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore(),loadModalMinimal(),loadLotRekomendasi()]);
   await fetchAllKasData();
   renderKasRingkasan();
@@ -2709,69 +2759,6 @@ function scoreCard(title, val, skor, label, labelColor){
       <div style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:${labelColor}22;color:${labelColor}">${label}</div>
     </div>
   </div>`;
-}
-
-// ══ KALKULATOR MODAL & BUFFER (sinkron 100% dengan data #calcPairSelect di Kalkulator Risiko per Pair) ══
-function initBufferCalc(){
-  const src = document.getElementById('calcPairSelect');
-  const sel = document.getElementById('bufPairSelect');
-  const modalEl = document.getElementById('bufModal');
-  const akunEl = document.getElementById('bufAkunType');
-  const outEl = document.getElementById('bufOut');
-  if(!src || !sel || !modalEl || !akunEl || !outEl) return;
-
-  // Ambil SEMUA opsi pair+level langsung dari dropdown kalkulator utama —
-  // jadi kalau SL pips di sana diubah/ditambah, kalkulator buffer ini otomatis ikut berubah.
-  sel.innerHTML = src.innerHTML;
-  sel.value = src.value; // default: XAUUSD Standar (166,66 pips), sama seperti kalkulator utama
-
-  const KNOWN_PAIRS = ['XAUUSD','BTCUSD','AUDUSD','EURGBP','NZDUSD','USDCHF','AUDJPY','CADJPY','EURUSD','GBPUSD','NZDJPY','USDCAD','CHFJPY','EURJPY','EURNZD','USDJPY'];
-  function pairNameFromText(text){ return KNOWN_PAIRS.find(p=>text.includes(p)) || 'XAUUSD'; }
-  // Sama persis dengan fungsi usdPerPip() di Kalkulator Risiko per Pair: flat $0,1/pip (kecuali BTCUSD $0,01/poin)
-  function usdPerPip(pairName){ return pairName==='BTCUSD' ? 0.01 : 0.1; }
-
-  function render(){
-    const modal = parseFloat(modalEl.value)||0;
-    const unit = akunEl.value;
-    const opt = sel.options[sel.selectedIndex];
-    if(!opt){ outEl.innerHTML=''; return; }
-
-    const slStr = opt.value.split('|')[0];
-    const slPips = parseFloat(slStr)||0;
-    const pairName = pairNameFromText(opt.textContent);
-    const pipVal = usdPerPip(pairName);
-    const costPerTrade = slPips*pipVal; // biaya 1x loss beruntun @ lot 0.01, SESUAI level yang dipilih (bukan fix 100 pips)
-
-    if(modal<=0 || slPips<=0 || costPerTrade<=0){
-      outEl.innerHTML = '<div style="padding:10px;color:#7A5D1F;font-size:11px;text-align:center">Isi modal dan pilih pair/level dulu.</div>';
-      return;
-    }
-
-    const buffer = Math.floor(modal/costPerTrade);
-    let level, color;
-    if(buffer>=100){ level='Konservatif'; color='#4ADE80'; }
-    else if(buffer>=60){ level='Moderat'; color='#C8A84B'; }
-    else if(buffer>=30){ level='Agresif'; color='#F87171'; }
-    else { level='Di Bawah Agresif (Belum Aman)'; color='#F87171'; }
-    const aman = buffer>=30;
-
-    outEl.innerHTML = `
-      <div style="background:#1E2312;border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${opt.textContent}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:800;color:${color}">${buffer}x</div>
-        <div style="font-size:10px;color:#8A6B26;margin-top:4px">tahan loss beruntun · lot 0.01 · biaya ${costPerTrade.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} ${unit}/trade (${slPips} pips × $0,1/pip)</div>
-      </div>
-      <div style="background:${aman?'#152016':'#241414'};border:1px solid ${aman?'#2E5C2E':'#5C2E2E'};border-radius:10px;padding:10px;text-align:center;margin-top:10px">
-        <div style="font-size:11px;font-weight:700;color:${color}">Level Keamanan: ${level}</div>
-        <div style="font-size:9px;color:#8A6B26;margin-top:2px">${aman?'✓ Modal cukup buat minimal level Agresif (≥30x loss beruntun)':'✗ Modal belum cukup, minimal butuh ≥30x buffer (level Agresif)'}</div>
-      </div>
-      <div style="font-size:8px;color:#5C4818;text-align:center;margin-top:8px;line-height:1.5">*SL pips diambil langsung dari opsi Pair &amp; Level ini — angka berubah otomatis kalau kamu ganti level/pair, tidak dipatok 100 pips terus. Untuk XAUUSD, TP tetap disarankan RR 1:2 dari SL yang dipilih (mis. Standar 166,66 → TP 332).</div>`;
-  }
-
-  modalEl.addEventListener('input', render);
-  akunEl.addEventListener('change', render);
-  sel.addEventListener('change', render);
-  render();
 }
 
 // ══ REKOMENDASI MODAL MINIMAL ══
