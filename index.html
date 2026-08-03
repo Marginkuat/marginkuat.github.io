@@ -1161,6 +1161,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         <option value="kesehatan">🔵 Kesehatan</option>
         <option value="gaya_hidup">🟣 Gaya Hidup</option>
       </optgroup>
+      <optgroup label="🏢 OPERASIONAL BISNIS (kalau sudah ada investor/karyawan)">
+        <option value="gaji_karyawan">👤 Gaji Karyawan</option>
+        <option value="listrik_kantor">💡 Listrik Kantor</option>
+        <option value="internet_kantor">🌐 Internet</option>
+        <option value="air_kantor">🚰 Air</option>
+        <option value="sewa_kantor">🏠 Sewa Tempat</option>
+        <option value="operasional_lain">⚙️ Operasional Lainnya</option>
+      </optgroup>
     </select>
 
     <label class="lbl">Mata Uang Asli (opsional)</label>
@@ -1929,11 +1937,19 @@ const kategoriMeta={
   kebutuhan_pokok:{label:'Belanja / Kebutuhan Pokok', color:'#F87171', dot:'🔴', grup:'pribadi'},
   utilitas:{label:'Listrik / Pulsa / Utilitas', color:'#EAB308', dot:'🟡', grup:'pribadi'},
   kesehatan:{label:'Kesehatan', color:'#60A5FA', dot:'🔵', grup:'pribadi'},
-  gaya_hidup:{label:'Gaya Hidup', color:'#C084FC', dot:'🟣', grup:'pribadi'}
+  gaya_hidup:{label:'Gaya Hidup', color:'#C084FC', dot:'🟣', grup:'pribadi'},
+  // 🏢 OPERASIONAL BISNIS — dipakai kalau skala akun ini sudah besar (ada investor/karyawan)
+  gaji_karyawan:{label:'Gaji Karyawan', color:'#F97316', dot:'👤', grup:'bisnis'},
+  listrik_kantor:{label:'Listrik Kantor', color:'#F97316', dot:'💡', grup:'bisnis'},
+  internet_kantor:{label:'Internet', color:'#F97316', dot:'🌐', grup:'bisnis'},
+  air_kantor:{label:'Air', color:'#F97316', dot:'🚰', grup:'bisnis'},
+  sewa_kantor:{label:'Sewa Tempat', color:'#F97316', dot:'🏠', grup:'bisnis'},
+  operasional_lain:{label:'Operasional Lainnya', color:'#F97316', dot:'⚙️', grup:'bisnis'}
 };
 const GRUP_META={
   operasional:{label:'💼 OPERASIONAL (Trading)'},
-  pribadi:{label:'🏦 PRIBADI (Kas)'}
+  pribadi:{label:'🏦 PRIBADI (Kas)'},
+  bisnis:{label:'🏢 OPERASIONAL BISNIS'}
 };
 // Kategori yang dihitung sebagai uang MASUK (sisanya otomatis dianggap KELUAR)
 const KATEGORI_MASUK=['pendapatan','gaji','profit_trading','wd_trading'];
@@ -2163,10 +2179,10 @@ function renderKasRingkasan(){
       <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:${profitBersih>=0?'#4ADE80':'#F87171'}">${profitBersih>=0?'+':''}${fc(profitBersih)}</div><div class="bal-box-lbl">📈 Profit Trading Bersih</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:14px">-${fc(pengeluaranPribadi)}</div><div class="bal-box-lbl">Pengeluaran Pribadi</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:#C8A84B">${fc(pengeluaranPribadi)}</div><div class="bal-box-lbl">Pengeluaran Pribadi (dari WD profit)</div></div>
       <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:${saldoBersih>=0?'#4ADE80':'#F87171'}">${saldoBersih>=0?'+':''}${fc(saldoBersih)}</div><div class="bal-box-lbl">Saldo Bersih Riil</div></div>
     </div>
-    <div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">Saldo Bersih Riil = Modal Pribadi + Profit Trading Bersih − Pengeluaran Pribadi</div>`;
+    <div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">Saldo Bersih Riil = Modal Pribadi + Profit Trading Bersih − Pengeluaran Pribadi.<br>Pengeluaran pribadi berwarna netral karena itu wajar (dibiayai dari profit yang sudah di-WD dari saldo MT4) — bukan tanda masalah.<br>Warna <b style="color:#F87171">merah</b> hanya muncul di Saldo Bersih Riil, dan itu cuma terjadi kalau pengeluaran benar-benar melebihi total profit + modal pribadi kamu.</div>`;
 
   // Deteksi kalau ada hari trading (saldo_harian) yang profit/loss-nya belum pernah tersinkron ke Arus Kas
   const backfillEl=document.getElementById('kasBackfillNotif');
@@ -2226,7 +2242,7 @@ function renderKasRekap(){
   let breakdownHtml='';
   if(kategoriKeys.length){
     breakdownHtml='<div style="margin-top:12px;border-top:1px solid #2A2E1F;padding-top:10px">';
-    ['operasional','pribadi'].forEach(grup=>{
+    ['operasional','pribadi','bisnis'].forEach(grup=>{
       const keysInGrup=Object.keys(kategoriMeta).filter(k=>kategoriMeta[k].grup===grup && perKategori[k]);
       if(!keysInGrup.length)return;
       breakdownHtml+=`<div style="font-size:10px;font-weight:700;color:#8A6B26;margin:8px 0 4px">${GRUP_META[grup].label}</div>`;
