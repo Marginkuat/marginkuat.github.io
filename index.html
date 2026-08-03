@@ -946,6 +946,10 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div>
     </div>
     <div id="kasNotifMenipis" style="display:none;margin-top:10px;background:#2D0E0E;border:1px solid #F87171;border-radius:8px;padding:10px 12px;font-size:11px;color:#F87171"></div>
+    <div id="kasBackfillNotif" style="display:none;margin-top:10px;background:#1E2312;border:1px solid #B8860B;border-radius:8px;padding:10px 12px;font-size:11px;color:#C8A84B">
+      ⚠️ Ada histori trading yang belum tersinkron ke Arus Kas, jadi profit trading kamu belum terhitung di sini.
+      <span onclick="syncAllHistoricalKas()" style="display:block;margin-top:6px;font-weight:700;color:#D4AF37;text-decoration:underline;cursor:pointer">🔄 Sinkron Semua Histori Trading Sekarang</span>
+    </div>
     <div style="display:flex;justify-content:flex-end;margin-top:8px">
       <span onclick="editKasThreshold()" style="font-size:9px;color:#8A6B26;cursor:pointer;text-decoration:underline">Atur batas peringatan</span>
     </div>
@@ -1983,6 +1987,28 @@ async function syncKasFromProfit(tgl, profit){
 }
 let allKasData=[];
 let hasKategoriCol=true;
+async function syncAllHistoricalKas(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk sinkron histori');return;}
+  const el=document.getElementById('kasBackfillNotif');
+  if(el) el.innerHTML='⏳ Menyinkronkan histori trading ke Arus Kas, mohon tunggu...';
+  try{
+    const rows=(allSaldoData||[]).filter(r=>parseFloat(r.profit||0)!==0);
+    for(const r of rows){
+      await syncKasFromProfit(r.tanggal, r.profit);
+    }
+    toast(`✅ ${rows.length} hari trading berhasil disinkron ke Arus Kas`);
+    await fetchAllKasData();
+    renderKasRingkasan();
+    renderKasRekap();
+    renderKasChart();
+    renderLapKeu();
+    await loadKas();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal sinkron histori: '+(e.message||'coba lagi').slice(0,200));
+    if(el) el.innerHTML='⚠️ Ada histori trading yang belum tersinkron ke Arus Kas, jadi profit trading kamu belum terhitung di sini.<span onclick="syncAllHistoricalKas()" style="display:block;margin-top:6px;font-weight:700;color:#D4AF37;text-decoration:underline;cursor:pointer">🔄 Coba Sinkron Lagi</span>';
+  }
+}
 async function fetchAllKasData(){
   try{
     allKasData=await api('kas_pribadi?select=tanggal,dari,ke,jumlah,keterangan,kategori&order=tanggal.asc');
@@ -2112,21 +2138,43 @@ function renderKasRingkasan(){
   const notifEl=document.getElementById('kasNotifMenipis');
   if(!el)return;
   const rows=allKasData||[];
-  let totalMasuk=0, totalKeluar=0;
+
+  // Pisah per GRUP biar jelas dari sudut pandang investor:
+  // - Modal Pribadi Masuk : uang pribadi kamu (gaji, WD yang sudah dicairkan, dll) — TIDAK termasuk profit trading
+  // - Profit Trading Bersih : hasil murni dari trading (profit dikurangi loss/komisi/swap)
+  // - Pengeluaran Pribadi : belanja/kebutuhan yang otomatis "dibayar" duluan dari Profit Trading, sisanya baru dari Modal Pribadi
+  let modalPribadiMasuk=0, pengeluaranPribadi=0, profitOperasional=0, lossOperasional=0;
   rows.forEach(r=>{
+    const km=kategoriMeta[r.kategori];
     const arah=kasArah(r);
     const j=parseFloat(r.jumlah||0);
-    if(arah==='masuk')totalMasuk+=j;
-    else if(arah==='keluar')totalKeluar+=j;
+    if(km&&km.grup==='operasional'){
+      if(arah==='masuk')profitOperasional+=j; else lossOperasional+=j;
+    }else{
+      if(arah==='masuk')modalPribadiMasuk+=j; else if(arah==='keluar')pengeluaranPribadi+=j;
+    }
   });
-  const saldoBersih=totalMasuk-totalKeluar;
+  const profitBersih=profitOperasional-lossOperasional;
+  const saldoBersih=modalPribadiMasuk+profitBersih-pengeluaranPribadi;
 
   el.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(totalMasuk)}</div><div class="bal-box-lbl">Total Masuk</div></div>
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:14px">-${fc(totalKeluar)}</div><div class="bal-box-lbl">Total Keluar</div></div>
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:${saldoBersih>=0?'#4ADE80':'#F87171'}">${fc(saldoBersih)}</div><div class="bal-box-lbl">Saldo Bersih</div></div>
-    </div>`;
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(modalPribadiMasuk)}</div><div class="bal-box-lbl">Modal Pribadi Masuk</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:${profitBersih>=0?'#4ADE80':'#F87171'}">${profitBersih>=0?'+':''}${fc(profitBersih)}</div><div class="bal-box-lbl">📈 Profit Trading Bersih</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:14px">-${fc(pengeluaranPribadi)}</div><div class="bal-box-lbl">Pengeluaran Pribadi</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:${saldoBersih>=0?'#4ADE80':'#F87171'}">${saldoBersih>=0?'+':''}${fc(saldoBersih)}</div><div class="bal-box-lbl">Saldo Bersih Riil</div></div>
+    </div>
+    <div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">Saldo Bersih Riil = Modal Pribadi + Profit Trading Bersih − Pengeluaran Pribadi</div>`;
+
+  // Deteksi kalau ada hari trading (saldo_harian) yang profit/loss-nya belum pernah tersinkron ke Arus Kas
+  const backfillEl=document.getElementById('kasBackfillNotif');
+  if(backfillEl){
+    const hariAdaProfit=(allSaldoData||[]).filter(r=>parseFloat(r.profit||0)!==0).length;
+    const sudahSinkron=rows.filter(r=>(r.keterangan||'').includes(AUTOSYNC_TAG)).length;
+    backfillEl.style.display=(hariAdaProfit>0 && sudahSinkron<hariAdaProfit) ? 'block' : 'none';
+  }
 
   const threshold=getKasThreshold();
   if(notifEl){
