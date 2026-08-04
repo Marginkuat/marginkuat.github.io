@@ -2485,11 +2485,15 @@ function renderLabaRugi(wrap){
   const rowsKas=(allKasData||[]).filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===labaRugiYear && d.getMonth()===labaRugiMonth; });
   const rowsTrading=(allSaldoData||[]).filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===labaRugiYear && d.getMonth()===labaRugiMonth; });
 
-  const pendapatanAktifCent=rowsKas.filter(r=>['gaji','pendapatan'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  // "gaji" & "modal_mt4" = uang yang disetor sebagai MODAL ke MT4, BUKAN pendapatan — jadi
+  // sengaja TIDAK dihitung di sini. Cuma "pendapatan" (pendapatan lain di luar trading & gaji)
+  // dan profit trading yang dianggap pendapatan riil.
+  const pendapatanLainCent=rowsKas.filter(r=>r.kategori==='pendapatan').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const modalDisetorBulanIni=rowsKas.filter(r=>['gaji','modal_mt4'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const profitTradingCent=rowsTrading.reduce((s,r)=>s+parseFloat(r.profit||0),0);
   const bebanCent=rowsKas.filter(r=>['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
 
-  const totalPendapatan=pendapatanAktifCent+profitTradingCent;
+  const totalPendapatan=pendapatanLainCent+profitTradingCent;
   const labaRugi=totalPendapatan-bebanCent;
 
   let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -2504,9 +2508,18 @@ function renderLabaRugi(wrap){
     return;
   }
 
+  if(modalDisetorBulanIni>0){
+    html+=`<div class="bal-box" style="background:#132436;border:1px solid #2E5C8A;margin-bottom:14px">
+      <div class="bal-box-val" style="font-size:15px;color:#60A5FA">${fc(modalDisetorBulanIni)}</div>
+      <div class="bal-box-lbl">💰 Modal / Dana Investasi Disetor ke MT4 Bulan Ini (BUKAN pendapatan — tidak dihitung di Laba Rugi)</div>
+    </div>`;
+  }
+
   html+=`<div style="font-size:11px;font-weight:700;color:#4ADE80;margin-bottom:8px">PENDAPATAN</div>`;
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Aktif (Gaji)</span><span style="color:#D4AF37">${fc(pendapatanAktifCent)}</span></div>`;
   html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Pasif (Profit Trading MT4)</span><span style="color:${profitTradingCent>=0?'#D4AF37':'#F87171'}">${fc(profitTradingCent)}</span></div>`;
+  if(pendapatanLainCent>0){
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Lain</span><span style="color:#D4AF37">${fc(pendapatanLainCent)}</span></div>`;
+  }
   html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#4ADE80">Total Pendapatan</span><span style="color:#4ADE80">${fc(totalPendapatan)}</span></div>`;
 
   html+=`<div style="font-size:11px;font-weight:700;color:#F87171;margin:16px 0 8px">BEBAN</div>`;
@@ -2523,7 +2536,7 @@ function renderLabaRugi(wrap){
 
   html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${labaRugi>=0?'#4ADE80':'#F87171'}">${labaRugi>=0?'+':''}${fc(labaRugi)}</div><div class="bal-box-lbl">${labaRugi>=0?'LABA':'RUGI'} BERSIH = Pendapatan − Beban</div></div>`;
   if(!hasKategoriCol){
-    html+='<div style="font-size:9px;color:#F87171;margin-top:10px">⚠️ Kolom kategori belum ada di Supabase, jadi Pendapatan Aktif & Beban belum bisa dipilah otomatis.</div>';
+    html+='<div style="font-size:9px;color:#F87171;margin-top:10px">⚠️ Kolom kategori belum ada di Supabase, jadi Pendapatan &amp; Beban belum bisa dipilah otomatis.</div>';
   }
 
   wrap.innerHTML=html;
