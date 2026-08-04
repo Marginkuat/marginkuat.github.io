@@ -971,7 +971,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div>
     </div>
     <div style="border-top:1px solid #2A2E1F;padding-top:14px">
-      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Masuk vs Keluar — 6 Bulan Terakhir</div>
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px">Masuk vs Keluar — 6 Bulan Terakhir</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Uang riil saja (gaji, WD, belanja) — bukan performa trading</div>
       <div id="kasChart"><div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
     </div>
   </div>
@@ -1952,9 +1953,16 @@ const GRUP_META={
   pribadi:{label:'🏦 PRIBADI (Kas)'},
   bisnis:{label:'🏢 OPERASIONAL BISNIS'}
 };
-// Kategori yang dihitung sebagai uang MASUK (sisanya otomatis dianggap KELUAR)
-const KATEGORI_MASUK=['pendapatan','gaji','profit_trading','wd_trading'];
+// Kategori yang dihitung sebagai uang MASUK (khusus untuk kelompok PRIBADI/BISNIS — uang yang
+// benar-benar berpindah tangan). Kategori grup OPERASIONAL (profit_trading, loss_trading, komisi,
+// swap) SENGAJA tidak dianggap arus kas riil di sini — itu cuma catatan kinerja trading harian
+// (auto-sync), bukan uang yang keluar-masuk dompet pribadi. Kalau ikut dihitung, "Arus Kas" akan
+// membengkak/membingungkan karena isinya campur aduk performa trading + uang riil.
+const KATEGORI_MASUK=['pendapatan','gaji','wd_trading'];
 function kasArah(r){
+  // Kategori grup OPERASIONAL = performa trading, BUKAN arus kas riil. Dikecualikan total.
+  const km=kategoriMeta[r.kategori];
+  if(km&&km.grup==='operasional') return 'trading';
   // Prioritas: kategori eksplisit kalau ada (lebih akurat)
   if(r.kategori){
     return KATEGORI_MASUK.includes(r.kategori) ? 'masuk' : 'keluar';
@@ -2178,7 +2186,7 @@ function renderKasRingkasan(){
     const arah=kasArah(r);
     const j=parseFloat(r.jumlah||0);
     if(km&&km.grup==='operasional'){
-      if(arah==='masuk')profitOperasional+=j; else lossOperasional+=j;
+      if(r.kategori==='profit_trading')profitOperasional+=j; else if(r.kategori==='loss_trading')lossOperasional+=j;
     }else{
       if(arah==='masuk')modalPribadiMasuk+=j; else if(arah==='keluar')pengeluaranPribadi+=j;
     }
@@ -2282,6 +2290,7 @@ function renderKasRekap(){
   }
 
   el.innerHTML=`
+    <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Uang riil yang berpindah tangan (gaji, WD, belanja) — tidak termasuk performa trading harian</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
       <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(masuk)}</div><div class="bal-box-lbl">Masuk Bulan Ini</div></div>
       <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:14px">-${fc(keluar)}</div><div class="bal-box-lbl">Keluar Bulan Ini</div></div>
@@ -2497,18 +2506,29 @@ function renderLabaRugi(wrap){
 // ── ARUS KAS (CASH FLOW, ringkas — detail lengkap ada di section Aliran Uang) ──
 function renderArusKasFormal(wrap){
   const rows=allKasData||[];
-  let masuk=0,keluar=0;
+  let masuk=0,keluar=0,profitTrading=0,lossTrading=0;
   rows.forEach(r=>{
     const arah=kasArah(r);
     const j=parseFloat(r.jumlah||0);
     if(arah==='masuk')masuk+=j; else if(arah==='keluar')keluar+=j;
+    else if(arah==='trading'){
+      if(r.kategori==='profit_trading')profitTrading+=j; else if(r.kategori==='loss_trading')lossTrading+=j;
+    }
   });
   const bersih=masuk-keluar;
-  let html=`<div style="font-size:9px;color:#5C4818;margin-bottom:14px">Ringkasan sepanjang waktu tercatat</div>`;
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#C8A84B">Kas Masuk</span><span style="color:#4ADE80">+${fc(masuk)}</span></div>`;
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid #2A2E1F"><span style="color:#C8A84B">Kas Keluar</span><span style="color:#F87171">-${fc(keluar)}</span></div>`;
-  html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</div><div class="bal-box-lbl">SALDO KAS BERSIH</div></div>`;
-  html+='<div style="font-size:10px;color:#7A5D1F;text-align:center;margin-top:14px">Rekap bulanan &amp; grafik lengkap ada di section 💸 "Aliran Uang Masuk &amp; Keluar" di atas</div>';
+  const performaTrading=profitTrading-lossTrading;
+  let html=`<div style="font-size:9px;color:#5C4818;margin-bottom:14px">Ringkasan sepanjang waktu tercatat — hanya uang yang BENAR-BENAR berpindah tangan (gaji, WD, belanja), bukan catatan performa trading harian</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#C8A84B">Uang Masuk (gaji + WD dari trading)</span><span style="color:#4ADE80">+${fc(masuk)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid #2A2E1F"><span style="color:#C8A84B">Uang Keluar (dipakai untuk kebutuhan)</span><span style="color:#F87171">-${fc(keluar)}</span></div>`;
+  html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</div><div class="bal-box-lbl">SELISIH UANG YANG PERNAH DITARIK (masuk − keluar, bukan saldo saat ini)</div></div>`;
+  html+=`<div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:12px">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📊 Kinerja Trading (Terpisah dari Kas)</div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Total Profit Trading</span><span style="color:#4ADE80">+${fc(profitTrading)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Total Loss Trading</span><span style="color:#F87171">-${fc(lossTrading)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-top:1px solid #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#D4AF37">Performa Bersih Trading</span><span style="color:${performaTrading>=0?'#4ADE80':'#F87171'}">${performaTrading>=0?'+':''}${fc(performaTrading)}</span></div>
+    <div style="font-size:9px;color:#5C4818;margin-top:6px">Ini catatan untung/rugi trading sejak awal (termasuk yang masih di MT4, belum ditarik) — dipakai buat menilai apakah tradingnya untung atau bangkrut. TIDAK termasuk dalam hitungan Uang Masuk/Keluar di atas.</div>
+  </div>`;
+  html+='<div style="font-size:10px;color:#7A5D1F;text-align:center;margin-top:14px">Saldo uang yang benar-benar kamu pegang SEKARANG ada di section 💰 "Saldo MT4 Saat Ini" di atas — bukan angka di halaman ini.</div>';
   wrap.innerHTML=html;
 }
 
