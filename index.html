@@ -972,7 +972,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     </div>
     <div style="border-top:1px solid #2A2E1F;padding-top:14px">
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px">Masuk vs Keluar — 6 Bulan Terakhir</div>
-      <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Uang riil saja (gaji, WD, belanja) — bukan performa trading</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Uang riil saja (Investasi, Profit MT4, belanja) — bukan performa trading</div>
       <div id="kasChart"><div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
     </div>
   </div>
@@ -1141,30 +1141,28 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="ap-title">💸 Input Aliran Uang</div>
 
     <label class="lbl">Dari (sumber uang)</label>
-    <input class="inp" id="kasDari" placeholder="Contoh: Gaji Kerja / Saldo MT4">
+    <input class="inp" id="kasDari" placeholder="Contoh: Investasi/Gaji / Profit MT4">
 
     <label class="lbl">Ke (tujuan uang)</label>
-    <input class="inp" id="kasKe" placeholder="Contoh: Saldo MT4 / Belanja Dapur">
+    <input class="inp" id="kasKe" placeholder="Contoh: Saldo MT4 / Obat / Listrik">
 
     <label class="lbl">Kategori</label>
     <select class="inp" id="kasKategori">
-      <optgroup label="💼 OPERASIONAL (Trading)">
-        <option value="profit_trading">📈 Profit Trading</option>
-        <option value="loss_trading">📉 Loss Trading</option>
-        <option value="komisi">💳 Komisi / Fee Broker</option>
-        <option value="swap">🔄 Swap</option>
+      <optgroup label="⬆️ UANG MASUK">
+        <option value="gaji">💰 Investasi (modal dari luar MT4, termasuk Gaji)</option>
+        <option value="wd_trading">📈 Profit dari MT4 (Harian)</option>
       </optgroup>
-      <optgroup label="💰 MODAL (Setoran ke MT4)">
-        <option value="modal_mt4">💰 Setoran Modal ke MT4 (bukan pendapatan)</option>
-      </optgroup>
-      <optgroup label="🏦 PRIBADI (Kas)">
-        <option value="gaji">💼 Gaji Masuk (dipegang, bukan disetor MT4)</option>
-        <option value="wd_trading">🏧 WD dari Trading</option>
-        <option value="pendapatan">🟢 Pendapatan Lain</option>
+      <optgroup label="⬇️ UANG KELUAR (diambil dari saldo MT4)">
         <option value="kebutuhan_pokok">🔴 Belanja / Kebutuhan Pokok</option>
         <option value="utilitas">🟡 Listrik / Pulsa / Utilitas</option>
         <option value="kesehatan">🔵 Kesehatan</option>
         <option value="gaya_hidup">🟣 Gaya Hidup</option>
+      </optgroup>
+      <optgroup label="💼 OPERASIONAL (Trading, terpisah dari Kas)">
+        <option value="profit_trading">📈 Profit Trading (auto-sync harian)</option>
+        <option value="loss_trading">📉 Loss Trading (auto-sync harian)</option>
+        <option value="komisi">💳 Komisi / Fee Broker</option>
+        <option value="swap">🔄 Swap</option>
       </optgroup>
       <optgroup label="🏢 OPERASIONAL BISNIS (kalau sudah ada investor/karyawan)">
         <option value="gaji_karyawan">👤 Gaji Karyawan</option>
@@ -1936,10 +1934,13 @@ const kategoriMeta={
   komisi:{label:'Komisi / Fee Broker', color:'#FB923C', dot:'💳', grup:'operasional'},
   swap:{label:'Swap', color:'#A78BFA', dot:'🔄', grup:'operasional'},
   // 🏦 PRIBADI (Kas) — aliran uang tunai/dompet pribadi di luar akun trading
-  gaji:{label:'Gaji Masuk (dipegang, bukan disetor MT4)', color:'#4ADE80', dot:'💼', grup:'pribadi'},
-  modal_mt4:{label:'Setoran Modal ke MT4', color:'#60A5FA', dot:'💰', grup:'modal'},
-  wd_trading:{label:'WD dari Trading', color:'#4ADE80', dot:'🏧', grup:'pribadi'},
-  pendapatan:{label:'Pendapatan Lain', color:'#4ADE80', dot:'🟢', grup:'pribadi'},
+  // "gaji" = Investasi: modal dari luar MT4 (gaji, uang pribadi, dll) yang dianggap sebagai investasi ke trading.
+  gaji:{label:'Investasi (modal dari luar MT4)', color:'#60A5FA', dot:'💰', grup:'pribadi'},
+  // "wd_trading" = Profit dari MT4 yang masuk sebagai uang (harian), bukan sekadar catatan performa.
+  wd_trading:{label:'Profit dari MT4 (Harian)', color:'#4ADE80', dot:'📈', grup:'pribadi'},
+  // Kategori legacy di bawah ini TIDAK lagi tersedia di form, hanya dipertahankan supaya data lama tetap terbaca benar.
+  modal_mt4:{label:'Setoran Modal ke MT4 (legacy)', color:'#60A5FA', dot:'💰', grup:'modal'},
+  pendapatan:{label:'Pendapatan Lain (legacy)', color:'#4ADE80', dot:'🟢', grup:'pribadi'},
   kebutuhan_pokok:{label:'Belanja / Kebutuhan Pokok', color:'#F87171', dot:'🔴', grup:'pribadi'},
   utilitas:{label:'Listrik / Pulsa / Utilitas', color:'#EAB308', dot:'🟡', grup:'pribadi'},
   kesehatan:{label:'Kesehatan', color:'#60A5FA', dot:'🔵', grup:'pribadi'},
@@ -2316,9 +2317,9 @@ function renderKasRekap(){
       <div class="bal-box-lbl">${sehatBulan>=0?'✅ SEHAT':'⚠️ WASPADA'} — Profit Trading Bulan Ini vs Pengeluaran</div>
       <div style="font-size:9px;color:#7A5D1F;margin-top:6px">${fc(performaTradingBulan)} (performa trading bulan ini) − ${fc(keluar)} (total pengeluaran bulan ini)</div>
     </div>
-    <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Rincian pencatatan uang riil yang berpindah tangan (gaji, WD, belanja) — beda dengan perbandingan di atas yang pakai performa trading langsung</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Rincian pencatatan uang riil yang berpindah tangan (Investasi, Profit MT4, belanja) — beda dengan perbandingan di atas yang pakai performa trading langsung</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(masuk)}</div><div class="bal-box-lbl">Gaji + WD Tercatat</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(masuk)}</div><div class="bal-box-lbl">Investasi + Profit Tercatat</div></div>
       <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:14px">-${fc(keluar)}</div><div class="bal-box-lbl">Keluar Bulan Ini</div></div>
     </div>
     <div style="text-align:center;font-size:11px;color:#8A6B26">${rows.length} transaksi · Selisih pencatatan: <span style="color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</span> <span style="color:#5C4818">(bukan indikator rugi — lihat kotak di atas)</span></div>
@@ -2576,13 +2577,13 @@ function renderArusKasFormal(wrap){
     }).join('');
   };
 
-  let html=`<div style="font-size:9px;color:#5C4818;margin-bottom:14px">Ringkasan sepanjang waktu tercatat — hanya uang yang BENAR-BENAR berpindah tangan (gaji, WD, belanja), bukan catatan performa trading harian</div>`;
+  let html=`<div style="font-size:9px;color:#5C4818;margin-bottom:14px">Ringkasan sepanjang waktu tercatat — hanya uang yang BENAR-BENAR berpindah tangan (Investasi, Profit MT4, Belanja), bukan catatan performa trading harian</div>`;
 
-  html+=`<div style="font-size:10px;color:#4ADE80;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px">⬆️ Uang Masuk — Dari Mana</div>`;
+  html+=`<div style="font-size:10px;color:#4ADE80;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px">⬆️ Uang Masuk — Investasi + Profit MT4</div>`;
   html+=breakdownList(masukPerKategori);
   html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#C8A84B">Total Masuk</span><span style="color:#4ADE80">+${fc(masuk)}</span></div>`;
 
-  html+=`<div style="font-size:10px;color:#F87171;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:16px 0 6px">⬇️ Uang Keluar — Ke Mana</div>`;
+  html+=`<div style="font-size:10px;color:#F87171;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:16px 0 6px">⬇️ Uang Keluar — Diambil dari Saldo MT4, Dipakai Kemana</div>`;
   html+=breakdownList(keluarPerKategori);
   html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#C8A84B">Total Keluar</span><span style="color:#F87171">-${fc(keluar)}</span></div>`;
 
