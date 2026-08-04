@@ -2167,12 +2167,11 @@ function renderKasRingkasan(){
   if(!el)return;
   const rows=allKasData||[];
 
-  // Pisah per GRUP biar jelas dari sudut pandang investor:
-  // - Modal Pribadi Masuk : uang pribadi kamu (gaji, WD yang SUDAH benar-benar dicairkan dari MT4, dll)
-  // - Profit Trading Bersih (All-Time) : hasil kumulatif trading dari awal (auto-sync harian), TERMASUK
-  //   profit yang MASIH mengendap di MT4 dan belum ditarik — jadi ini bukan uang cash di tangan,
-  //   melainkan indikator KINERJA trading (dipakai investor untuk menilai untung/rugi performa akun).
-  // - Pengeluaran Pribadi : belanja/kebutuhan yang dibiayai dari uang yang SUDAH ditarik (WD)
+  // ══ MODEL BARU (sesuai kenyataan pemilik akun): ══
+  // Uang yang ditarik (WD) dari MT4 langsung dipakai untuk kebutuhan harian — TIDAK disimpan
+  // sebagai "kas pribadi" terpisah. Jadi satu-satunya saldo RIIL yang benar-benar dipegang
+  // sekarang adalah Saldo MT4 itu sendiri. Semua angka lain di bawah ini murni RIWAYAT/HISTORIS
+  // (buat menilai kinerja & pola keuangan), BUKAN saldo yang perlu dijumlah-jumlahkan lagi.
   let modalPribadiMasuk=0, pengeluaranPribadi=0, profitOperasional=0, lossOperasional=0;
   rows.forEach(r=>{
     const km=kategoriMeta[r.kategori];
@@ -2185,36 +2184,24 @@ function renderKasRingkasan(){
     }
   });
   const profitBersih=profitOperasional-lossOperasional; // performa trading all-time (termasuk yang belum di-WD)
-
-  // Saldo Bersih Riil = UANG CASH yang benar-benar di tangan kamu sekarang (bukan yang masih di MT4).
-  // Sengaja TIDAK memasukkan profitBersih, karena profit itu baru jadi uang cash setelah di-WD —
-  // dan WD yang sudah terjadi SUDAH ikut terhitung di dalam modalPribadiMasuk (kategori "WD dari Trading").
-  // Kalau profitBersih ikut ditambahkan lagi di sini, profit yang sama akan terhitung DUA KALI.
-  const saldoBersih=modalPribadiMasuk-pengeluaranPribadi;
-
-  // Saldo MT4 saat ini (uang yang masih aktif ditradingkan, belum ditarik)
   const saldoMt4Sekarang = allSaldoData&&allSaldoData.length ? parseFloat(allSaldoData[allSaldoData.length-1].saldo_mt4||0) : 0;
-  // Total Kekayaan Riil = uang cash di tangan + uang yang masih di MT4 (gambaran utuh untuk investor)
-  const totalKekayaan = saldoBersih+saldoMt4Sekarang;
 
   el.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(modalPribadiMasuk)}</div><div class="bal-box-lbl">Modal Pribadi Masuk (termasuk WD)</div></div>
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:${profitBersih>=0?'#4ADE80':'#F87171'}">${profitBersih>=0?'+':''}${fc(profitBersih)}</div><div class="bal-box-lbl">📈 Profit Trading (All-Time, termasuk yang masih di MT4)</div></div>
+    <div class="bal-box" style="background:#2A2410;border:1px solid #B8860B;margin-bottom:8px">
+      <div class="bal-box-val" style="font-size:22px;color:#FFD700">${fc(saldoMt4Sekarang)}</div>
+      <div class="bal-box-lbl">💰 Saldo MT4 Saat Ini (uang riil yang kamu pegang sekarang)</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:#C8A84B">${fc(pengeluaranPribadi)}</div><div class="bal-box-lbl">Pengeluaran Pribadi (dari WD profit)</div></div>
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:${saldoBersih>=0?'#4ADE80':'#F87171'}">${saldoBersih>=0?'+':''}${fc(saldoBersih)}</div><div class="bal-box-lbl">💵 Saldo Bersih Riil (uang cash di tangan)</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(modalPribadiMasuk)}</div><div class="bal-box-lbl">Modal &amp; WD Disetor/Ditarik (All-Time)</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:${profitBersih>=0?'#4ADE80':'#F87171'}">${profitBersih>=0?'+':''}${fc(profitBersih)}</div><div class="bal-box-lbl">📈 Profit Trading (All-Time)</div></div>
     </div>
-    <div class="bal-box" style="background:#2A2410;border:1px solid #B8860B">
-      <div class="bal-box-val" style="font-size:18px;color:#FFD700">${fc(saldoMt4Sekarang)} <span style="font-size:11px;color:#8A6B26">(di MT4)</span> + ${fc(saldoBersih)} <span style="font-size:11px;color:#8A6B26">(cash)</span> = ${totalKekayaan>=0?'':''}${fc(totalKekayaan)}</div>
-      <div class="bal-box-lbl">🏦 Total Kekayaan Riil Saat Ini</div>
+    <div class="bal-box" style="background:#1E2312">
+      <div class="bal-box-val" style="font-size:14px;color:#C8A84B">${fc(pengeluaranPribadi)}</div>
+      <div class="bal-box-lbl">Sudah Ditarik &amp; Dipakai untuk Kebutuhan (All-Time)</div>
     </div>
     <div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">
-      <b style="color:#C8A84B">Saldo Bersih Riil</b> = Modal Pribadi Masuk − Pengeluaran Pribadi. Ini murni UANG CASH yang benar-benar kamu pegang di luar MT4 — profit yang masih mengendap di MT4 TIDAK dihitung di sini supaya tidak dobel hitung dengan WD yang sudah dicairkan.<br>
-      <b style="color:#D4AF37">Profit Trading (All-Time)</b> di atas cuma indikator KINERJA trading sejak awal (dipakai buat menilai untung/rugi performa akun) — bukan uang cash yang siap dipakai.<br>
-      <b style="color:#FFD700">Total Kekayaan Riil</b> = penjumlahan uang di MT4 (belum ditarik) + uang cash di tangan — ini angka paling akurat buat investor menilai kondisi keseluruhan.<br>
-      Warna <b style="color:#F87171">merah</b> pada Saldo Bersih Riil terjadi kalau pengeluaran benar-benar melebihi total modal pribadi + WD yang sudah dicairkan.</div>`;
+      <b style="color:#FFD700">Saldo MT4 Saat Ini</b> adalah satu-satunya angka SALDO riil — diambil langsung dari catatan saldo harian terakhir.<br>
+      Kotak-kotak di bawahnya bukan saldo, melainkan RIWAYAT sepanjang waktu: total modal/WD yang pernah masuk-keluar, total performa trading, dan total yang sudah dibelanjakan. Uang yang sudah ditarik &amp; dipakai dianggap wajar (habis untuk kebutuhan harian) — bukan tanda masalah, dan sengaja TIDAK dikurangkan dari Saldo MT4 supaya tidak dihitung dua kali.</div>`;
 
   // Deteksi kalau ada hari trading (saldo_harian) yang profit/loss-nya belum pernah tersinkron
   // DENGAN BENAR ke Arus Kas (harus ada entrinya DAN kategorinya harus terisi, bukan cuma "ada entri").
@@ -2232,9 +2219,9 @@ function renderKasRingkasan(){
 
   const threshold=getKasThreshold();
   if(notifEl){
-    if(saldoBersih<threshold){
+    if(saldoMt4Sekarang<threshold){
       notifEl.style.display='block';
-      notifEl.innerHTML=`⚠️ Saldo bersih (${fc(saldoBersih)}) di bawah batas peringatan (${fc(threshold)}). Pertimbangkan untuk menambah dana atau kurangi pengeluaran.`;
+      notifEl.innerHTML=`⚠️ Saldo MT4 (${fc(saldoMt4Sekarang)}) di bawah batas peringatan (${fc(threshold)}). Pertimbangkan untuk menambah dana atau kurangi penarikan.`;
     }else{
       notifEl.style.display='none';
     }
