@@ -2255,14 +2255,19 @@ function renderKasRekap(){
     el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Tidak ada transaksi bulan ini.</div>';
     return;
   }
-  let masuk=0,keluar=0;
+  let masuk=0,keluar=0,profitTradingBulan=0,lossTradingBulan=0;
   rows.forEach(r=>{
     const arah=kasArah(r);
     const j=parseFloat(r.jumlah||0);
     if(arah==='masuk')masuk+=j;
     else if(arah==='keluar')keluar+=j;
+    else if(arah==='trading'){
+      if(r.kategori==='profit_trading')profitTradingBulan+=j; else if(r.kategori==='loss_trading')lossTradingBulan+=j;
+    }
   });
   const bersih=masuk-keluar;
+  const performaTradingBulan=profitTradingBulan-lossTradingBulan;
+  const sehatBulan=performaTradingBulan-keluar;
 
   // Breakdown per kategori, dikelompokkan per Grup (Operasional vs Pribadi) biar rapi
   const perKategori={};
@@ -2290,12 +2295,17 @@ function renderKasRekap(){
   }
 
   el.innerHTML=`
-    <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Uang riil yang berpindah tangan (gaji, WD, belanja) — tidak termasuk performa trading harian</div>
+    <div class="bal-box" style="background:${sehatBulan>=0?'#152016':'#241414'};border:1px solid ${sehatBulan>=0?'#2E5C2E':'#5C2E2E'};margin-bottom:12px">
+      <div class="bal-box-val" style="font-size:20px;color:${sehatBulan>=0?'#4ADE80':'#F87171'}">${sehatBulan>=0?'+':''}${fc(sehatBulan)}</div>
+      <div class="bal-box-lbl">${sehatBulan>=0?'✅ SEHAT':'⚠️ WASPADA'} — Profit Trading Bulan Ini vs Pengeluaran</div>
+      <div style="font-size:9px;color:#7A5D1F;margin-top:6px">${fc(performaTradingBulan)} (performa trading bulan ini) − ${fc(keluar)} (total pengeluaran bulan ini)</div>
+    </div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Rincian pencatatan uang riil yang berpindah tangan (gaji, WD, belanja) — beda dengan perbandingan di atas yang pakai performa trading langsung</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(masuk)}</div><div class="bal-box-lbl">Masuk Bulan Ini</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(masuk)}</div><div class="bal-box-lbl">Gaji + WD Tercatat</div></div>
       <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:14px">-${fc(keluar)}</div><div class="bal-box-lbl">Keluar Bulan Ini</div></div>
     </div>
-    <div style="text-align:center;font-size:11px;color:#8A6B26">${rows.length} transaksi · Selisih bersih: <span style="color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</span></div>
+    <div style="text-align:center;font-size:11px;color:#8A6B26">${rows.length} transaksi · Selisih pencatatan: <span style="color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</span> <span style="color:#5C4818">(bukan indikator rugi — lihat kotak di atas)</span></div>
     ${breakdownHtml}`;
 }
 function renderKasChart(){
