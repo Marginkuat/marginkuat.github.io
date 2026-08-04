@@ -1154,8 +1154,11 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
         <option value="komisi">💳 Komisi / Fee Broker</option>
         <option value="swap">🔄 Swap</option>
       </optgroup>
+      <optgroup label="💰 MODAL (Setoran ke MT4)">
+        <option value="modal_mt4">💰 Setoran Modal ke MT4 (bukan pendapatan)</option>
+      </optgroup>
       <optgroup label="🏦 PRIBADI (Kas)">
-        <option value="gaji">💼 Gaji Masuk</option>
+        <option value="gaji">💼 Gaji Masuk (dipegang, bukan disetor MT4)</option>
         <option value="wd_trading">🏧 WD dari Trading</option>
         <option value="pendapatan">🟢 Pendapatan Lain</option>
         <option value="kebutuhan_pokok">🔴 Belanja / Kebutuhan Pokok</option>
@@ -1933,7 +1936,8 @@ const kategoriMeta={
   komisi:{label:'Komisi / Fee Broker', color:'#FB923C', dot:'💳', grup:'operasional'},
   swap:{label:'Swap', color:'#A78BFA', dot:'🔄', grup:'operasional'},
   // 🏦 PRIBADI (Kas) — aliran uang tunai/dompet pribadi di luar akun trading
-  gaji:{label:'Gaji Masuk', color:'#4ADE80', dot:'💼', grup:'pribadi'},
+  gaji:{label:'Gaji Masuk (dipegang, bukan disetor MT4)', color:'#4ADE80', dot:'💼', grup:'pribadi'},
+  modal_mt4:{label:'Setoran Modal ke MT4', color:'#60A5FA', dot:'💰', grup:'modal'},
   wd_trading:{label:'WD dari Trading', color:'#4ADE80', dot:'🏧', grup:'pribadi'},
   pendapatan:{label:'Pendapatan Lain', color:'#4ADE80', dot:'🟢', grup:'pribadi'},
   kebutuhan_pokok:{label:'Belanja / Kebutuhan Pokok', color:'#F87171', dot:'🔴', grup:'pribadi'},
@@ -1951,14 +1955,17 @@ const kategoriMeta={
 const GRUP_META={
   operasional:{label:'💼 OPERASIONAL (Trading)'},
   pribadi:{label:'🏦 PRIBADI (Kas)'},
+  modal:{label:'💰 MODAL (Setoran ke MT4)'},
   bisnis:{label:'🏢 OPERASIONAL BISNIS'}
 };
-// Kategori yang dihitung sebagai uang MASUK (khusus untuk kelompok PRIBADI/BISNIS — uang yang
+// Kategori yang dihitung sebagai uang MASUK (khusus untuk kelompok PRIBADI/MODAL/BISNIS — uang yang
 // benar-benar berpindah tangan). Kategori grup OPERASIONAL (profit_trading, loss_trading, komisi,
 // swap) SENGAJA tidak dianggap arus kas riil di sini — itu cuma catatan kinerja trading harian
 // (auto-sync), bukan uang yang keluar-masuk dompet pribadi. Kalau ikut dihitung, "Arus Kas" akan
 // membengkak/membingungkan karena isinya campur aduk performa trading + uang riil.
-const KATEGORI_MASUK=['pendapatan','gaji','wd_trading'];
+// "modal_mt4" (setoran modal ke MT4) TETAP dihitung 'masuk' di sini untuk tujuan tracking saldo,
+// tapi SENGAJA dikecualikan dari Laba Rugi (lihat renderLabaRugi) karena itu modal, bukan pendapatan.
+const KATEGORI_MASUK=['pendapatan','gaji','wd_trading','modal_mt4'];
 function kasArah(r){
   // Kategori grup OPERASIONAL = performa trading, BUKAN arus kas riil. Dikecualikan total.
   const km=kategoriMeta[r.kategori];
@@ -2280,7 +2287,7 @@ function renderKasRekap(){
   let breakdownHtml='';
   if(kategoriKeys.length){
     breakdownHtml='<div style="margin-top:12px;border-top:1px solid #2A2E1F;padding-top:10px">';
-    ['operasional','pribadi','bisnis'].forEach(grup=>{
+    ['operasional','modal','pribadi','bisnis'].forEach(grup=>{
       const keysInGrup=Object.keys(kategoriMeta).filter(k=>kategoriMeta[k].grup===grup && perKategori[k]);
       if(!keysInGrup.length)return;
       breakdownHtml+=`<div style="font-size:10px;font-weight:700;color:#8A6B26;margin:8px 0 4px">${GRUP_META[grup].label}</div>`;
