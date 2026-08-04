@@ -2507,19 +2507,46 @@ function renderLabaRugi(wrap){
 function renderArusKasFormal(wrap){
   const rows=allKasData||[];
   let masuk=0,keluar=0,profitTrading=0,lossTrading=0;
+  const masukPerKategori={}, keluarPerKategori={};
   rows.forEach(r=>{
     const arah=kasArah(r);
     const j=parseFloat(r.jumlah||0);
-    if(arah==='masuk')masuk+=j; else if(arah==='keluar')keluar+=j;
-    else if(arah==='trading'){
+    if(arah==='masuk'){
+      masuk+=j;
+      const k=r.kategori||'lainnya';
+      masukPerKategori[k]=(masukPerKategori[k]||0)+j;
+    }else if(arah==='keluar'){
+      keluar+=j;
+      const k=r.kategori||'lainnya';
+      keluarPerKategori[k]=(keluarPerKategori[k]||0)+j;
+    }else if(arah==='trading'){
       if(r.kategori==='profit_trading')profitTrading+=j; else if(r.kategori==='loss_trading')lossTrading+=j;
     }
   });
   const bersih=masuk-keluar;
   const performaTrading=profitTrading-lossTrading;
+
+  const breakdownList=(obj)=>{
+    const keys=Object.keys(obj).sort((a,b)=>obj[b]-obj[a]);
+    if(!keys.length) return '<div style="font-size:10px;color:#5C4818;padding:4px 0 4px 6px">Belum ada transaksi.</div>';
+    return keys.map(k=>{
+      const km=kategoriMeta[k];
+      const label=km?`${km.dot} ${km.label}`:'⚪ Belum diberi kategori';
+      const color=km?km.color:'#8A6B26';
+      return `<div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0 4px 6px"><span style="color:${color}">${label}</span><span style="color:#D4AF37">${fc(obj[k])}</span></div>`;
+    }).join('');
+  };
+
   let html=`<div style="font-size:9px;color:#5C4818;margin-bottom:14px">Ringkasan sepanjang waktu tercatat — hanya uang yang BENAR-BENAR berpindah tangan (gaji, WD, belanja), bukan catatan performa trading harian</div>`;
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#C8A84B">Uang Masuk (gaji + WD dari trading)</span><span style="color:#4ADE80">+${fc(masuk)}</span></div>`;
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid #2A2E1F"><span style="color:#C8A84B">Uang Keluar (dipakai untuk kebutuhan)</span><span style="color:#F87171">-${fc(keluar)}</span></div>`;
+
+  html+=`<div style="font-size:10px;color:#4ADE80;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px">⬆️ Uang Masuk — Dari Mana</div>`;
+  html+=breakdownList(masukPerKategori);
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#C8A84B">Total Masuk</span><span style="color:#4ADE80">+${fc(masuk)}</span></div>`;
+
+  html+=`<div style="font-size:10px;color:#F87171;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:16px 0 6px">⬇️ Uang Keluar — Ke Mana</div>`;
+  html+=breakdownList(keluarPerKategori);
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#C8A84B">Total Keluar</span><span style="color:#F87171">-${fc(keluar)}</span></div>`;
+
   html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</div><div class="bal-box-lbl">SELISIH UANG YANG PERNAH DITARIK (masuk − keluar, bukan saldo saat ini)</div></div>`;
   html+=`<div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:12px">
     <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📊 Kinerja Trading (Terpisah dari Kas)</div>
