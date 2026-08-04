@@ -2182,23 +2182,34 @@ function renderKasRingkasan(){
   if(!el)return;
   const rows=allKasData||[];
 
-  // ══ MODEL BARU (sesuai kenyataan pemilik akun): ══
-  // Uang yang ditarik (WD) dari MT4 langsung dipakai untuk kebutuhan harian — TIDAK disimpan
-  // sebagai "kas pribadi" terpisah. Jadi satu-satunya saldo RIIL yang benar-benar dipegang
-  // sekarang adalah Saldo MT4 itu sendiri. Semua angka lain di bawah ini murni RIWAYAT/HISTORIS
-  // (buat menilai kinerja & pola keuangan), BUKAN saldo yang perlu dijumlah-jumlahkan lagi.
-  let modalPribadiMasuk=0, pengeluaranPribadi=0, profitOperasional=0, lossOperasional=0;
-  rows.forEach(r=>{
-    const km=kategoriMeta[r.kategori];
-    const arah=kasArah(r);
-    const j=parseFloat(r.jumlah||0);
-    if(km&&km.grup==='operasional'){
-      if(r.kategori==='profit_trading')profitOperasional+=j; else if(r.kategori==='loss_trading')lossOperasional+=j;
+  // ══ MODEL BARU v2 (dihitung dari INPUT HARIAN, bukan dari tag kategori manual yang rawan tidak konsisten) ══
+  // Saldo MT4 setiap hari SUDAH tercatat lewat "Input Saldo Harian" (saldo_mt4 + profit).
+  // Dari situ kita bisa hitung mundur secara matematis, per hari:
+  //   selisih = saldo hari ini − saldo kemarin
+  //   bagian yang BUKAN dari hasil profit/loss hari itu = deposit (kalau positif) atau WD (kalau negatif)
+  // Ini otomatis akurat dan SELALU balance dengan saldo MT4 saat ini — nggak tergantung
+  // konsistensi kamu waktu kasih label "gaji"/"modal"/dll di form Aliran Uang.
+  let totalModalDisetor=0, totalWD=0, totalProfitTrading=0, totalLossTrading=0;
+  const dataUrut=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  let prevSaldo=null;
+  dataUrut.forEach(r=>{
+    const saldo=parseFloat(r.saldo_mt4||0);
+    const profit=parseFloat(r.profit||0);
+    if(profit>0)totalProfitTrading+=profit; else if(profit<0)totalLossTrading+=Math.abs(profit);
+    if(prevSaldo===null){
+      // Hari pertama tercatat: saldo sebelum profit hari itu dianggap modal awal/setoran pertama
+      const modalAwal=saldo-profit;
+      if(modalAwal>0.01)totalModalDisetor+=modalAwal;
     }else{
-      if(arah==='masuk')modalPribadiMasuk+=j; else if(arah==='keluar')pengeluaranPribadi+=j;
+      const selisih=saldo-prevSaldo;
+      const implisit=selisih-profit; // bagian pergerakan saldo yang BUKAN dari hasil trading hari itu
+      if(implisit>0.01)totalModalDisetor+=implisit;
+      else if(implisit<-0.01)totalWD+=Math.abs(implisit);
     }
+    prevSaldo=saldo;
   });
-  const profitBersih=profitOperasional-lossOperasional; // performa trading all-time (termasuk yang belum di-WD)
+  const totalDanaMasuk=totalModalDisetor+totalProfitTrading;
+  const totalDanaKeluar=totalWD+totalLossTrading;
   const saldoMt4Sekarang = allSaldoData&&allSaldoData.length ? parseFloat(allSaldoData[allSaldoData.length-1].saldo_mt4||0) : 0;
 
   el.innerHTML=`
@@ -2207,16 +2218,14 @@ function renderKasRingkasan(){
       <div class="bal-box-lbl">💰 Saldo MT4 Saat Ini (uang riil yang kamu pegang sekarang)</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(modalPribadiMasuk)}</div><div class="bal-box-lbl">Modal &amp; WD Disetor/Ditarik (All-Time)</div></div>
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:14px;color:${profitBersih>=0?'#4ADE80':'#F87171'}">${profitBersih>=0?'+':''}${fc(profitBersih)}</div><div class="bal-box-lbl">📈 Profit Trading (All-Time)</div></div>
-    </div>
-    <div class="bal-box" style="background:#1E2312">
-      <div class="bal-box-val" style="font-size:14px;color:#C8A84B">${fc(pengeluaranPribadi)}</div>
-      <div class="bal-box-lbl">Sudah Ditarik &amp; Dipakai untuk Kebutuhan (All-Time)</div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:15px">+${fc(totalDanaMasuk)}</div><div class="bal-box-lbl">⬆️ Total Dana Masuk (Modal Disetor + Profit Trading, All-Time)</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:15px">-${fc(totalDanaKeluar)}</div><div class="bal-box-lbl">⬇️ Total Dana Keluar (WD + Loss Trading, All-Time)</div></div>
     </div>
     <div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">
-      <b style="color:#FFD700">Saldo MT4 Saat Ini</b> adalah satu-satunya angka SALDO riil — diambil langsung dari catatan saldo harian terakhir.<br>
-      Kotak-kotak di bawahnya bukan saldo, melainkan RIWAYAT sepanjang waktu: total modal/WD yang pernah masuk-keluar, total performa trading, dan total yang sudah dibelanjakan. Uang yang sudah ditarik &amp; dipakai dianggap wajar (habis untuk kebutuhan harian) — bukan tanda masalah, dan sengaja TIDAK dikurangkan dari Saldo MT4 supaya tidak dihitung dua kali.</div>`;
+      <b style="color:#FFD700">Saldo MT4 Saat Ini</b> = angka riil, diambil langsung dari saldo hari terakhir yang kamu input.<br>
+      <b style="color:#4ADE80">Total Dana Masuk</b> = semua modal yang pernah kamu setor ke MT4 (dana investasi, digabung jadi satu, apapun labelnya) + semua profit trading sejak awal.<br>
+      <b style="color:#F87171">Total Dana Keluar</b> = semua yang pernah ditarik dari MT4 + loss trading sejak awal.<br>
+      Angka ini dihitung otomatis dari catatan Saldo Harian (bukan dari label manual di Aliran Uang), jadi selalu balance: Dana Masuk − Dana Keluar = Saldo MT4 Saat Ini, tidak akan pernah "minus" secara nggak masuk akal.</div>`;
 
   // Deteksi kalau ada hari trading (saldo_harian) yang profit/loss-nya belum pernah tersinkron
   // DENGAN BENAR ke Arus Kas (harus ada entrinya DAN kategorinya harus terisi, bukan cuma "ada entri").
