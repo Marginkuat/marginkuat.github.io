@@ -2574,7 +2574,8 @@ function renderKasChart(){
   });
   const maxVal=Math.max(1,...data.map(d=>Math.max(d.masuk,d.keluar)));
 
-  let html='<div style="display:flex;align-items:flex-end;justify-content:space-around;height:130px;gap:6px;padding:0 2px">';
+  let html='<div id="kasChartBars" style="position:relative;touch-action:none;cursor:pointer">';
+  html+='<div style="display:flex;align-items:flex-end;justify-content:space-around;height:130px;gap:6px;padding:0 2px">';
   data.forEach(d=>{
     const hMasuk=Math.max(2,(d.masuk/maxVal)*100);
     const hKeluar=Math.max(2,(d.keluar/maxVal)*100);
@@ -2587,14 +2588,57 @@ function renderKasChart(){
       </div>`;
   });
   html+='</div>';
+  html+=`<div class="graph-tooltip" id="kasChartTooltip">
+    <div class="graph-tooltip-date" id="kasChartTooltipDate">-</div>
+    <div class="graph-tooltip-val" id="kasChartTooltipVal" style="color:#4ADE80">Masuk: ¢0.00</div>
+    <div class="graph-tooltip-val" id="kasChartTooltipVal2" style="color:#F87171;margin-top:2px">Keluar: ¢0.00</div>
+  </div>`;
+  html+='</div>';
   html+='<div style="display:flex;justify-content:space-around;margin-top:6px">';
   data.forEach(d=>{ html+=`<div style="flex:1;text-align:center;font-size:9px;color:#7A5D1F">${d.label}</div>`; });
   html+='</div>';
   html+=`<div style="display:flex;justify-content:center;gap:16px;margin-top:10px;font-size:9px;color:#8A6B26">
     <span><span style="color:#4ADE80">■</span> Masuk</span>
     <span><span style="color:#F87171">■</span> Keluar</span>
-  </div>`;
+  </div>
+  <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">👆 Tap &amp; geser buat lihat detail tiap bulan</div>`;
   el.innerHTML=html;
+
+  setupKasChartInteraction(data);
+}
+function setupKasChartInteraction(data){
+  const wrap=document.getElementById('kasChartBars');
+  const tooltip=document.getElementById('kasChartTooltip');
+  const tooltipDate=document.getElementById('kasChartTooltipDate');
+  const tooltipVal=document.getElementById('kasChartTooltipVal');
+  const tooltipVal2=document.getElementById('kasChartTooltipVal2');
+  if(!wrap)return;
+
+  function showAt(clientX){
+    const rect=wrap.getBoundingClientRect();
+    const relX=Math.min(rect.width-1, Math.max(0, clientX-rect.left));
+    let idx=Math.floor((relX/rect.width)*data.length);
+    idx=Math.max(0, Math.min(data.length-1, idx));
+    const d=data[idx];
+
+    tooltipDate.textContent=d.label;
+    tooltipVal.textContent='Masuk: +'+fc(d.masuk);
+    tooltipVal2.textContent='Keluar: -'+fc(d.keluar);
+    tooltip.style.display='block';
+
+    const segWidth=rect.width/data.length;
+    let leftPx=segWidth*idx+segWidth/2;
+    const tooltipWidth=tooltip.offsetWidth||130;
+    leftPx=Math.max(4, Math.min(rect.width-tooltipWidth-4, leftPx-tooltipWidth/2));
+    tooltip.style.left=leftPx+'px';
+  }
+  function hideTooltip(){ tooltip.style.display='none'; }
+
+  let dragging=false;
+  wrap.addEventListener('pointerdown',e=>{dragging=true;showAt(e.clientX);});
+  wrap.addEventListener('pointermove',e=>{if(dragging)showAt(e.clientX);});
+  window.addEventListener('pointerup',()=>{dragging=false;});
+  wrap.addEventListener('pointerleave',()=>{if(!dragging)hideTooltip();});
 }
 
 // ══ RIWAYAT PENARIKAN (WD) — VISUAL ══
@@ -4099,19 +4143,82 @@ function loadJournalVisual(){
     });
 
     wrap.innerHTML=`
-      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:160px;display:block;background:#1E2312;border-radius:10px">
+      <svg id="journalSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:160px;display:block;background:#1E2312;border-radius:10px;touch-action:none;cursor:pointer">
         <line x1="${padX}" y1="${zeroY}" x2="${W-padX}" y2="${zeroY}" stroke="#2A2E1F" stroke-width="1"/>
         ${dots}
+        <line id="journalIndicatorLine" x1="0" y1="0" x2="0" y2="${H}" class="graph-dashed" style="display:none"/>
+        <circle id="journalIndicatorRing" r="9" fill="none" stroke="#D4AF37" stroke-width="1.5" style="display:none"/>
       </svg>
       <div style="display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:9px;color:#8A6B26">
         <span><span style="color:#4ADE80">●</span> Profit</span>
         <span><span style="color:#F87171">●</span> Loss</span>
         <span>Ukuran = jumlah signal</span>
+      </div>
+      <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">👆 Tap &amp; geser di grafik buat lihat detail tiap hari</div>
+      <div class="graph-tooltip" id="journalTooltip">
+        <div class="graph-tooltip-date" id="journalTooltipDate">-</div>
+        <div class="graph-tooltip-val" id="journalTooltipVal">¢0.00</div>
+        <div style="font-size:9px;color:#7A5D1F;margin-top:2px" id="journalTooltipSignal"></div>
       </div>`;
+
+    setupJournalInteraction(rows, xFor, yFor, W);
   }catch(e){
     console.error(e);
     wrap.innerHTML='<div style="text-align:center;padding:14px;color:#F87171;font-size:12px">Gagal memuat journal visual.</div>';
   }
+}
+function setupJournalInteraction(rows, xFor, yFor, W){
+  const svg=document.getElementById('journalSvg');
+  const wrap=document.getElementById('journalVisualWrap');
+  const tooltip=document.getElementById('journalTooltip');
+  const tooltipDate=document.getElementById('journalTooltipDate');
+  const tooltipVal=document.getElementById('journalTooltipVal');
+  const tooltipSignal=document.getElementById('journalTooltipSignal');
+  const line=document.getElementById('journalIndicatorLine');
+  const ring=document.getElementById('journalIndicatorRing');
+  if(!svg||!wrap)return;
+
+  function showAt(clientX){
+    const rect=svg.getBoundingClientRect();
+    const relX=clientX-rect.left;
+    const svgX=(relX/rect.width)*W;
+    let idx=0, bestDist=Infinity;
+    rows.forEach((r,i)=>{
+      const d=Math.abs(xFor(i)-svgX);
+      if(d<bestDist){bestDist=d;idx=i;}
+    });
+    const r=rows[idx];
+    const p=parseFloat(r.profit||0);
+    const sig=parseInt(r.jumlah_signal||0)||0;
+    const px=xFor(idx), py=yFor(p);
+
+    line.setAttribute('x1',px);line.setAttribute('x2',px);line.style.display='block';
+    ring.setAttribute('cx',px);ring.setAttribute('cy',py);ring.style.display='block';
+
+    const pColor=p>0?'#4ADE80':(p<0?'#F87171':'#8A6B26');
+    tooltipDate.textContent=fd(r.tanggal);
+    tooltipVal.textContent=(p>=0?'+':'')+fc(p);
+    tooltipVal.style.color=pColor;
+    tooltipSignal.textContent=sig+' signal hari ini';
+
+    const rectWrap=wrap.getBoundingClientRect();
+    const pxPercent=px/W;
+    let leftPx=pxPercent*rectWrap.width;
+    tooltip.style.display='block';
+    const tooltipWidth=tooltip.offsetWidth||110;
+    leftPx=Math.max(4, Math.min(rectWrap.width-tooltipWidth-4, leftPx-tooltipWidth/2));
+    tooltip.style.left=leftPx+'px';
+  }
+  function hideTooltip(){
+    tooltip.style.display='none';
+    line.style.display='none';
+    ring.style.display='none';
+  }
+  let dragging=false;
+  svg.addEventListener('pointerdown',e=>{dragging=true;showAt(e.clientX);});
+  svg.addEventListener('pointermove',e=>{if(dragging)showAt(e.clientX);});
+  window.addEventListener('pointerup',()=>{dragging=false;});
+  svg.addEventListener('pointerleave',()=>{if(!dragging)hideTooltip();});
 }
 
 // ══ PERFORMANCE VS BENCHMARK ══
@@ -4174,24 +4281,97 @@ async function loadBenchmark(){
           <div class="bal-box-lbl">${assetLabel} (Buy &amp; Hold)</div>
         </div>
       </div>
-      <div style="background:#1E2312;border-radius:10px;padding:8px 4px">
-        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:130px;display:block">
+      <div id="benchChartWrap" style="background:#1E2312;border-radius:10px;padding:8px 4px;position:relative;touch-action:none;cursor:pointer">
+        <svg id="benchSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:130px;display:block">
           <line x1="${padX}" y1="${zeroY}" x2="${W-padX}" y2="${zeroY}" stroke="#2A2E1F" stroke-width="1"/>
           <path d="${pathFor(benchCurve)}" fill="none" stroke="#8A6B26" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
           <path d="${pathFor(yourCurve)}" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+          <line id="benchIndicatorLine" x1="0" y1="0" x2="0" y2="${H}" class="graph-dashed" style="display:none"/>
+          <circle id="benchDotYou" r="3.5" fill="#4ADE80" stroke="#0D0F0A" stroke-width="1" style="display:none"/>
+          <circle id="benchDotBench" r="3.5" fill="#8A6B26" stroke="#0D0F0A" stroke-width="1" style="display:none"/>
         </svg>
+        <div class="graph-tooltip" id="benchTooltip">
+          <div class="graph-tooltip-date" id="benchTooltipDate">-</div>
+          <div class="graph-tooltip-val" id="benchTooltipYou" style="color:#4ADE80">Anda: +0.0%</div>
+          <div class="graph-tooltip-val" id="benchTooltipBench" style="color:#8A6B26;margin-top:2px">${assetLabel}: +0.0%</div>
+        </div>
       </div>
       <div style="display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:9px;color:#8A6B26">
         <span><span style="color:#4ADE80">●</span> Performa Anda</span>
         <span><span style="color:#8A6B26">●</span> ${assetLabel}</span>
       </div>
+      <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">👆 Tap &amp; geser di grafik buat lihat detail</div>
       <div style="text-align:center;margin-top:10px;font-size:11px;font-weight:700;color:${youWin?'#4ADE80':'#F87171'}">
         ${youWin?'🎉 Anda mengungguli '+assetLabel:'⚠️ '+assetLabel+' unggul dari performa Anda'}
       </div>`;
+
+    setupBenchmarkInteraction(yourCurve, benchCurve, allSaldoData, assetLabel, W, padX);
   }catch(e){
     console.error(e);
     wrap.innerHTML='<div style="padding:14px;text-align:center;color:#F87171;font-size:12px">Gagal memuat data harga benchmark. Cek koneksi internet lalu coba lagi.</div>';
   }
+}
+function setupBenchmarkInteraction(yourCurve, benchCurve, saldoRows, assetLabel, W, padX){
+  const svg=document.getElementById('benchSvg');
+  const wrap=document.getElementById('benchChartWrap');
+  const tooltip=document.getElementById('benchTooltip');
+  const tooltipDate=document.getElementById('benchTooltipDate');
+  const tooltipYou=document.getElementById('benchTooltipYou');
+  const tooltipBench=document.getElementById('benchTooltipBench');
+  const line=document.getElementById('benchIndicatorLine');
+  const dotYou=document.getElementById('benchDotYou');
+  const dotBench=document.getElementById('benchDotBench');
+  if(!svg||!wrap)return;
+
+  function showAt(clientX){
+    const rect=svg.getBoundingClientRect();
+    const relX=clientX-rect.left;
+    const svgX=Math.max(padX, Math.min(W-padX, (relX/rect.width)*W));
+    const prop=Math.max(0, Math.min(1, (svgX-padX)/(W-padX*2)));
+
+    const idxYou=Math.round(prop*(yourCurve.length-1));
+    const py=yourCurve[idxYou];
+    const dateInfo=saldoRows[idxYou]?fd(saldoRows[idxYou].tanggal):'-';
+
+    const idxBenchFloat=prop*(benchCurve.length-1);
+    const idxLow=Math.floor(idxBenchFloat), idxHigh=Math.min(benchCurve.length-1, idxLow+1);
+    const frac=idxBenchFloat-idxLow;
+    const pb=benchCurve[idxLow]*(1-frac)+benchCurve[idxHigh]*frac;
+
+    line.setAttribute('x1',svgX);line.setAttribute('x2',svgX);line.style.display='block';
+
+    const yFor=v=>{
+      const allVals=[...yourCurve,...benchCurve];
+      const minV=Math.min(0,...allVals), maxV=Math.max(0,...allVals);
+      const range=(maxV-minV)||1;
+      return 130-10-((v-minV)/range)*(130-10*2);
+    };
+    dotYou.setAttribute('cx',svgX);dotYou.setAttribute('cy',yFor(py));dotYou.style.display='block';
+    dotBench.setAttribute('cx',svgX);dotBench.setAttribute('cy',yFor(pb));dotBench.style.display='block';
+
+    tooltipDate.textContent=dateInfo;
+    tooltipYou.textContent='Anda: '+(py>=0?'+':'')+py.toFixed(1)+'%';
+    tooltipBench.textContent=assetLabel+': '+(pb>=0?'+':'')+pb.toFixed(1)+'%';
+    tooltip.style.display='block';
+
+    const rectWrap=wrap.getBoundingClientRect();
+    const pxPercent=svgX/W;
+    let leftPx=pxPercent*rectWrap.width;
+    const tooltipWidth=tooltip.offsetWidth||130;
+    leftPx=Math.max(4, Math.min(rectWrap.width-tooltipWidth-4, leftPx-tooltipWidth/2));
+    tooltip.style.left=leftPx+'px';
+  }
+  function hideTooltip(){
+    tooltip.style.display='none';
+    line.style.display='none';
+    dotYou.style.display='none';
+    dotBench.style.display='none';
+  }
+  let dragging=false;
+  svg.addEventListener('pointerdown',e=>{dragging=true;showAt(e.clientX);});
+  svg.addEventListener('pointermove',e=>{if(dragging)showAt(e.clientX);});
+  window.addEventListener('pointerup',()=>{dragging=false;});
+  svg.addEventListener('pointerleave',()=>{if(!dragging)hideTooltip();});
 }
 
 // ══ PSIKOLOGI TRADING (MOOD VS PROFIT) ══
