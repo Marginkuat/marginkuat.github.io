@@ -224,7 +224,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <div class="search-wrap" id="searchWrap">
   <div class="search-box">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A6B26" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" class="search-input" id="searchInput" placeholder="Cari: Saldo MT4, Score, RR, Peluang Bangkrut..." autocomplete="off" oninput="onSearchInput()" onfocus="onSearchInput()" onkeydown="onSearchKeydown(event)">
+    <input type="text" class="search-input" id="searchInput" placeholder="Tap untuk lihat semua menu, atau ketik cari..." autocomplete="off" oninput="onSearchInput()" onfocus="onSearchInput()" onkeydown="onSearchKeydown(event)">
     <button class="search-clear" id="searchClearBtn" onclick="clearSearch()">✕</button>
   </div>
   <div class="search-results" id="searchResults"></div>
@@ -1411,10 +1411,17 @@ function onSearchInput(){
   clearBtn.style.display=q?'block':'none';
   const resultsEl=document.getElementById('searchResults');
   searchActiveIdx=-1;
+
+  // Kalau belum ketik apa-apa (baru tap kotaknya), langsung tampilkan SEMUA menu
+  // biar pengunjung tinggal scroll & klik langsung — tidak wajib mengetik dulu.
   if(!q){
-    resultsEl.classList.remove('show');
-    resultsEl.innerHTML='';
-    searchCurrentResults=[];
+    searchCurrentResults=SEARCH_MENU;
+    resultsEl.innerHTML='<div class="search-hint">📋 Semua Menu — Tap untuk Langsung ke Bagian</div>'+
+      SEARCH_MENU.map((item,i)=>`<div class="search-result-item" data-idx="${i}" onclick="goToSearchResult('${item.id}')">
+        <div class="search-result-icon">${item.icon}</div>
+        <div><div class="search-result-label">${item.label}</div><div class="search-result-desc">${item.desc}</div></div>
+      </div>`).join('');
+    resultsEl.classList.add('show');
     return;
   }
   const terms=q.split(/\s+/).filter(Boolean);
