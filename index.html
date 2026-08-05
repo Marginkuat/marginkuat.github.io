@@ -1141,7 +1141,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="ap-title">💸 Input Aliran Uang</div>
 
     <label class="lbl">Dari (sumber uang)</label>
-    <input class="inp" id="kasDari" placeholder="Contoh: Investasi/Gaji / Profit MT4">
+    <input class="inp" id="kasDari" placeholder="Contoh: Investasi / Profit MT4">
 
     <label class="lbl">Ke (tujuan uang)</label>
     <input class="inp" id="kasKe" placeholder="Contoh: Saldo MT4 / Obat / Listrik">
@@ -1149,8 +1149,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <label class="lbl">Kategori</label>
     <select class="inp" id="kasKategori">
       <optgroup label="⬆️ UANG MASUK">
-        <option value="gaji">💰 Investasi (modal dari luar MT4, termasuk Gaji)</option>
-        <option value="wd_trading">📈 Profit dari MT4 (Harian)</option>
+        <option value="gaji">💰 Investasi</option>
+        <option value="wd_trading">📈 Profit MT4</option>
       </optgroup>
       <optgroup label="⬇️ UANG KELUAR (diambil dari saldo MT4)">
         <option value="kebutuhan_pokok">🔴 Belanja / Kebutuhan Pokok</option>
@@ -1935,9 +1935,9 @@ const kategoriMeta={
   swap:{label:'Swap', color:'#A78BFA', dot:'🔄', grup:'operasional'},
   // 🏦 PRIBADI (Kas) — aliran uang tunai/dompet pribadi di luar akun trading
   // "gaji" = Investasi: modal dari luar MT4 (gaji, uang pribadi, dll) yang dianggap sebagai investasi ke trading.
-  gaji:{label:'Investasi (modal dari luar MT4)', color:'#60A5FA', dot:'💰', grup:'pribadi'},
-  // "wd_trading" = Profit dari MT4 yang masuk sebagai uang (harian), bukan sekadar catatan performa.
-  wd_trading:{label:'Profit dari MT4 (Harian)', color:'#4ADE80', dot:'📈', grup:'pribadi'},
+  gaji:{label:'Investasi', color:'#60A5FA', dot:'💰', grup:'pribadi'},
+  // "wd_trading" = Profit dari MT4 yang masuk sebagai uang, bukan sekadar catatan performa.
+  wd_trading:{label:'Profit MT4', color:'#4ADE80', dot:'📈', grup:'pribadi'},
   // Kategori legacy di bawah ini TIDAK lagi tersedia di form, hanya dipertahankan supaya data lama tetap terbaca benar.
   modal_mt4:{label:'Setoran Modal ke MT4 (legacy)', color:'#60A5FA', dot:'💰', grup:'modal'},
   pendapatan:{label:'Pendapatan Lain (legacy)', color:'#4ADE80', dot:'🟢', grup:'pribadi'},
@@ -2393,12 +2393,16 @@ function renderLapKeu(){
   else renderArusKasFormal(wrap);
 }
 
-// ── NERACA (BALANCE SHEET) ──
+// ── NERACA (BALANCE SHEET) — format gaya laporan keuangan perusahaan (Aset Lancar/Tidak Lancar, Kewajiban Lancar/Jangka Panjang) ──
 function getAsetLain(){
-  try{ return JSON.parse(localStorage.getItem('mk_aset_lain')||'[]'); }catch(e){ return []; }
+  try{
+    return JSON.parse(localStorage.getItem('mk_aset_lain')||'[]').map(a=>({...a, tipe: a.tipe==='tidak_lancar'?'tidak_lancar':'lancar'}));
+  }catch(e){ return []; }
 }
 function getKewajiban(){
-  try{ return JSON.parse(localStorage.getItem('mk_kewajiban')||'[]'); }catch(e){ return []; }
+  try{
+    return JSON.parse(localStorage.getItem('mk_kewajiban')||'[]').map(a=>({...a, tipe: a.tipe==='jangka_panjang'?'jangka_panjang':'lancar'}));
+  }catch(e){ return []; }
 }
 function tambahAsetLain(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
@@ -2407,8 +2411,9 @@ function tambahAsetLain(){
   const jumlahStr=prompt('Nilai aset (dalam Rupiah, contoh: 5000000):');
   const jumlah=parseFloat(jumlahStr);
   if(isNaN(jumlah)||jumlah<0){toast('❌ Nilai tidak valid');return;}
+  const lancar=confirm('Apakah ini ASET LANCAR? (mudah dicairkan < 1 tahun — misal: kas, tabungan, piutang)\n\nOK = Aset Lancar\nCancel = Aset Tidak Lancar (misal: motor, tanah, properti, alat)');
   const list=getAsetLain();
-  list.push({nama, jumlah});
+  list.push({nama, jumlah, tipe: lancar?'lancar':'tidak_lancar'});
   localStorage.setItem('mk_aset_lain', JSON.stringify(list));
   toast('✅ Aset ditambahkan');
   renderLapKeu();
@@ -2427,8 +2432,9 @@ function tambahKewajiban(){
   const jumlahStr=prompt('Nilai kewajiban (dalam Rupiah, contoh: 2000000):');
   const jumlah=parseFloat(jumlahStr);
   if(isNaN(jumlah)||jumlah<0){toast('❌ Nilai tidak valid');return;}
+  const lancar=confirm('Apakah ini KEWAJIBAN LANCAR? (jatuh tempo < 1 tahun — misal: utang teman, tagihan bulan ini)\n\nOK = Kewajiban Lancar\nCancel = Kewajiban Jangka Panjang (misal: cicilan >1 tahun, KPR)');
   const list=getKewajiban();
-  list.push({nama, jumlah});
+  list.push({nama, jumlah, tipe: lancar?'lancar':'jangka_panjang'});
   localStorage.setItem('mk_kewajiban', JSON.stringify(list));
   toast('✅ Kewajiban ditambahkan');
   renderLapKeu();
@@ -2440,39 +2446,90 @@ function hapusKewajiban(idx){
   localStorage.setItem('mk_kewajiban', JSON.stringify(list));
   renderLapKeu();
 }
-function renderNeraca(wrap){
+// Hitung ringkasan Neraca (dipakai juga di Laba Rugi untuk ROE)
+function hitungNeraca(){
   const saldoMt4Cent = allSaldoData&&allSaldoData.length ? parseFloat(allSaldoData[allSaldoData.length-1].saldo_mt4||0) : 0;
   const saldoMt4Rp = Math.round(saldoMt4Cent/100*K);
-  const asetLain=getAsetLain();
-  const kewajiban=getKewajiban();
-  const totalAsetLain=asetLain.reduce((s,a)=>s+a.jumlah,0);
-  const totalAset=saldoMt4Rp+totalAsetLain;
-  const totalKewajiban=kewajiban.reduce((s,a)=>s+a.jumlah,0);
+  const asetLain=getAsetLain().map((a,i)=>({...a,i}));
+  const kewajiban=getKewajiban().map((a,i)=>({...a,i}));
+  const asetLancarList=asetLain.filter(a=>a.tipe==='lancar');
+  const asetTidakLancarList=asetLain.filter(a=>a.tipe==='tidak_lancar');
+  const totalAsetLancar=saldoMt4Rp+asetLancarList.reduce((s,a)=>s+a.jumlah,0);
+  const totalAsetTidakLancar=asetTidakLancarList.reduce((s,a)=>s+a.jumlah,0);
+  const totalAset=totalAsetLancar+totalAsetTidakLancar;
+  const kewajibanLancarList=kewajiban.filter(a=>a.tipe==='lancar');
+  const kewajibanPanjangList=kewajiban.filter(a=>a.tipe==='jangka_panjang');
+  const totalKewajibanLancar=kewajibanLancarList.reduce((s,a)=>s+a.jumlah,0);
+  const totalKewajibanPanjang=kewajibanPanjangList.reduce((s,a)=>s+a.jumlah,0);
+  const totalKewajiban=totalKewajibanLancar+totalKewajibanPanjang;
   const ekuitas=totalAset-totalKewajiban;
+  return {saldoMt4Rp, asetLancarList, asetTidakLancarList, totalAsetLancar, totalAsetTidakLancar, totalAset,
+    kewajibanLancarList, kewajibanPanjangList, totalKewajibanLancar, totalKewajibanPanjang, totalKewajiban, ekuitas};
+}
+function renderNeraca(wrap){
+  const n=hitungNeraca();
   const rp=v=>'Rp '+Math.round(v).toLocaleString('id-ID');
+  const currentRatio = n.totalKewajibanLancar>0 ? (n.totalAsetLancar/n.totalKewajibanLancar) : null;
+  const der = n.ekuitas!==0 ? (n.totalKewajiban/n.ekuitas) : null;
+  const dar = n.totalAset>0 ? (n.totalKewajiban/n.totalAset) : null;
 
-  let html=`<div style="font-size:9px;color:#5C4818;margin-bottom:12px">Per ${fd(new Date().toISOString().slice(0,10))} · Saldo MT4 otomatis, aset lain &amp; kewajiban diisi manual oleh Admin</div>`;
+  let html=`<div style="font-size:9px;color:#5C4818;margin-bottom:12px">📄 LAPORAN POSISI KEUANGAN (NERACA) · Per ${fd(new Date().toISOString().slice(0,10))} — format gaya perusahaan (Aset Lancar/Tidak Lancar, Liabilitas Lancar/Jangka Panjang). Saldo MT4 otomatis, sisanya diisi manual Admin.</div>`;
 
-  html+=`<div style="font-size:11px;font-weight:700;color:#4ADE80;margin-bottom:8px">ASET (HARTA)</div>`;
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Saldo MT4 (Trading)</span><span style="color:#D4AF37">${rp(saldoMt4Rp)}</span></div>`;
-  asetLain.forEach((a,i)=>{
-    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#D4AF37">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusAsetLain(${i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
+  html+=`<div style="font-size:12px;font-weight:800;color:#D4AF37;margin-bottom:10px;letter-spacing:.5px">ASET (HARTA)</div>`;
+
+  html+=`<div style="font-size:10px;font-weight:700;color:#4ADE80;margin:6px 0 6px;text-transform:uppercase;letter-spacing:.5px">Aset Lancar</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">Saldo MT4 (Trading)</span><span style="color:#D4AF37">${rp(n.saldoMt4Rp)}</span></div>`;
+  n.asetLancarList.forEach(a=>{
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#D4AF37">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusAsetLain(${a.i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
   });
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#4ADE80">Total Aset</span><span style="color:#4ADE80">${rp(totalAset)}</span></div>`;
-  if(isAdmin) html+=`<div onclick="tambahAsetLain()" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin:8px 0 18px">+ Tambah Aset</div>`;
-  else html+='<div style="margin-bottom:18px"></div>';
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Aset Lancar</span><span style="color:#D4AF37">${rp(n.totalAsetLancar)}</span></div>`;
 
-  html+=`<div style="font-size:11px;font-weight:700;color:#F87171;margin-bottom:8px">KEWAJIBAN (HUTANG)</div>`;
-  if(!kewajiban.length){
-    html+=`<div style="font-size:11px;color:#7A5D1F;padding:4px 0">Tidak ada kewajiban tercatat.</div>`;
+  html+=`<div style="font-size:10px;font-weight:700;color:#60A5FA;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px">Aset Tidak Lancar</div>`;
+  if(!n.asetTidakLancarList.length){
+    html+=`<div style="font-size:11px;color:#7A5D1F;padding:4px 0 4px 6px">Tidak ada aset tidak lancar tercatat.</div>`;
   }
-  kewajiban.forEach((a,i)=>{
-    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#F87171">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusKewajiban(${i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
+  n.asetTidakLancarList.forEach(a=>{
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#D4AF37">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusAsetLain(${a.i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
   });
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#F87171">Total Kewajiban</span><span style="color:#F87171">${rp(totalKewajiban)}</span></div>`;
-  if(isAdmin) html+=`<div onclick="tambahKewajiban()" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin:8px 0 4px">+ Tambah Kewajiban</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Aset Tidak Lancar</span><span style="color:#D4AF37">${rp(n.totalAsetTidakLancar)}</span></div>`;
 
-  html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${ekuitas>=0?'#4ADE80':'#F87171'}">${rp(ekuitas)}</div><div class="bal-box-lbl">EKUITAS (Kekayaan Bersih) = Aset − Kewajiban</div></div>`;
+  if(isAdmin) html+=`<div onclick="tambahAsetLain()" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin:10px 0 6px">+ Tambah Aset</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-top:1.5px solid #4ADE80;margin-top:6px;font-weight:800"><span style="color:#4ADE80">TOTAL ASET</span><span style="color:#4ADE80">${rp(n.totalAset)}</span></div>`;
+
+  html+=`<div style="height:1px;background:#2A2E1F;margin:18px 0"></div>`;
+
+  html+=`<div style="font-size:12px;font-weight:800;color:#D4AF37;margin-bottom:10px;letter-spacing:.5px">LIABILITAS (KEWAJIBAN / UTANG)</div>`;
+
+  html+=`<div style="font-size:10px;font-weight:700;color:#F87171;margin:6px 0 6px;text-transform:uppercase;letter-spacing:.5px">Kewajiban Lancar (&lt; 1 tahun)</div>`;
+  if(!n.kewajibanLancarList.length){
+    html+=`<div style="font-size:11px;color:#7A5D1F;padding:4px 0 4px 6px">Tidak ada kewajiban lancar tercatat.</div>`;
+  }
+  n.kewajibanLancarList.forEach(a=>{
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#F87171">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusKewajiban(${a.i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
+  });
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Kewajiban Lancar</span><span style="color:#F87171">${rp(n.totalKewajibanLancar)}</span></div>`;
+
+  html+=`<div style="font-size:10px;font-weight:700;color:#FB923C;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px">Kewajiban Jangka Panjang (&gt; 1 tahun)</div>`;
+  if(!n.kewajibanPanjangList.length){
+    html+=`<div style="font-size:11px;color:#7A5D1F;padding:4px 0 4px 6px">Tidak ada kewajiban jangka panjang tercatat.</div>`;
+  }
+  n.kewajibanPanjangList.forEach(a=>{
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#F87171">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusKewajiban(${a.i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
+  });
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Kewajiban Jangka Panjang</span><span style="color:#F87171">${rp(n.totalKewajibanPanjang)}</span></div>`;
+
+  if(isAdmin) html+=`<div onclick="tambahKewajiban()" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin:10px 0 6px">+ Tambah Kewajiban</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-top:1.5px solid #F87171;margin-top:6px;font-weight:800"><span style="color:#F87171">TOTAL LIABILITAS</span><span style="color:#F87171">${rp(n.totalKewajiban)}</span></div>`;
+
+  html+=`<div class="bal-box" style="background:#1E2312;margin-top:16px"><div class="bal-box-val" style="font-size:20px;color:${n.ekuitas>=0?'#4ADE80':'#F87171'}">${rp(n.ekuitas)}</div><div class="bal-box-lbl">EKUITAS (Kekayaan Bersih) = Total Aset − Total Liabilitas</div></div>`;
+
+  html+=`<div style="border-top:1px solid #2A2E1F;margin-top:18px;padding-top:12px">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📊 Rasio Keuangan (ala Laporan Perusahaan)</div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Current Ratio (Aset Lancar ÷ Kewajiban Lancar)</span><span style="color:#D4AF37">${currentRatio!==null?currentRatio.toFixed(2)+'x':'—'}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Debt to Equity Ratio (DER)</span><span style="color:#D4AF37">${der!==null?der.toFixed(2)+'x':'—'}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Debt to Asset Ratio (DAR)</span><span style="color:#D4AF37">${dar!==null?(dar*100).toFixed(1)+'%':'—'}</span></div>
+    <div style="font-size:9px;color:#5C4818;margin-top:6px">Current Ratio tinggi = likuiditas bagus (aman bayar utang jangka pendek). DER/DAR tinggi = beban utang besar dibanding modal/aset sendiri.</div>
+  </div>`;
 
   wrap.innerHTML=html;
 }
@@ -2496,6 +2553,10 @@ function renderLabaRugi(wrap){
 
   const totalPendapatan=pendapatanLainCent+profitTradingCent;
   const labaRugi=totalPendapatan-bebanCent;
+  const marginLaba = totalPendapatan!==0 ? (labaRugi/totalPendapatan*100) : null;
+  const labaRugiRp = Math.round(labaRugi/100*K);
+  const ekuitasSaatIni = hitungNeraca().ekuitas;
+  const roe = ekuitasSaatIni>0 ? (labaRugiRp/ekuitasSaatIni*100) : null;
 
   let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
     <button class="cal-nav-btn" onclick="labaRugiPrev()">‹</button>
@@ -2536,6 +2597,14 @@ function renderLabaRugi(wrap){
   html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#F87171">Total Beban</span><span style="color:#F87171">${fc(bebanCent)}</span></div>`;
 
   html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${labaRugi>=0?'#4ADE80':'#F87171'}">${labaRugi>=0?'+':''}${fc(labaRugi)}</div><div class="bal-box-lbl">${labaRugi>=0?'LABA':'RUGI'} BERSIH = Pendapatan − Beban</div></div>`;
+
+  html+=`<div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:12px">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📊 Rasio Kinerja (ala Laporan Perusahaan)</div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Margin Laba Bersih (Laba Bersih ÷ Pendapatan)</span><span style="color:${marginLaba!==null&&marginLaba>=0?'#4ADE80':'#F87171'}">${marginLaba!==null?marginLaba.toFixed(1)+'%':'—'}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">ROE Bulanan (Laba Bersih ÷ Ekuitas Saat Ini)</span><span style="color:${roe!==null&&roe>=0?'#4ADE80':'#F87171'}">${roe!==null?roe.toFixed(2)+'%':'—'}</span></div>
+    <div style="font-size:9px;color:#5C4818;margin-top:6px">Margin Laba Bersih tinggi = tiap Rupiah pendapatan menghasilkan laba lebih besar. ROE dihitung dari Ekuitas terkini di tab Neraca (bukan rata-rata bulan berjalan), jadi hanya perkiraan kasar.</div>
+  </div>`;
+
   if(!hasKategoriCol){
     html+='<div style="font-size:9px;color:#F87171;margin-top:10px">⚠️ Kolom kategori belum ada di Supabase, jadi Pendapatan &amp; Beban belum bisa dipilah otomatis.</div>';
   }
