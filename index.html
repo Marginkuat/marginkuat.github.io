@@ -178,6 +178,27 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 .divider{height:1px;background:#1E2312;margin:20px 16px 0}
 .footer{padding:20px 16px;text-align:center;font-size:10px;color:#4A3A14;line-height:1.8}
 #riwayatSaldoWrap{max-height:300px;overflow-y:auto}
+
+/* SEARCH MENU */
+.search-wrap{position:relative;padding:0 16px;margin-top:14px}
+.search-box{display:flex;align-items:center;gap:8px;background:#161A0F;border:1.5px solid #2A2E1F;border-radius:12px;padding:11px 14px;transition:border-color .15s}
+.search-box:focus-within{border-color:#B8860B}
+.search-box svg{flex-shrink:0;opacity:.6}
+.search-input{flex:1;background:transparent;border:none;outline:none;color:#D4AF37;font-family:'Inter',sans-serif;font-size:13px}
+.search-input::placeholder{color:#7A5D1F}
+.search-clear{background:transparent;border:none;color:#7A5D1F;font-size:16px;cursor:pointer;padding:0 2px;line-height:1;display:none}
+.search-results{position:absolute;left:16px;right:16px;top:calc(100% + 6px);background:#161A0F;border:1.5px solid #2A2E1F;border-radius:12px;max-height:min(60vh,420px);overflow-y:auto;z-index:150;display:none;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.search-results.show{display:block}
+.search-result-item{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;border-bottom:1px solid #1E2312}
+.search-result-item:last-child{border-bottom:none}
+.search-result-item:hover,.search-result-item.active{background:#1E2312}
+.search-result-icon{font-size:16px;flex-shrink:0}
+.search-result-label{font-size:12.5px;color:#D4AF37;font-weight:600}
+.search-result-desc{font-size:10px;color:#8A6B26;margin-top:1px}
+.search-empty{padding:16px 14px;text-align:center;font-size:11px;color:#7A5D1F}
+.search-hint{padding:8px 14px 4px;font-size:9px;color:#5C4818;text-transform:uppercase;letter-spacing:.6px}
+@keyframes secFlash{0%{box-shadow:0 0 0 2px #D4AF37}100%{box-shadow:0 0 0 2px transparent}}
+.sec-flash{animation:secFlash 1.4s ease-out;border-radius:16px}
 </style>
 </head>
 <body>
@@ -199,6 +220,16 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- SEARCH MENU: cari & lompat langsung ke bagian manapun di situs -->
+<div class="search-wrap" id="searchWrap">
+  <div class="search-box">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A6B26" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" class="search-input" id="searchInput" placeholder="Cari: Saldo MT4, Score, RR, Peluang Bangkrut..." autocomplete="off" oninput="onSearchInput()" onfocus="onSearchInput()" onkeydown="onSearchKeydown(event)">
+    <button class="search-clear" id="searchClearBtn" onclick="clearSearch()">✕</button>
+  </div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
 <div class="section" style="padding-top:14px">
   <a href="https://www.tiktok.com/@datuk_eurusd" target="_blank" rel="noopener" style="display:block;text-decoration:none;background:linear-gradient(135deg,#1E2312,#161A0F);border:1.5px solid #B8860B;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px">
     <div>
@@ -210,7 +241,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- BALANCE HERO -->
-<div class="balance-card">
+<div class="balance-card" id="secSaldo">
   <div class="bal-label" style="display:flex;align-items:center;justify-content:center;gap:8px">
     <span>Saldo MT4 Saat Ini</span>
     <span style="background:#0ECB81;color:#0D0F0A;font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;letter-spacing:.5px">FBS</span>
@@ -236,7 +267,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- SCORE DASHBOARD (sepaket langsung di bawah Saldo MT4) -->
-<div class="section">
+<div class="section" id="secScore">
   <div class="sec-title">🏆 Score Dashboard</div>
   <div class="graph-card">
     <div id="scoreDashboard" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
@@ -244,7 +275,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- STATISTIK PER PAIR -->
-<div class="section">
+<div class="section" id="secStatPair">
   <div class="sec-title">📊 Statistik Per Pair</div>
   <div class="graph-card">
     <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px" id="pairTabs">
@@ -258,7 +289,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- RISK REWARD ANALYSIS -->
-<div class="section">
+<div class="section" id="secRR">
   <div class="sec-title">⚖️ Risk Reward Analysis</div>
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Dihitung dari rata-rata profit/loss harian (data tercatat per hari, bukan per trade individual)</div>
@@ -267,7 +298,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- CONSISTENCY SCORE & SHARPE RATIO -->
-<div class="section">
+<div class="section" id="secConsistency">
   <div class="sec-title">📐 Consistency Score &amp; Sharpe Ratio</div>
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Dihitung dari standar deviasi profit harian — semakin stabil profitnya, semakin tinggi skornya</div>
@@ -276,7 +307,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- RISK OF RUIN -->
-<div class="section">
+<div class="section" id="secRiskRuin">
   <div class="sec-title">🚨 Risk of Ruin (Peluang Bangkrut)</div>
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Estimasi peluang akun kena Margin Call, dihitung dari win rate & risk/reward historis kamu. Angka ini teoretis — bukan prediksi pasti.</div>
@@ -285,7 +316,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- PSIKOLOGI TRADING (MOOD TRACKER) -->
-<div class="section">
+<div class="section" id="secMood">
   <div class="sec-title">🧠 Psikologi Trading (Mood vs Profit)</div>
   <div class="graph-card">
     <div id="moodStats" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
@@ -293,7 +324,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- PERFORMANCE VS BENCHMARK -->
-<div class="section">
+<div class="section" id="secBenchmark">
   <div class="sec-title">📈 Performance vs Benchmark</div>
   <div class="graph-card">
     <div style="display:flex;gap:6px;margin-bottom:14px" id="benchTabs">
@@ -308,7 +339,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- REKOMENDASI MODAL MINIMAL -->
-<div class="section">
+<div class="section" id="secModalMinimal">
   <div class="sec-title">💰 Rekomendasi Modal Minimal</div>
   <div class="graph-card">
     <div id="modalMinimal" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
@@ -326,7 +357,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- KALKULATOR RISIKO PER PAIR (UMUM) -->
-<div class="section">
+<div class="section" id="secKalkulator">
   <div class="sec-title">🧮 Kalkulator Risiko per Pair</div>
   <div class="graph-card">
     <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.5">Isi bebas — tentukan sendiri berapa pips yang dipertaruhkan (SL), target (TP), dan lot. Hasil $ dan VP terhitung otomatis.</div>
@@ -854,7 +885,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <!-- GRAFIK BULANAN -->
-<div class="section">
+<div class="section" id="secGrafikBulanan">
   <div class="sec-title">📈 Grafik Kinerja Bulanan</div>
   <div class="graph-card">
     <div class="graph-nav">
@@ -882,7 +913,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- MONTHLY COMPARISON -->
-<div class="section">
+<div class="section" id="secPerbandingan">
   <div class="sec-title">📊 Perbandingan Bulanan</div>
   <div class="graph-card">
     <div id="monthlyComparison" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
@@ -890,7 +921,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- KALENDER -->
-<div class="section">
+<div class="section" id="secKalender">
   <div class="sec-title">📅 Kalender Trading</div>
   <div>
     <div class="cal-nav">
@@ -914,7 +945,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- KALENDER DRAWDOWN -->
-<div class="section">
+<div class="section" id="secKalenderDD">
   <div class="sec-title">🗓️ Kalender Drawdown</div>
   <div>
     <div class="cal-nav">
@@ -939,7 +970,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- ALIRAN UANG -->
-<div class="section">
+<div class="section" id="secAliranUang">
   <div class="sec-title">💸 Aliran Uang Masuk &amp; Keluar</div>
   <div class="graph-card" style="margin-bottom:12px">
     <div id="kasSaldoRingkasan">
@@ -959,7 +990,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- REKAP & GRAFIK ARUS KAS -->
-<div class="section">
+<div class="section" id="secRekapArusKas">
   <div class="sec-title">📊 Rekap &amp; Grafik Arus Kas</div>
   <div class="graph-card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -979,7 +1010,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- LAPORAN KEUANGAN -->
-<div class="section">
+<div class="section" id="secLaporanKeuangan">
   <div class="sec-title">📑 Laporan Keuangan</div>
   <div class="graph-card">
     <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px" id="lapKeuTabs">
@@ -994,7 +1025,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- EKSPOR LAPORAN KEUANGAN -->
-<div class="section">
+<div class="section" id="secEksporKeuangan">
   <div class="sec-title">📁 Ekspor Laporan Keuangan</div>
   <div class="graph-card">
     <div style="font-size:10px;color:#7A5D1F;text-align:center;margin-bottom:14px">Download riwayat aliran uang masuk &amp; keluar untuk arsip pribadi</div>
@@ -1007,13 +1038,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- PROFIT PER BULAN -->
-<div class="section">
+<div class="section" id="secProfitBulanan">
   <div class="sec-title">📊 Profit Per Bulan</div>
   <div id="profitBulananList"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
 </div>
 
 <!-- EKSPOR LAPORAN BULANAN -->
-<div class="section">
+<div class="section" id="secEksporBulanan">
   <div class="sec-title">📁 Ekspor Laporan Bulanan</div>
   <div class="graph-card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -1031,7 +1062,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- TRADING JOURNAL VISUAL -->
-<div class="section">
+<div class="section" id="secJournal">
   <div class="sec-title">🎨 Trading Journal Visual</div>
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Tiap titik = 1 hari. Hijau = profit, Merah = loss. Ukuran titik makin besar kalau jumlah signal hari itu makin banyak.</div>
@@ -1042,7 +1073,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- RIWAYAT -->
-<div class="section">
+<div class="section" id="secRiwayat">
   <div class="sec-title">📋 Riwayat Harian</div>
   <div id="riwayatSaldoWrap">
     <div id="riwayatList"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
@@ -1050,7 +1081,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- DISKUSI KOMUNITAS -->
-<div class="section">
+<div class="section" id="secDiskusi">
   <div class="sec-title">💬 Diskusi &amp; Komentar</div>
   <div class="graph-card">
     <div style="font-size:10px;color:#7A5D1F;text-align:center;margin-bottom:14px">Diskusi bebas antar trader — sharing analisa, tanya jawab, atau sekadar curhat market 👇</div>
@@ -1063,7 +1094,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <!-- ADMIN PANEL -->
-<div class="section">
+<div class="section" id="secAdmin">
   <div class="admin-panel" id="adminPanel">
     <div style="background:#1E2312;border:1px dashed #B8860B;border-radius:10px;padding:14px;margin-bottom:18px">
       <div style="font-size:12px;font-weight:700;color:#D4AF37;margin-bottom:6px">📥 Auto-Copy Data dari MT4 (Import CSV)</div>
@@ -1339,6 +1370,123 @@ const fc=v=>'¢'+parseFloat(v||0).toFixed(2);
 const fu=v=>'$'+(parseFloat(v||0)/100).toFixed(2);
 const fr=v=>'Rp '+Math.round(parseFloat(v||0)/100*K).toLocaleString('id-ID');
 const fd=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';
+
+// ══ SEARCH MENU: cari & lompat ke bagian manapun di situs ══
+const SEARCH_MENU=[
+  {id:'secSaldo', icon:'💰', label:'Saldo MT4 & Equity Curve', desc:'Saldo saat ini, win rate, total profit, grafik equity', kw:'saldo mt4 equity curve balance modal akun win rate'},
+  {id:'secScore', icon:'🏆', label:'Score Dashboard', desc:'Skor keseluruhan performa trading kamu', kw:'score dashboard skor nilai rating'},
+  {id:'secStatPair', icon:'📊', label:'Statistik Per Pair', desc:'Performa per XAUUSD, BTCUSD, Forex', kw:'statistik pair xauusd btcusd forex per pasangan'},
+  {id:'secRR', icon:'⚖️', label:'Risk Reward Analysis (RR Analisa)', desc:'Analisa rasio risk/reward dari profit-loss harian', kw:'rr analisa risk reward ratio rasio'},
+  {id:'secConsistency', icon:'📐', label:'Consistency Score & Sharpe Ratio', desc:'Konsistensi profit & rasio sharpe', kw:'consistency score sharpe ratio konsistensi konsultasi risk stabilitas'},
+  {id:'secRiskRuin', icon:'🚨', label:'Risk of Ruin (Peluang Bangkrut)', desc:'Estimasi peluang akun kena margin call', kw:'risk of ruin peluang bangkrut margin call resiko rugi total'},
+  {id:'secMood', icon:'🧠', label:'Psikologi Trading (Mood vs Profit)', desc:'Hubungan mood harian dengan hasil trading', kw:'psikologi mood tracker mental emosi'},
+  {id:'secBenchmark', icon:'📈', label:'Performance vs Benchmark', desc:'Perbandingan performa vs XAUUSD/BTCUSD pasar', kw:'benchmark perbandingan pasar market vs'},
+  {id:'secModalMinimal', icon:'💵', label:'Rekomendasi Modal Minimal', desc:'Saran modal minimal berdasarkan gaya trading', kw:'modal minimal rekomendasi saran capital'},
+  {id:'secKalkulator', icon:'🧮', label:'Kalkulator Risiko per Pair', desc:'Hitung lot, SL/TP, risk $, breakeven win rate', kw:'kalkulator risiko lot sl tp stop loss take profit breakeven kalkulator lot'},
+  {id:'secGrafikBulanan', icon:'📈', label:'Grafik Kinerja Bulanan & Target', desc:'Grafik profit bulanan dan progress target', kw:'grafik kinerja bulanan target bulan ini progress'},
+  {id:'secPerbandingan', icon:'📊', label:'Perbandingan Bulanan', desc:'Bandingkan performa antar bulan', kw:'perbandingan bulanan monthly comparison'},
+  {id:'secKalender', icon:'📅', label:'Kalender Trading', desc:'Kalender harian profit/loss', kw:'kalender trading calendar harian'},
+  {id:'secKalenderDD', icon:'🗓️', label:'Kalender Drawdown', desc:'Kalender level drawdown harian', kw:'kalender drawdown dd'},
+  {id:'secAliranUang', icon:'💸', label:'Aliran Uang Masuk & Keluar', desc:'Catatan investasi, profit MT4, dan pengeluaran', kw:'aliran uang masuk keluar investasi profit mt4 kas pribadi belanja'},
+  {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow'},
+  {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio'},
+  {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf'},
+  {id:'secProfitBulanan', icon:'📊', label:'Profit Per Bulan', desc:'Daftar total profit tiap bulan', kw:'profit per bulan bulanan'},
+  {id:'secEksporBulanan', icon:'📁', label:'Ekspor Laporan Bulanan', desc:'Download catatan harian per bulan', kw:'ekspor export laporan bulanan csv pdf'},
+  {id:'secJournal', icon:'🎨', label:'Trading Journal Visual', desc:'Visualisasi titik profit/loss harian', kw:'trading journal visual jurnal'},
+  {id:'secRiwayat', icon:'📋', label:'Riwayat Harian', desc:'Daftar semua catatan trading harian', kw:'riwayat harian history log catatan'},
+  {id:'secDiskusi', icon:'💬', label:'Diskusi & Komentar', desc:'Diskusi bebas antar trader', kw:'diskusi komentar komunitas chat forum'},
+  {id:'secAdmin', icon:'⚙️', label:'Panel Admin & Import CSV', desc:'Input catatan harian & import data dari MT4', kw:'admin panel import csv input catatan simpan'},
+  {id:'secTentang', icon:'📝', label:'Tentang Saya', desc:'Profil & tujuan situs ini', kw:'tentang saya about profil'},
+  {id:'secKontak', icon:'📞', label:'Kontak / Kirim Pesan', desc:'Form kontak & kerja sama', kw:'kontak pesan email hubungi'},
+  {id:'secPrivasi', icon:'📜', label:'Kebijakan Privasi & Disclaimer', desc:'Disclaimer & kebijakan privasi', kw:'privasi disclaimer kebijakan legal'}
+];
+let searchActiveIdx=-1, searchCurrentResults=[];
+function normalizeSearchText(s){
+  return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function onSearchInput(){
+  const q=normalizeSearchText(document.getElementById('searchInput').value.trim());
+  const clearBtn=document.getElementById('searchClearBtn');
+  clearBtn.style.display=q?'block':'none';
+  const resultsEl=document.getElementById('searchResults');
+  searchActiveIdx=-1;
+  if(!q){
+    resultsEl.classList.remove('show');
+    resultsEl.innerHTML='';
+    searchCurrentResults=[];
+    return;
+  }
+  const terms=q.split(/\s+/).filter(Boolean);
+  const scored=SEARCH_MENU.map(item=>{
+    const hay=normalizeSearchText(item.label+' '+item.desc+' '+item.kw);
+    let score=0;
+    terms.forEach(t=>{
+      if(hay.includes(t)) score += (normalizeSearchText(item.label).includes(t) ? 3 : 1);
+    });
+    return {item, score};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).map(x=>x.item);
+
+  searchCurrentResults=scored;
+  if(!scored.length){
+    resultsEl.innerHTML='<div class="search-empty">🔍 Tidak ada menu yang cocok dengan "'+escapeHtml(document.getElementById('searchInput').value.trim())+'"</div>';
+  }else{
+    resultsEl.innerHTML='<div class="search-hint">'+scored.length+' menu ditemukan</div>'+
+      scored.map((item,i)=>`<div class="search-result-item" data-idx="${i}" onclick="goToSearchResult('${item.id}')">
+        <div class="search-result-icon">${item.icon}</div>
+        <div><div class="search-result-label">${item.label}</div><div class="search-result-desc">${item.desc}</div></div>
+      </div>`).join('');
+  }
+  resultsEl.classList.add('show');
+}
+function onSearchKeydown(e){
+  if(!searchCurrentResults.length)return;
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    searchActiveIdx=Math.min(searchActiveIdx+1, searchCurrentResults.length-1);
+    updateSearchActiveHighlight();
+  }else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    searchActiveIdx=Math.max(searchActiveIdx-1, 0);
+    updateSearchActiveHighlight();
+  }else if(e.key==='Enter'){
+    e.preventDefault();
+    const idx=searchActiveIdx>=0?searchActiveIdx:0;
+    if(searchCurrentResults[idx]) goToSearchResult(searchCurrentResults[idx].id);
+  }else if(e.key==='Escape'){
+    clearSearch();
+  }
+}
+function updateSearchActiveHighlight(){
+  document.querySelectorAll('#searchResults .search-result-item').forEach((el,i)=>{
+    el.classList.toggle('active', i===searchActiveIdx);
+    if(i===searchActiveIdx) el.scrollIntoView({block:'nearest'});
+  });
+}
+function goToSearchResult(id){
+  const el=document.getElementById(id);
+  clearSearch();
+  if(!el){ toast('⚠️ Bagian ini belum tersedia'); return; }
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+  el.classList.remove('sec-flash');
+  void el.offsetWidth;
+  el.classList.add('sec-flash');
+  setTimeout(()=>el.classList.remove('sec-flash'), 1500);
+}
+function clearSearch(){
+  const input=document.getElementById('searchInput');
+  input.value='';
+  document.getElementById('searchClearBtn').style.display='none';
+  document.getElementById('searchResults').classList.remove('show');
+  document.getElementById('searchResults').innerHTML='';
+  searchCurrentResults=[];
+  searchActiveIdx=-1;
+  input.blur();
+}
+document.addEventListener('click', e=>{
+  const wrap=document.getElementById('searchWrap');
+  if(wrap && !wrap.contains(e.target)) document.getElementById('searchResults').classList.remove('show');
+});
 
 // ══ STATE ══
 let isAdmin=false;
