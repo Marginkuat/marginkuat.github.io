@@ -1081,6 +1081,30 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- CERTIFICATE OF PERFORMANCE -->
+<div class="section" id="secSertifikat">
+  <div class="sec-title">🏆 Certificate of Performance</div>
+  <div class="graph-card">
+    <div style="display:flex;gap:6px;margin-bottom:14px" id="sertifikatTabs">
+      <button class="pair-tab active" data-st="bulanan" onclick="setSertifikatPeriode('bulanan')">Bulanan</button>
+      <button class="pair-tab" data-st="tahunan" onclick="setSertifikatPeriode('tahunan')">Tahunan</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <button class="cal-nav-btn" onclick="sertifikatPrev()">‹</button>
+      <div id="sertifikatLabel" style="font-size:14px;font-weight:700;color:#D4AF37">-</div>
+      <button class="cal-nav-btn" onclick="sertifikatNext()">›</button>
+    </div>
+    <div id="sertifikatPreview"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+    <div style="margin-top:14px">
+      <label class="lbl">Nama Trader (tampil di sertifikat)</label>
+      <input class="inp" id="sertifikatNama" placeholder="Contoh: Nama Anda" oninput="renderSertifikat()" style="margin-bottom:12px">
+    </div>
+    <button class="btn btn-p" onclick="downloadSertifikatPDF()" style="margin-bottom:0">⬇️ Download Sertifikat (PDF)</button>
+    <div id="sertifikatStatus" style="font-size:10px;color:#7A5D1F;margin-top:10px;text-align:center"></div>
+    <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">Digenerate otomatis dari catatan trading pribadimu — untuk branding/portofolio, bukan dokumen resmi lembaga keuangan.</div>
+  </div>
+</div>
+
 <!-- TRADING JOURNAL VISUAL -->
 <div class="section" id="secJournal">
   <div class="sec-title">🎨 Trading Journal Visual</div>
@@ -1638,6 +1662,7 @@ async function loadAll(){
   renderKasRekap();
   renderKasChart();
   renderWdSection();
+  renderSertifikat();
   renderLapKeu();
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
   loadStatPair();
@@ -2689,6 +2714,153 @@ function renderWdSection(){
   renderWdRingkasan();
   renderWdChart();
   renderWdVsProfitChart();
+}
+
+// ══ CERTIFICATE OF PERFORMANCE ══
+let sertifikatPeriode='bulanan';
+let sertifikatYear=new Date().getFullYear(), sertifikatMonth=new Date().getMonth();
+function setSertifikatPeriode(p){
+  sertifikatPeriode=p;
+  document.querySelectorAll('#sertifikatTabs .pair-tab').forEach(b=>b.classList.toggle('active', b.dataset.st===p));
+  renderSertifikat();
+}
+function sertifikatPrev(){
+  if(sertifikatPeriode==='bulanan'){ sertifikatMonth--; if(sertifikatMonth<0){sertifikatMonth=11;sertifikatYear--;} }
+  else sertifikatYear--;
+  renderSertifikat();
+}
+function sertifikatNext(){
+  if(sertifikatPeriode==='bulanan'){ sertifikatMonth++; if(sertifikatMonth>11){sertifikatMonth=0;sertifikatYear++;} }
+  else sertifikatYear++;
+  renderSertifikat();
+}
+function sertifikatLabel(){
+  const bn=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  return sertifikatPeriode==='bulanan' ? `${bn[sertifikatMonth]} ${sertifikatYear}` : `Tahun ${sertifikatYear}`;
+}
+function getSertifikatStats(){
+  const rows=(allSaldoData||[]).filter(r=>{
+    const d=new Date(r.tanggal);
+    if(sertifikatPeriode==='bulanan') return d.getFullYear()===sertifikatYear && d.getMonth()===sertifikatMonth;
+    return d.getFullYear()===sertifikatYear;
+  }).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  if(!rows.length) return null;
+  let netProfit=0, hariProfit=0, bestDay=rows[0];
+  rows.forEach(r=>{
+    const p=parseFloat(r.profit||0);
+    netProfit+=p;
+    if(p>0)hariProfit++;
+    if(p>parseFloat(bestDay.profit||0)) bestDay=r;
+  });
+  const winRate=hariProfit/rows.length*100;
+  const startBal=parseFloat(rows[0].saldo_mt4||0)-parseFloat(rows[0].profit||0);
+  const growth=startBal>0.01 ? (netProfit/startBal*100) : 0;
+  return {rows, netProfit, hariProfit, totalHari:rows.length, winRate, bestDay, growth};
+}
+function getSertifikatNama(){
+  const inp=document.getElementById('sertifikatNama');
+  const v=inp?inp.value.trim():'';
+  if(v){ localStorage.setItem('mk_sertifikat_nama', v); return v; }
+  return localStorage.getItem('mk_sertifikat_nama') || 'Trader Marginkuat';
+}
+function renderSertifikat(){
+  const labelEl=document.getElementById('sertifikatLabel');
+  const el=document.getElementById('sertifikatPreview');
+  if(labelEl) labelEl.textContent=sertifikatLabel();
+  if(!el)return;
+  const nameInput=document.getElementById('sertifikatNama');
+  if(nameInput && !nameInput.value){
+    const saved=localStorage.getItem('mk_sertifikat_nama');
+    if(saved) nameInput.value=saved;
+  }
+  const stats=getSertifikatStats();
+  if(!stats){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Tidak ada data tercatat di periode ini.</div>';
+    return;
+  }
+  const nama=getSertifikatNama();
+  el.innerHTML=`
+    <div style="border:2px solid #B8860B;border-radius:14px;padding:22px 16px;text-align:center;background:linear-gradient(160deg,#1E2312,#161A0F)">
+      <div style="font-size:26px;margin-bottom:4px">🏆</div>
+      <div style="font-size:10px;letter-spacing:2px;color:#8A6B26;text-transform:uppercase;margin-bottom:2px">Certificate of Performance</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:14px">MARGINKUAT — Catatan Trading Pribadi</div>
+      <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px">Diberikan kepada</div>
+      <div style="font-size:19px;font-weight:800;color:#FFD700;margin:4px 0 14px;font-family:'JetBrains Mono',monospace">${nama}</div>
+      <div style="font-size:10px;color:#8A6B26;margin-bottom:14px">atas performa trading periode <b style="color:#D4AF37">${sertifikatLabel()}</b></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val ${stats.netProfit>=0?'cg':'cr'}" style="font-size:14px">${stats.netProfit>=0?'+':''}${fc(stats.netProfit)}</div><div class="bal-box-lbl">Net Profit</div></div>
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val cy" style="font-size:14px">${stats.winRate.toFixed(0)}%</div><div class="bal-box-lbl">Win Rate</div></div>
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val cg" style="font-size:14px">${fc(parseFloat(stats.bestDay.profit||0))}</div><div class="bal-box-lbl">Profit Terbaik (${stats.bestDay.tanggal})</div></div>
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:${stats.growth>=0?'#4ADE80':'#F87171'}">${stats.growth>=0?'+':''}${stats.growth.toFixed(1)}%</div><div class="bal-box-lbl">Growth</div></div>
+      </div>
+      <div style="font-size:9px;color:#5C4818;margin-top:10px">${stats.totalHari} hari trading tercatat</div>
+      <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #2A2E1F;font-size:9px;color:#7A5D1F">Diterbitkan otomatis oleh Marginkuat pada ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+    </div>`;
+}
+async function downloadSertifikatPDF(){
+  const statusEl=document.getElementById('sertifikatStatus');
+  if(statusEl) statusEl.textContent='⏳ Menyiapkan sertifikat...';
+  try{
+    if(typeof window.jspdf==='undefined'){ if(statusEl) statusEl.textContent='❌ Library PDF gagal dimuat, cek koneksi internet.'; return; }
+    const stats=getSertifikatStats();
+    if(!stats){ if(statusEl) statusEl.textContent='❌ Tidak ada data tercatat di periode ini.'; return; }
+    const nama=getSertifikatNama();
+    const { jsPDF }=window.jspdf;
+    const doc=new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+    const W=297, H=210;
+    doc.setDrawColor(184,134,11); doc.setLineWidth(1.2);
+    doc.rect(8,8,W-16,H-16);
+    doc.setLineWidth(0.4);
+    doc.rect(12,12,W-24,H-24);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(20);
+    doc.setTextColor(30,30,30);
+    doc.text('CERTIFICATE OF PERFORMANCE', W/2, 38, {align:'center'});
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text('MARGINKUAT — Catatan Trading Pribadi', W/2, 46, {align:'center'});
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+    doc.text('Diberikan kepada', W/2, 66, {align:'center'});
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(24);
+    doc.setTextColor(20);
+    doc.text(nama, W/2, 79, {align:'center'});
+    doc.setDrawColor(184,134,11); doc.setLineWidth(0.3);
+    doc.line(W/2-45, 83, W/2+45, 83);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+    doc.text(`atas performa trading periode ${sertifikatLabel()}`, W/2, 93, {align:'center'});
+    const statsY=115;
+    const cols=[
+      {lbl:'NET PROFIT', val:(stats.netProfit>=0?'+':'')+fc(stats.netProfit)},
+      {lbl:'WIN RATE', val:stats.winRate.toFixed(0)+'%'},
+      {lbl:'PROFIT TERBAIK', val:fc(parseFloat(stats.bestDay.profit||0))},
+      {lbl:'GROWTH', val:(stats.growth>=0?'+':'')+stats.growth.toFixed(1)+'%'}
+    ];
+    const colW=(W-80)/4;
+    cols.forEach((c,i)=>{
+      const x=40+colW*i+colW/2;
+      doc.setFontSize(14); doc.setFont('helvetica','bold'); doc.setTextColor(20);
+      doc.text(c.val, x, statsY, {align:'center'});
+      doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(130);
+      doc.text(c.lbl, x, statsY+6, {align:'center'});
+    });
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text(`${stats.totalHari} hari trading tercatat`, W/2, statsY+20, {align:'center'});
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text(`Diterbitkan otomatis oleh Marginkuat pada ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}`, W/2, H-24, {align:'center'});
+    doc.setFontSize(7); doc.setTextColor(180);
+    doc.text('Sertifikat ini digenerate otomatis dari catatan trading pribadi dan bukan dokumen resmi lembaga keuangan.', W/2, H-18, {align:'center'});
+    const filename=`Sertifikat_${sertifikatPeriode==='bulanan'?sertifikatLabel().replace(' ','_'):'Tahun_'+sertifikatYear}.pdf`;
+    doc.save(filename);
+    if(statusEl) statusEl.textContent='✅ Sertifikat berhasil diunduh: '+filename;
+  }catch(e){
+    console.error(e);
+    if(statusEl) statusEl.textContent='❌ Gagal membuat sertifikat: '+(e.message||'').slice(0,150);
+  }
 }
 
 // ══ LAPORAN KEUANGAN: NERACA, LABA RUGI, ARUS KAS ══
