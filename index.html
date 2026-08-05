@@ -2559,14 +2559,32 @@ function getKewajiban(){
     return JSON.parse(localStorage.getItem('mk_kewajiban')||'[]').map(a=>({...a, tipe: a.tipe==='jangka_panjang'?'jangka_panjang':'lancar'}));
   }catch(e){ return []; }
 }
-function tambahAsetLain(){
+const ASET_PRESET={
+  saham:{nama:'Saham', tipe:'lancar', hint:'nilai portofolio saham saat ini'},
+  deposito:{nama:'Deposito', tipe:'lancar', hint:'nilai pokok deposito'},
+  sun:{nama:'Surat Utang Negara (SUN/ORI/SBN)', tipe:'lancar', hint:'nilai obligasi/SUN yang dimiliki'},
+  properti:{nama:'Properti', tipe:'tidak_lancar', hint:'estimasi nilai jual properti'},
+  tanah:{nama:'Tanah', tipe:'tidak_lancar', hint:'estimasi nilai jual tanah'}
+};
+function tambahAsetLain(presetKey){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
-  const nama=prompt('Nama aset (contoh: Saldo Rekening Bank, Motor, Emas, dll):');
-  if(!nama)return;
-  const jumlahStr=prompt('Nilai aset (dalam Rupiah, contoh: 5000000):');
+  const preset=presetKey?ASET_PRESET[presetKey]:null;
+  let nama, lancar;
+  if(preset){
+    const namaKustom=prompt(`Nama aset (boleh diedit, contoh "${preset.nama} BBCA" dll):`, preset.nama);
+    if(!namaKustom)return;
+    nama=namaKustom;
+    lancar=preset.tipe==='lancar';
+  }else{
+    nama=prompt('Nama aset (contoh: Saldo Rekening Bank, Motor, Emas, dll):');
+    if(!nama)return;
+  }
+  const jumlahStr=prompt(`Nilai ${nama} (dalam Rupiah${preset?', '+preset.hint:''}, contoh: 5000000):`);
   const jumlah=parseFloat(jumlahStr);
   if(isNaN(jumlah)||jumlah<0){toast('❌ Nilai tidak valid');return;}
-  const lancar=confirm('Apakah ini ASET LANCAR? (mudah dicairkan < 1 tahun — misal: kas, tabungan, piutang)\n\nOK = Aset Lancar\nCancel = Aset Tidak Lancar (misal: motor, tanah, properti, alat)');
+  if(!preset){
+    lancar=confirm('Apakah ini ASET LANCAR? (mudah dicairkan < 1 tahun — misal: kas, tabungan, piutang)\n\nOK = Aset Lancar\nCancel = Aset Tidak Lancar (misal: motor, tanah, properti, alat)');
+  }
   const list=getAsetLain();
   list.push({nama, jumlah, tipe: lancar?'lancar':'tidak_lancar'});
   localStorage.setItem('mk_aset_lain', JSON.stringify(list));
@@ -2648,7 +2666,19 @@ function renderNeraca(wrap){
   });
   html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Aset Tidak Lancar</span><span style="color:#D4AF37">${rp(n.totalAsetTidakLancar)}</span></div>`;
 
-  if(isAdmin) html+=`<div onclick="tambahAsetLain()" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin:10px 0 6px">+ Tambah Aset</div>`;
+  if(isAdmin){
+    html+=`<div style="margin:10px 0 6px">
+      <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tambah Aset Perusahaan Cepat</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+        <span onclick="tambahAsetLain('saham')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid #2A2E1F;color:#C8A84B;cursor:pointer">📈 Saham</span>
+        <span onclick="tambahAsetLain('deposito')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid #2A2E1F;color:#C8A84B;cursor:pointer">🏦 Deposito</span>
+        <span onclick="tambahAsetLain('sun')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid #2A2E1F;color:#C8A84B;cursor:pointer">📜 SUN/Obligasi</span>
+        <span onclick="tambahAsetLain('properti')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid #2A2E1F;color:#C8A84B;cursor:pointer">🏢 Properti</span>
+        <span onclick="tambahAsetLain('tanah')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid #2A2E1F;color:#C8A84B;cursor:pointer">🌳 Tanah</span>
+      </div>
+      <div onclick="tambahAsetLain()" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer">+ Tambah Aset Lain (Kustom)</div>
+    </div>`;
+  }
   html+=`<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-top:1.5px solid #4ADE80;margin-top:6px;font-weight:800"><span style="color:#4ADE80">TOTAL ASET</span><span style="color:#4ADE80">${rp(n.totalAset)}</span></div>`;
 
   html+=`<div style="height:1px;background:#2A2E1F;margin:18px 0"></div>`;
@@ -2704,7 +2734,11 @@ function renderLabaRugi(wrap){
   const pendapatanLainCent=rowsKas.filter(r=>r.kategori==='pendapatan').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const modalDisetorBulanIni=rowsKas.filter(r=>['gaji','modal_mt4'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const profitTradingCent=rowsTrading.reduce((s,r)=>s+parseFloat(r.profit||0),0);
-  const bebanCent=rowsKas.filter(r=>['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'];
+  const BEBAN_BISNIS=['gaji_karyawan','listrik_kantor','internet_kantor','air_kantor','sewa_kantor','operasional_lain'];
+  const bebanPribadiCent=rowsKas.filter(r=>BEBAN_PRIBADI.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const bebanBisnisCent=rowsKas.filter(r=>BEBAN_BISNIS.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const bebanCent=bebanPribadiCent+bebanBisnisCent;
 
   const totalPendapatan=pendapatanLainCent+profitTradingCent;
   const labaRugi=totalPendapatan-bebanCent;
@@ -2740,16 +2774,32 @@ function renderLabaRugi(wrap){
   html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#4ADE80">Total Pendapatan</span><span style="color:#4ADE80">${fc(totalPendapatan)}</span></div>`;
 
   html+=`<div style="font-size:11px;font-weight:700;color:#F87171;margin:16px 0 8px">BEBAN</div>`;
-  ['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'].forEach(k=>{
+
+  html+=`<div style="font-size:10px;font-weight:700;color:#C084FC;margin:2px 0 6px;text-transform:uppercase;letter-spacing:.5px">Beban Pribadi (Hidup)</div>`;
+  let adaBebanPribadi=false;
+  BEBAN_PRIBADI.forEach(k=>{
     const total=rowsKas.filter(r=>r.kategori===k).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
     if(!total)return;
+    adaBebanPribadi=true;
     const km=kategoriMeta[k];
-    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:${km.color}">${km.dot} ${km.label}</span><span style="color:#F87171">${fc(total)}</span></div>`;
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:${km.color}">${km.dot} ${km.label}</span><span style="color:#F87171">${fc(total)}</span></div>`;
   });
-  if(!bebanCent){
-    html+='<div style="font-size:11px;color:#7A5D1F;padding:4px 0">Tidak ada beban tercatat.</div>';
-  }
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#F87171">Total Beban</span><span style="color:#F87171">${fc(bebanCent)}</span></div>`;
+  if(!adaBebanPribadi) html+='<div style="font-size:11px;color:#7A5D1F;padding:4px 0 4px 6px">Tidak ada beban pribadi tercatat.</div>';
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Beban Pribadi</span><span style="color:#F87171">${fc(bebanPribadiCent)}</span></div>`;
+
+  html+=`<div style="font-size:10px;font-weight:700;color:#FB923C;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px">Beban Operasional Bisnis (Karyawan &amp; Kantor)</div>`;
+  let adaBebanBisnis=false;
+  BEBAN_BISNIS.forEach(k=>{
+    const total=rowsKas.filter(r=>r.kategori===k).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+    if(!total)return;
+    adaBebanBisnis=true;
+    const km=kategoriMeta[k];
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:${km.color}">${km.dot} ${km.label}</span><span style="color:#F87171">${fc(total)}</span></div>`;
+  });
+  if(!adaBebanBisnis) html+='<div style="font-size:11px;color:#7A5D1F;padding:4px 0 4px 6px">Tidak ada beban operasional bisnis tercatat.</div>';
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Beban Bisnis</span><span style="color:#F87171">${fc(bebanBisnisCent)}</span></div>`;
+
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:8px;font-weight:700"><span style="color:#F87171">Total Beban</span><span style="color:#F87171">${fc(bebanCent)}</span></div>`;
 
   html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${labaRugi>=0?'#4ADE80':'#F87171'}">${labaRugi>=0?'+':''}${fc(labaRugi)}</div><div class="bal-box-lbl">${labaRugi>=0?'LABA':'RUGI'} BERSIH = Pendapatan − Beban</div></div>`;
 
