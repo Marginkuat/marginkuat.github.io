@@ -1172,7 +1172,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="ap-title">💸 Input Aliran Uang</div>
 
     <label class="lbl">Dari (sumber uang)</label>
-    <input class="inp" id="kasDari" placeholder="Contoh: Investasi / Profit MT4">
+    <input class="inp" id="kasDari" placeholder="Contoh: Modal Pribadi / Modal Investor / Profit MT4">
 
     <label class="lbl">Ke (tujuan uang)</label>
     <input class="inp" id="kasKe" placeholder="Contoh: Saldo MT4 / Obat / Listrik">
@@ -1180,7 +1180,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <label class="lbl">Kategori</label>
     <select class="inp" id="kasKategori">
       <optgroup label="⬆️ UANG MASUK">
-        <option value="gaji">💰 Investasi</option>
+        <option value="gaji">💰 Modal Pribadi</option>
+        <option value="modal_investor">🤝 Modal Investor</option>
         <option value="wd_trading">📈 Profit MT4</option>
       </optgroup>
       <optgroup label="⬇️ UANG KELUAR (diambil dari saldo MT4)">
@@ -2089,8 +2090,11 @@ const kategoriMeta={
   komisi:{label:'Komisi / Fee Broker', color:'#FB923C', dot:'💳', grup:'operasional'},
   swap:{label:'Swap', color:'#A78BFA', dot:'🔄', grup:'operasional'},
   // 🏦 PRIBADI (Kas) — aliran uang tunai/dompet pribadi di luar akun trading
-  // "gaji" = Investasi: modal dari luar MT4 (gaji, uang pribadi, dll) yang dianggap sebagai investasi ke trading.
-  gaji:{label:'Investasi', color:'#60A5FA', dot:'💰', grup:'pribadi'},
+  // "gaji" = Modal Pribadi: uang pribadi dari luar MT4 yang disetor sebagai investasi ke trading.
+  gaji:{label:'Modal Pribadi', color:'#60A5FA', dot:'💰', grup:'pribadi'},
+  // "modal_investor" = Modal dari investor luar (bukan uang pribadi Admin), dicatat terpisah supaya
+  // nanti gampang dihitung porsi kepemilikan / bagi hasil kalau sudah ada investor beneran.
+  modal_investor:{label:'Modal Investor', color:'#A78BFA', dot:'🤝', grup:'pribadi'},
   // "wd_trading" = Profit dari MT4 yang masuk sebagai uang, bukan sekadar catatan performa.
   wd_trading:{label:'Profit MT4', color:'#4ADE80', dot:'📈', grup:'pribadi'},
   // Kategori legacy di bawah ini TIDAK lagi tersedia di form, hanya dipertahankan supaya data lama tetap terbaca benar.
@@ -2121,7 +2125,7 @@ const GRUP_META={
 // membengkak/membingungkan karena isinya campur aduk performa trading + uang riil.
 // "modal_mt4" (setoran modal ke MT4) TETAP dihitung 'masuk' di sini untuk tujuan tracking saldo,
 // tapi SENGAJA dikecualikan dari Laba Rugi (lihat renderLabaRugi) karena itu modal, bukan pendapatan.
-const KATEGORI_MASUK=['pendapatan','gaji','wd_trading','modal_mt4'];
+const KATEGORI_MASUK=['pendapatan','gaji','modal_investor','wd_trading','modal_mt4'];
 function kasArah(r){
   // Kategori grup OPERASIONAL = performa trading, BUKAN arus kas riil. Dikecualikan total.
   const km=kategoriMeta[r.kategori];
@@ -2708,6 +2712,27 @@ function renderNeraca(wrap){
 
   html+=`<div class="bal-box" style="background:#1E2312;margin-top:16px"><div class="bal-box-val" style="font-size:20px;color:${n.ekuitas>=0?'#4ADE80':'#F87171'}">${rp(n.ekuitas)}</div><div class="bal-box-lbl">EKUITAS (Kekayaan Bersih) = Total Aset − Total Liabilitas</div></div>`;
 
+  // Rincian kepemilikan modal (all-time) — akumulasi semua setoran Modal Pribadi vs Modal Investor
+  // sejak awal, dipakai sebagai acuan porsi kepemilikan/bagi hasil kalau nanti ada investor beneran.
+  const kasSemua=allKasData||[];
+  const totalModalPribadiCent=kasSemua.filter(r=>['gaji','modal_mt4'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const totalModalInvestorCent=kasSemua.filter(r=>r.kategori==='modal_investor').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const totalModalSemua=totalModalPribadiCent+totalModalInvestorCent;
+  if(totalModalSemua>0){
+    const pctPribadi=(totalModalPribadiCent/totalModalSemua*100);
+    const pctInvestor=(totalModalInvestorCent/totalModalSemua*100);
+    html+=`<div style="margin-top:12px;background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🤝 Rincian Kepemilikan Modal (Akumulasi Sejak Awal)</div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#60A5FA">💰 Modal Pribadi</span><span style="color:#60A5FA">${fc(totalModalPribadiCent)} · ${pctPribadi.toFixed(1)}%</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#A78BFA">🤝 Modal Investor</span><span style="color:#A78BFA">${fc(totalModalInvestorCent)} · ${pctInvestor.toFixed(1)}%</span></div>
+      <div class="progress-track" style="margin-top:8px;display:flex">
+        <div style="width:${pctPribadi}%;background:#60A5FA;height:100%"></div>
+        <div style="width:${pctInvestor}%;background:#A78BFA;height:100%"></div>
+      </div>
+      <div style="font-size:9px;color:#5C4818;margin-top:8px">Persentase ini estimasi kasar porsi kepemilikan berdasarkan total modal yang disetor masing-masing pihak — bukan hitungan legal/hukum, cuma acuan internal.</div>
+    </div>`;
+  }
+
   html+=`<div style="border-top:1px solid #2A2E1F;margin-top:18px;padding-top:12px">
     <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📊 Rasio Keuangan (ala Laporan Perusahaan)</div>
     <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Current Ratio (Aset Lancar ÷ Kewajiban Lancar)</span><span style="color:#D4AF37">${currentRatio!==null?currentRatio.toFixed(2)+'x':'—'}</span></div>
@@ -2732,7 +2757,9 @@ function renderLabaRugi(wrap){
   // sengaja TIDAK dihitung di sini. Cuma "pendapatan" (pendapatan lain di luar trading & gaji)
   // dan profit trading yang dianggap pendapatan riil.
   const pendapatanLainCent=rowsKas.filter(r=>r.kategori==='pendapatan').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
-  const modalDisetorBulanIni=rowsKas.filter(r=>['gaji','modal_mt4'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const modalPribadiBulanIni=rowsKas.filter(r=>['gaji','modal_mt4'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const modalInvestorBulanIni=rowsKas.filter(r=>r.kategori==='modal_investor').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const modalDisetorBulanIni=modalPribadiBulanIni+modalInvestorBulanIni;
   const profitTradingCent=rowsTrading.reduce((s,r)=>s+parseFloat(r.profit||0),0);
   const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'];
   const BEBAN_BISNIS=['gaji_karyawan','listrik_kantor','internet_kantor','air_kantor','sewa_kantor','operasional_lain'];
@@ -2746,6 +2773,7 @@ function renderLabaRugi(wrap){
   const labaRugiRp = Math.round(labaRugi/100*K);
   const ekuitasSaatIni = hitungNeraca().ekuitas;
   const roe = ekuitasSaatIni>0 ? (labaRugiRp/ekuitasSaatIni*100) : null;
+  const fcx=(v,color)=>`<span style="display:inline-block;text-align:right"><span style="color:${color}">${fc(v)}</span><br><span style="font-size:9px;color:#7A5D1F;font-weight:500">${fr(v)}</span></span>`;
 
   let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
     <button class="cal-nav-btn" onclick="labaRugiPrev()">‹</button>
@@ -2762,16 +2790,21 @@ function renderLabaRugi(wrap){
   if(modalDisetorBulanIni>0){
     html+=`<div class="bal-box" style="background:#132436;border:1px solid #2E5C8A;margin-bottom:14px">
       <div class="bal-box-val" style="font-size:15px;color:#60A5FA">${fc(modalDisetorBulanIni)}</div>
-      <div class="bal-box-lbl">💰 Modal / Dana Investasi Disetor ke MT4 Bulan Ini (BUKAN pendapatan — tidak dihitung di Laba Rugi)</div>
+      <div style="font-size:11px;color:#5C7A9C;font-weight:600;margin-top:1px">${fr(modalDisetorBulanIni)}</div>
+      <div class="bal-box-lbl">💰 Total Modal Disetor ke MT4 Bulan Ini (BUKAN pendapatan — tidak dihitung di Laba Rugi)</div>
+      ${modalPribadiBulanIni>0||modalInvestorBulanIni>0?`<div style="display:flex;justify-content:space-around;margin-top:10px;padding-top:10px;border-top:1px solid #2E5C8A">
+        <div style="text-align:center"><div style="font-size:9px;color:#5C7A9C">💰 Modal Pribadi</div><div style="font-size:12px;font-weight:700;color:#60A5FA">${fc(modalPribadiBulanIni)}</div></div>
+        <div style="text-align:center"><div style="font-size:9px;color:#5C7A9C">🤝 Modal Investor</div><div style="font-size:12px;font-weight:700;color:#A78BFA">${fc(modalInvestorBulanIni)}</div></div>
+      </div>`:''}
     </div>`;
   }
 
   html+=`<div style="font-size:11px;font-weight:700;color:#4ADE80;margin-bottom:8px">PENDAPATAN</div>`;
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Pasif (Profit Trading MT4)</span><span style="color:${profitTradingCent>=0?'#D4AF37':'#F87171'}">${fc(profitTradingCent)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Pasif (Profit Trading MT4)</span>${fcx(profitTradingCent, profitTradingCent>=0?'#D4AF37':'#F87171')}</div>`;
   if(pendapatanLainCent>0){
-    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Lain</span><span style="color:#D4AF37">${fc(pendapatanLainCent)}</span></div>`;
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Lain</span>${fcx(pendapatanLainCent,'#D4AF37')}</div>`;
   }
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#4ADE80">Total Pendapatan</span><span style="color:#4ADE80">${fc(totalPendapatan)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#4ADE80">Total Pendapatan</span>${fcx(totalPendapatan,'#4ADE80')}</div>`;
 
   html+=`<div style="font-size:11px;font-weight:700;color:#F87171;margin:16px 0 8px">BEBAN</div>`;
 
@@ -2782,10 +2815,10 @@ function renderLabaRugi(wrap){
     if(!total)return;
     adaBebanPribadi=true;
     const km=kategoriMeta[k];
-    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:${km.color}">${km.dot} ${km.label}</span><span style="color:#F87171">${fc(total)}</span></div>`;
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:${km.color}">${km.dot} ${km.label}</span>${fcx(total,'#F87171')}</div>`;
   });
   if(!adaBebanPribadi) html+='<div style="font-size:11px;color:#7A5D1F;padding:4px 0 4px 6px">Tidak ada beban pribadi tercatat.</div>';
-  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Beban Pribadi</span><span style="color:#F87171">${fc(bebanPribadiCent)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Beban Pribadi</span>${fcx(bebanPribadiCent,'#F87171')}</div>`;
 
   html+=`<div style="font-size:10px;font-weight:700;color:#FB923C;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px">Beban Operasional Bisnis (Karyawan &amp; Kantor)</div>`;
   let adaBebanBisnis=false;
@@ -2794,14 +2827,14 @@ function renderLabaRugi(wrap){
     if(!total)return;
     adaBebanBisnis=true;
     const km=kategoriMeta[k];
-    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:${km.color}">${km.dot} ${km.label}</span><span style="color:#F87171">${fc(total)}</span></div>`;
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:${km.color}">${km.dot} ${km.label}</span>${fcx(total,'#F87171')}</div>`;
   });
   if(!adaBebanBisnis) html+='<div style="font-size:11px;color:#7A5D1F;padding:4px 0 4px 6px">Tidak ada beban operasional bisnis tercatat.</div>';
-  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Beban Bisnis</span><span style="color:#F87171">${fc(bebanBisnisCent)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Beban Bisnis</span>${fcx(bebanBisnisCent,'#F87171')}</div>`;
 
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:8px;font-weight:700"><span style="color:#F87171">Total Beban</span><span style="color:#F87171">${fc(bebanCent)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:8px;font-weight:700"><span style="color:#F87171">Total Beban</span>${fcx(bebanCent,'#F87171')}</div>`;
 
-  html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${labaRugi>=0?'#4ADE80':'#F87171'}">${labaRugi>=0?'+':''}${fc(labaRugi)}</div><div class="bal-box-lbl">${labaRugi>=0?'LABA':'RUGI'} BERSIH = Pendapatan − Beban</div></div>`;
+  html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${labaRugi>=0?'#4ADE80':'#F87171'}">${labaRugi>=0?'+':''}${fc(labaRugi)}</div><div style="font-size:12px;color:${labaRugi>=0?'#4ADE80':'#F87171'};font-weight:600;margin-top:2px">${labaRugi>=0?'+':''}${fr(labaRugi)}</div><div class="bal-box-lbl">${labaRugi>=0?'LABA':'RUGI'} BERSIH = Pendapatan − Beban</div></div>`;
 
   html+=`<div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:12px">
     <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📊 Rasio Kinerja (ala Laporan Perusahaan)</div>
