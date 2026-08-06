@@ -1123,6 +1123,22 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- WEEKLY RECAP -->
+<div class="section" id="secWeeklyRecap">
+  <div class="sec-title">📊 Weekly Recap / Laporan Mingguan</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Laporan performa mingguan otomatis — investor bisa lihat rutin tanpa perlu minta.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <button class="cal-nav-btn" onclick="weeklyRecapPrev()">‹</button>
+      <div id="weeklyRecapLabel" style="font-size:12px;font-weight:700;color:#D4AF37;text-align:center;line-height:1.4">-</div>
+      <button class="cal-nav-btn" onclick="weeklyRecapNext()">›</button>
+    </div>
+    <div id="weeklyRecapContent"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+    <button class="btn btn-p" onclick="downloadWeeklyRecapPDF()" style="margin-top:12px;margin-bottom:0">⬇️ Download Laporan Mingguan (PDF)</button>
+    <div id="weeklyRecapStatus" style="font-size:10px;color:#7A5D1F;margin-top:10px;text-align:center"></div>
+  </div>
+</div>
+
 <!-- PROFIT PER BULAN -->
 <div class="section" id="secProfitBulanan">
   <div class="sec-title">📊 Profit Per Bulan</div>
@@ -1732,6 +1748,7 @@ async function loadAll(){
   renderGoalTracker();
   renderInvestorDashboard();
   renderNotifCenter();
+  renderWeeklyRecap();
   renderFAQ();
   renderSertifikat();
   renderLapKeu();
@@ -2326,6 +2343,7 @@ async function syncAllHistoricalKas(){
     renderGoalTracker();
     renderInvestorDashboard();
     renderNotifCenter();
+    renderWeeklyRecap();
     renderLapKeu();
     await loadKas();
   }catch(e){
@@ -2440,6 +2458,7 @@ async function simpanKas(){
     renderGoalTracker();
     renderInvestorDashboard();
     renderNotifCenter();
+    renderWeeklyRecap();
     renderLapKeu();
   }catch(e){
     console.error(e);
@@ -3297,6 +3316,143 @@ function renderFAQ(){
   el.innerHTML=html;
 }
 
+// ══ WEEKLY RECAP / LAPORAN MINGGUAN ══
+let weeklyRecapOffset=0;
+function weeklyRecapPrev(){ weeklyRecapOffset--; renderWeeklyRecap(); }
+function weeklyRecapNext(){ weeklyRecapOffset++; renderWeeklyRecap(); }
+function getWeekRange(offset){
+  const now=new Date();
+  const day=now.getDay();
+  const diffToMonday = day===0 ? -6 : 1-day;
+  const thisMonday=new Date(now.getFullYear(), now.getMonth(), now.getDate()+diffToMonday);
+  const start=new Date(thisMonday); start.setDate(start.getDate()+offset*7); start.setHours(0,0,0,0);
+  const end=new Date(start); end.setDate(end.getDate()+6); end.setHours(23,59,59,999);
+  return {start, end};
+}
+function weeklyRecapLabelText(start,end){
+  const opts1={day:'numeric',month:'short'};
+  const opts2={day:'numeric',month:'short',year:'numeric'};
+  return `${start.toLocaleDateString('id-ID',opts1)} - ${end.toLocaleDateString('id-ID',opts2)}`;
+}
+function getWeeklyRecapData(offset){
+  const {start,end}=getWeekRange(offset);
+  const rows=(allSaldoData||[]).filter(r=>{
+    const d=new Date(r.tanggal);
+    return d>=start && d<=end;
+  }).sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  if(!rows.length) return {start,end,rows:[]};
+
+  let profitMinggu=0, hariProfit=0;
+  let peak=0, cum=0, maxDD=0;
+  const pairSignal={};
+  let totalSignal=0;
+  rows.forEach(r=>{
+    const p=parseFloat(r.profit||0);
+    profitMinggu+=p;
+    if(p>0)hariProfit++;
+    cum+=p;
+    if(cum>peak)peak=cum;
+    const dd=peak-cum;
+    if(dd>maxDD)maxDD=dd;
+    const sig=parseInt(r.jumlah_signal||0)||0;
+    totalSignal+=sig;
+    const pairName=r.pair||'XAUUSD';
+    pairSignal[pairName]=(pairSignal[pairName]||0)+sig;
+  });
+  const winRate= rows.length ? (hariProfit/rows.length*100) : 0;
+  let topPair='-', topPairCount=0;
+  Object.keys(pairSignal).forEach(k=>{ if(pairSignal[k]>topPairCount){topPairCount=pairSignal[k]; topPair=k;} });
+
+  return {start,end,rows,profitMinggu,winRate,maxDD,totalSignal,topPair,topPairCount};
+}
+function renderWeeklyRecap(){
+  const labelEl=document.getElementById('weeklyRecapLabel');
+  const el=document.getElementById('weeklyRecapContent');
+  if(!el)return;
+  const data=getWeeklyRecapData(weeklyRecapOffset);
+  if(labelEl) labelEl.textContent=weeklyRecapLabelText(data.start,data.end);
+  if(!data.rows.length){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Tidak ada data tercatat di minggu ini.</div>';
+    return;
+  }
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val ${data.profitMinggu>=0?'cg':'cr'}" style="font-size:15px">${data.profitMinggu>=0?'+':''}${fc(data.profitMinggu)}</div><div class="bal-box-lbl">Profit Minggu Ini</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cy" style="font-size:15px">${data.winRate.toFixed(0)}%</div><div class="bal-box-lbl">Win Rate</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:15px;color:${data.maxDD>0?'#F87171':'#4ADE80'}">${fc(data.maxDD)}</div><div class="bal-box-lbl">Max Drawdown</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:15px;color:#D4AF37">${data.topPair}</div><div class="bal-box-lbl">Transaksi Terbanyak (${data.topPairCount}x)</div></div>
+    </div>
+    <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:6px">${data.rows.length} hari tercatat · ${data.totalSignal} total transaksi minggu ini</div>`;
+}
+async function downloadWeeklyRecapPDF(){
+  const statusEl=document.getElementById('weeklyRecapStatus');
+  if(statusEl) statusEl.textContent='⏳ Menyiapkan laporan...';
+  try{
+    if(typeof window.jspdf==='undefined'){ if(statusEl) statusEl.textContent='❌ Library PDF gagal dimuat, cek koneksi internet.'; return; }
+    const data=getWeeklyRecapData(weeklyRecapOffset);
+    if(!data.rows.length){ if(statusEl) statusEl.textContent='❌ Tidak ada data tercatat di minggu ini.'; return; }
+    const { jsPDF }=window.jspdf;
+    const doc=new jsPDF();
+    const labelText=weeklyRecapLabelText(data.start,data.end);
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(20);
+    doc.text('Weekly Recap — Laporan Mingguan', 14, 20);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(100);
+    doc.text('Periode: '+labelText, 14, 27);
+    doc.text('Marginkuat — Catatan Trading Pribadi', 14, 33);
+
+    doc.setDrawColor(200); doc.line(14,38,196,38);
+
+    const items=[
+      ['Profit Minggu Ini', (data.profitMinggu>=0?'+':'')+fc(data.profitMinggu)],
+      ['Win Rate', data.winRate.toFixed(0)+'%'],
+      ['Max Drawdown', fc(data.maxDD)],
+      ['Transaksi Terbanyak', `${data.topPair} (${data.topPairCount}x)`],
+      ['Total Hari Tercatat', data.rows.length+' hari'],
+      ['Total Transaksi', data.totalSignal+'x']
+    ];
+    let y=50;
+    doc.setFontSize(11);
+    items.forEach(([label,val])=>{
+      doc.setFont('helvetica','normal'); doc.setTextColor(90);
+      doc.text(label, 14, y);
+      doc.setFont('helvetica','bold'); doc.setTextColor(20);
+      doc.text(String(val), 140, y);
+      y+=10;
+    });
+
+    y+=4;
+    doc.setDrawColor(200); doc.line(14,y,196,y); y+=10;
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20);
+    doc.text('Rincian Harian', 14, y); y+=8;
+    doc.setFontSize(9);
+    doc.setFont('helvetica','bold'); doc.setTextColor(90);
+    doc.text('Tanggal', 14, y); doc.text('Pair', 60, y); doc.text('Signal', 95, y); doc.text('Profit/Loss', 140, y);
+    y+=2; doc.setDrawColor(220); doc.line(14,y,196,y); y+=6;
+    doc.setFont('helvetica','normal');
+    data.rows.forEach(r=>{
+      if(y>270){ doc.addPage(); y=20; }
+      const p=parseFloat(r.profit||0);
+      doc.setTextColor(90);
+      doc.text(fd(r.tanggal), 14, y);
+      doc.text(r.pair||'-', 60, y);
+      doc.text(String(r.jumlah_signal||0), 95, y);
+      if(p>=0) doc.setTextColor(34,150,60); else doc.setTextColor(200,60,60);
+      doc.text((p>=0?'+':'')+fc(p), 140, y);
+      y+=7;
+    });
+
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text('Digenerate otomatis oleh Marginkuat pada '+new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}), 14, 285);
+
+    const filename=`Laporan_Mingguan_${data.start.toISOString().slice(0,10)}.pdf`;
+    doc.save(filename);
+    if(statusEl) statusEl.textContent='✅ Laporan berhasil diunduh: '+filename;
+  }catch(e){
+    console.error(e);
+    if(statusEl) statusEl.textContent='❌ Gagal membuat laporan: '+(e.message||'').slice(0,150);
+  }
+}
+
 // ══ CERTIFICATE OF PERFORMANCE ══
 let sertifikatPeriode='bulanan';
 let sertifikatYear=new Date().getFullYear(), sertifikatMonth=new Date().getMonth();
@@ -4023,6 +4179,7 @@ async function simpanSaldo(){
     renderGoalTracker();
     renderInvestorDashboard();
     renderNotifCenter();
+    renderWeeklyRecap();
     renderLapKeu();
   }catch(e){
     console.error(e);
