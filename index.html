@@ -266,6 +266,18 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- NOTIFICATION CENTER -->
+<div class="section" id="secNotifCenter">
+  <div class="sec-title">🔔 Notifikasi <span id="notifBadge" style="display:none;background:#F87171;color:#161A0F;font-size:10px;font-weight:800;border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:middle">0</span></div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Update otomatis dari data terbaru — WD, profit/loss, status risiko, dan goal tercapai. Muncul tiap kamu buka halaman ini.</div>
+    <div id="notifList"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+    <div style="text-align:right;margin-top:8px">
+      <span onclick="markAllNotifRead()" style="font-size:9px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Tandai semua sudah dibaca</span>
+    </div>
+  </div>
+</div>
+
 <!-- SCORE DASHBOARD (sepaket langsung di bawah Saldo MT4) -->
 <div class="section" id="secScore">
   <div class="sec-title">🏆 Score Dashboard</div>
@@ -1719,6 +1731,7 @@ async function loadAll(){
   renderRiskMeter();
   renderGoalTracker();
   renderInvestorDashboard();
+  renderNotifCenter();
   renderFAQ();
   renderSertifikat();
   renderLapKeu();
@@ -2312,6 +2325,7 @@ async function syncAllHistoricalKas(){
     renderRiskMeter();
     renderGoalTracker();
     renderInvestorDashboard();
+    renderNotifCenter();
     renderLapKeu();
     await loadKas();
   }catch(e){
@@ -2425,6 +2439,7 @@ async function simpanKas(){
     renderRiskMeter();
     renderGoalTracker();
     renderInvestorDashboard();
+    renderNotifCenter();
     renderLapKeu();
   }catch(e){
     console.error(e);
@@ -3160,6 +3175,101 @@ function renderInvestorDashboard(){
   visibleInvestors.forEach(inv=>{ html+=investorCardHtml(inv, totalProfitAllTime, totalModalInvestorPool, showHapus); });
   html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal investor terhadap total modal investor tercatat — bukan kalkulasi bagi hasil resmi/legal.</div>';
   dashBox.innerHTML=html;
+}
+
+// ══ NOTIFICATION CENTER ══
+function getNotifReadIds(){
+  try{ return new Set(JSON.parse(localStorage.getItem('mk_notif_read')||'[]')); }catch(e){ return new Set(); }
+}
+function saveNotifReadIds(setIds){
+  localStorage.setItem('mk_notif_read', JSON.stringify([...setIds]));
+}
+function markAllNotifRead(){
+  const notifs=buildNotifList();
+  saveNotifReadIds(new Set(notifs.map(n=>n.id)));
+  renderNotifCenter();
+  toast('✅ Semua notifikasi ditandai sudah dibaca');
+}
+function buildNotifList(){
+  const notifs=[];
+  const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(b.tanggal)-new Date(a.tanggal));
+  const todayStr=rows[0]?rows[0].tanggal:new Date().toISOString().slice(0,10);
+
+  // 1) WD terbaru
+  if(typeof getWdProfitPerHari==='function'){
+    const wdData=getWdProfitPerHari().filter(d=>d.wd>0.01).sort((a,b)=>new Date(b.tanggal)-new Date(a.tanggal));
+    wdData.slice(0,5).forEach(d=>{
+      notifs.push({id:'wd-'+d.tanggal, icon:'💰', title:'Penarikan (WD) tercatat', desc:`WD sebesar ${fc(d.wd)} pada ${fd(d.tanggal)}`, tanggal:d.tanggal});
+    });
+  }
+  // 2) Profit/loss harian signifikan
+  rows.slice(0,10).forEach(r=>{
+    const p=parseFloat(r.profit||0);
+    if(Math.abs(p)<1) return;
+    notifs.push({id:'pl-'+r.tanggal, icon:p>=0?'📈':'📉', title:p>=0?'Profit hari ini':'Loss hari ini', desc:`${p>=0?'+':''}${fc(p)} pada ${fd(r.tanggal)}`, tanggal:r.tanggal});
+  });
+  // 3) Status risiko (dari Risk Meter)
+  if(typeof getRiskMeterData==='function' && typeof riskZone==='function'){
+    const rd=getRiskMeterData();
+    if(rd){
+      const ddZone=riskZone(rd.ddPct,15,35);
+      const rorZone = rd.hasEnoughData ? riskZone(rd.ror,10,40) : null;
+      const riskZoneVal = rd.hasRiskInput ? riskZone(rd.riskPct,2,5) : null;
+      const codes=[ddZone.code]; if(rorZone)codes.push(rorZone.code); if(riskZoneVal)codes.push(riskZoneVal.code);
+      let overallCode='green';
+      if(codes.includes('red'))overallCode='red'; else if(codes.includes('yellow'))overallCode='yellow';
+      if(overallCode!=='green'){
+        notifs.push({
+          id:'risk-'+overallCode+'-'+todayStr,
+          icon: overallCode==='red'?'🔴':'🟡',
+          title: overallCode==='red'?'Status risiko: BAHAYA':'Status risiko: WASPADA',
+          desc:'Cek section Risk Meter buat detail Current Drawdown, Risk of Ruin, dan Risk per Trade.',
+          tanggal: todayStr
+        });
+      }
+    }
+  }
+  // 4) Goal tercapai
+  if(typeof getGoalList==='function' && typeof getGoalCurrentVal==='function'){
+    getGoalList().forEach(g=>{
+      const current=getGoalCurrentVal(g);
+      if(g.targetVal>0 && current>=g.targetVal){
+        notifs.push({id:'goal-'+g.id, icon:'🏆', title:'Goal tercapai!', desc:`"${g.judul}" sudah mencapai target ${fc(g.targetVal)}`, tanggal:todayStr});
+      }
+    });
+  }
+  notifs.sort((a,b)=>new Date(b.tanggal)-new Date(a.tanggal));
+  return notifs;
+}
+function renderNotifCenter(){
+  const listEl=document.getElementById('notifList');
+  const badgeEl=document.getElementById('notifBadge');
+  if(!listEl)return;
+  const notifs=buildNotifList();
+  const readIds=getNotifReadIds();
+  const unread=notifs.filter(n=>!readIds.has(n.id));
+
+  if(badgeEl){
+    if(unread.length>0){ badgeEl.style.display='inline-block'; badgeEl.textContent=unread.length; }
+    else{ badgeEl.style.display='none'; }
+  }
+  if(!notifs.length){
+    listEl.innerHTML='<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Belum ada notifikasi.</div>';
+    return;
+  }
+  let html='';
+  notifs.slice(0,15).forEach(n=>{
+    const isUnread=!readIds.has(n.id);
+    html+=`
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #1E2312;${isUnread?'':'opacity:.55'}">
+        <div style="font-size:18px;flex-shrink:0">${n.icon}</div>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;color:#D4AF37;display:flex;align-items:center;gap:6px">${n.title}${isUnread?'<span style="width:6px;height:6px;border-radius:50%;background:#F87171;display:inline-block;flex-shrink:0"></span>':''}</div>
+          <div style="font-size:10px;color:#8A6B26;margin-top:2px">${n.desc}</div>
+        </div>
+      </div>`;
+  });
+  listEl.innerHTML=html;
 }
 
 // ══ FAQ SECTION ══
@@ -3912,6 +4022,7 @@ async function simpanSaldo(){
     renderRiskMeter();
     renderGoalTracker();
     renderInvestorDashboard();
+    renderNotifCenter();
     renderLapKeu();
   }catch(e){
     console.error(e);
