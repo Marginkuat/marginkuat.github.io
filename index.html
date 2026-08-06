@@ -1587,7 +1587,7 @@ const SEARCH_MENU=[
   {id:'secAliranUang', icon:'💸', label:'Aliran Uang Masuk & Keluar', desc:'Catatan investasi, profit MT4, dan pengeluaran', kw:'aliran uang masuk keluar investasi profit mt4 kas pribadi belanja'},
   {id:'secAlokasiDana', icon:'🥧', label:'Alokasi Dana (Allocation & Goals)', desc:'Bagi dana hasil WD ke kebutuhan harian, investasi, tabungan, hiburan', kw:'alokasi dana allocation goals budgeting pie chart kebutuhan harian investasi tabungan darurat hiburan'},
   {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow'},
-  {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio'},
+  {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio riwayat transaksi aset beli jual saham properti tracker'},
   {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf'},
   {id:'secProfitBulanan', icon:'📊', label:'Profit Per Bulan', desc:'Daftar total profit tiap bulan', kw:'profit per bulan bulanan'},
   {id:'secEksporBulanan', icon:'📁', label:'Ekspor Laporan Bulanan', desc:'Download catatan harian per bulan', kw:'ekspor export laporan bulanan csv pdf'},
@@ -3981,6 +3981,15 @@ const ASET_PRESET={
   properti:{nama:'Properti', tipe:'tidak_lancar', hint:'estimasi nilai jual properti'},
   tanah:{nama:'Tanah', tipe:'tidak_lancar', hint:'estimasi nilai jual tanah'}
 };
+// ── RIWAYAT TRANSAKSI ASET — catat kapan & berapa nilai aset ditambahkan/dihapus ──
+function getRiwayatAset(){
+  try{ return JSON.parse(localStorage.getItem('mk_riwayat_aset')||'[]'); }catch(e){ return []; }
+}
+function catatRiwayatAset(entry){
+  const list=getRiwayatAset();
+  list.unshift(entry); // terbaru di atas
+  localStorage.setItem('mk_riwayat_aset', JSON.stringify(list.slice(0,100)));
+}
 function tambahAsetLain(presetKey){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const preset=presetKey?ASET_PRESET[presetKey]:null;
@@ -4000,17 +4009,22 @@ function tambahAsetLain(presetKey){
   if(!preset){
     lancar=confirm('Apakah ini ASET LANCAR? (mudah dicairkan < 1 tahun — misal: kas, tabungan, piutang)\n\nOK = Aset Lancar\nCancel = Aset Tidak Lancar (misal: motor, tanah, properti, alat)');
   }
+  const todayStr=new Date().toISOString().slice(0,10);
+  const tanggalStr=prompt('Tanggal transaksi (kapan aset ini dibeli/diperoleh)?\nFormat: YYYY-MM-DD', todayStr) || todayStr;
   const list=getAsetLain();
   list.push({nama, jumlah, tipe: lancar?'lancar':'tidak_lancar'});
   localStorage.setItem('mk_aset_lain', JSON.stringify(list));
+  catatRiwayatAset({tanggal:tanggalStr, nama, jumlah, aksi:'beli'});
   toast('✅ Aset ditambahkan');
   renderLapKeu();
 }
 function hapusAsetLain(idx){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const list=getAsetLain();
+  const removed=list[idx];
   list.splice(idx,1);
   localStorage.setItem('mk_aset_lain', JSON.stringify(list));
+  if(removed) catatRiwayatAset({tanggal:new Date().toISOString().slice(0,10), nama:removed.nama, jumlah:removed.jumlah, aksi:'jual'});
   renderLapKeu();
 }
 function tambahKewajiban(){
@@ -4095,6 +4109,23 @@ function renderNeraca(wrap){
     </div>`;
   }
   html+=`<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-top:1.5px solid #4ADE80;margin-top:6px;font-weight:800"><span style="color:#4ADE80">TOTAL ASET</span><span style="color:#4ADE80">${rp(n.totalAset)}</span></div>`;
+
+  // ── RIWAYAT TRANSAKSI ASET ──
+  const riwayatAset=getRiwayatAset();
+  html+=`<div style="margin-top:16px;background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:14px">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🧾 Riwayat Transaksi Aset</div>`;
+  if(!riwayatAset.length){
+    html+=`<div style="font-size:11px;color:#7A5D1F;text-align:center;padding:6px 0">Belum ada riwayat transaksi. Riwayat otomatis tercatat tiap kali aset ditambahkan/dihapus.</div>`;
+  }else{
+    riwayatAset.slice(0,15).forEach(r=>{
+      const beli=r.aksi==='beli';
+      html+=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="color:#C8A84B">${beli?'🟢 Beli':'🔴 Jual/Hapus'} ${escapeHtml(r.nama)}<br><span style="font-size:9px;color:#7A5D1F">${fd(r.tanggal)}</span></span>
+        <span style="color:${beli?'#4ADE80':'#F87171'};font-weight:700">${beli?'+':'-'}${rp(r.jumlah)}</span>
+      </div>`;
+    });
+  }
+  html+=`</div>`;
 
   html+=`<div style="height:1px;background:var(--border);margin:18px 0"></div>`;
 
