@@ -274,6 +274,27 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- RISK METER -->
+<div class="section" id="secRiskMeter">
+  <div class="sec-title">🚦 Risk Meter</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Visualisasi risiko akun secara real-time — Current Drawdown, Risk of Ruin, dan Risk per Trade dalam satu tampilan.</div>
+    <div id="riskMeter" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
+<!-- GOAL TRACKER -->
+<div class="section" id="secGoalTracker">
+  <div class="sec-title">🎯 Goal Tracker</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Tetapkan target modal, profit, atau WD — progress dihitung otomatis dari data trading kamu.</div>
+    <div id="goalTracker">
+      <div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    </div>
+    <button class="btn btn-p" onclick="tambahGoal()" style="margin-top:12px;margin-bottom:0">➕ Tambah Goal</button>
+  </div>
+</div>
+
 <!-- STATISTIK PER PAIR -->
 <div class="section" id="secStatPair">
   <div class="sec-title">📊 Statistik Per Pair</div>
@@ -1009,6 +1030,38 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- RIWAYAT PENARIKAN (WD) -->
+<div class="section" id="secWdHistory">
+  <div class="sec-title">💰 Riwayat Penarikan (WD)</div>
+  <div class="graph-card" style="margin-bottom:12px">
+    <div id="wdRingkasan">
+      <div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    </div>
+  </div>
+  <div class="graph-card" style="margin-bottom:12px">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px">Grafik WD per Bulan — 6 Bulan Terakhir</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Total penarikan dari MT4 tiap bulan, dihitung otomatis dari Saldo Harian</div>
+    <div id="wdChart"><div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+  </div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px">WD vs Profit — 6 Bulan Terakhir</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:8px">✅ Bukti kamu sudah profitable — WD berasal dari hasil profit, bukan dari modal</div>
+    <div id="wdVsProfitChart"><div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+  </div>
+</div>
+
+<!-- INVESTOR DASHBOARD -->
+<div class="section" id="secInvestorDashboard">
+  <div class="sec-title">👥 Investor Dashboard</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Tampilan personal untuk tiap investor — porsi modal, estimasi profit, dan ROI, dihitung otomatis dari data trading kamu.</div>
+    <div id="investorDashboard">
+      <div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    </div>
+    <button class="btn btn-p" onclick="tambahInvestor()" style="margin-top:12px;margin-bottom:0">➕ Tambah Investor</button>
+  </div>
+</div>
+
 <!-- LAPORAN KEUANGAN -->
 <div class="section" id="secLaporanKeuangan">
   <div class="sec-title">📑 Laporan Keuangan</div>
@@ -1058,6 +1111,30 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <button class="btn btn-p" onclick="exportLaporanPDF()" style="margin-bottom:0">⬇️ PDF</button>
     </div>
     <div id="exportStatus" style="font-size:10px;color:#7A5D1F;margin-top:10px;text-align:center"></div>
+  </div>
+</div>
+
+<!-- CERTIFICATE OF PERFORMANCE -->
+<div class="section" id="secSertifikat">
+  <div class="sec-title">🏆 Certificate of Performance</div>
+  <div class="graph-card">
+    <div style="display:flex;gap:6px;margin-bottom:14px" id="sertifikatTabs">
+      <button class="pair-tab active" data-st="bulanan" onclick="setSertifikatPeriode('bulanan')">Bulanan</button>
+      <button class="pair-tab" data-st="tahunan" onclick="setSertifikatPeriode('tahunan')">Tahunan</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <button class="cal-nav-btn" onclick="sertifikatPrev()">‹</button>
+      <div id="sertifikatLabel" style="font-size:14px;font-weight:700;color:#D4AF37">-</div>
+      <button class="cal-nav-btn" onclick="sertifikatNext()">›</button>
+    </div>
+    <div id="sertifikatPreview"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+    <div style="margin-top:14px">
+      <label class="lbl">Nama Trader (tampil di sertifikat)</label>
+      <input class="inp" id="sertifikatNama" placeholder="Contoh: Nama Anda" oninput="renderSertifikat()" style="margin-bottom:12px">
+    </div>
+    <button class="btn btn-p" onclick="downloadSertifikatPDF()" style="margin-bottom:0">⬇️ Download Sertifikat (PDF)</button>
+    <div id="sertifikatStatus" style="font-size:10px;color:#7A5D1F;margin-top:10px;text-align:center"></div>
+    <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">Digenerate otomatis dari catatan trading pribadimu — untuk branding/portofolio, bukan dokumen resmi lembaga keuangan.</div>
   </div>
 </div>
 
@@ -1617,6 +1694,11 @@ async function loadAll(){
   renderKasRingkasan();
   renderKasRekap();
   renderKasChart();
+  renderWdSection();
+  renderRiskMeter();
+  renderGoalTracker();
+  renderInvestorDashboard();
+  renderSertifikat();
   renderLapKeu();
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
   loadStatPair();
@@ -2204,6 +2286,10 @@ async function syncAllHistoricalKas(){
     renderKasRingkasan();
     renderKasRekap();
     renderKasChart();
+    renderWdSection();
+    renderRiskMeter();
+    renderGoalTracker();
+    renderInvestorDashboard();
     renderLapKeu();
     await loadKas();
   }catch(e){
@@ -2313,6 +2399,10 @@ async function simpanKas(){
     renderKasRingkasan();
     renderKasRekap();
     renderKasChart();
+    renderWdSection();
+    renderRiskMeter();
+    renderGoalTracker();
+    renderInvestorDashboard();
     renderLapKeu();
   }catch(e){
     console.error(e);
@@ -2514,7 +2604,8 @@ function renderKasChart(){
   });
   const maxVal=Math.max(1,...data.map(d=>Math.max(d.masuk,d.keluar)));
 
-  let html='<div style="display:flex;align-items:flex-end;justify-content:space-around;height:130px;gap:6px;padding:0 2px">';
+  let html='<div id="kasChartBars" style="position:relative;touch-action:none;cursor:pointer">';
+  html+='<div style="display:flex;align-items:flex-end;justify-content:space-around;height:130px;gap:6px;padding:0 2px">';
   data.forEach(d=>{
     const hMasuk=Math.max(2,(d.masuk/maxVal)*100);
     const hKeluar=Math.max(2,(d.keluar/maxVal)*100);
@@ -2527,14 +2618,622 @@ function renderKasChart(){
       </div>`;
   });
   html+='</div>';
+  html+=`<div class="graph-tooltip" id="kasChartTooltip">
+    <div class="graph-tooltip-date" id="kasChartTooltipDate">-</div>
+    <div class="graph-tooltip-val" id="kasChartTooltipVal" style="color:#4ADE80">Masuk: ¢0.00</div>
+    <div class="graph-tooltip-val" id="kasChartTooltipVal2" style="color:#F87171;margin-top:2px">Keluar: ¢0.00</div>
+  </div>`;
+  html+='</div>';
   html+='<div style="display:flex;justify-content:space-around;margin-top:6px">';
   data.forEach(d=>{ html+=`<div style="flex:1;text-align:center;font-size:9px;color:#7A5D1F">${d.label}</div>`; });
   html+='</div>';
   html+=`<div style="display:flex;justify-content:center;gap:16px;margin-top:10px;font-size:9px;color:#8A6B26">
     <span><span style="color:#4ADE80">■</span> Masuk</span>
     <span><span style="color:#F87171">■</span> Keluar</span>
+  </div>
+  <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">👆 Tap &amp; geser buat lihat detail tiap bulan</div>`;
+  el.innerHTML=html;
+
+  setupKasChartInteraction(data);
+}
+function setupKasChartInteraction(data){
+  const wrap=document.getElementById('kasChartBars');
+  const tooltip=document.getElementById('kasChartTooltip');
+  const tooltipDate=document.getElementById('kasChartTooltipDate');
+  const tooltipVal=document.getElementById('kasChartTooltipVal');
+  const tooltipVal2=document.getElementById('kasChartTooltipVal2');
+  if(!wrap)return;
+
+  function showAt(clientX){
+    const rect=wrap.getBoundingClientRect();
+    const relX=Math.min(rect.width-1, Math.max(0, clientX-rect.left));
+    let idx=Math.floor((relX/rect.width)*data.length);
+    idx=Math.max(0, Math.min(data.length-1, idx));
+    const d=data[idx];
+
+    tooltipDate.textContent=d.label;
+    tooltipVal.textContent='Masuk: +'+fc(d.masuk);
+    tooltipVal2.textContent='Keluar: -'+fc(d.keluar);
+    tooltip.style.display='block';
+
+    const segWidth=rect.width/data.length;
+    let leftPx=segWidth*idx+segWidth/2;
+    const tooltipWidth=tooltip.offsetWidth||130;
+    leftPx=Math.max(4, Math.min(rect.width-tooltipWidth-4, leftPx-tooltipWidth/2));
+    tooltip.style.left=leftPx+'px';
+  }
+  function hideTooltip(){ tooltip.style.display='none'; }
+
+  let dragging=false;
+  wrap.addEventListener('pointerdown',e=>{dragging=true;showAt(e.clientX);});
+  wrap.addEventListener('pointermove',e=>{if(dragging)showAt(e.clientX);});
+  window.addEventListener('pointerup',()=>{dragging=false;});
+  wrap.addEventListener('pointerleave',()=>{if(!dragging)hideTooltip();});
+}
+
+// ══ RIWAYAT PENARIKAN (WD) — VISUAL ══
+// Dihitung dari selisih Saldo Harian (sama seperti model WD di renderKasRingkasan), BUKAN dari
+// label kategori manual di Aliran Uang — jadi selalu akurat & konsisten dengan Saldo MT4 riil.
+function getWdProfitPerHari(){
+  const dataUrut=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const out=[];
+  let prevSaldo=null;
+  dataUrut.forEach(r=>{
+    const saldo=parseFloat(r.saldo_mt4||0);
+    const profit=parseFloat(r.profit||0);
+    let wd=0;
+    if(prevSaldo!==null){
+      const selisih=saldo-prevSaldo;
+      const implisit=selisih-profit; // bagian selisih saldo yang BUKAN dari hasil trading hari itu
+      if(implisit<-0.01) wd=Math.abs(implisit);
+    }
+    out.push({tanggal:r.tanggal, wd, profit});
+    prevSaldo=saldo;
+  });
+  return out;
+}
+function last6Bulan(){
+  const now=new Date();
+  const bulanSingkat=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const list=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(now.getFullYear(), now.getMonth()-i, 1);
+    list.push({y:d.getFullYear(), m:d.getMonth(), label:bulanSingkat[d.getMonth()]});
+  }
+  return list;
+}
+function renderWdRingkasan(){
+  const el=document.getElementById('wdRingkasan');
+  if(!el)return;
+  const data=getWdProfitPerHari();
+  if(!data.length){
+    el.innerHTML='<div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Belum ada data Saldo Harian.</div>';
+    return;
+  }
+  const totalWd=data.reduce((s,d)=>s+d.wd,0);
+  const totalProfit=data.reduce((s,d)=>s+Math.max(0,d.profit),0);
+  const jumlahWd=data.filter(d=>d.wd>0.01).length;
+  const rasio=totalProfit>0 ? (totalWd/totalProfit*100) : 0;
+  el.innerHTML=`
+    <div class="bal-box" style="background:#2A2410;border:1px solid #B8860B;margin-bottom:8px">
+      <div class="bal-box-val" style="font-size:24px;color:#FFD700">${fc(totalWd)}</div>
+      <div class="bal-box-lbl">💰 Total Penarikan (WD) All-Time</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:15px;color:#D4AF37">${jumlahWd}x</div><div class="bal-box-lbl">Jumlah Kali WD</div></div>
+      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:15px;color:${rasio<=100?'#4ADE80':'#F87171'}">${rasio.toFixed(0)}%</div><div class="bal-box-lbl">WD vs Total Profit</div></div>
+    </div>
+    <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">Dihitung otomatis dari selisih Saldo Harian yang kamu input — bukan dari input manual, jadi bisa jadi bukti riwayat penarikan yang konsisten.</div>`;
+}
+function renderWdChart(){
+  const el=document.getElementById('wdChart');
+  if(!el)return;
+  const data=getWdProfitPerHari();
+  if(!data.length){
+    el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Belum ada data.</div>';
+    return;
+  }
+  const monthly=last6Bulan().map(b=>{
+    let wd=0;
+    data.forEach(d=>{
+      const dt=new Date(d.tanggal);
+      if(dt.getFullYear()===b.y && dt.getMonth()===b.m) wd+=d.wd;
+    });
+    return {...b, wd};
+  });
+  const maxVal=Math.max(1,...monthly.map(d=>d.wd));
+  let html='<div style="display:flex;align-items:flex-end;justify-content:space-around;height:140px;gap:6px;padding:0 2px">';
+  monthly.forEach(d=>{
+    const h=Math.max(2,(d.wd/maxVal)*100);
+    html+=`
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;flex:1">
+        <div style="font-size:8px;color:#8A6B26;margin-bottom:3px;white-space:nowrap">${d.wd>0.01?fc(d.wd):''}</div>
+        <div style="width:18px;height:${h}%;background:#F87171;border-radius:4px 4px 0 0;min-height:2px"></div>
+      </div>`;
+  });
+  html+='</div>';
+  html+='<div style="display:flex;justify-content:space-around;margin-top:6px">';
+  monthly.forEach(d=>{ html+=`<div style="flex:1;text-align:center;font-size:9px;color:#7A5D1F">${d.label}</div>`; });
+  html+='</div>';
+  el.innerHTML=html;
+}
+function renderWdVsProfitChart(){
+  const el=document.getElementById('wdVsProfitChart');
+  if(!el)return;
+  const data=getWdProfitPerHari();
+  if(!data.length){
+    el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Belum ada data.</div>';
+    return;
+  }
+  const monthly=last6Bulan().map(b=>{
+    let wd=0, profit=0;
+    data.forEach(d=>{
+      const dt=new Date(d.tanggal);
+      if(dt.getFullYear()===b.y && dt.getMonth()===b.m){ wd+=d.wd; profit+=Math.max(0,d.profit); }
+    });
+    return {...b, wd, profit};
+  });
+  const maxVal=Math.max(1,...monthly.map(d=>Math.max(d.wd,d.profit)));
+  let html='<div style="display:flex;align-items:flex-end;justify-content:space-around;height:140px;gap:6px;padding:0 2px">';
+  monthly.forEach(d=>{
+    const hProfit=Math.max(2,(d.profit/maxVal)*100);
+    const hWd=Math.max(2,(d.wd/maxVal)*100);
+    html+=`
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;flex:1">
+        <div style="display:flex;align-items:flex-end;gap:2px;height:100%">
+          <div style="width:10px;height:${hProfit}%;background:#4ADE80;border-radius:3px 3px 0 0;min-height:2px"></div>
+          <div style="width:10px;height:${hWd}%;background:#F87171;border-radius:3px 3px 0 0;min-height:2px"></div>
+        </div>
+      </div>`;
+  });
+  html+='</div>';
+  html+='<div style="display:flex;justify-content:space-around;margin-top:6px">';
+  monthly.forEach(d=>{ html+=`<div style="flex:1;text-align:center;font-size:9px;color:#7A5D1F">${d.label}</div>`; });
+  html+='</div>';
+  html+=`<div style="display:flex;justify-content:center;gap:16px;margin-top:10px;font-size:9px;color:#8A6B26">
+    <span><span style="color:#4ADE80">■</span> Profit</span>
+    <span><span style="color:#F87171">■</span> WD</span>
   </div>`;
   el.innerHTML=html;
+}
+function renderWdSection(){
+  renderWdRingkasan();
+  renderWdChart();
+  renderWdVsProfitChart();
+}
+
+// ══ RISK METER (Current Drawdown + Risk of Ruin + Risk per Trade, dalam 1 tampilan) ══
+function riskZone(val, greenMax, yellowMax){
+  if(val<=greenMax) return {color:'#4ADE80', label:'Aman', code:'green'};
+  if(val<=yellowMax) return {color:'#EAB308', label:'Waspada', code:'yellow'};
+  return {color:'#F87171', label:'Bahaya', code:'red'};
+}
+function getRiskMeterData(){
+  const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  if(!rows.length) return null;
+
+  // ── Current Drawdown (real-time, %) — sama seperti perhitungan di Score Dashboard ──
+  const now=new Date();
+  const cutoff=new Date(now.getFullYear(), now.getMonth()-5, 1); // 6 bulan terakhir
+  const r6=rows.filter(r=>new Date(r.tanggal)>=cutoff);
+  let peak=0, cumPL=0, currentDd=0;
+  r6.forEach(r=>{
+    cumPL+=parseFloat(r.profit||0);
+    if(cumPL>peak)peak=cumPL;
+    currentDd=peak-cumPL;
+  });
+  const modalUntukDd = r6.length ? parseFloat(r6[r6.length-1].saldo_mt4||0) : parseFloat(rows[rows.length-1].saldo_mt4||0);
+  const ddPct = modalUntukDd>0 ? (currentDd/modalUntukDd*100) : 0;
+
+  // ── Risk of Ruin (%) — formula klasik, sama seperti section Risk of Ruin Calculator ──
+  const profits=rows.map(r=>parseFloat(r.profit||0));
+  const gains=profits.filter(p=>p>0);
+  const losses=profits.filter(p=>p<0);
+  let ror=0, hasEnoughData=(gains.length+losses.length)>=5 && losses.length>0;
+  if(hasEnoughData){
+    const p=gains.length/(gains.length+losses.length);
+    const q=1-p;
+    const avgWin=gains.length?gains.reduce((a,b)=>a+b,0)/gains.length:0;
+    const avgLoss=Math.abs(losses.reduce((a,b)=>a+b,0)/losses.length);
+    const modal=parseFloat(rows[rows.length-1].saldo_mt4||0);
+    if(avgLoss>0){
+      const RR=avgWin/avgLoss;
+      const edge=p*RR-q;
+      const units=Math.max(1,Math.floor(modal/avgLoss));
+      if(edge<=0) ror=100;
+      else ror=Math.min(100, Math.pow((1-edge)/(1+edge), units)*100);
+    }
+  }
+
+  // ── Risk per Trade (%) — dari Kalkulator Risiko per Pair yang aktif ──
+  const riskHeroEl=document.getElementById('calcOutRiskHero');
+  let riskDollar=0;
+  if(riskHeroEl){
+    riskDollar=parseFloat((riskHeroEl.textContent||'').replace(/[^0-9.\-]/g,''))||0;
+  }
+  const modalSekarang=parseFloat(rows[rows.length-1].saldo_mt4||0);
+  const riskPct = modalSekarang>0 ? (riskDollar/modalSekarang*100) : 0;
+
+  return {ddPct, ror, hasEnoughData, riskPct, hasRiskInput:riskDollar>0.001};
+}
+function riskMeterLampRow(label, valueText, zone, hint){
+  return `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #1E2312;text-align:left">
+      <div style="width:14px;height:14px;border-radius:50%;background:${zone.color};box-shadow:0 0 8px ${zone.color};flex-shrink:0"></div>
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:700;color:#D4AF37">${label}</div>
+        <div style="font-size:9px;color:#7A5D1F;margin-top:1px">${hint}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:800;color:${zone.color}">${valueText}</div>
+        <div style="font-size:8px;color:${zone.color};font-weight:700;text-transform:uppercase;letter-spacing:.5px">${zone.label}</div>
+      </div>
+    </div>`;
+}
+function renderRiskMeter(){
+  const el=document.getElementById('riskMeter');
+  if(!el)return;
+  const data=getRiskMeterData();
+  if(!data){
+    el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Belum ada data Saldo Harian.</div>';
+    return;
+  }
+  const ddZone=riskZone(data.ddPct, 15, 35);
+  const rorZone=data.hasEnoughData ? riskZone(data.ror, 10, 40) : null;
+  const riskZoneVal = data.hasRiskInput ? riskZone(data.riskPct, 2, 5) : null;
+
+  const codes=[ddZone.code];
+  if(rorZone) codes.push(rorZone.code);
+  if(riskZoneVal) codes.push(riskZoneVal.code);
+  let overallCode='green', overallLabel='AMAN', overallColor='#4ADE80', overallDot='🟢';
+  if(codes.includes('red')){ overallCode='red'; overallLabel='BAHAYA'; overallColor='#F87171'; overallDot='🔴'; }
+  else if(codes.includes('yellow')){ overallCode='yellow'; overallLabel='WASPADA'; overallColor='#EAB308'; overallDot='🟡'; }
+
+  let html=`
+    <div style="text-align:center;padding:14px;border-radius:12px;background:${overallColor}22;border:1px solid ${overallColor};margin-bottom:6px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Status Risiko Akun</div>
+      <div style="font-size:20px;font-weight:800;color:${overallColor}">${overallDot} ${overallLabel}</div>
+    </div>
+    ${riskMeterLampRow('Current Drawdown', data.ddPct.toFixed(1)+'%', ddZone, 'Jarak equity ke puncak tertinggi, 6 bulan terakhir')}
+    ${rorZone ? riskMeterLampRow('Risk of Ruin', data.ror.toFixed(1)+'%', rorZone, 'Peluang teoretis akun habis, dari win rate & RR historis') : `
+    <div style="padding:10px 0;text-align:center;font-size:10px;color:#7A5D1F;border-bottom:1px solid #1E2312">Risk of Ruin belum bisa dihitung — butuh minimal 5 hari data dengan profit &amp; loss.</div>`}
+    ${riskZoneVal ? riskMeterLampRow('Risk per Trade', data.riskPct.toFixed(2)+'%', riskZoneVal, 'Dari Kalkulator Risiko — % modal dipertaruhkan per entry') : `
+    <div style="padding:10px 0;text-align:center;font-size:10px;color:#7A5D1F">Risk per Trade belum terhitung — isi SL &amp; Lot di <span onclick="document.getElementById('secKalkulator').scrollIntoView({behavior:'smooth'})" style="color:#C8A84B;text-decoration:underline;cursor:pointer">Kalkulator Risiko</span> dulu.</div>`}
+    <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">🟢 Aman · 🟡 Waspada · 🔴 Bahaya — estimasi otomatis dari data historis, bukan jaminan hasil trading ke depan.</div>`;
+  el.innerHTML=html;
+}
+// Update Risk per Trade secara real-time saat kalkulator diubah (dengar event SETELAH kalkulator update nilainya sendiri)
+(function initRiskMeterListeners(){
+  ['calcSL','calcTP','calcPipValue','calcLotTest'].forEach(id=>{
+    const elx=document.getElementById(id);
+    if(elx) elx.addEventListener('input', ()=>renderRiskMeter());
+  });
+  const pairSelectElx=document.getElementById('calcPairSelect');
+  if(pairSelectElx) pairSelectElx.addEventListener('change', ()=>renderRiskMeter());
+})();
+
+// ══ GOAL TRACKER ══
+function getGoalList(){
+  try{ return JSON.parse(localStorage.getItem('mk_goals')||'[]'); }catch(e){ return []; }
+}
+function saveGoalList(list){ localStorage.setItem('mk_goals', JSON.stringify(list)); }
+const GOAL_SUMBER_META={
+  modal:{label:'Modal MT4 Saat Ini'},
+  profit_alltime:{label:'Total Profit All-Time'},
+  wd_alltime:{label:'Total WD All-Time'},
+  manual:{label:'Manual (isi sendiri)'}
+};
+function tambahGoal(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk tambah goal');return;}
+  const judul=prompt('Judul goal (contoh: Modal 10.000 / WD Pertama $500):');
+  if(!judul)return;
+  const targetStr=prompt('Target nominal (dalam ¢ / sen, sama seperti format saldo di app ini):');
+  const targetVal=parseFloat(targetStr);
+  if(isNaN(targetVal)||targetVal<=0){toast('❌ Nilai target tidak valid');return;}
+  const sumberInput=prompt('Sumber progress otomatis:\n1 = Modal MT4 Saat Ini\n2 = Total Profit All-Time\n3 = Total WD All-Time\n4 = Manual (isi progress sendiri)\n\nKetik angka 1-4:', '1');
+  const sumberMap={'1':'modal','2':'profit_alltime','3':'wd_alltime','4':'manual'};
+  const sumber=sumberMap[sumberInput];
+  if(!sumber){toast('❌ Pilihan sumber tidak valid');return;}
+  const deadline=prompt('Deadline (format YYYY-MM-DD, kosongkan kalau tidak ada):','');
+  const list=getGoalList();
+  list.push({id:Date.now().toString(36), judul, targetVal, sumber, manualVal:0, deadline: deadline||null});
+  saveGoalList(list);
+  toast('✅ Goal ditambahkan');
+  renderGoalTracker();
+}
+function hapusGoal(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!confirm('Hapus goal ini?'))return;
+  saveGoalList(getGoalList().filter(g=>g.id!==id));
+  toast('✅ Goal dihapus');
+  renderGoalTracker();
+}
+function updateGoalManual(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const list=getGoalList();
+  const g=list.find(x=>x.id===id);
+  if(!g)return;
+  const v=prompt('Progress saat ini (dalam ¢ / sen):', g.manualVal||0);
+  const val=parseFloat(v);
+  if(isNaN(val)||val<0){toast('❌ Nilai tidak valid');return;}
+  g.manualVal=val;
+  saveGoalList(list);
+  toast('✅ Progress diperbarui');
+  renderGoalTracker();
+}
+function getGoalCurrentVal(goal){
+  const rows=allSaldoData||[];
+  if(goal.sumber==='modal'){
+    return rows.length ? parseFloat(rows[rows.length-1].saldo_mt4||0) : 0;
+  }
+  if(goal.sumber==='profit_alltime'){
+    return rows.reduce((s,r)=>s+Math.max(0,parseFloat(r.profit||0)),0);
+  }
+  if(goal.sumber==='wd_alltime'){
+    const wdData=typeof getWdProfitPerHari==='function' ? getWdProfitPerHari() : [];
+    return wdData.reduce((s,d)=>s+(d.wd||0),0);
+  }
+  return parseFloat(goal.manualVal||0);
+}
+function renderGoalTracker(){
+  const el=document.getElementById('goalTracker');
+  if(!el)return;
+  const goals=getGoalList();
+  if(!goals.length){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada goal. Tekan tombol di bawah untuk mulai bikin rencana &amp; target.</div>';
+    return;
+  }
+  let html='';
+  goals.forEach(g=>{
+    const current=getGoalCurrentVal(g);
+    const pct=Math.min(100, Math.max(0, g.targetVal>0?(current/g.targetVal*100):0));
+    const tercapai=current>=g.targetVal;
+    const barColor=tercapai?'#4ADE80':'#D4AF37';
+    let deadlineInfo='';
+    if(g.deadline){
+      const d=new Date(g.deadline);
+      const daysLeft=Math.ceil((d.getTime()-Date.now())/86400000);
+      deadlineInfo = daysLeft>=0 ? `${daysLeft} hari lagi (${g.deadline})` : `Lewat deadline (${g.deadline})`;
+    }
+    html+=`
+      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:14px;margin-bottom:10px;text-align:left">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#D4AF37">${tercapai?'🏆 ':'🎯 '}${g.judul}</div>
+            <div style="font-size:9px;color:#7A5D1F;margin-top:2px">${GOAL_SUMBER_META[g.sumber]?GOAL_SUMBER_META[g.sumber].label:'-'}${deadlineInfo?' · '+deadlineInfo:''}</div>
+          </div>
+          <span onclick="hapusGoal('${g.id}')" style="font-size:9px;color:#7A5D1F;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px">Hapus</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#C8A84B;margin-bottom:6px">
+          <span>${fc(current)} / ${fc(g.targetVal)}</span>
+          <span style="color:${tercapai?'#4ADE80':'#8A6B26'}">${pct.toFixed(0)}%</span>
+        </div>
+        <div style="background:#1E2312;border-radius:20px;height:12px;overflow:hidden">
+          <div style="background:${barColor};height:100%;width:${pct}%;border-radius:20px;transition:width .3s"></div>
+        </div>
+        ${g.sumber==='manual'?`<div style="text-align:right;margin-top:6px"><span onclick="updateGoalManual('${g.id}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Update Progress</span></div>`:''}
+        ${tercapai?'<div style="text-align:center;margin-top:6px;font-size:10px;color:#4ADE80;font-weight:700">🎉 Target tercapai!</div>':''}
+      </div>`;
+  });
+  el.innerHTML=html;
+}
+
+// ══ INVESTOR DASHBOARD ══
+function getInvestorList(){
+  try{ return JSON.parse(localStorage.getItem('mk_investors')||'[]'); }catch(e){ return []; }
+}
+function saveInvestorList(list){ localStorage.setItem('mk_investors', JSON.stringify(list)); }
+function tambahInvestor(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk tambah investor');return;}
+  const nama=prompt('Nama investor:');
+  if(!nama)return;
+  const modalStr=prompt(`Modal yang disetor ${nama} (dalam ¢ / sen, sama seperti format saldo di app ini):`);
+  const modal=parseFloat(modalStr);
+  if(isNaN(modal)||modal<=0){toast('❌ Nilai modal tidak valid');return;}
+  const tglStr=prompt('Tanggal bergabung (format YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+  if(!tglStr || !/^\d{4}-\d{2}-\d{2}$/.test(tglStr)){toast('❌ Format tanggal tidak valid');return;}
+  const list=getInvestorList();
+  list.push({id:Date.now().toString(36), nama, modal, tanggal:tglStr});
+  saveInvestorList(list);
+  toast('✅ Investor ditambahkan');
+  renderInvestorDashboard();
+}
+function hapusInvestor(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!confirm('Hapus investor ini dari dashboard?'))return;
+  saveInvestorList(getInvestorList().filter(v=>v.id!==id));
+  toast('✅ Investor dihapus');
+  renderInvestorDashboard();
+}
+function renderInvestorDashboard(){
+  const el=document.getElementById('investorDashboard');
+  if(!el)return;
+  const investors=getInvestorList();
+  if(!investors.length){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada investor ditambahkan. Tekan tombol di bawah untuk mulai.</div>';
+    return;
+  }
+  const rows=allSaldoData||[];
+  const totalProfitAllTime=rows.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+  const totalModalInvestorPool=investors.reduce((s,v)=>s+parseFloat(v.modal||0),0);
+
+  let html='';
+  investors.forEach(inv=>{
+    const sharePct = totalModalInvestorPool>0 ? (inv.modal/totalModalInvestorPool*100) : 0;
+    const profitShare = totalProfitAllTime * (sharePct/100);
+    const currentVal = parseFloat(inv.modal||0) + profitShare;
+    const roi = inv.modal>0 ? (profitShare/inv.modal*100) : 0;
+    const joinDate=new Date(inv.tanggal);
+    const days=Math.max(0, Math.floor((Date.now()-joinDate.getTime())/86400000));
+    html+=`
+      <div style="border:1.5px solid #B8860B;border-radius:14px;padding:16px;margin-bottom:12px;background:linear-gradient(160deg,#1E2312,#161A0F);position:relative;text-align:left">
+        <div style="position:absolute;top:12px;right:14px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;border:1px solid #5C4818;border-radius:10px;padding:2px 8px">VIP</div>
+        <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px">Selamat datang</div>
+        <div style="font-size:18px;font-weight:800;color:#FFD700;margin:2px 0 10px">${inv.nama} 👋</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(inv.modal)}</div><div class="bal-box-lbl">Modal Disetor</div></div>
+          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:#FFD700">${fc(currentVal)}</div><div class="bal-box-lbl">Estimasi Nilai Sekarang</div></div>
+          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val ${profitShare>=0?'cg':'cr'}" style="font-size:14px">${profitShare>=0?'+':''}${fc(profitShare)}</div><div class="bal-box-lbl">Estimasi Profit Share</div></div>
+          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:${roi>=0?'#4ADE80':'#F87171'}">${roi>=0?'+':''}${roi.toFixed(1)}%</div><div class="bal-box-lbl">ROI</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:9px;color:#7A5D1F;border-top:1px solid #2A2E1F;padding-top:8px">
+          <span>Porsi Modal: <b style="color:#C8A84B">${sharePct.toFixed(1)}%</b></span>
+          <span>Bergabung ${days} hari lalu (${inv.tanggal})</span>
+        </div>
+        <div style="text-align:right;margin-top:6px">
+          <span onclick="hapusInvestor('${inv.id}')" style="font-size:9px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Hapus</span>
+        </div>
+      </div>`;
+  });
+  html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal investor terhadap total modal investor tercatat — bukan kalkulasi bagi hasil resmi/legal.</div>';
+  el.innerHTML=html;
+}
+
+// ══ CERTIFICATE OF PERFORMANCE ══
+let sertifikatPeriode='bulanan';
+let sertifikatYear=new Date().getFullYear(), sertifikatMonth=new Date().getMonth();
+function setSertifikatPeriode(p){
+  sertifikatPeriode=p;
+  document.querySelectorAll('#sertifikatTabs .pair-tab').forEach(b=>b.classList.toggle('active', b.dataset.st===p));
+  renderSertifikat();
+}
+function sertifikatPrev(){
+  if(sertifikatPeriode==='bulanan'){ sertifikatMonth--; if(sertifikatMonth<0){sertifikatMonth=11;sertifikatYear--;} }
+  else sertifikatYear--;
+  renderSertifikat();
+}
+function sertifikatNext(){
+  if(sertifikatPeriode==='bulanan'){ sertifikatMonth++; if(sertifikatMonth>11){sertifikatMonth=0;sertifikatYear++;} }
+  else sertifikatYear++;
+  renderSertifikat();
+}
+function sertifikatLabel(){
+  const bn=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  return sertifikatPeriode==='bulanan' ? `${bn[sertifikatMonth]} ${sertifikatYear}` : `Tahun ${sertifikatYear}`;
+}
+function getSertifikatStats(){
+  const rows=(allSaldoData||[]).filter(r=>{
+    const d=new Date(r.tanggal);
+    if(sertifikatPeriode==='bulanan') return d.getFullYear()===sertifikatYear && d.getMonth()===sertifikatMonth;
+    return d.getFullYear()===sertifikatYear;
+  }).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  if(!rows.length) return null;
+  let netProfit=0, hariProfit=0, bestDay=rows[0];
+  rows.forEach(r=>{
+    const p=parseFloat(r.profit||0);
+    netProfit+=p;
+    if(p>0)hariProfit++;
+    if(p>parseFloat(bestDay.profit||0)) bestDay=r;
+  });
+  const winRate=hariProfit/rows.length*100;
+  const startBal=parseFloat(rows[0].saldo_mt4||0)-parseFloat(rows[0].profit||0);
+  const growth=startBal>0.01 ? (netProfit/startBal*100) : 0;
+  return {rows, netProfit, hariProfit, totalHari:rows.length, winRate, bestDay, growth};
+}
+function getSertifikatNama(){
+  const inp=document.getElementById('sertifikatNama');
+  const v=inp?inp.value.trim():'';
+  if(v){ localStorage.setItem('mk_sertifikat_nama', v); return v; }
+  return localStorage.getItem('mk_sertifikat_nama') || 'Trader Marginkuat';
+}
+function renderSertifikat(){
+  const labelEl=document.getElementById('sertifikatLabel');
+  const el=document.getElementById('sertifikatPreview');
+  if(labelEl) labelEl.textContent=sertifikatLabel();
+  if(!el)return;
+  const nameInput=document.getElementById('sertifikatNama');
+  if(nameInput && !nameInput.value){
+    const saved=localStorage.getItem('mk_sertifikat_nama');
+    if(saved) nameInput.value=saved;
+  }
+  const stats=getSertifikatStats();
+  if(!stats){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Tidak ada data tercatat di periode ini.</div>';
+    return;
+  }
+  const nama=getSertifikatNama();
+  el.innerHTML=`
+    <div style="border:2px solid #B8860B;border-radius:14px;padding:22px 16px;text-align:center;background:linear-gradient(160deg,#1E2312,#161A0F)">
+      <div style="font-size:26px;margin-bottom:4px">🏆</div>
+      <div style="font-size:10px;letter-spacing:2px;color:#8A6B26;text-transform:uppercase;margin-bottom:2px">Certificate of Performance</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:14px">MARGINKUAT — Catatan Trading Pribadi</div>
+      <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px">Diberikan kepada</div>
+      <div style="font-size:19px;font-weight:800;color:#FFD700;margin:4px 0 14px;font-family:'JetBrains Mono',monospace">${nama}</div>
+      <div style="font-size:10px;color:#8A6B26;margin-bottom:14px">atas performa trading periode <b style="color:#D4AF37">${sertifikatLabel()}</b></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val ${stats.netProfit>=0?'cg':'cr'}" style="font-size:14px">${stats.netProfit>=0?'+':''}${fc(stats.netProfit)}</div><div class="bal-box-lbl">Net Profit</div></div>
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val cy" style="font-size:14px">${stats.winRate.toFixed(0)}%</div><div class="bal-box-lbl">Win Rate</div></div>
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val cg" style="font-size:14px">${fc(parseFloat(stats.bestDay.profit||0))}</div><div class="bal-box-lbl">Profit Terbaik (${stats.bestDay.tanggal})</div></div>
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:${stats.growth>=0?'#4ADE80':'#F87171'}">${stats.growth>=0?'+':''}${stats.growth.toFixed(1)}%</div><div class="bal-box-lbl">Growth</div></div>
+      </div>
+      <div style="font-size:9px;color:#5C4818;margin-top:10px">${stats.totalHari} hari trading tercatat</div>
+      <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #2A2E1F;font-size:9px;color:#7A5D1F">Diterbitkan otomatis oleh Marginkuat pada ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+    </div>`;
+}
+async function downloadSertifikatPDF(){
+  const statusEl=document.getElementById('sertifikatStatus');
+  if(statusEl) statusEl.textContent='⏳ Menyiapkan sertifikat...';
+  try{
+    if(typeof window.jspdf==='undefined'){ if(statusEl) statusEl.textContent='❌ Library PDF gagal dimuat, cek koneksi internet.'; return; }
+    const stats=getSertifikatStats();
+    if(!stats){ if(statusEl) statusEl.textContent='❌ Tidak ada data tercatat di periode ini.'; return; }
+    const nama=getSertifikatNama();
+    const { jsPDF }=window.jspdf;
+    const doc=new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+    const W=297, H=210;
+    doc.setDrawColor(184,134,11); doc.setLineWidth(1.2);
+    doc.rect(8,8,W-16,H-16);
+    doc.setLineWidth(0.4);
+    doc.rect(12,12,W-24,H-24);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(20);
+    doc.setTextColor(30,30,30);
+    doc.text('CERTIFICATE OF PERFORMANCE', W/2, 38, {align:'center'});
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text('MARGINKUAT — Catatan Trading Pribadi', W/2, 46, {align:'center'});
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+    doc.text('Diberikan kepada', W/2, 66, {align:'center'});
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(24);
+    doc.setTextColor(20);
+    doc.text(nama, W/2, 79, {align:'center'});
+    doc.setDrawColor(184,134,11); doc.setLineWidth(0.3);
+    doc.line(W/2-45, 83, W/2+45, 83);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+    doc.text(`atas performa trading periode ${sertifikatLabel()}`, W/2, 93, {align:'center'});
+    const statsY=115;
+    const cols=[
+      {lbl:'NET PROFIT', val:(stats.netProfit>=0?'+':'')+fc(stats.netProfit)},
+      {lbl:'WIN RATE', val:stats.winRate.toFixed(0)+'%'},
+      {lbl:'PROFIT TERBAIK', val:fc(parseFloat(stats.bestDay.profit||0))},
+      {lbl:'GROWTH', val:(stats.growth>=0?'+':'')+stats.growth.toFixed(1)+'%'}
+    ];
+    const colW=(W-80)/4;
+    cols.forEach((c,i)=>{
+      const x=40+colW*i+colW/2;
+      doc.setFontSize(14); doc.setFont('helvetica','bold'); doc.setTextColor(20);
+      doc.text(c.val, x, statsY, {align:'center'});
+      doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(130);
+      doc.text(c.lbl, x, statsY+6, {align:'center'});
+    });
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text(`${stats.totalHari} hari trading tercatat`, W/2, statsY+20, {align:'center'});
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text(`Diterbitkan otomatis oleh Marginkuat pada ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}`, W/2, H-24, {align:'center'});
+    doc.setFontSize(7); doc.setTextColor(180);
+    doc.text('Sertifikat ini digenerate otomatis dari catatan trading pribadi dan bukan dokumen resmi lembaga keuangan.', W/2, H-18, {align:'center'});
+    const filename=`Sertifikat_${sertifikatPeriode==='bulanan'?sertifikatLabel().replace(' ','_'):'Tahun_'+sertifikatYear}.pdf`;
+    doc.save(filename);
+    if(statusEl) statusEl.textContent='✅ Sertifikat berhasil diunduh: '+filename;
+  }catch(e){
+    console.error(e);
+    if(statusEl) statusEl.textContent='❌ Gagal membuat sertifikat: '+(e.message||'').slice(0,150);
+  }
 }
 
 // ══ LAPORAN KEUANGAN: NERACA, LABA RUGI, ARUS KAS ══
@@ -3111,6 +3810,10 @@ async function simpanSaldo(){
     renderKasRingkasan();
     renderKasRekap();
     renderKasChart();
+    renderWdSection();
+    renderRiskMeter();
+    renderGoalTracker();
+    renderInvestorDashboard();
     renderLapKeu();
   }catch(e){
     console.error(e);
@@ -3649,19 +4352,82 @@ function loadJournalVisual(){
     });
 
     wrap.innerHTML=`
-      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:160px;display:block;background:#1E2312;border-radius:10px">
+      <svg id="journalSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:160px;display:block;background:#1E2312;border-radius:10px;touch-action:none;cursor:pointer">
         <line x1="${padX}" y1="${zeroY}" x2="${W-padX}" y2="${zeroY}" stroke="#2A2E1F" stroke-width="1"/>
         ${dots}
+        <line id="journalIndicatorLine" x1="0" y1="0" x2="0" y2="${H}" class="graph-dashed" style="display:none"/>
+        <circle id="journalIndicatorRing" r="9" fill="none" stroke="#D4AF37" stroke-width="1.5" style="display:none"/>
       </svg>
       <div style="display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:9px;color:#8A6B26">
         <span><span style="color:#4ADE80">●</span> Profit</span>
         <span><span style="color:#F87171">●</span> Loss</span>
         <span>Ukuran = jumlah signal</span>
+      </div>
+      <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">👆 Tap &amp; geser di grafik buat lihat detail tiap hari</div>
+      <div class="graph-tooltip" id="journalTooltip">
+        <div class="graph-tooltip-date" id="journalTooltipDate">-</div>
+        <div class="graph-tooltip-val" id="journalTooltipVal">¢0.00</div>
+        <div style="font-size:9px;color:#7A5D1F;margin-top:2px" id="journalTooltipSignal"></div>
       </div>`;
+
+    setupJournalInteraction(rows, xFor, yFor, W);
   }catch(e){
     console.error(e);
     wrap.innerHTML='<div style="text-align:center;padding:14px;color:#F87171;font-size:12px">Gagal memuat journal visual.</div>';
   }
+}
+function setupJournalInteraction(rows, xFor, yFor, W){
+  const svg=document.getElementById('journalSvg');
+  const wrap=document.getElementById('journalVisualWrap');
+  const tooltip=document.getElementById('journalTooltip');
+  const tooltipDate=document.getElementById('journalTooltipDate');
+  const tooltipVal=document.getElementById('journalTooltipVal');
+  const tooltipSignal=document.getElementById('journalTooltipSignal');
+  const line=document.getElementById('journalIndicatorLine');
+  const ring=document.getElementById('journalIndicatorRing');
+  if(!svg||!wrap)return;
+
+  function showAt(clientX){
+    const rect=svg.getBoundingClientRect();
+    const relX=clientX-rect.left;
+    const svgX=(relX/rect.width)*W;
+    let idx=0, bestDist=Infinity;
+    rows.forEach((r,i)=>{
+      const d=Math.abs(xFor(i)-svgX);
+      if(d<bestDist){bestDist=d;idx=i;}
+    });
+    const r=rows[idx];
+    const p=parseFloat(r.profit||0);
+    const sig=parseInt(r.jumlah_signal||0)||0;
+    const px=xFor(idx), py=yFor(p);
+
+    line.setAttribute('x1',px);line.setAttribute('x2',px);line.style.display='block';
+    ring.setAttribute('cx',px);ring.setAttribute('cy',py);ring.style.display='block';
+
+    const pColor=p>0?'#4ADE80':(p<0?'#F87171':'#8A6B26');
+    tooltipDate.textContent=fd(r.tanggal);
+    tooltipVal.textContent=(p>=0?'+':'')+fc(p);
+    tooltipVal.style.color=pColor;
+    tooltipSignal.textContent=sig+' signal hari ini';
+
+    const rectWrap=wrap.getBoundingClientRect();
+    const pxPercent=px/W;
+    let leftPx=pxPercent*rectWrap.width;
+    tooltip.style.display='block';
+    const tooltipWidth=tooltip.offsetWidth||110;
+    leftPx=Math.max(4, Math.min(rectWrap.width-tooltipWidth-4, leftPx-tooltipWidth/2));
+    tooltip.style.left=leftPx+'px';
+  }
+  function hideTooltip(){
+    tooltip.style.display='none';
+    line.style.display='none';
+    ring.style.display='none';
+  }
+  let dragging=false;
+  svg.addEventListener('pointerdown',e=>{dragging=true;showAt(e.clientX);});
+  svg.addEventListener('pointermove',e=>{if(dragging)showAt(e.clientX);});
+  window.addEventListener('pointerup',()=>{dragging=false;});
+  svg.addEventListener('pointerleave',()=>{if(!dragging)hideTooltip();});
 }
 
 // ══ PERFORMANCE VS BENCHMARK ══
@@ -3724,24 +4490,97 @@ async function loadBenchmark(){
           <div class="bal-box-lbl">${assetLabel} (Buy &amp; Hold)</div>
         </div>
       </div>
-      <div style="background:#1E2312;border-radius:10px;padding:8px 4px">
-        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:130px;display:block">
+      <div id="benchChartWrap" style="background:#1E2312;border-radius:10px;padding:8px 4px;position:relative;touch-action:none;cursor:pointer">
+        <svg id="benchSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:130px;display:block">
           <line x1="${padX}" y1="${zeroY}" x2="${W-padX}" y2="${zeroY}" stroke="#2A2E1F" stroke-width="1"/>
           <path d="${pathFor(benchCurve)}" fill="none" stroke="#8A6B26" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
           <path d="${pathFor(yourCurve)}" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+          <line id="benchIndicatorLine" x1="0" y1="0" x2="0" y2="${H}" class="graph-dashed" style="display:none"/>
+          <circle id="benchDotYou" r="3.5" fill="#4ADE80" stroke="#0D0F0A" stroke-width="1" style="display:none"/>
+          <circle id="benchDotBench" r="3.5" fill="#8A6B26" stroke="#0D0F0A" stroke-width="1" style="display:none"/>
         </svg>
+        <div class="graph-tooltip" id="benchTooltip">
+          <div class="graph-tooltip-date" id="benchTooltipDate">-</div>
+          <div class="graph-tooltip-val" id="benchTooltipYou" style="color:#4ADE80">Anda: +0.0%</div>
+          <div class="graph-tooltip-val" id="benchTooltipBench" style="color:#8A6B26;margin-top:2px">${assetLabel}: +0.0%</div>
+        </div>
       </div>
       <div style="display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:9px;color:#8A6B26">
         <span><span style="color:#4ADE80">●</span> Performa Anda</span>
         <span><span style="color:#8A6B26">●</span> ${assetLabel}</span>
       </div>
+      <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">👆 Tap &amp; geser di grafik buat lihat detail</div>
       <div style="text-align:center;margin-top:10px;font-size:11px;font-weight:700;color:${youWin?'#4ADE80':'#F87171'}">
         ${youWin?'🎉 Anda mengungguli '+assetLabel:'⚠️ '+assetLabel+' unggul dari performa Anda'}
       </div>`;
+
+    setupBenchmarkInteraction(yourCurve, benchCurve, allSaldoData, assetLabel, W, padX);
   }catch(e){
     console.error(e);
     wrap.innerHTML='<div style="padding:14px;text-align:center;color:#F87171;font-size:12px">Gagal memuat data harga benchmark. Cek koneksi internet lalu coba lagi.</div>';
   }
+}
+function setupBenchmarkInteraction(yourCurve, benchCurve, saldoRows, assetLabel, W, padX){
+  const svg=document.getElementById('benchSvg');
+  const wrap=document.getElementById('benchChartWrap');
+  const tooltip=document.getElementById('benchTooltip');
+  const tooltipDate=document.getElementById('benchTooltipDate');
+  const tooltipYou=document.getElementById('benchTooltipYou');
+  const tooltipBench=document.getElementById('benchTooltipBench');
+  const line=document.getElementById('benchIndicatorLine');
+  const dotYou=document.getElementById('benchDotYou');
+  const dotBench=document.getElementById('benchDotBench');
+  if(!svg||!wrap)return;
+
+  function showAt(clientX){
+    const rect=svg.getBoundingClientRect();
+    const relX=clientX-rect.left;
+    const svgX=Math.max(padX, Math.min(W-padX, (relX/rect.width)*W));
+    const prop=Math.max(0, Math.min(1, (svgX-padX)/(W-padX*2)));
+
+    const idxYou=Math.round(prop*(yourCurve.length-1));
+    const py=yourCurve[idxYou];
+    const dateInfo=saldoRows[idxYou]?fd(saldoRows[idxYou].tanggal):'-';
+
+    const idxBenchFloat=prop*(benchCurve.length-1);
+    const idxLow=Math.floor(idxBenchFloat), idxHigh=Math.min(benchCurve.length-1, idxLow+1);
+    const frac=idxBenchFloat-idxLow;
+    const pb=benchCurve[idxLow]*(1-frac)+benchCurve[idxHigh]*frac;
+
+    line.setAttribute('x1',svgX);line.setAttribute('x2',svgX);line.style.display='block';
+
+    const yFor=v=>{
+      const allVals=[...yourCurve,...benchCurve];
+      const minV=Math.min(0,...allVals), maxV=Math.max(0,...allVals);
+      const range=(maxV-minV)||1;
+      return 130-10-((v-minV)/range)*(130-10*2);
+    };
+    dotYou.setAttribute('cx',svgX);dotYou.setAttribute('cy',yFor(py));dotYou.style.display='block';
+    dotBench.setAttribute('cx',svgX);dotBench.setAttribute('cy',yFor(pb));dotBench.style.display='block';
+
+    tooltipDate.textContent=dateInfo;
+    tooltipYou.textContent='Anda: '+(py>=0?'+':'')+py.toFixed(1)+'%';
+    tooltipBench.textContent=assetLabel+': '+(pb>=0?'+':'')+pb.toFixed(1)+'%';
+    tooltip.style.display='block';
+
+    const rectWrap=wrap.getBoundingClientRect();
+    const pxPercent=svgX/W;
+    let leftPx=pxPercent*rectWrap.width;
+    const tooltipWidth=tooltip.offsetWidth||130;
+    leftPx=Math.max(4, Math.min(rectWrap.width-tooltipWidth-4, leftPx-tooltipWidth/2));
+    tooltip.style.left=leftPx+'px';
+  }
+  function hideTooltip(){
+    tooltip.style.display='none';
+    line.style.display='none';
+    dotYou.style.display='none';
+    dotBench.style.display='none';
+  }
+  let dragging=false;
+  svg.addEventListener('pointerdown',e=>{dragging=true;showAt(e.clientX);});
+  svg.addEventListener('pointermove',e=>{if(dragging)showAt(e.clientX);});
+  window.addEventListener('pointerup',()=>{dragging=false;});
+  svg.addEventListener('pointerleave',()=>{if(!dragging)hideTooltip();});
 }
 
 // ══ PSIKOLOGI TRADING (MOOD VS PROFIT) ══
