@@ -1253,6 +1253,23 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <div id="csvStatus" style="font-size:10px;color:#7A5D1F;margin-top:8px;white-space:pre-line"></div>
     </div>
 
+    <div style="background:#1E2312;border:1px dashed #B8860B;border-radius:10px;padding:14px;margin-bottom:18px">
+      <div style="font-size:12px;font-weight:700;color:#D4AF37;margin-bottom:6px">💾 Auto Backup Data</div>
+      <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.7">Backup semua data (saldo harian, kas, investor, goal, dll) ke file JSON. Browser gak bisa auto-upload ke Google Drive atau auto-kirim email tanpa izin eksplisit dari pengguna (batasan keamanan browser) — jadi "otomatis" di sini artinya: file backup otomatis disiapkan &amp; diunduh sesuai jadwal yang kamu pilih, tinggal kamu upload manual ke Drive atau lampirkan ke email.</div>
+      <div id="autoBackupStatus" style="font-size:11px;color:#8A6B26;margin-bottom:10px;text-align:center"></div>
+      <button class="btn btn-p" onclick="doBackupNow()" style="margin-bottom:8px">💾 Backup Sekarang (Download JSON)</button>
+      <button class="btn btn-ghost" onclick="doBackupViaEmail()" style="margin-bottom:8px">✉️ Kirim via Email</button>
+      <label class="lbl">Email Tujuan Backup (opsional)</label>
+      <input class="inp" id="backupEmailTarget" type="email" placeholder="contoh@email.com" oninput="saveBackupEmailTarget()" style="margin-bottom:10px">
+      <label class="lbl">Interval Auto Backup</label>
+      <select class="inp" id="backupIntervalSelect" onchange="saveBackupInterval()">
+        <option value="0">Nonaktif</option>
+        <option value="1">Tiap buka halaman (maks 1x/hari)</option>
+        <option value="7">Mingguan</option>
+      </select>
+      <div id="backupHistoryInfo" style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center"></div>
+    </div>
+
     <div class="ap-title">⚙️ Input Saldo Harian</div>
 
     <label class="lbl">Pair</label>
@@ -1770,6 +1787,8 @@ async function loadAll(){
   renderInvestorCalc();
   renderFAQ();
   renderSertifikat();
+  renderAutoBackupInfo();
+  checkAutoBackupSchedule();
   renderLapKeu();
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
   loadStatPair();
@@ -3542,6 +3561,105 @@ async function downloadWeeklyRecapPDF(){
   }catch(e){
     console.error(e);
     if(statusEl) statusEl.textContent='❌ Gagal membuat laporan: '+(e.message||'').slice(0,150);
+  }
+}
+
+// ══ AUTO BACKUP DATA ══
+function getBackupSettings(){
+  try{ return JSON.parse(localStorage.getItem('mk_backup_settings')||'{}'); }catch(e){ return {}; }
+}
+function saveBackupSettings(s){ localStorage.setItem('mk_backup_settings', JSON.stringify(s)); }
+function saveBackupEmailTarget(){
+  const el=document.getElementById('backupEmailTarget');
+  const s=getBackupSettings();
+  s.email=el?el.value.trim():'';
+  saveBackupSettings(s);
+}
+function saveBackupInterval(){
+  const el=document.getElementById('backupIntervalSelect');
+  const s=getBackupSettings();
+  s.intervalDays=el?(parseInt(el.value)||0):0;
+  saveBackupSettings(s);
+  renderAutoBackupInfo();
+}
+function buildBackupPayload(){
+  const localKeys=['mk_investors','mk_goals','mk_aset_lain','mk_kewajiban','mk_target_bulanan','mk_target_rr','mk_sertifikat_nama','mk_kas_threshold','mk_backup_settings'];
+  const localData={};
+  localKeys.forEach(k=>{
+    const v=localStorage.getItem(k);
+    if(v!==null){ try{ localData[k]=JSON.parse(v); }catch(e){ localData[k]=v; } }
+  });
+  return {
+    exportedAt: new Date().toISOString(),
+    app: 'Marginkuat',
+    saldoHarian: allSaldoData||[],
+    kasPribadi: allKasData||[],
+    localSettings: localData
+  };
+}
+function doBackupNow(silent){
+  try{
+    const payload=buildBackupPayload();
+    const json=JSON.stringify(payload, null, 2);
+    const blob=new Blob([json], {type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const filename=`Marginkuat_Backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const s=getBackupSettings();
+    s.lastBackup=new Date().toISOString();
+    saveBackupSettings(s);
+    renderAutoBackupInfo();
+    if(!silent) toast('✅ Backup diunduh: '+filename);
+    return filename;
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal membuat backup: '+(e.message||'').slice(0,100));
+    return null;
+  }
+}
+function doBackupViaEmail(){
+  const s=getBackupSettings();
+  const target=s.email||'';
+  const filename=doBackupNow(true);
+  if(!filename)return;
+  const subject=encodeURIComponent('Backup Data Marginkuat — '+new Date().toLocaleDateString('id-ID'));
+  const body=encodeURIComponent(`File backup (${filename}) sudah otomatis terdownload di perangkat kamu — cek folder Download, lalu lampirkan file itu ke email ini sebelum dikirim (browser tidak bisa melampirkan file secara otomatis karena alasan keamanan).\n\nDikirim dari Marginkuat.`);
+  window.location.href=`mailto:${target}?subject=${subject}&body=${body}`;
+  toast('✅ File backup terdownload — lampirkan manual ke email yang baru terbuka');
+}
+function renderAutoBackupInfo(){
+  const s=getBackupSettings();
+  const statusEl=document.getElementById('autoBackupStatus');
+  const historyEl=document.getElementById('backupHistoryInfo');
+  const emailInput=document.getElementById('backupEmailTarget');
+  const intervalSelect=document.getElementById('backupIntervalSelect');
+  if(emailInput && !emailInput.value) emailInput.value=s.email||'';
+  if(intervalSelect) intervalSelect.value=String(s.intervalDays||0);
+
+  if(statusEl){
+    statusEl.textContent = s.lastBackup
+      ? 'Backup terakhir: '+new Date(s.lastBackup).toLocaleString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
+      : 'Belum pernah backup — tekan tombol di bawah buat mulai.';
+  }
+  if(historyEl){
+    historyEl.textContent = (s.intervalDays>0)
+      ? `Auto backup aktif — file otomatis disiapkan tiap ${s.intervalDays===1?'buka halaman (maks 1x/hari)':'7 hari sekali'}.`
+      : 'Auto backup nonaktif. Kamu masih bisa backup manual kapan saja.';
+  }
+}
+function checkAutoBackupSchedule(){
+  const s=getBackupSettings();
+  if(!s.intervalDays || s.intervalDays<=0) return;
+  const last=s.lastBackup ? new Date(s.lastBackup).getTime() : 0;
+  const now=Date.now();
+  const intervalMs=s.intervalDays*86400000;
+  if(now-last >= intervalMs){
+    doBackupNow(true);
+    toast('💾 Auto backup berjalan — file backup terbaru otomatis terdownload');
   }
 }
 
