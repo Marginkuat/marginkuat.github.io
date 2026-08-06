@@ -283,6 +283,18 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- GOAL TRACKER -->
+<div class="section" id="secGoalTracker">
+  <div class="sec-title">🎯 Goal Tracker</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Tetapkan target modal, profit, atau WD — progress dihitung otomatis dari data trading kamu.</div>
+    <div id="goalTracker">
+      <div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    </div>
+    <button class="btn btn-p" onclick="tambahGoal()" style="margin-top:12px;margin-bottom:0">➕ Tambah Goal</button>
+  </div>
+</div>
+
 <!-- STATISTIK PER PAIR -->
 <div class="section" id="secStatPair">
   <div class="sec-title">📊 Statistik Per Pair</div>
@@ -1038,6 +1050,18 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- INVESTOR DASHBOARD -->
+<div class="section" id="secInvestorDashboard">
+  <div class="sec-title">👥 Investor Dashboard</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Tampilan personal untuk tiap investor — porsi modal, estimasi profit, dan ROI, dihitung otomatis dari data trading kamu.</div>
+    <div id="investorDashboard">
+      <div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    </div>
+    <button class="btn btn-p" onclick="tambahInvestor()" style="margin-top:12px;margin-bottom:0">➕ Tambah Investor</button>
+  </div>
+</div>
+
 <!-- LAPORAN KEUANGAN -->
 <div class="section" id="secLaporanKeuangan">
   <div class="sec-title">📑 Laporan Keuangan</div>
@@ -1672,6 +1696,8 @@ async function loadAll(){
   renderKasChart();
   renderWdSection();
   renderRiskMeter();
+  renderGoalTracker();
+  renderInvestorDashboard();
   renderSertifikat();
   renderLapKeu();
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
@@ -2262,6 +2288,8 @@ async function syncAllHistoricalKas(){
     renderKasChart();
     renderWdSection();
     renderRiskMeter();
+    renderGoalTracker();
+    renderInvestorDashboard();
     renderLapKeu();
     await loadKas();
   }catch(e){
@@ -2373,6 +2401,8 @@ async function simpanKas(){
     renderKasChart();
     renderWdSection();
     renderRiskMeter();
+    renderGoalTracker();
+    renderInvestorDashboard();
     renderLapKeu();
   }catch(e){
     console.error(e);
@@ -2881,6 +2911,183 @@ function renderRiskMeter(){
   const pairSelectElx=document.getElementById('calcPairSelect');
   if(pairSelectElx) pairSelectElx.addEventListener('change', ()=>renderRiskMeter());
 })();
+
+// ══ GOAL TRACKER ══
+function getGoalList(){
+  try{ return JSON.parse(localStorage.getItem('mk_goals')||'[]'); }catch(e){ return []; }
+}
+function saveGoalList(list){ localStorage.setItem('mk_goals', JSON.stringify(list)); }
+const GOAL_SUMBER_META={
+  modal:{label:'Modal MT4 Saat Ini'},
+  profit_alltime:{label:'Total Profit All-Time'},
+  wd_alltime:{label:'Total WD All-Time'},
+  manual:{label:'Manual (isi sendiri)'}
+};
+function tambahGoal(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk tambah goal');return;}
+  const judul=prompt('Judul goal (contoh: Modal 10.000 / WD Pertama $500):');
+  if(!judul)return;
+  const targetStr=prompt('Target nominal (dalam ¢ / sen, sama seperti format saldo di app ini):');
+  const targetVal=parseFloat(targetStr);
+  if(isNaN(targetVal)||targetVal<=0){toast('❌ Nilai target tidak valid');return;}
+  const sumberInput=prompt('Sumber progress otomatis:\n1 = Modal MT4 Saat Ini\n2 = Total Profit All-Time\n3 = Total WD All-Time\n4 = Manual (isi progress sendiri)\n\nKetik angka 1-4:', '1');
+  const sumberMap={'1':'modal','2':'profit_alltime','3':'wd_alltime','4':'manual'};
+  const sumber=sumberMap[sumberInput];
+  if(!sumber){toast('❌ Pilihan sumber tidak valid');return;}
+  const deadline=prompt('Deadline (format YYYY-MM-DD, kosongkan kalau tidak ada):','');
+  const list=getGoalList();
+  list.push({id:Date.now().toString(36), judul, targetVal, sumber, manualVal:0, deadline: deadline||null});
+  saveGoalList(list);
+  toast('✅ Goal ditambahkan');
+  renderGoalTracker();
+}
+function hapusGoal(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!confirm('Hapus goal ini?'))return;
+  saveGoalList(getGoalList().filter(g=>g.id!==id));
+  toast('✅ Goal dihapus');
+  renderGoalTracker();
+}
+function updateGoalManual(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const list=getGoalList();
+  const g=list.find(x=>x.id===id);
+  if(!g)return;
+  const v=prompt('Progress saat ini (dalam ¢ / sen):', g.manualVal||0);
+  const val=parseFloat(v);
+  if(isNaN(val)||val<0){toast('❌ Nilai tidak valid');return;}
+  g.manualVal=val;
+  saveGoalList(list);
+  toast('✅ Progress diperbarui');
+  renderGoalTracker();
+}
+function getGoalCurrentVal(goal){
+  const rows=allSaldoData||[];
+  if(goal.sumber==='modal'){
+    return rows.length ? parseFloat(rows[rows.length-1].saldo_mt4||0) : 0;
+  }
+  if(goal.sumber==='profit_alltime'){
+    return rows.reduce((s,r)=>s+Math.max(0,parseFloat(r.profit||0)),0);
+  }
+  if(goal.sumber==='wd_alltime'){
+    const wdData=typeof getWdProfitPerHari==='function' ? getWdProfitPerHari() : [];
+    return wdData.reduce((s,d)=>s+(d.wd||0),0);
+  }
+  return parseFloat(goal.manualVal||0);
+}
+function renderGoalTracker(){
+  const el=document.getElementById('goalTracker');
+  if(!el)return;
+  const goals=getGoalList();
+  if(!goals.length){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada goal. Tekan tombol di bawah untuk mulai bikin rencana &amp; target.</div>';
+    return;
+  }
+  let html='';
+  goals.forEach(g=>{
+    const current=getGoalCurrentVal(g);
+    const pct=Math.min(100, Math.max(0, g.targetVal>0?(current/g.targetVal*100):0));
+    const tercapai=current>=g.targetVal;
+    const barColor=tercapai?'#4ADE80':'#D4AF37';
+    let deadlineInfo='';
+    if(g.deadline){
+      const d=new Date(g.deadline);
+      const daysLeft=Math.ceil((d.getTime()-Date.now())/86400000);
+      deadlineInfo = daysLeft>=0 ? `${daysLeft} hari lagi (${g.deadline})` : `Lewat deadline (${g.deadline})`;
+    }
+    html+=`
+      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:14px;margin-bottom:10px;text-align:left">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#D4AF37">${tercapai?'🏆 ':'🎯 '}${g.judul}</div>
+            <div style="font-size:9px;color:#7A5D1F;margin-top:2px">${GOAL_SUMBER_META[g.sumber]?GOAL_SUMBER_META[g.sumber].label:'-'}${deadlineInfo?' · '+deadlineInfo:''}</div>
+          </div>
+          <span onclick="hapusGoal('${g.id}')" style="font-size:9px;color:#7A5D1F;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px">Hapus</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#C8A84B;margin-bottom:6px">
+          <span>${fc(current)} / ${fc(g.targetVal)}</span>
+          <span style="color:${tercapai?'#4ADE80':'#8A6B26'}">${pct.toFixed(0)}%</span>
+        </div>
+        <div style="background:#1E2312;border-radius:20px;height:12px;overflow:hidden">
+          <div style="background:${barColor};height:100%;width:${pct}%;border-radius:20px;transition:width .3s"></div>
+        </div>
+        ${g.sumber==='manual'?`<div style="text-align:right;margin-top:6px"><span onclick="updateGoalManual('${g.id}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Update Progress</span></div>`:''}
+        ${tercapai?'<div style="text-align:center;margin-top:6px;font-size:10px;color:#4ADE80;font-weight:700">🎉 Target tercapai!</div>':''}
+      </div>`;
+  });
+  el.innerHTML=html;
+}
+
+// ══ INVESTOR DASHBOARD ══
+function getInvestorList(){
+  try{ return JSON.parse(localStorage.getItem('mk_investors')||'[]'); }catch(e){ return []; }
+}
+function saveInvestorList(list){ localStorage.setItem('mk_investors', JSON.stringify(list)); }
+function tambahInvestor(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk tambah investor');return;}
+  const nama=prompt('Nama investor:');
+  if(!nama)return;
+  const modalStr=prompt(`Modal yang disetor ${nama} (dalam ¢ / sen, sama seperti format saldo di app ini):`);
+  const modal=parseFloat(modalStr);
+  if(isNaN(modal)||modal<=0){toast('❌ Nilai modal tidak valid');return;}
+  const tglStr=prompt('Tanggal bergabung (format YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+  if(!tglStr || !/^\d{4}-\d{2}-\d{2}$/.test(tglStr)){toast('❌ Format tanggal tidak valid');return;}
+  const list=getInvestorList();
+  list.push({id:Date.now().toString(36), nama, modal, tanggal:tglStr});
+  saveInvestorList(list);
+  toast('✅ Investor ditambahkan');
+  renderInvestorDashboard();
+}
+function hapusInvestor(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!confirm('Hapus investor ini dari dashboard?'))return;
+  saveInvestorList(getInvestorList().filter(v=>v.id!==id));
+  toast('✅ Investor dihapus');
+  renderInvestorDashboard();
+}
+function renderInvestorDashboard(){
+  const el=document.getElementById('investorDashboard');
+  if(!el)return;
+  const investors=getInvestorList();
+  if(!investors.length){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada investor ditambahkan. Tekan tombol di bawah untuk mulai.</div>';
+    return;
+  }
+  const rows=allSaldoData||[];
+  const totalProfitAllTime=rows.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+  const totalModalInvestorPool=investors.reduce((s,v)=>s+parseFloat(v.modal||0),0);
+
+  let html='';
+  investors.forEach(inv=>{
+    const sharePct = totalModalInvestorPool>0 ? (inv.modal/totalModalInvestorPool*100) : 0;
+    const profitShare = totalProfitAllTime * (sharePct/100);
+    const currentVal = parseFloat(inv.modal||0) + profitShare;
+    const roi = inv.modal>0 ? (profitShare/inv.modal*100) : 0;
+    const joinDate=new Date(inv.tanggal);
+    const days=Math.max(0, Math.floor((Date.now()-joinDate.getTime())/86400000));
+    html+=`
+      <div style="border:1.5px solid #B8860B;border-radius:14px;padding:16px;margin-bottom:12px;background:linear-gradient(160deg,#1E2312,#161A0F);position:relative;text-align:left">
+        <div style="position:absolute;top:12px;right:14px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;border:1px solid #5C4818;border-radius:10px;padding:2px 8px">VIP</div>
+        <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px">Selamat datang</div>
+        <div style="font-size:18px;font-weight:800;color:#FFD700;margin:2px 0 10px">${inv.nama} 👋</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(inv.modal)}</div><div class="bal-box-lbl">Modal Disetor</div></div>
+          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:#FFD700">${fc(currentVal)}</div><div class="bal-box-lbl">Estimasi Nilai Sekarang</div></div>
+          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val ${profitShare>=0?'cg':'cr'}" style="font-size:14px">${profitShare>=0?'+':''}${fc(profitShare)}</div><div class="bal-box-lbl">Estimasi Profit Share</div></div>
+          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:${roi>=0?'#4ADE80':'#F87171'}">${roi>=0?'+':''}${roi.toFixed(1)}%</div><div class="bal-box-lbl">ROI</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:9px;color:#7A5D1F;border-top:1px solid #2A2E1F;padding-top:8px">
+          <span>Porsi Modal: <b style="color:#C8A84B">${sharePct.toFixed(1)}%</b></span>
+          <span>Bergabung ${days} hari lalu (${inv.tanggal})</span>
+        </div>
+        <div style="text-align:right;margin-top:6px">
+          <span onclick="hapusInvestor('${inv.id}')" style="font-size:9px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Hapus</span>
+        </div>
+      </div>`;
+  });
+  html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal investor terhadap total modal investor tercatat — bukan kalkulasi bagi hasil resmi/legal.</div>';
+  el.innerHTML=html;
+}
 
 // ══ CERTIFICATE OF PERFORMANCE ══
 let sertifikatPeriode='bulanan';
@@ -3605,6 +3812,8 @@ async function simpanSaldo(){
     renderKasChart();
     renderWdSection();
     renderRiskMeter();
+    renderGoalTracker();
+    renderInvestorDashboard();
     renderLapKeu();
   }catch(e){
     console.error(e);
