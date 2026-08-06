@@ -1086,6 +1086,19 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
+<!-- EMERGENCY FUND & FINANCIAL HEALTH SCORE -->
+<div class="section" id="secDanaDarurat">
+  <div class="sec-title">🚨 Dana Darurat & Skor Kesehatan Finansial</div>
+  <div class="graph-card" style="margin-bottom:12px">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Dana Darurat diambil dari porsi "Tabungan/Darurat" di Alokasi Dana. Sistem hitung otomatis berapa bulan pengeluaran pribadi yang bisa ditutup dana ini.</div>
+    <div id="danaDaruratBox"></div>
+  </div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Skor Kesehatan Finansial</div>
+    <div id="skorKesehatanBox"></div>
+  </div>
+</div>
+
 <!-- INVESTOR DASHBOARD -->
 <div class="section" id="secInvestorDashboard">
   <div class="sec-title">👥 Investor Dashboard</div>
@@ -1586,6 +1599,7 @@ const SEARCH_MENU=[
   {id:'secKalenderDD', icon:'🗓️', label:'Kalender Drawdown', desc:'Kalender level drawdown harian', kw:'kalender drawdown dd'},
   {id:'secAliranUang', icon:'💸', label:'Aliran Uang Masuk & Keluar', desc:'Catatan investasi, profit MT4, dan pengeluaran', kw:'aliran uang masuk keluar investasi profit mt4 kas pribadi belanja'},
   {id:'secAlokasiDana', icon:'🥧', label:'Alokasi Dana (Allocation & Goals)', desc:'Bagi dana hasil WD ke kebutuhan harian, investasi, tabungan, hiburan', kw:'alokasi dana allocation goals budgeting pie chart kebutuhan harian investasi tabungan darurat hiburan'},
+  {id:'secDanaDarurat', icon:'🚨', label:'Dana Darurat & Skor Kesehatan Finansial', desc:'Runway dana darurat dan skor kesehatan finansial A-D', kw:'dana darurat emergency fund skor kesehatan finansial financial health score rasio'},
   {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow'},
   {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio riwayat transaksi aset beli jual saham properti tracker'},
   {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf'},
@@ -2934,6 +2948,7 @@ function renderWdSection(){
   renderWdChart();
   renderWdVsProfitChart();
   renderAlokasiDana();
+  renderDanaDarurat();
 }
 
 // ══ ALOKASI DANA (ALLOCATION & GOALS) ══
@@ -3017,6 +3032,115 @@ function renderAlokasiDana(){
         <span style="font-size:11px;color:#8A6B26;font-weight:700">Total Dana WD</span>
         <span style="font-size:13px;font-weight:800;color:#FFD700">${fc(totalWd)}</span>
       </div>`;
+}
+
+// ══ EMERGENCY FUND & FINANCIAL HEALTH SCORE ══
+// Rata-rata pengeluaran pribadi per bulan (dari kategori kebutuhan pribadi di Aliran Uang)
+function getRataRataPengeluaranPribadiBulanan(){
+  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'];
+  const rows=(allKasData||[]).filter(r=>BEBAN_PRIBADI.includes(r.kategori));
+  if(!rows.length) return {rata:0, adaData:false};
+  const byMonth={};
+  rows.forEach(r=>{
+    const d=new Date(r.tanggal);
+    const k=d.getFullYear()+'-'+d.getMonth();
+    byMonth[k]=(byMonth[k]||0)+parseFloat(r.jumlah||0);
+  });
+  const months=Object.keys(byMonth);
+  const total=months.reduce((s,k)=>s+byMonth[k],0);
+  return {rata: months.length?total/months.length:0, adaData:true};
+}
+// Rata-rata profit trading per bulan (dari Saldo Harian)
+function getRataRataProfitBulanan(){
+  const rows=allSaldoData||[];
+  if(!rows.length) return 0;
+  const byMonth={};
+  rows.forEach(r=>{
+    const d=new Date(r.tanggal);
+    const k=d.getFullYear()+'-'+d.getMonth();
+    byMonth[k]=(byMonth[k]||0)+parseFloat(r.profit||0);
+  });
+  const months=Object.keys(byMonth);
+  const total=months.reduce((s,k)=>s+byMonth[k],0);
+  return months.length?total/months.length:0;
+}
+function renderDanaDarurat(){
+  const el=document.getElementById('danaDaruratBox');
+  const skorEl=document.getElementById('skorKesehatanBox');
+  if(!el||!skorEl)return;
+
+  const persen=getAlokasiPersen();
+  const wdData=getWdProfitPerHari();
+  const totalWd=wdData.reduce((s,d)=>s+d.wd,0);
+  const danaDarurat=totalWd*(persen.tabungan/100);
+
+  const {rata:pengeluaranBulanan, adaData:adaPengeluaran}=getRataRataPengeluaranPribadiBulanan();
+  const bulanCukup = (adaPengeluaran && pengeluaranBulanan>0.01) ? (danaDarurat/pengeluaranBulanan) : null;
+
+  el.innerHTML=`
+    <div class="bal-box" style="background:var(--bg3);border:1px solid #B8860B;margin-bottom:8px">
+      <div class="bal-box-val" style="font-size:22px;color:#FFD700">${fc(danaDarurat)}</div>
+      <div class="bal-box-lbl">🏦 Dana Darurat Tersedia (porsi Tabungan/Darurat)</div>
+    </div>
+    <div class="bal-box" style="background:var(--bg2)">
+      <div class="bal-box-val" style="font-size:18px;color:${bulanCukup===null?'#7A5D1F':(bulanCukup>=6?'#4ADE80':bulanCukup>=3?'#EAB308':'#F87171')}">${bulanCukup===null?'Belum ada data pengeluaran':bulanCukup.toFixed(1)+' bulan'}</div>
+      <div class="bal-box-lbl">Dana darurat cukup untuk berapa lama${adaPengeluaran?` (rata-rata pengeluaran ${fc(pengeluaranBulanan)}/bulan)`:''}</div>
+    </div>
+    ${!adaPengeluaran?'<div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">Belum ada catatan pengeluaran pribadi (Belanja/Utilitas/Kesehatan/Gaya Hidup) di Aliran Uang, jadi estimasi bulan belum bisa dihitung.</div>':''}`;
+
+  // ── SKOR KESEHATAN FINANSIAL (A–D) ──
+  const n=hitungNeraca();
+  const der = n.ekuitas>0 ? (n.totalKewajiban/n.ekuitas) : (n.ekuitas<0 ? 99 : null);
+  const profitBulanan=getRataRataProfitBulanan();
+  const rasioProfitBiaya = (adaPengeluaran && pengeluaranBulanan>0.01) ? (profitBulanan/pengeluaranBulanan) : null;
+
+  let pts=0, maxPts=0;
+  const faktor=[];
+  // Faktor 1: runway dana darurat
+  if(bulanCukup!==null){
+    maxPts+=3;
+    const p = bulanCukup>=6?3:bulanCukup>=3?2:bulanCukup>=1?1:0;
+    pts+=p;
+    faktor.push({label:'Runway Dana Darurat', nilai:bulanCukup.toFixed(1)+' bulan', status:p>=2?'Baik':p>=1?'Cukup':'Kurang', color:p>=2?'#4ADE80':p>=1?'#EAB308':'#F87171'});
+  }
+  // Faktor 2: rasio utang terhadap ekuitas (DER)
+  if(der!==null){
+    maxPts+=3;
+    const p = der<0.5?3:der<1?2:der<2?1:0;
+    pts+=p;
+    faktor.push({label:'Utang vs Ekuitas (DER)', nilai:der>=99?'Ekuitas negatif':der.toFixed(2)+'x', status:p>=2?'Baik':p>=1?'Cukup':'Kurang', color:p>=2?'#4ADE80':p>=1?'#EAB308':'#F87171'});
+  }
+  // Faktor 3: profit trading vs biaya hidup
+  if(rasioProfitBiaya!==null){
+    maxPts+=3;
+    const p = rasioProfitBiaya>=2?3:rasioProfitBiaya>=1?2:rasioProfitBiaya>=0.5?1:0;
+    pts+=p;
+    faktor.push({label:'Profit Trading vs Biaya Hidup', nilai:rasioProfitBiaya.toFixed(2)+'x', status:p>=2?'Baik':p>=1?'Cukup':'Kurang', color:p>=2?'#4ADE80':p>=1?'#EAB308':'#F87171'});
+  }
+
+  if(maxPts===0){
+    skorEl.innerHTML=`<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Belum cukup data untuk menghitung skor — isi Saldo Harian, Aliran Uang, dan Neraca (aset/kewajiban) dulu.</div>`;
+    return;
+  }
+  const pctScore = pts/maxPts*100;
+  const grade = pctScore>=85?'A':pctScore>=65?'B':pctScore>=35?'C':'D';
+  const gradeColor = grade==='A'?'#4ADE80':grade==='B'?'#EAB308':grade==='C'?'#FB923C':'#F87171';
+  const gradeDesc = {A:'Sangat sehat', B:'Sehat', C:'Perlu perhatian', D:'Berisiko'}[grade];
+
+  skorEl.innerHTML=`
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
+      <div style="width:64px;height:64px;border-radius:50%;border:3px solid ${gradeColor};display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:${gradeColor};flex-shrink:0">${grade}</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:${gradeColor}">${gradeDesc}</div>
+        <div style="font-size:10px;color:#7A5D1F;margin-top:2px">Berdasarkan ${faktor.length} faktor kesehatan finansial (${pts}/${maxPts} poin)</div>
+      </div>
+    </div>
+    ${faktor.map(f=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:11px;color:#C8A84B">${f.label}</span>
+        <span style="font-size:11px;text-align:right"><b style="color:${f.color}">${f.status}</b><br><span style="font-size:9px;color:#7A5D1F">${f.nilai}</span></span>
+      </div>`).join('')}
+    <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">Skor edukatif berdasarkan aturan umum finansial (dana darurat 3-6 bulan, DER rendah, profit lebih besar dari biaya hidup) — bukan saran keuangan profesional.</div>`;
 }
 
 // ══ RISK METER (Current Drawdown + Risk of Ruin + Risk per Trade, dalam 1 tampilan) ══
