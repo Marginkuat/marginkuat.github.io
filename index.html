@@ -1067,6 +1067,25 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
+<!-- ALOKASI DANA OTOMATIS -->
+<div class="section" id="secAlokasiDana">
+  <div class="sec-title">🥧 Alokasi Dana (Allocation & Goals)</div>
+  <div class="graph-card" style="margin-bottom:12px">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Atur persentase pembagian dari total dana yang sudah ditarik (WD) dari MT4 — seperti budgeting, tapi dihitung otomatis dari data trading kamu.</div>
+    <div id="alokasiInputs"></div>
+    <div id="alokasiTotalWarn" style="font-size:10px;color:#F87171;text-align:center;margin-top:4px;display:none">⚠️ Total persentase harus 100%</div>
+  </div>
+  <div class="graph-card" style="margin-bottom:12px">
+    <div id="alokasiPieWrap" style="display:flex;justify-content:center;padding:10px 0"></div>
+    <div id="alokasiLegend"></div>
+  </div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Rincian Nominal</div>
+    <div id="alokasiTable"></div>
+    <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">Berdasarkan total WD all-time (dihitung otomatis dari selisih Saldo Harian) — bukan modal trading yang masih aktif.</div>
+  </div>
+</div>
+
 <!-- INVESTOR DASHBOARD -->
 <div class="section" id="secInvestorDashboard">
   <div class="sec-title">👥 Investor Dashboard</div>
@@ -1566,6 +1585,7 @@ const SEARCH_MENU=[
   {id:'secKalender', icon:'📅', label:'Kalender Trading', desc:'Kalender harian profit/loss', kw:'kalender trading calendar harian'},
   {id:'secKalenderDD', icon:'🗓️', label:'Kalender Drawdown', desc:'Kalender level drawdown harian', kw:'kalender drawdown dd'},
   {id:'secAliranUang', icon:'💸', label:'Aliran Uang Masuk & Keluar', desc:'Catatan investasi, profit MT4, dan pengeluaran', kw:'aliran uang masuk keluar investasi profit mt4 kas pribadi belanja'},
+  {id:'secAlokasiDana', icon:'🥧', label:'Alokasi Dana (Allocation & Goals)', desc:'Bagi dana hasil WD ke kebutuhan harian, investasi, tabungan, hiburan', kw:'alokasi dana allocation goals budgeting pie chart kebutuhan harian investasi tabungan darurat hiburan'},
   {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow'},
   {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio'},
   {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf'},
@@ -2913,6 +2933,90 @@ function renderWdSection(){
   renderWdRingkasan();
   renderWdChart();
   renderWdVsProfitChart();
+  renderAlokasiDana();
+}
+
+// ══ ALOKASI DANA (ALLOCATION & GOALS) ══
+// Membagi total WD all-time (dana yang sudah ditarik dari MT4) ke beberapa kategori
+// berdasarkan persentase yang diatur sendiri oleh pengguna. Persentase disimpan di localStorage.
+const ALOKASI_DEFAULT={harian:40, investasi:30, tabungan:20, hiburan:10};
+const ALOKASI_META=[
+  {key:'harian',    label:'Kebutuhan Harian',        color:'#D4AF37'},
+  {key:'investasi', label:'Investasi (Saham/Properti)', color:'#4ADE80'},
+  {key:'tabungan',  label:'Tabungan / Darurat',       color:'#60A5FA'},
+  {key:'hiburan',   label:'Hiburan',                  color:'#F87171'}
+];
+function getAlokasiPersen(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('mk_alokasi_persen'));
+    if(saved && typeof saved==='object') return {...ALOKASI_DEFAULT, ...saved};
+  }catch(e){}
+  return {...ALOKASI_DEFAULT};
+}
+function saveAlokasiPersenInput(){
+  const persen={};
+  ALOKASI_META.forEach(m=>{
+    const el=document.getElementById('alokasiInp_'+m.key);
+    persen[m.key]=Math.max(0, parseFloat(el.value)||0);
+  });
+  localStorage.setItem('mk_alokasi_persen', JSON.stringify(persen));
+  renderAlokasiDana();
+}
+function renderAlokasiInputs(){
+  const el=document.getElementById('alokasiInputs');
+  if(!el)return;
+  const persen=getAlokasiPersen();
+  el.innerHTML=ALOKASI_META.map(m=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="width:10px;height:10px;border-radius:3px;background:${m.color};flex-shrink:0"></span>
+      <label style="flex:1;font-size:11px;color:#C8A84B">${m.label}</label>
+      <input class="inp" id="alokasiInp_${m.key}" type="number" min="0" max="100" value="${persen[m.key]}" oninput="saveAlokasiPersenInput()" style="width:64px;text-align:center;margin-bottom:0;padding:6px">
+      <span style="font-size:11px;color:#7A5D1F">%</span>
+    </div>`).join('');
+}
+function renderAlokasiDana(){
+  const pieWrap=document.getElementById('alokasiPieWrap');
+  const legendEl=document.getElementById('alokasiLegend');
+  const tableEl=document.getElementById('alokasiTable');
+  const warnEl=document.getElementById('alokasiTotalWarn');
+  if(!pieWrap||!tableEl)return;
+
+  renderAlokasiInputs();
+  const persen=getAlokasiPersen();
+  const totalPersen=ALOKASI_META.reduce((s,m)=>s+persen[m.key],0);
+  if(warnEl) warnEl.style.display = Math.abs(totalPersen-100)>0.5 ? 'block' : 'none';
+
+  const data=getWdProfitPerHari();
+  const totalWd=data.reduce((s,d)=>s+d.wd,0);
+
+  // ── PIE CHART pakai CSS conic-gradient, tidak perlu canvas ──
+  let acc=0;
+  const stops=ALOKASI_META.map(m=>{
+    const pct = totalPersen>0 ? (persen[m.key]/totalPersen*100) : 0;
+    const start=acc, end=acc+pct;
+    acc=end;
+    return `${m.color} ${start}% ${end}%`;
+  }).join(', ');
+  pieWrap.innerHTML = totalWd>0.01
+    ? `<div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(${stops});box-shadow:0 0 0 3px var(--bg2)"></div>`
+    : `<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada dana WD tercatat — pie chart akan muncul setelah ada penarikan (WD) dari MT4.</div>`;
+
+  legendEl.innerHTML = `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:12px">${
+    ALOKASI_META.map(m=>`<span style="font-size:9px;color:#8A6B26"><span style="color:${m.color}">■</span> ${m.label} (${persen[m.key]}%)</span>`).join('')
+  }</div>`;
+
+  tableEl.innerHTML = ALOKASI_META.map(m=>{
+    const nominal = totalWd * (persen[m.key]/100);
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:11px;color:#C8A84B"><span style="color:${m.color}">●</span> ${m.label}</span>
+        <span style="font-size:12px;font-weight:700;color:#D4AF37">${fc(nominal)}</span>
+      </div>`;
+  }).join('') + `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px">
+        <span style="font-size:11px;color:#8A6B26;font-weight:700">Total Dana WD</span>
+        <span style="font-size:13px;font-weight:800;color:#FFD700">${fc(totalWd)}</span>
+      </div>`;
 }
 
 // ══ RISK METER (Current Drawdown + Risk of Ruin + Risk per Trade, dalam 1 tampilan) ══
