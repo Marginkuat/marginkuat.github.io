@@ -1099,6 +1099,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
+<!-- FINANCIAL INDEPENDENCE (FI) NUMBER -->
+<div class="section" id="secFINumber">
+  <div class="sec-title">🎯 Financial Independence (FI) Number</div>
+  <div class="graph-card" style="margin-bottom:12px">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Berapa modal trading yang dibutuhkan agar profit bulanan rata-rata bisa menutup biaya hidup, tanpa perlu kerja lain. Dihitung dari rata-rata return bulanan historis dan rata-rata pengeluaran pribadi kamu.</div>
+    <div id="fiNumberBox"></div>
+  </div>
+</div>
+
 <!-- INVESTOR DASHBOARD -->
 <div class="section" id="secInvestorDashboard">
   <div class="sec-title">👥 Investor Dashboard</div>
@@ -1600,6 +1609,7 @@ const SEARCH_MENU=[
   {id:'secAliranUang', icon:'💸', label:'Aliran Uang Masuk & Keluar', desc:'Catatan investasi, profit MT4, dan pengeluaran', kw:'aliran uang masuk keluar investasi profit mt4 kas pribadi belanja'},
   {id:'secAlokasiDana', icon:'🥧', label:'Alokasi Dana (Allocation & Goals)', desc:'Bagi dana hasil WD ke kebutuhan harian, investasi, tabungan, hiburan', kw:'alokasi dana allocation goals budgeting pie chart kebutuhan harian investasi tabungan darurat hiburan'},
   {id:'secDanaDarurat', icon:'🚨', label:'Dana Darurat & Skor Kesehatan Finansial', desc:'Runway dana darurat dan skor kesehatan finansial A-D', kw:'dana darurat emergency fund skor kesehatan finansial financial health score rasio'},
+  {id:'secFINumber', icon:'🎯', label:'Financial Independence (FI) Number', desc:'Modal yang dibutuhkan agar profit bulanan menutup biaya hidup', kw:'financial independence fi number kebebasan finansial simulasi proyeksi target modal pensiun dini'},
   {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow'},
   {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio riwayat transaksi aset beli jual saham properti tracker'},
   {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf'},
@@ -2949,6 +2959,7 @@ function renderWdSection(){
   renderWdVsProfitChart();
   renderAlokasiDana();
   renderDanaDarurat();
+  renderFINumber();
 }
 
 // ══ ALOKASI DANA (ALLOCATION & GOALS) ══
@@ -3141,6 +3152,59 @@ function renderDanaDarurat(){
         <span style="font-size:11px;text-align:right"><b style="color:${f.color}">${f.status}</b><br><span style="font-size:9px;color:#7A5D1F">${f.nilai}</span></span>
       </div>`).join('')}
     <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">Skor edukatif berdasarkan aturan umum finansial (dana darurat 3-6 bulan, DER rendah, profit lebih besar dari biaya hidup) — bukan saran keuangan profesional.</div>`;
+}
+
+// ══ FINANCIAL INDEPENDENCE (FI) NUMBER ══
+// FI Number = modal trading yang dibutuhkan supaya profit rata-rata bulanan (dari histori) cukup
+// menutup rata-rata pengeluaran pribadi bulanan — tanpa perlu penghasilan lain.
+function renderFINumber(){
+  const el=document.getElementById('fiNumberBox');
+  if(!el)return;
+
+  const stats=getInvestorCalcStats();
+  const {rata:biayaBulanan, adaData:adaPengeluaran}=getRataRataPengeluaranPribadiBulanan();
+  const saldoMt4Sekarang = allSaldoData&&allSaldoData.length ? parseFloat(allSaldoData[allSaldoData.length-1].saldo_mt4||0) : 0;
+
+  if(!stats){
+    el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Belum cukup data historis (minimal 1 bulan tercatat Saldo Harian) untuk menghitung FI Number.</div>';
+    return;
+  }
+  if(!adaPengeluaran || biayaBulanan<=0.01){
+    el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Belum ada catatan pengeluaran pribadi (Belanja/Utilitas/Kesehatan/Gaya Hidup) di Aliran Uang, jadi FI Number belum bisa dihitung.</div>';
+    return;
+  }
+  if(stats.avg<=0){
+    el.innerHTML=`<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Rata-rata return bulanan historis kamu ${stats.avg.toFixed(1)}% (belum positif), jadi FI Number belum bisa dihitung — perlu rata-rata profit positif dulu.</div>`;
+    return;
+  }
+
+  const fiNumber = biayaBulanan / (stats.avg/100);
+  const progress = Math.min(100, saldoMt4Sekarang/fiNumber*100);
+  // Estimasi lama waktu (bulan) sampai saldo sekarang mencapai FI Number, asumsi tumbuh rata-rata stats.avg%/bulan
+  let estBulan=null;
+  if(saldoMt4Sekarang>0 && saldoMt4Sekarang<fiNumber){
+    estBulan=Math.log(fiNumber/saldoMt4Sekarang)/Math.log(1+stats.avg/100);
+  }
+
+  el.innerHTML=`
+    <div class="bal-box" style="background:var(--bg3);border:1px solid #B8860B;margin-bottom:8px">
+      <div class="bal-box-val" style="font-size:20px;color:#FFD700">${fc(fiNumber)}</div>
+      <div class="bal-box-lbl">🎯 FI Number — modal dibutuhkan agar profit bulanan menutup biaya hidup</div>
+    </div>
+    <div style="font-size:9px;color:#5C4818;text-align:center;margin-bottom:10px">Rata-rata pengeluaran ${fc(biayaBulanan)}/bulan ÷ rata-rata return trading ${stats.avg.toFixed(1)}%/bulan</div>
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:#8A6B26;margin-bottom:4px">
+        <span>Progress menuju FI</span><span>${progress.toFixed(1)}%</span>
+      </div>
+      <div class="progress-track"><div style="width:${progress}%;background:${progress>=100?'#4ADE80':'#B8860B'};height:100%"></div></div>
+      <div style="font-size:9px;color:#7A5D1F;margin-top:4px">Saldo MT4 saat ini: ${fc(saldoMt4Sekarang)}</div>
+    </div>
+    ${progress>=100
+      ? `<div style="text-align:center;font-size:12px;font-weight:700;color:#4ADE80;padding:6px 0">🎉 Kamu sudah mencapai FI Number!</div>`
+      : (estBulan!==null && isFinite(estBulan)
+        ? `<div style="text-align:center;font-size:11px;color:#C8A84B">Estimasi ${estBulan.toFixed(0)} bulan lagi (± ${(estBulan/12).toFixed(1)} tahun) untuk mencapai FI Number, dengan asumsi rata-rata return bulanan tetap konsisten.</div>`
+        : '')}
+    <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">⚠️ Estimasi berdasarkan performa historis, BUKAN jaminan. Return trading berfluktuasi dan bisa saja negatif di periode tertentu.</div>`;
 }
 
 // ══ RISK METER (Current Drawdown + Risk of Ruin + Risk per Trade, dalam 1 tampilan) ══
