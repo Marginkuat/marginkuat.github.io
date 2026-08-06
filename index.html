@@ -1159,6 +1159,21 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
+<!-- INVESTMENT PORTFOLIO DASHBOARD -->
+<div class="section" id="secPortofolioInvestasi">
+  <div class="sec-title">📊 Investment Portfolio Dashboard</div>
+  <div class="graph-card" style="margin-bottom:12px">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Breakdown investasi di luar MT4 — saham, reksadana, deposito, SUN/obligasi, properti, tanah, dan aset lain yang kamu input di Neraca (Laporan Keuangan).</div>
+    <div id="portofolioPieWrap" style="display:flex;justify-content:center;padding:10px 0"></div>
+    <div id="portofolioLegend"></div>
+  </div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Rincian per Aset</div>
+    <div id="portofolioTable"></div>
+    <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">Data diambil otomatis dari Daftar Aset di Laporan Keuangan → Neraca. Tambah/hapus aset dari sana.</div>
+  </div>
+</div>
+
 <!-- LAPORAN KEUANGAN -->
 <div class="section" id="secLaporanKeuangan">
   <div class="sec-title">📑 Laporan Keuangan</div>
@@ -1611,6 +1626,7 @@ const SEARCH_MENU=[
   {id:'secDanaDarurat', icon:'🚨', label:'Dana Darurat & Skor Kesehatan Finansial', desc:'Runway dana darurat dan skor kesehatan finansial A-D', kw:'dana darurat emergency fund skor kesehatan finansial financial health score rasio'},
   {id:'secFINumber', icon:'🎯', label:'Financial Independence (FI) Number', desc:'Modal yang dibutuhkan agar profit bulanan menutup biaya hidup', kw:'financial independence fi number kebebasan finansial simulasi proyeksi target modal pensiun dini'},
   {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow'},
+  {id:'secPortofolioInvestasi', icon:'📊', label:'Investment Portfolio Dashboard', desc:'Breakdown investasi saham, reksadana, deposito, properti di luar MT4', kw:'investment portfolio dashboard investasi saham reksadana deposito properti tanah obligasi sun breakdown portofolio'},
   {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio riwayat transaksi aset beli jual saham properti tracker'},
   {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf'},
   {id:'secProfitBulanan', icon:'📊', label:'Profit Per Bulan', desc:'Daftar total profit tiap bulan', kw:'profit per bulan bulanan'},
@@ -4149,6 +4165,7 @@ function renderLapKeu(){
   if(lapKeuTab==='neraca') renderNeraca(wrap);
   else if(lapKeuTab==='labarugi') renderLabaRugi(wrap);
   else renderArusKasFormal(wrap);
+  renderPortofolioInvestasi();
 }
 
 // ── NERACA (BALANCE SHEET) — format gaya laporan keuangan perusahaan (Aset Lancar/Tidak Lancar, Kewajiban Lancar/Jangka Panjang) ──
@@ -4163,12 +4180,60 @@ function getKewajiban(){
   }catch(e){ return []; }
 }
 const ASET_PRESET={
-  saham:{nama:'Saham', tipe:'lancar', hint:'nilai portofolio saham saat ini'},
+  saham:{nama:'Saham', tipe:'lancar', hint:'nilai portofolio saham saat ini, contoh: BBCA, BBRI'},
+  reksadana:{nama:'Reksadana', tipe:'lancar', hint:'nilai unit reksadana saat ini'},
   deposito:{nama:'Deposito', tipe:'lancar', hint:'nilai pokok deposito'},
   sun:{nama:'Surat Utang Negara (SUN/ORI/SBN)', tipe:'lancar', hint:'nilai obligasi/SUN yang dimiliki'},
   properti:{nama:'Properti', tipe:'tidak_lancar', hint:'estimasi nilai jual properti'},
   tanah:{nama:'Tanah', tipe:'tidak_lancar', hint:'estimasi nilai jual tanah'}
 };
+
+// ══ INVESTMENT PORTFOLIO DASHBOARD ══
+// Breakdown visual dari semua aset di luar MT4 (Daftar Aset di Neraca) — pie chart + rincian per aset.
+const PORTOFOLIO_PALET=['#D4AF37','#4ADE80','#60A5FA','#F87171','#A78BFA','#FB923C','#EAB308','#34D399','#C084FC','#FF8080'];
+function renderPortofolioInvestasi(){
+  const pieWrap=document.getElementById('portofolioPieWrap');
+  const legendEl=document.getElementById('portofolioLegend');
+  const tableEl=document.getElementById('portofolioTable');
+  if(!pieWrap||!tableEl)return;
+
+  const list=getAsetLain();
+  const total=list.reduce((s,a)=>s+parseFloat(a.jumlah||0),0);
+
+  if(!list.length || total<=0){
+    pieWrap.innerHTML=`<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada aset investasi tercatat. Tambahkan dari Laporan Keuangan → Neraca → Daftar Aset (Saham, Reksadana, Deposito, dll).</div>`;
+    legendEl.innerHTML='';
+    tableEl.innerHTML='';
+    return;
+  }
+
+  let acc=0;
+  const withColor=list.map((a,i)=>({...a, color:PORTOFOLIO_PALET[i%PORTOFOLIO_PALET.length]}));
+  const stops=withColor.map(a=>{
+    const pct=parseFloat(a.jumlah||0)/total*100;
+    const start=acc, end=acc+pct;
+    acc=end;
+    return `${a.color} ${start}% ${end}%`;
+  }).join(', ');
+  pieWrap.innerHTML=`<div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(${stops});box-shadow:0 0 0 3px var(--bg2)"></div>`;
+
+  legendEl.innerHTML=`<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:12px">${
+    withColor.map(a=>`<span style="font-size:9px;color:#8A6B26"><span style="color:${a.color}">■</span> ${escapeHtml(a.nama)}</span>`).join('')
+  }</div>`;
+
+  tableEl.innerHTML=withColor.map(a=>{
+    const pct=parseFloat(a.jumlah||0)/total*100;
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:11px;color:#C8A84B"><span style="color:${a.color}">●</span> ${escapeHtml(a.nama)} <span style="font-size:9px;color:#7A5D1F">(${a.tipe==='lancar'?'Lancar':'Tidak Lancar'})</span></span>
+        <span style="font-size:12px;font-weight:700;color:#D4AF37;text-align:right">Rp ${Math.round(a.jumlah).toLocaleString('id-ID')}<br><span style="font-size:9px;color:#7A5D1F;font-weight:400">${pct.toFixed(1)}%</span></span>
+      </div>`;
+  }).join('') + `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px">
+        <span style="font-size:11px;color:#8A6B26;font-weight:700">Total Portofolio</span>
+        <span style="font-size:13px;font-weight:800;color:#FFD700">Rp ${Math.round(total).toLocaleString('id-ID')}</span>
+      </div>`;
+}
 // ── RIWAYAT TRANSAKSI ASET — catat kapan & berapa nilai aset ditambahkan/dihapus ──
 function getRiwayatAset(){
   try{ return JSON.parse(localStorage.getItem('mk_riwayat_aset')||'[]'); }catch(e){ return []; }
@@ -4288,6 +4353,7 @@ function renderNeraca(wrap){
       <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tambah Aset Perusahaan Cepat</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
         <span onclick="tambahAsetLain('saham')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">📈 Saham</span>
+        <span onclick="tambahAsetLain('reksadana')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">📊 Reksadana</span>
         <span onclick="tambahAsetLain('deposito')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">🏦 Deposito</span>
         <span onclick="tambahAsetLain('sun')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">📜 SUN/Obligasi</span>
         <span onclick="tambahAsetLain('properti')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">🏢 Properti</span>
