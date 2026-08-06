@@ -1087,6 +1087,24 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 </div>
 
+<!-- INVESTOR CALCULATOR -->
+<div class="section" id="secInvestorCalc">
+  <div class="sec-title">🧮 Investor Calculator</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Simulasi potensi return berdasarkan performa historis — investor bisa coba sendiri skenario investasinya.</div>
+    <label class="lbl">Jumlah Investasi (dalam ¢ / sen, sama seperti format saldo di app ini)</label>
+    <input class="inp" id="invCalcJumlah" type="number" value="100000" min="0" oninput="renderInvestorCalc()" style="margin-bottom:10px">
+    <label class="lbl">Durasi Simulasi</label>
+    <select class="inp" id="invCalcDurasi" onchange="renderInvestorCalc()" style="margin-bottom:14px">
+      <option value="1">1 Bulan</option>
+      <option value="3" selected>3 Bulan</option>
+      <option value="6">6 Bulan</option>
+      <option value="12">12 Bulan</option>
+    </select>
+    <div id="invCalcResult"><div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+  </div>
+</div>
+
 <!-- FAQ SECTION -->
 <div class="section" id="secFAQ">
   <div class="sec-title">❓ FAQ — Pertanyaan Umum Investor</div>
@@ -1749,6 +1767,7 @@ async function loadAll(){
   renderInvestorDashboard();
   renderNotifCenter();
   renderWeeklyRecap();
+  renderInvestorCalc();
   renderFAQ();
   renderSertifikat();
   renderLapKeu();
@@ -2344,6 +2363,7 @@ async function syncAllHistoricalKas(){
     renderInvestorDashboard();
     renderNotifCenter();
     renderWeeklyRecap();
+    renderInvestorCalc();
     renderLapKeu();
     await loadKas();
   }catch(e){
@@ -2459,6 +2479,7 @@ async function simpanKas(){
     renderInvestorDashboard();
     renderNotifCenter();
     renderWeeklyRecap();
+    renderInvestorCalc();
     renderLapKeu();
   }catch(e){
     console.error(e);
@@ -3289,6 +3310,77 @@ function renderNotifCenter(){
       </div>`;
   });
   listEl.innerHTML=html;
+}
+
+// ══ INVESTOR CALCULATOR ══
+function getMonthlyReturnRates(){
+  const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const grouped={};
+  rows.forEach(r=>{
+    const d=new Date(r.tanggal);
+    const key=`${d.getFullYear()}-${d.getMonth()}`;
+    if(!grouped[key]) grouped[key]={profit:0, saldoAwal:null};
+    grouped[key].profit+=parseFloat(r.profit||0);
+    const saldoSetelahHariItu=parseFloat(r.saldo_mt4||0)-parseFloat(r.profit||0);
+    if(grouped[key].saldoAwal===null) grouped[key].saldoAwal=saldoSetelahHariItu;
+  });
+  const rates=[];
+  Object.values(grouped).forEach(g=>{
+    if(g.saldoAwal>0) rates.push(g.profit/g.saldoAwal*100);
+  });
+  return rates;
+}
+function getInvestorCalcStats(){
+  const rates=getMonthlyReturnRates();
+  if(!rates.length) return null;
+  const avg=rates.reduce((a,b)=>a+b,0)/rates.length;
+  const best=Math.max(...rates);
+  const worst=Math.min(...rates);
+  return {avg,best,worst,count:rates.length};
+}
+function renderInvestorCalc(){
+  const el=document.getElementById('invCalcResult');
+  if(!el)return;
+  const stats=getInvestorCalcStats();
+  if(!stats){
+    el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Belum cukup data historis (minimal 1 bulan tercatat) untuk simulasi.</div>';
+    return;
+  }
+  const jumlahInput=document.getElementById('invCalcJumlah');
+  const durasiInput=document.getElementById('invCalcDurasi');
+  const jumlah=parseFloat(jumlahInput?jumlahInput.value:0)||0;
+  const durasi=parseInt(durasiInput?durasiInput.value:3)||3;
+
+  if(jumlah<=0){
+    el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Masukkan jumlah investasi dulu.</div>';
+    return;
+  }
+
+  const project=ratePct=>jumlah*Math.pow(1+(ratePct/100), durasi);
+  const worstVal=project(stats.worst);
+  const avgVal=project(stats.avg);
+  const bestVal=project(stats.best);
+
+  function row(label, rate, val, color){
+    const gain=val-jumlah;
+    const gainPct= jumlah>0 ? (gain/jumlah*100) : 0;
+    return `
+      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:12px 14px;margin-bottom:8px;text-align:left">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:11px;font-weight:700;color:${color}">${label}</span>
+          <span style="font-size:9px;color:#7A5D1F">${rate>=0?'+':''}${rate.toFixed(1)}%/bulan</span>
+        </div>
+        <div style="font-size:16px;font-weight:800;color:${color}">${fc(val)}</div>
+        <div style="font-size:9px;color:${gain>=0?'#4ADE80':'#F87171'}">${gain>=0?'+':''}${fc(gain)} (${gainPct>=0?'+':''}${gainPct.toFixed(1)}%) dari modal awal</div>
+      </div>`;
+  }
+
+  el.innerHTML=`
+    <div style="font-size:9px;color:#7A5D1F;margin-bottom:10px;text-align:center;line-height:1.6">Asumsi dari ${stats.count} bulan data historis: bulan terbaik ${stats.best>=0?'+':''}${stats.best.toFixed(1)}%, rata-rata ${stats.avg>=0?'+':''}${stats.avg.toFixed(1)}%, bulan terburuk ${stats.worst>=0?'+':''}${stats.worst.toFixed(1)}% per bulan.</div>
+    ${row('🚀 Skenario Optimis', stats.best, bestVal, '#4ADE80')}
+    ${row('📊 Skenario Rata-rata', stats.avg, avgVal, '#D4AF37')}
+    ${row('⚠️ Skenario Konservatif', stats.worst, worstVal, '#F87171')}
+    <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:10px;line-height:1.6">⚠️ Ini simulasi berdasarkan performa historis, BUKAN jaminan atau janji return di masa depan. Trading forex/emas/kripto memiliki risiko, termasuk risiko kerugian modal.</div>`;
 }
 
 // ══ FAQ SECTION ══
@@ -4180,6 +4272,7 @@ async function simpanSaldo(){
     renderInvestorDashboard();
     renderNotifCenter();
     renderWeeklyRecap();
+    renderInvestorCalc();
     renderLapKeu();
   }catch(e){
     console.error(e);
