@@ -1054,11 +1054,32 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <div class="section" id="secInvestorDashboard">
   <div class="sec-title">👥 Investor Dashboard</div>
   <div class="graph-card">
-    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Tampilan personal untuk tiap investor — porsi modal, estimasi profit, dan ROI, dihitung otomatis dari data trading kamu.</div>
-    <div id="investorDashboard">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Login khusus investor — tiap investor punya kode akses sendiri buat lihat porsi modal, estimasi profit, dan ROI mereka.</div>
+
+    <div id="investorLoginBox">
+      <label class="lbl">Kode Akses Investor</label>
+      <input class="inp" id="investorLoginCode" type="text" placeholder="Masukkan kode akses kamu" style="margin-bottom:10px">
+      <button class="btn btn-p" onclick="doInvestorLogin()" style="margin-bottom:0">🔑 Masuk sebagai Investor</button>
+      <div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">Kode akses diberikan oleh pengelola akun. Admin bisa lihat semua investor tanpa kode.</div>
+    </div>
+
+    <div id="investorDashboard" style="display:none">
       <div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
     </div>
-    <button class="btn btn-p" onclick="tambahInvestor()" style="margin-top:12px;margin-bottom:0">➕ Tambah Investor</button>
+
+    <div id="investorLogoutBox" style="display:none;text-align:right;margin-top:10px">
+      <span onclick="doInvestorLogout()" style="font-size:10px;color:#7A5D1F;cursor:pointer;text-decoration:underline">↩ Keluar dari tampilan Investor</span>
+    </div>
+
+    <button class="btn btn-p" id="btnTambahInvestor" onclick="tambahInvestor()" style="margin-top:12px;margin-bottom:0;display:none">➕ Tambah Investor</button>
+  </div>
+</div>
+
+<!-- FAQ SECTION -->
+<div class="section" id="secFAQ">
+  <div class="sec-title">❓ FAQ — Pertanyaan Umum Investor</div>
+  <div class="graph-card">
+    <div id="faqList"><div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
   </div>
 </div>
 
@@ -1698,6 +1719,7 @@ async function loadAll(){
   renderRiskMeter();
   renderGoalTracker();
   renderInvestorDashboard();
+  renderFAQ();
   renderSertifikat();
   renderLapKeu();
   saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
@@ -3018,7 +3040,8 @@ function renderGoalTracker(){
   el.innerHTML=html;
 }
 
-// ══ INVESTOR DASHBOARD ══
+// ══ INVESTOR DASHBOARD (dengan login khusus per investor) ══
+let loggedInInvestorId=null;
 function getInvestorList(){
   try{ return JSON.parse(localStorage.getItem('mk_investors')||'[]'); }catch(e){ return []; }
 }
@@ -3032,10 +3055,15 @@ function tambahInvestor(){
   if(isNaN(modal)||modal<=0){toast('❌ Nilai modal tidak valid');return;}
   const tglStr=prompt('Tanggal bergabung (format YYYY-MM-DD):', new Date().toISOString().slice(0,10));
   if(!tglStr || !/^\d{4}-\d{2}-\d{2}$/.test(tglStr)){toast('❌ Format tanggal tidak valid');return;}
+  let kode=prompt(`Buat kode akses login untuk ${nama} (contoh: 4-6 digit angka/huruf, ini yang dipakai investor buat login):`);
+  if(!kode){toast('❌ Kode akses wajib diisi');return;}
+  kode=kode.trim();
+  if(!kode){toast('❌ Kode akses wajib diisi');return;}
   const list=getInvestorList();
-  list.push({id:Date.now().toString(36), nama, modal, tanggal:tglStr});
+  if(list.some(v=>v.kode===kode)){toast('❌ Kode akses sudah dipakai investor lain, pakai kode lain');return;}
+  list.push({id:Date.now().toString(36), nama, modal, tanggal:tglStr, kode});
   saveInvestorList(list);
-  toast('✅ Investor ditambahkan');
+  toast('✅ Investor ditambahkan — kode akses: '+kode);
   renderInvestorDashboard();
 }
 function hapusInvestor(id){
@@ -3045,12 +3073,83 @@ function hapusInvestor(id){
   toast('✅ Investor dihapus');
   renderInvestorDashboard();
 }
+function doInvestorLogin(){
+  const codeInput=document.getElementById('investorLoginCode');
+  const code=(codeInput?codeInput.value:'').trim();
+  if(!code){toast('❌ Masukkan kode akses dulu');return;}
+  const found=getInvestorList().find(v=>v.kode && v.kode===code);
+  if(!found){toast('❌ Kode akses tidak ditemukan');return;}
+  loggedInInvestorId=found.id;
+  sessionStorage.setItem('mk_investor_session', found.id);
+  if(codeInput) codeInput.value='';
+  toast('✅ Selamat datang, '+found.nama);
+  renderInvestorDashboard();
+}
+function doInvestorLogout(){
+  loggedInInvestorId=null;
+  sessionStorage.removeItem('mk_investor_session');
+  toast('↩ Keluar dari tampilan Investor');
+  renderInvestorDashboard();
+}
+function investorCardHtml(inv, totalProfitAllTime, totalModalInvestorPool, showHapus){
+  const sharePct = totalModalInvestorPool>0 ? (inv.modal/totalModalInvestorPool*100) : 0;
+  const profitShare = totalProfitAllTime * (sharePct/100);
+  const currentVal = parseFloat(inv.modal||0) + profitShare;
+  const roi = inv.modal>0 ? (profitShare/inv.modal*100) : 0;
+  const joinDate=new Date(inv.tanggal);
+  const days=Math.max(0, Math.floor((Date.now()-joinDate.getTime())/86400000));
+  return `
+    <div style="border:1.5px solid #B8860B;border-radius:14px;padding:16px;margin-bottom:12px;background:linear-gradient(160deg,#1E2312,#161A0F);position:relative;text-align:left">
+      <div style="position:absolute;top:12px;right:14px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;border:1px solid #5C4818;border-radius:10px;padding:2px 8px">VIP</div>
+      <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px">Selamat datang</div>
+      <div style="font-size:18px;font-weight:800;color:#FFD700;margin:2px 0 10px">${inv.nama} 👋</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(inv.modal)}</div><div class="bal-box-lbl">Modal Disetor</div></div>
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:#FFD700">${fc(currentVal)}</div><div class="bal-box-lbl">Estimasi Nilai Sekarang</div></div>
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val ${profitShare>=0?'cg':'cr'}" style="font-size:14px">${profitShare>=0?'+':''}${fc(profitShare)}</div><div class="bal-box-lbl">Estimasi Profit Share</div></div>
+        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:${roi>=0?'#4ADE80':'#F87171'}">${roi>=0?'+':''}${roi.toFixed(1)}%</div><div class="bal-box-lbl">ROI</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:9px;color:#7A5D1F;border-top:1px solid #2A2E1F;padding-top:8px">
+        <span>Porsi Modal: <b style="color:#C8A84B">${sharePct.toFixed(1)}%</b></span>
+        <span>Bergabung ${days} hari lalu (${inv.tanggal})</span>
+      </div>
+      ${showHapus?`<div style="text-align:right;margin-top:6px"><span onclick="hapusInvestor('${inv.id}')" style="font-size:9px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Hapus</span></div>`:''}
+    </div>`;
+}
 function renderInvestorDashboard(){
-  const el=document.getElementById('investorDashboard');
-  if(!el)return;
+  const loginBox=document.getElementById('investorLoginBox');
+  const dashBox=document.getElementById('investorDashboard');
+  const logoutBox=document.getElementById('investorLogoutBox');
+  const tambahBtn=document.getElementById('btnTambahInvestor');
+  if(!dashBox)return;
+
   const investors=getInvestorList();
-  if(!investors.length){
-    el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada investor ditambahkan. Tekan tombol di bawah untuk mulai.</div>';
+  const sessionId=sessionStorage.getItem('mk_investor_session');
+  if(sessionId) loggedInInvestorId=sessionId;
+
+  let visibleInvestors=[], showHapus=false;
+  if(isAdmin){
+    visibleInvestors=investors;
+    showHapus=true;
+    if(loginBox)loginBox.style.display='none';
+    if(logoutBox)logoutBox.style.display='none';
+    if(tambahBtn)tambahBtn.style.display='block';
+  }else if(loggedInInvestorId && investors.some(v=>v.id===loggedInInvestorId)){
+    visibleInvestors=investors.filter(v=>v.id===loggedInInvestorId);
+    if(loginBox)loginBox.style.display='none';
+    if(logoutBox)logoutBox.style.display='block';
+    if(tambahBtn)tambahBtn.style.display='none';
+  }else{
+    dashBox.style.display='none';
+    if(loginBox)loginBox.style.display='block';
+    if(logoutBox)logoutBox.style.display='none';
+    if(tambahBtn)tambahBtn.style.display='none';
+    return;
+  }
+  dashBox.style.display='block';
+
+  if(!visibleInvestors.length){
+    dashBox.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada investor ditambahkan. Tekan tombol di bawah untuk mulai.</div>';
     return;
   }
   const rows=allSaldoData||[];
@@ -3058,34 +3157,33 @@ function renderInvestorDashboard(){
   const totalModalInvestorPool=investors.reduce((s,v)=>s+parseFloat(v.modal||0),0);
 
   let html='';
-  investors.forEach(inv=>{
-    const sharePct = totalModalInvestorPool>0 ? (inv.modal/totalModalInvestorPool*100) : 0;
-    const profitShare = totalProfitAllTime * (sharePct/100);
-    const currentVal = parseFloat(inv.modal||0) + profitShare;
-    const roi = inv.modal>0 ? (profitShare/inv.modal*100) : 0;
-    const joinDate=new Date(inv.tanggal);
-    const days=Math.max(0, Math.floor((Date.now()-joinDate.getTime())/86400000));
-    html+=`
-      <div style="border:1.5px solid #B8860B;border-radius:14px;padding:16px;margin-bottom:12px;background:linear-gradient(160deg,#1E2312,#161A0F);position:relative;text-align:left">
-        <div style="position:absolute;top:12px;right:14px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;border:1px solid #5C4818;border-radius:10px;padding:2px 8px">VIP</div>
-        <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px">Selamat datang</div>
-        <div style="font-size:18px;font-weight:800;color:#FFD700;margin:2px 0 10px">${inv.nama} 👋</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(inv.modal)}</div><div class="bal-box-lbl">Modal Disetor</div></div>
-          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:#FFD700">${fc(currentVal)}</div><div class="bal-box-lbl">Estimasi Nilai Sekarang</div></div>
-          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val ${profitShare>=0?'cg':'cr'}" style="font-size:14px">${profitShare>=0?'+':''}${fc(profitShare)}</div><div class="bal-box-lbl">Estimasi Profit Share</div></div>
-          <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:${roi>=0?'#4ADE80':'#F87171'}">${roi>=0?'+':''}${roi.toFixed(1)}%</div><div class="bal-box-lbl">ROI</div></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:9px;color:#7A5D1F;border-top:1px solid #2A2E1F;padding-top:8px">
-          <span>Porsi Modal: <b style="color:#C8A84B">${sharePct.toFixed(1)}%</b></span>
-          <span>Bergabung ${days} hari lalu (${inv.tanggal})</span>
-        </div>
-        <div style="text-align:right;margin-top:6px">
-          <span onclick="hapusInvestor('${inv.id}')" style="font-size:9px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Hapus</span>
-        </div>
-      </div>`;
-  });
+  visibleInvestors.forEach(inv=>{ html+=investorCardHtml(inv, totalProfitAllTime, totalModalInvestorPool, showHapus); });
   html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal investor terhadap total modal investor tercatat — bukan kalkulasi bagi hasil resmi/legal.</div>';
+  dashBox.innerHTML=html;
+}
+
+// ══ FAQ SECTION ══
+const FAQ_ITEMS=[
+  {q:'Apa itu Marginkuat?', a:'Marginkuat adalah jurnal trading pribadi buat mencatat performa harian dari akun trading (XAUUSD, BTCUSD, forex). Semua data yang ditampilkan di sini — saldo, profit/loss, WD — dicatat dari histori riil di MT4/broker.'},
+  {q:'Bagaimana profit dihitung?', a:'Profit dihitung dari selisih saldo MT4 yang dicatat tiap hari, dikurangi dana masuk/keluar (deposit/WD) supaya angkanya murni hasil trading, bukan tercampur dana yang ditambah atau ditarik.'},
+  {q:'Kapan saya bisa WD (penarikan)?', a:'WD dilakukan sesuai kesepakatan dengan pengelola akun. Riwayat WD sebelumnya bisa dilihat di section "Riwayat Penarikan (WD)" — tiap penarikan dihitung otomatis dari selisih saldo harian, jadi datanya transparan dan bisa dicek kapan saja.'},
+  {q:'Apakah profit dijamin setiap bulan?', a:'Tidak. Trading forex/emas/kripto punya risiko, dan hasil masa lalu tidak menjamin hasil di masa depan. Section "Risk Meter" dan "Risk of Ruin" ada supaya kamu bisa lihat sendiri seberapa besar risiko yang sedang diambil di akun ini.'},
+  {q:'Bagaimana cara kerja porsi modal & estimasi profit share?', a:'Tiap investor punya "porsi modal" = modal yang disetor dibagi total modal investor yang tercatat. Estimasi profit share dihitung proporsional dari porsi itu terhadap total profit trading. Ini murni estimasi otomatis untuk transparansi, BUKAN perjanjian bagi hasil resmi/legal — kesepakatan bagi hasil yang sebenarnya tetap mengikuti perjanjian di luar aplikasi ini.'},
+  {q:'Apakah dana saya aman?', a:'Aplikasi ini adalah alat pencatatan (jurnal), bukan platform kustodian dana. Dana tetap berada di akun broker/MT4 pengelola. Selalu pastikan ada kesepakatan tertulis dengan pengelola akun sebelum menyetor modal, dan jangan menganggap angka di sini sebagai jaminan hukum.'},
+  {q:'Bagaimana cara memantau performa akun?', a:'Login pakai kode akses investor kamu di section "Investor Dashboard" untuk lihat ringkasan modal, estimasi profit, dan ROI. Kamu juga bisa lihat grafik performa harian, statistik per pair, dan perbandingan performa vs benchmark (XAUUSD/BTCUSD) di section lain pada halaman ini.'},
+  {q:'Apa yang terjadi kalau akun mengalami loss / drawdown?', a:'Loss dan drawdown adalah bagian normal dari trading. Semua tercatat apa adanya di jurnal ini, termasuk saat performa sedang turun — supaya laporan yang kamu lihat selalu jujur dan bisa dipertanggungjawabkan, bukan cuma pas untung saja.'}
+];
+function renderFAQ(){
+  const el=document.getElementById('faqList');
+  if(!el)return;
+  let html='';
+  FAQ_ITEMS.forEach((item,i)=>{
+    html+=`
+      <details style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;margin-bottom:8px" ${i===0?'open':''}>
+        <summary style="padding:12px 14px;font-size:12px;font-weight:700;color:#D4AF37;cursor:pointer">${item.q}</summary>
+        <div style="padding:0 14px 14px;font-size:11px;color:#8A6B26;line-height:1.6">${item.a}</div>
+      </details>`;
+  });
   el.innerHTML=html;
 }
 
