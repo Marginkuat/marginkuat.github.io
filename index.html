@@ -28,11 +28,14 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:100vh}
+:root{--bg0:#0D0F0A;--bg1:#161A0F;--bg2:#1E2312;--bg3:#2A2410;--border:#2A2E1F}
+body.light-theme{--bg0:#F7F5EE;--bg1:#FFFFFF;--bg2:#F0EDE0;--bg3:#FBF1D2;--border:#E3DCC4}
+body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-height:100vh;transition:background .25s ease}
+.theme-toggle{width:30px;height:30px;border-radius:20px;border:1.5px solid #B8860B;background:transparent;color:#C8A84B;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 
 /* LOADING */
-#loading{position:fixed;inset:0;background:#0D0F0A;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
-.spin{width:32px;height:32px;border:2px solid #2A2E1F;border-top-color:#B8860B;border-radius:50%;animation:spin .8s linear infinite}
+#loading{position:fixed;inset:0;background:var(--bg0);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.spin{width:32px;height:32px;border:2px solid var(--border);border-top-color:#B8860B;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* HEADER */
@@ -49,25 +52,25 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 .sec-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px}
 
 /* BALANCE HERO */
-.balance-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:20px;margin:16px;margin-bottom:0;text-align:center}
+.balance-card{background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:20px;margin:16px;margin-bottom:0;text-align:center}
 .bal-label{font-size:10px;color:#9C7A2E;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px}
 .bal-cent{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:#C8A84B;letter-spacing:-1px}
 .bal-usd{font-size:14px;color:#B8924A;margin-top:4px;font-family:'JetBrains Mono',monospace}
 .bal-rp{font-size:12px;color:#7A5D1F;margin-top:2px;font-family:'JetBrains Mono',monospace;margin-bottom:16px}
 .bal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.bal-box{background:#1E2312;border-radius:10px;padding:10px 6px;text-align:center}
+.bal-box{background:var(--bg2);border-radius:10px;padding:10px 6px;text-align:center}
 .bal-box-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
 .bal-box-lbl{font-size:9px;color:#8A6B26;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
 .cg{color:#4ADE80}.cr{color:#F87171}.cy{color:#C8A84B}
 
 /* KALENDER */
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.cal-nav-btn{width:34px;height:34px;background:#161A0F;border:1px solid #2A2E1F;border-radius:8px;color:#C8A84B;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cal-nav-btn{width:34px;height:34px;background:var(--bg1);border:1px solid var(--border);border-radius:8px;color:#C8A84B;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .cal-month{font-size:16px;font-weight:700;color:#C8A84B}
 .cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px}
 .cal-day-lbl{text-align:center;font-size:9px;color:#7A5D1F;font-weight:600;padding:4px 0;text-transform:uppercase}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cal-cell{border-radius:8px;padding:4px 2px;text-align:center;min-height:44px;display:flex;flex-direction:column;justify-content:center;background:#161A0F;border:1px solid #1E2312}
+.cal-cell{border-radius:8px;padding:4px 2px;text-align:center;min-height:44px;display:flex;flex-direction:column;justify-content:center;background:var(--bg1);border:1px solid var(--bg2)}
 .cal-cell.profit{background:#132D0E;border-color:#1E4A14}
 .cal-cell.loss{background:#2D0E0E;border-color:#4A1414}
 .cal-cell.today{border-color:#C8A84B;border-width:1.5px}
@@ -79,13 +82,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 .cal-leg-dot{width:8px;height:8px;border-radius:3px}
 
 /* GRAFIK BULANAN */
-.graph-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px}
+.graph-card{background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:16px}
 .graph-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .graph-month{font-size:15px;font-weight:700;color:#D4AF37}
 .graph-signal{font-size:10px;color:#8A6B26;margin-top:2px}
 .graph-total{text-align:center;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;margin-bottom:2px}
 .graph-pct{text-align:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;margin-bottom:12px}
-.graph-tooltip{position:absolute;top:6px;background:#0D0F0A;border:1px solid #2A2E1F;border-radius:9px;padding:7px 11px;pointer-events:none;display:none;white-space:nowrap;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.graph-tooltip{position:absolute;top:6px;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:7px 11px;pointer-events:none;display:none;white-space:nowrap;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.4)}
 .graph-tooltip-date{font-size:10px;color:#9C7A2E;font-weight:700;margin-bottom:2px}
 .graph-tooltip-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
 .graph-dashed{stroke:#5C4818;stroke-width:1;stroke-dasharray:3,3}
@@ -93,23 +96,23 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 .graph-dot-inner{stroke:none}
 
 /* TARGET */
-.target-card{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px}
+.target-card{background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:16px}
 .target-title{text-align:center;font-size:13px;font-weight:700;color:#D4AF37;margin-bottom:4px}
 .target-sub{text-align:center;font-size:11px;color:#8A6B26;margin-bottom:12px}
 .target-row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:12px}
-.target-box{background:#1E2312;border-radius:10px;padding:10px;text-align:center}
+.target-box{background:var(--bg2);border-radius:10px;padding:10px;text-align:center}
 .target-box-lbl{font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
 .target-box-val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#C8A84B}
 .target-arrow{font-size:18px;color:#7A5D1F;text-align:center}
-.target-main{background:#2A2E1F;border-radius:10px;padding:10px;text-align:center}
+.target-main{background:var(--border);border-radius:10px;padding:10px;text-align:center}
 .target-main-lbl{font-size:9px;color:#C8A84B;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
 .target-main-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#FFD700}
-.progress-bar{height:6px;background:#1E2312;border-radius:3px;overflow:hidden;margin-top:10px}
+.progress-bar{height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-top:10px}
 .progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#2E4A1E,#4ADE80);transition:width 1s}
 .progress-info{display:flex;justify-content:space-between;font-size:10px;color:#8A6B26;margin-top:4px}
 
 /* RIWAYAT */
-.riwayat-item{background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.riwayat-item{background:var(--bg1);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
 .ri-info{flex:1}
 .ri-date{font-size:11px;font-weight:700;color:#C8A84B}
 .ri-saldo{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#D4AF37}
@@ -117,32 +120,32 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 .ri-cat{font-size:10px;color:#7A5D1F}
 
 /* PROFIT BULANAN */
-.pb-item{background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.pb-item{background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
 .pb-bulan{font-size:14px;font-weight:700;color:#D4AF37}
 .pb-signal{font-size:11px;color:#7A5D1F;margin-top:2px}
 .pb-profit{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;text-align:right}
 
 /* PAIR TABS */
-.pair-tab{padding:7px 14px;border-radius:20px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#8A6B26;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
-.pair-tab.active{border-color:#B8860B;background:#2A2410;color:#D4AF37}
-.zoom-btn{width:30px;height:30px;border-radius:8px;border:1px solid #2A2E1F;background:#0D0F0A;color:#C8A84B;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.progress-track{width:100%;height:14px;border-radius:8px;background:#0D0F0A;border:1px solid #2A2E1F;overflow:hidden}
+.pair-tab{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg0);color:#8A6B26;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.pair-tab.active{border-color:#B8860B;background:var(--bg3);color:#D4AF37}
+.zoom-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--bg0);color:#C8A84B;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.progress-track{width:100%;height:14px;border-radius:8px;background:var(--bg0);border:1px solid var(--border);overflow:hidden}
 .progress-fill{height:100%;border-radius:8px;transition:width .4s ease}
-.mood-btn{padding:10px 4px;border-radius:10px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#8A6B26;font-size:20px;cursor:pointer;text-align:center;line-height:1.3}
-.mood-btn.active{border-color:#B8860B;background:#2A2410}
+.mood-btn{padding:10px 4px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg0);color:#8A6B26;font-size:20px;cursor:pointer;text-align:center;line-height:1.3}
+.mood-btn.active{border-color:#B8860B;background:var(--bg3)}
 
 /* ADMIN PANEL */
-.admin-panel{background:#161A0F;border:1px solid #2A2E1F;border-radius:16px;padding:16px;display:none}
+.admin-panel{background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:16px;display:none}
 .ap-title{font-size:12px;font-weight:700;color:#C8A84B;margin-bottom:12px}
 .lbl{font-size:10px;font-weight:600;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px}
-.inp{width:100%;padding:10px 12px;border:1.5px solid #2A2E1F;border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;outline:none;margin-bottom:10px}
+.inp{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;outline:none;margin-bottom:10px}
 .inp:focus{border-color:#B8860B}
 .inp::placeholder{color:#5C4818}
 .btn{width:100%;padding:11px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px}
-.btn-p{background:linear-gradient(135deg,#B8860B,#C8A84B);color:#0D0F0A}
+.btn-p{background:linear-gradient(135deg,#B8860B,#C8A84B);color:var(--bg0)}
 .btn-g{background:#132D0E;color:#4ADE80;border:1px solid #1E4A14}
-.btn-ghost{background:#1E2312;color:#9C7A2E}
-.preview-box{background:#0D0F0A;border-radius:9px;padding:10px;margin-bottom:10px;display:none}
+.btn-ghost{background:var(--bg2);color:#9C7A2E}
+.preview-box{background:var(--bg0);border-radius:9px;padding:10px;margin-bottom:10px;display:none}
 .preview-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center}
 .pv-lbl{font-size:9px;color:#7A5D1F;margin-bottom:2px}
 .pv-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
@@ -150,48 +153,48 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 /* MODAL */
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end;justify-content:center}
 .modal.open{display:flex}
-.modal-box{background:#161A0F;border:1px solid #2A2E1F;width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px;max-height:88vh;overflow-y:auto}
-.modal-bar{width:36px;height:4px;background:#2A2E1F;border-radius:2px;margin:0 auto 16px}
+.modal-box{background:var(--bg1);border:1px solid var(--border);width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px;max-height:88vh;overflow-y:auto}
+.modal-bar{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
 .modal-title{font-size:15px;font-weight:700;color:#D4AF37;margin-bottom:14px}
 
 /* TOAST */
-.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-8px);background:#1E2312;color:#D4AF37;border:1px solid #2A2E1F;padding:9px 16px;border-radius:9px;font-size:11px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:normal;max-width:90vw;text-align:center;line-height:1.4}
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-8px);background:var(--bg2);color:#D4AF37;border:1px solid var(--border);padding:9px 16px;border-radius:9px;font-size:11px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:normal;max-width:90vw;text-align:center;line-height:1.4}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* KALKULATOR LOT */
-.calc-seg{display:flex;background:#0D0F0A;border:1px solid #2A2E1F;border-radius:10px;padding:3px;gap:3px;margin-bottom:14px}
+.calc-seg{display:flex;background:var(--bg0);border:1px solid var(--border);border-radius:10px;padding:3px;gap:3px;margin-bottom:14px}
 .calc-seg button{flex:1;background:transparent;border:none;color:#8A6B26;font-family:'Inter',sans-serif;font-size:11px;font-weight:700;padding:9px 4px;border-radius:7px;cursor:pointer;transition:all .15s}
-.calc-seg button.active{background:linear-gradient(135deg,#B8860B,#C8A84B);color:#0D0F0A}
+.calc-seg button.active{background:linear-gradient(135deg,#B8860B,#C8A84B);color:var(--bg0)}
 .calc-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.calc-hero{background:linear-gradient(135deg,#1E2312,#161A0F);border:1px solid #B8860B;border-radius:14px;padding:20px;text-align:center;margin-bottom:14px}
+.calc-hero{background:linear-gradient(135deg,var(--bg2),var(--bg1));border:1px solid #B8860B;border-radius:14px;padding:20px;text-align:center;margin-bottom:14px}
 .calc-hero-lbl{font-size:10px;color:#C8A84B;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;font-weight:700}
 .calc-hero-val{font-family:'JetBrains Mono',monospace;font-size:38px;font-weight:800;color:#FFD700;letter-spacing:-1px}
 .calc-hero-note{font-size:11px;color:#8A6B26;margin-top:8px;font-family:'JetBrains Mono',monospace}
-.calc-risk-track{height:7px;background:#0D0F0A;border-radius:4px;overflow:hidden;margin-top:14px}
+.calc-risk-track{height:7px;background:var(--bg0);border-radius:4px;overflow:hidden;margin-top:14px}
 .calc-risk-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#4ADE80,#C8A84B);transition:width .2s}
 .calc-risk-labels{display:flex;justify-content:space-between;font-size:9px;color:#7A5D1F;margin-top:5px;font-family:'JetBrains Mono',monospace}
-.calc-wc-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #1E2312;font-size:12px}
+.calc-wc-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bg2);font-size:12px}
 .calc-wc-row:last-child{border-bottom:none}
 .calc-wc-row .n{color:#8A6B26}
 .calc-wc-row .v{font-family:'JetBrains Mono',monospace;font-weight:700;color:#D4AF37}
 
-.divider{height:1px;background:#1E2312;margin:20px 16px 0}
+.divider{height:1px;background:var(--bg2);margin:20px 16px 0}
 .footer{padding:20px 16px;text-align:center;font-size:10px;color:#4A3A14;line-height:1.8}
 #riwayatSaldoWrap{max-height:300px;overflow-y:auto}
 
 /* SEARCH MENU */
 .search-wrap{position:relative;padding:0 16px;margin-top:14px}
-.search-box{display:flex;align-items:center;gap:8px;background:#161A0F;border:1.5px solid #2A2E1F;border-radius:12px;padding:11px 14px;transition:border-color .15s}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--bg1);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;transition:border-color .15s}
 .search-box:focus-within{border-color:#B8860B}
 .search-box svg{flex-shrink:0;opacity:.6}
 .search-input{flex:1;background:transparent;border:none;outline:none;color:#D4AF37;font-family:'Inter',sans-serif;font-size:13px}
 .search-input::placeholder{color:#7A5D1F}
 .search-clear{background:transparent;border:none;color:#7A5D1F;font-size:16px;cursor:pointer;padding:0 2px;line-height:1;display:none}
-.search-results{position:absolute;left:16px;right:16px;top:calc(100% + 6px);background:#161A0F;border:1.5px solid #2A2E1F;border-radius:12px;max-height:min(60vh,420px);overflow-y:auto;z-index:150;display:none;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.search-results{position:absolute;left:16px;right:16px;top:calc(100% + 6px);background:var(--bg1);border:1.5px solid var(--border);border-radius:12px;max-height:min(60vh,420px);overflow-y:auto;z-index:150;display:none;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 .search-results.show{display:block}
-.search-result-item{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;border-bottom:1px solid #1E2312}
+.search-result-item{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--bg2)}
 .search-result-item:last-child{border-bottom:none}
-.search-result-item:hover,.search-result-item.active{background:#1E2312}
+.search-result-item:hover,.search-result-item.active{background:var(--bg2)}
 .search-result-icon{font-size:16px;flex-shrink:0}
 .search-result-label{font-size:12.5px;color:#D4AF37;font-weight:600}
 .search-result-desc{font-size:10px;color:#8A6B26;margin-top:1px}
@@ -202,6 +205,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </style>
 </head>
 <body>
+<script>(function(){try{if(localStorage.getItem('mk_theme')==='light')document.body.classList.add('light-theme');}catch(e){}})();</script>
 
 <div id="loading">
   <div class="spin"></div>
@@ -214,7 +218,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="brand-sub">Trading emas di MT4</div>
   </div>
   <div class="header-right">
-    <button class="btn-admin" id="btnShare" onclick="shareSite()" style="background:transparent;border:1.5px solid #2A2E1F;color:#C8A84B">📤 Share</button>
+    <button class="theme-toggle" id="btnTheme" onclick="toggleTheme()" title="Ganti tema gelap/terang">🌙</button>
+    <button class="btn-admin" id="btnShare" onclick="shareSite()" style="background:transparent;border:1.5px solid var(--border);color:#C8A84B">📤 Share</button>
     <button class="btn-admin" id="btnAdmin" onclick="openModal('mLogin')">🔑 Masuk</button>
     <button class="btn-logout" id="btnLogout" onclick="logout()">↩ Keluar</button>
   </div>
@@ -231,7 +236,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 </div>
 
 <div class="section" style="padding-top:14px">
-  <a href="https://www.tiktok.com/@datuk_eurusd" target="_blank" rel="noopener" style="display:block;text-decoration:none;background:linear-gradient(135deg,#1E2312,#161A0F);border:1.5px solid #B8860B;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+  <a href="https://www.tiktok.com/@datuk_eurusd" target="_blank" rel="noopener" style="display:block;text-decoration:none;background:linear-gradient(135deg,var(--bg2),var(--bg1));border:1.5px solid #B8860B;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px">
     <div>
       <div style="font-size:13px;font-weight:700;color:#D4AF37;margin-bottom:2px">🎵 Ikuti di TikTok</div>
       <div style="font-size:10px;color:#9C7A2E">@datuk_eurusd</div>
@@ -244,7 +249,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <div class="balance-card" id="secSaldo">
   <div class="bal-label" style="display:flex;align-items:center;justify-content:center;gap:8px">
     <span>Saldo MT4 Saat Ini</span>
-    <span style="background:#0ECB81;color:#0D0F0A;font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;letter-spacing:.5px">FBS</span>
+    <span style="background:#0ECB81;color:var(--bg0);font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;letter-spacing:.5px">FBS</span>
   </div>
   <div class="bal-cent" id="balCent">¢0.00</div>
   <div class="bal-usd" id="balUSD">= $0.00 USD nyata</div>
@@ -256,9 +261,9 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
   </div>
 
   <!-- EQUITY CURVE REAL-TIME (gabung dengan Saldo MT4) -->
-  <div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:14px;text-align:left">
+  <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px;text-align:left">
     <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">📈 Equity Curve</div>
-    <div style="background:#1E2312;border-radius:10px;padding:10px 6px 4px">
+    <div style="background:var(--bg2);border-radius:10px;padding:10px 6px 4px">
       <div id="equitySvgWrap" style="position:relative"></div>
     </div>
     <div id="equityEmpty" style="display:none;text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada data untuk digambar.</div>
@@ -268,7 +273,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
 <!-- NOTIFICATION CENTER -->
 <div class="section" id="secNotifCenter">
-  <div class="sec-title">🔔 Notifikasi <span id="notifBadge" style="display:none;background:#F87171;color:#161A0F;font-size:10px;font-weight:800;border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:middle">0</span></div>
+  <div class="sec-title">🔔 Notifikasi <span id="notifBadge" style="display:none;background:#F87171;color:var(--bg1);font-size:10px;font-weight:800;border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:middle">0</span></div>
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Update otomatis dari data terbaru — WD, profit/loss, status risiko, dan goal tercapai. Muncul tiap kamu buka halaman ini.</div>
     <div id="notifList"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
@@ -417,7 +422,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       </div>
     </div>
 
-    <div style="height:1px;background:#2A2E1F;margin:18px 0"></div>
+    <div style="height:1px;background:var(--border);margin:18px 0"></div>
     <div style="font-size:11px;color:#8A6B26;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1, 1:2, dan 1:3 sekaligus (pakai SL pips di atas sebagai basis).</div>
 
     <div class="calc-row">
@@ -434,7 +439,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       </div>
     </div>
 
-    <div style="height:1px;background:#2A2E1F;margin:16px 0"></div>
+    <div style="height:1px;background:var(--border);margin:16px 0"></div>
 
     <label class="lbl">Pilih Pair</label>
     <select class="inp" id="calcPairSelect" style="margin-bottom:0">
@@ -552,7 +557,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <div class="bal-box"><div class="bal-box-val cg" id="calcOutRewardVP">0</div><div class="bal-box-lbl">Target VP</div></div>
     </div>
 
-    <div style="background:#1E2312;border-radius:10px;padding:12px;margin-top:14px;text-align:center">
+    <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-top:14px;text-align:center">
       <div style="font-size:9px;color:#8A6B26;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Breakeven Win Rate</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:800;color:#D4AF37" id="calcOutBEHero">0%</div>
       <div style="font-size:9px;color:#5C4818;margin-top:4px" id="calcOutBENote">Isi SL/TP dulu buat lihat win rate minimal.</div>
@@ -650,14 +655,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const spread = pairSpread(pairName);
     const sellPrice = entry - spread*factor;
     const buyPrice = entry + spread*factor;
-    $('selisihOut').innerHTML = `<div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:12px">
+    $('selisihOut').innerHTML = `<div style="background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:12px">
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">↔️ Selisih ${spread} pips (${pairName})</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div style="background:#0D0F0A;border-radius:8px;padding:8px;text-align:center">
+        <div style="background:var(--bg0);border-radius:8px;padding:8px;text-align:center">
           <div style="font-size:9px;color:#F87171;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Sell</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:#F87171;font-weight:700">${fmtPrice(sellPrice, decimals)}</div>
         </div>
-        <div style="background:#0D0F0A;border-radius:8px;padding:8px;text-align:center">
+        <div style="background:var(--bg0);border-radius:8px;padding:8px;text-align:center">
           <div style="font-size:9px;color:#4ADE80;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Buy</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:#4ADE80;font-weight:700">${fmtPrice(buyPrice, decimals)}</div>
         </div>
@@ -671,7 +676,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const unitLabel = pairName==='BTCUSD' ? 'poin' : 'pips';
     const showVP = pairName!=='BTCUSD';
 
-    let html = `<div style="background:#0D0F0A;border:1px solid #8A2020;border-radius:10px;padding:12px;margin-bottom:10px">
+    let html = `<div style="background:var(--bg0);border:1px solid #8A2020;border-radius:10px;padding:12px;margin-bottom:10px">
       <div style="font-size:10px;color:#C89090;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🛑 Stop Loss (sama untuk semua RR)</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:18px;color:#FF8080;font-weight:700">${fmtPrice(slPrice, decimals)}</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B26;margin-top:4px">${slPips} ${unitLabel}${showVP ? ' · '+slVP.toLocaleString('en-US',{maximumFractionDigits:2})+' VP' : ''}</div>
@@ -695,7 +700,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       const tpPrice = entry + dir*tpPips*factor;
       const tpVP = tpPips*mult;
       const tpUSD = tpPips*usdPerPip(pairName);
-      html += `<div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+      html += `<div style="background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="font-size:10px;color:#4ADE80;text-transform:uppercase;letter-spacing:1px;font-weight:700">🎯 TP — RR 1:${rrLabel}</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:18px;color:#4ADE80;font-weight:700">${fmtPrice(tpPrice, decimals)}</div>
@@ -717,17 +722,17 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
     const pendRow = (label, valA, valB) => pairName==='BTCUSD' ? `
       <div style="margin-bottom:8px">
-        <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:9px;text-align:center">
+        <div style="background:var(--bg1);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center">
           <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmtPrice(valA, decimals)}</div>
         </div>
       </div>` : `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:9px;text-align:center">
+        <div style="background:var(--bg1);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center">
           <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmtPrice(valA, decimals)}</div>
         </div>
-        <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:9px;padding:9px;text-align:center">
+        <div style="background:var(--bg1);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center">
           <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmtPrice(valB, decimals)}</div>
         </div>
@@ -768,13 +773,13 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       const gridRow = (label, vals) => `
         <div style="display:grid;grid-template-columns:repeat(${vals.length},1fr);gap:6px;margin-bottom:8px">
           ${vals.map(v=>`
-          <div style="background:#0D0F0A;border-radius:8px;padding:7px 4px;text-align:center">
+          <div style="background:var(--bg0);border-radius:8px;padding:7px 4px;text-align:center">
             <div style="font-size:8.5px;color:#8A6B26;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px">${label}</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#D4AF37;font-weight:700">${fmtPrice(v, decimals)}</div>
           </div>`).join('')}
         </div>`;
 
-      let gridHtml = `<div style="background:#161A0F;border:1px solid #4A3A12;border-radius:10px;padding:12px">
+      let gridHtml = `<div style="background:var(--bg1);border:1px solid #4A3A12;border-radius:10px;padding:12px">
         <div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚡ Pending Order (Khusus XAUUSD, maks. 2x)</div>
         <div style="display:grid;grid-template-columns:repeat(${kes.length},1fr);gap:6px;margin-bottom:4px">
           ${kes.map(k=>`<div style="text-align:center;font-size:9px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.3px">${orderLabel} — ${k.label}</div>`).join('')}
@@ -879,7 +884,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     const lvSaatIni = levelOf(bufferSaatIni);
 
     rekomOutEl.innerHTML = `
-      <div style="background:#1E2312;border-radius:10px;padding:14px;margin-top:12px">
+      <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-top:12px">
         <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;text-align:center;margin-bottom:10px">💡 Rekomendasi Otomatis — Modal ${modal.toLocaleString('en-US')} ${unit}, SL ${sl} pips</div>
         <div style="display:flex;justify-content:center;gap:20px;text-align:center">
           <div>
@@ -887,14 +892,14 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
             <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#D4AF37">${lotRek.toFixed(2)}</div>
             <div style="font-size:8px;color:#5C4818">target min. buffer 30x</div>
           </div>
-          <div style="width:1px;background:#2A2E1F"></div>
+          <div style="width:1px;background:var(--border)"></div>
           <div>
             <div style="font-size:9px;color:#8A6B26;font-weight:700">Buffer Rekomendasi</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#4ADE80">${bufferRek}x</div>
             <div style="font-size:8px;color:#5C4818">pakai lot ${lotRek.toFixed(2)}</div>
           </div>
         </div>
-        <div style="border-top:1px solid #2A2E1F;margin-top:10px;padding-top:10px;text-align:center">
+        <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;text-align:center">
           <div style="font-size:9px;color:#8A6B26">Kalau pakai Lot yang kamu isi manual sekarang (${lotSaatIni.toFixed(2)}):</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:${lvSaatIni.c};margin-top:2px">${bufferSaatIni}x <span style="font-size:10px;font-weight:400">(${lvSaatIni.t})</span></div>
         </div>
@@ -933,7 +938,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="graph-pct" id="graphPct">0%</div>
     <div id="graphSvgWrap" style="position:relative"></div>
 
-    <div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:14px">
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">🎯 Target Bulan Ini</div>
         <span onclick="editTargetBulanan()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Target</span>
@@ -972,7 +977,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div class="cal-legend">
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#132D0E"></div>Profit</div>
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#2D0E0E"></div>Loss</div>
-      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#161A0F"></div>Tidak Trading</div>
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--bg1)"></div>Tidak Trading</div>
     </div>
   </div>
 </div>
@@ -1010,7 +1015,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div>
     </div>
     <div id="kasNotifMenipis" style="display:none;margin-top:10px;background:#2D0E0E;border:1px solid #F87171;border-radius:8px;padding:10px 12px;font-size:11px;color:#F87171"></div>
-    <div id="kasBackfillNotif" style="display:none;margin-top:10px;background:#1E2312;border:1px solid #B8860B;border-radius:8px;padding:10px 12px;font-size:11px;color:#C8A84B">
+    <div id="kasBackfillNotif" style="display:none;margin-top:10px;background:var(--bg2);border:1px solid #B8860B;border-radius:8px;padding:10px 12px;font-size:11px;color:#C8A84B">
       ⚠️ Ada histori trading yang belum tersinkron ke Arus Kas, jadi profit trading kamu belum terhitung di sini.
       <span onclick="syncAllHistoricalKas()" style="display:block;margin-top:6px;font-weight:700;color:#D4AF37;text-decoration:underline;cursor:pointer">🔄 Sinkron Semua Histori Trading Sekarang</span>
     </div>
@@ -1034,7 +1039,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <div id="kasRekapBulan" style="margin-bottom:16px">
       <div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div>
     </div>
-    <div style="border-top:1px solid #2A2E1F;padding-top:14px">
+    <div style="border-top:1px solid var(--border);padding-top:14px">
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px">Masuk vs Keluar — 6 Bulan Terakhir</div>
       <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Uang riil saja (Investasi, Profit MT4, belanja) — bukan performa trading</div>
       <div id="kasChart"><div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
@@ -1240,7 +1245,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 <!-- ADMIN PANEL -->
 <div class="section" id="secAdmin">
   <div class="admin-panel" id="adminPanel">
-    <div style="background:#1E2312;border:1px dashed #B8860B;border-radius:10px;padding:14px;margin-bottom:18px">
+    <div style="background:var(--bg2);border:1px dashed #B8860B;border-radius:10px;padding:14px;margin-bottom:18px">
       <div style="font-size:12px;font-weight:700;color:#D4AF37;margin-bottom:6px">📥 Auto-Copy Data dari MT4 (Import CSV)</div>
       <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.7">
         Ekspor histori dari MT4 ke CSV, lalu upload di sini. Format kolom (baris pertama = header):<br>
@@ -1253,7 +1258,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       <div id="csvStatus" style="font-size:10px;color:#7A5D1F;margin-top:8px;white-space:pre-line"></div>
     </div>
 
-    <div style="background:#1E2312;border:1px dashed #B8860B;border-radius:10px;padding:14px;margin-bottom:18px">
+    <div style="background:var(--bg2);border:1px dashed #B8860B;border-radius:10px;padding:14px;margin-bottom:18px">
       <div style="font-size:12px;font-weight:700;color:#D4AF37;margin-bottom:6px">💾 Auto Backup Data</div>
       <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.7">Backup semua data (saldo harian, kas, investor, goal, dll) ke file JSON. Browser gak bisa auto-upload ke Google Drive atau auto-kirim email tanpa izin eksplisit dari pengguna (batasan keamanan browser) — jadi "otomatis" di sini artinya: file backup otomatis disiapkan &amp; diunduh sesuai jadwal yang kamu pilih, tinggal kamu upload manual ke Drive atau lampirkan ke email.</div>
       <div id="autoBackupStatus" style="font-size:11px;color:#8A6B26;margin-bottom:10px;text-align:center"></div>
@@ -1306,7 +1311,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <label class="lbl">Profit / Loss Hari Ini (angka dari MT4)</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
       <button id="btnProfit" onclick="setPL('profit')" style="padding:9px;border-radius:8px;border:1.5px solid #2E4A1E;background:#132D0E;color:#4ADE80;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📈 PROFIT</button>
-      <button id="btnLoss" onclick="setPL('loss')" style="padding:9px;border-radius:8px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#8A6B26;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📉 LOSS</button>
+      <button id="btnLoss" onclick="setPL('loss')" style="padding:9px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg0);color:#8A6B26;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📉 LOSS</button>
     </div>
     <input class="inp" type="number" id="inpProfit" placeholder="0.00 (tulis angka positif)" step="0.01" min="0">
     <input type="hidden" id="plType" value="profit">
@@ -1328,7 +1333,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
     <button class="btn btn-p" onclick="simpanSaldo()">💾 Simpan Catatan Hari Ini</button>
     <button class="btn btn-ghost" onclick="openModal('mGantiPin')">🔐 Ganti PIN</button>
 
-    <div style="height:1px;background:#2A2E1F;margin:16px 0"></div>
+    <div style="height:1px;background:var(--border);margin:16px 0"></div>
 
     <div class="ap-title">💸 Input Aliran Uang</div>
 
@@ -1369,8 +1374,8 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
 
     <label class="lbl">Mata Uang Asli (opsional)</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
-      <button id="btnMataIDR" onclick="setMataUang('IDR')" style="padding:9px;border-radius:8px;border:1.5px solid #B8860B;background:#2A2410;color:#D4AF37;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">IDR (Rupiah)</button>
-      <button id="btnMataUSD" onclick="setMataUang('USD')" style="padding:9px;border-radius:8px;border:1.5px solid #2A2E1F;background:#0D0F0A;color:#7A5D1F;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">USD</button>
+      <button id="btnMataIDR" onclick="setMataUang('IDR')" style="padding:9px;border-radius:8px;border:1.5px solid #B8860B;background:var(--bg3);color:#D4AF37;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">IDR (Rupiah)</button>
+      <button id="btnMataUSD" onclick="setMataUang('USD')" style="padding:9px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg0);color:#7A5D1F;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">USD</button>
     </div>
     <input type="hidden" id="kasMataUang" value="IDR">
 
@@ -1403,7 +1408,7 @@ body{font-family:'Inter',sans-serif;background:#0D0F0A;color:#D4AF37;min-height:
       Tujuan situs ini dibuat: sebagai jurnal trading pribadi yang transparan, sekaligus tempat berbagi pengalaman
       dan berdiskusi bebas dengan trader lain lewat kolom komentar di bawah.
     </p>
-    <p style="font-size:11px;color:#7A5D1F;line-height:1.7;border-top:1px solid #2A2E1F;padding-top:10px">
+    <p style="font-size:11px;color:#7A5D1F;line-height:1.7;border-top:1px solid var(--border);padding-top:10px">
       ⚠️ Ini bukan saran finansial. Semua yang ditampilkan di situs ini adalah catatan pribadi berdasarkan pengalaman
       trading saya sendiri — bukan ajakan atau rekomendasi untuk mengambil keputusan trading apapun.
     </p>
@@ -1523,6 +1528,17 @@ async function api(p,m='GET',b=null){
 // PIN default. Setelah diganti lewat tombol "Ganti PIN", nilai baru tersimpan
 // di localStorage browser ini (tidak dikirim ke server). Ganti PIN ini sebelum publikasi.
 const DEFAULT_PIN='123456';
+// ══ DARK / LIGHT MODE TOGGLE ══
+function applyThemeIcon(){
+  const btn=document.getElementById('btnTheme');
+  if(btn) btn.textContent = document.body.classList.contains('light-theme') ? '☀️' : '🌙';
+}
+function toggleTheme(){
+  document.body.classList.toggle('light-theme');
+  const isLight=document.body.classList.contains('light-theme');
+  try{ localStorage.setItem('mk_theme', isLight?'light':'dark'); }catch(e){}
+  applyThemeIcon();
+}
 function getAdminPin(){ return localStorage.getItem('mk_admin_pin') || DEFAULT_PIN; }
 function setAdminPin(p){ localStorage.setItem('mk_admin_pin', p); }
 
@@ -1756,6 +1772,7 @@ function loadDisqus(){
 
 // ══ INIT ══
 window.onload=async()=>{
+  applyThemeIcon();
   try{
     await api('saldo_harian?limit=1');
     hide('loading');
@@ -1766,7 +1783,7 @@ window.onload=async()=>{
     await loadAll();
     loadDisqus();
   }catch(e){
-    document.getElementById('loading').innerHTML=`<div style="text-align:center;padding:20px;color:#D4AF37"><div style="font-size:32px;margin-bottom:10px">⚠️</div><div style="font-weight:600;margin-bottom:6px">Gagal konek database</div><div style="font-size:11px;color:#7A5D1F;margin-bottom:14px">Cek koneksi internet atau coba lagi</div><button onclick="location.reload()" style="padding:9px 18px;background:#B8860B;color:#0D0F0A;border:none;border-radius:8px;font-weight:700;cursor:pointer">Coba Lagi</button></div>`;
+    document.getElementById('loading').innerHTML=`<div style="text-align:center;padding:20px;color:#D4AF37"><div style="font-size:32px;margin-bottom:10px">⚠️</div><div style="font-weight:600;margin-bottom:6px">Gagal konek database</div><div style="font-size:11px;color:#7A5D1F;margin-bottom:14px">Cek koneksi internet atau coba lagi</div><button onclick="location.reload()" style="padding:9px 18px;background:#B8860B;color:var(--bg0);border:none;border-radius:8px;font-weight:700;cursor:pointer">Coba Lagi</button></div>`;
   }
 };
 
@@ -2013,7 +2030,7 @@ function renderGraph(){
           <stop offset="100%" stop-color="${fillColorBottom}"/>
         </linearGradient>
       </defs>
-      <line x1="${pad}" y1="${zeroY}" x2="${W-pad}" y2="${zeroY}" stroke="#2A2E1F" stroke-width="1"/>
+      <line x1="${pad}" y1="${zeroY}" x2="${W-pad}" y2="${zeroY}" stroke="var(--border)" stroke-width="1"/>
       <polygon points="${areaPts}" fill="url(#graphFill)"/>
       <polyline points="${linePts}" fill="none" stroke="${mainColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
       <line id="graphIndicatorLine" x1="0" y1="0" x2="0" y2="${H}" class="graph-dashed" style="display:none"/>
@@ -2062,7 +2079,7 @@ function renderTargetProgress(totalBulanIni){
       <span>Target: ${fc(target)}</span>
       <span style="color:${totalBulanIni>=0?'#4ADE80':'#F87171'}">${totalBulanIni>=0?'+':''}${fc(totalBulanIni)}</span>
     </div>
-    <div style="background:#1E2312;border-radius:20px;height:14px;overflow:hidden;position:relative">
+    <div style="background:var(--bg2);border-radius:20px;height:14px;overflow:hidden;position:relative">
       <div style="background:${barColor};height:100%;width:${pct}%;border-radius:20px;transition:width .3s"></div>
     </div>
     <div style="text-align:center;font-size:10px;color:#7A5D1F;margin-top:6px">
@@ -2440,11 +2457,11 @@ function setMataUang(mata){
   document.getElementById('kasMataUang').value=mata;
   const bi=document.getElementById('btnMataIDR'),bu=document.getElementById('btnMataUSD');
   if(mata==='IDR'){
-    bi.style.border='1.5px solid #B8860B';bi.style.background='#2A2410';bi.style.color='#D4AF37';
-    bu.style.border='1.5px solid #2A2E1F';bu.style.background='#0D0F0A';bu.style.color='#7A5D1F';
+    bi.style.border='1.5px solid #B8860B';bi.style.background='var(--bg3)';bi.style.color='#D4AF37';
+    bu.style.border='1.5px solid var(--border)';bu.style.background='var(--bg0)';bu.style.color='#7A5D1F';
   }else{
-    bu.style.border='1.5px solid #B8860B';bu.style.background='#2A2410';bu.style.color='#D4AF37';
-    bi.style.border='1.5px solid #2A2E1F';bi.style.background='#0D0F0A';bi.style.color='#7A5D1F';
+    bu.style.border='1.5px solid #B8860B';bu.style.background='var(--bg3)';bu.style.color='#D4AF37';
+    bi.style.border='1.5px solid var(--border)';bi.style.background='var(--bg0)';bi.style.color='#7A5D1F';
   }
 }
 async function simpanKas(){
@@ -2559,13 +2576,13 @@ function renderKasRingkasan(){
   const saldoMt4Sekarang = allSaldoData&&allSaldoData.length ? parseFloat(allSaldoData[allSaldoData.length-1].saldo_mt4||0) : 0;
 
   el.innerHTML=`
-    <div class="bal-box" style="background:#2A2410;border:1px solid #B8860B;margin-bottom:8px">
+    <div class="bal-box" style="background:var(--bg3);border:1px solid #B8860B;margin-bottom:8px">
       <div class="bal-box-val" style="font-size:22px;color:#FFD700">${fc(saldoMt4Sekarang)}</div>
       <div class="bal-box-lbl">💰 Saldo MT4 Saat Ini (uang riil yang kamu pegang sekarang)</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:15px">+${fc(totalDanaMasuk)}</div><div class="bal-box-lbl">⬆️ Total Dana Masuk (Modal Disetor + Profit Trading, All-Time)</div></div>
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:15px">-${fc(totalDanaKeluar)}</div><div class="bal-box-lbl">⬇️ Total Dana Keluar (WD + Loss Trading, All-Time)</div></div>
+      <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val cg" style="font-size:15px">+${fc(totalDanaMasuk)}</div><div class="bal-box-lbl">⬆️ Total Dana Masuk (Modal Disetor + Profit Trading, All-Time)</div></div>
+      <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val cr" style="font-size:15px">-${fc(totalDanaKeluar)}</div><div class="bal-box-lbl">⬇️ Total Dana Keluar (WD + Loss Trading, All-Time)</div></div>
     </div>
     <div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">
       <b style="color:#FFD700">Saldo MT4 Saat Ini</b> = angka riil, diambil langsung dari saldo hari terakhir yang kamu input.<br>
@@ -2641,7 +2658,7 @@ function renderKasRekap(){
   const kategoriKeys=Object.keys(perKategori);
   let breakdownHtml='';
   if(kategoriKeys.length){
-    breakdownHtml='<div style="margin-top:12px;border-top:1px solid #2A2E1F;padding-top:10px">';
+    breakdownHtml='<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">';
     ['operasional','modal','pribadi','bisnis'].forEach(grup=>{
       const keysInGrup=Object.keys(kategoriMeta).filter(k=>kategoriMeta[k].grup===grup && perKategori[k]);
       if(!keysInGrup.length)return;
@@ -2664,8 +2681,8 @@ function renderKasRekap(){
     </div>
     <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Rincian pencatatan uang riil yang berpindah tangan (Investasi, Profit MT4, belanja) — beda dengan perbandingan di atas yang pakai performa trading langsung</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:14px">+${fc(masuk)}</div><div class="bal-box-lbl">Investasi + Profit Tercatat</div></div>
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:14px">-${fc(keluar)}</div><div class="bal-box-lbl">Keluar Bulan Ini</div></div>
+      <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val cg" style="font-size:14px">+${fc(masuk)}</div><div class="bal-box-lbl">Investasi + Profit Tercatat</div></div>
+      <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val cr" style="font-size:14px">-${fc(keluar)}</div><div class="bal-box-lbl">Keluar Bulan Ini</div></div>
     </div>
     <div style="text-align:center;font-size:11px;color:#8A6B26">${rows.length} transaksi · Selisih pencatatan: <span style="color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</span> <span style="color:#5C4818">(bukan indikator rugi — lihat kotak di atas)</span></div>
     ${breakdownHtml}`;
@@ -2811,13 +2828,13 @@ function renderWdRingkasan(){
   const jumlahWd=data.filter(d=>d.wd>0.01).length;
   const rasio=totalProfit>0 ? (totalWd/totalProfit*100) : 0;
   el.innerHTML=`
-    <div class="bal-box" style="background:#2A2410;border:1px solid #B8860B;margin-bottom:8px">
+    <div class="bal-box" style="background:var(--bg3);border:1px solid #B8860B;margin-bottom:8px">
       <div class="bal-box-val" style="font-size:24px;color:#FFD700">${fc(totalWd)}</div>
       <div class="bal-box-lbl">💰 Total Penarikan (WD) All-Time</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:15px;color:#D4AF37">${jumlahWd}x</div><div class="bal-box-lbl">Jumlah Kali WD</div></div>
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:15px;color:${rasio<=100?'#4ADE80':'#F87171'}">${rasio.toFixed(0)}%</div><div class="bal-box-lbl">WD vs Total Profit</div></div>
+      <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val" style="font-size:15px;color:#D4AF37">${jumlahWd}x</div><div class="bal-box-lbl">Jumlah Kali WD</div></div>
+      <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val" style="font-size:15px;color:${rasio<=100?'#4ADE80':'#F87171'}">${rasio.toFixed(0)}%</div><div class="bal-box-lbl">WD vs Total Profit</div></div>
     </div>
     <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">Dihitung otomatis dari selisih Saldo Harian yang kamu input — bukan dari input manual, jadi bisa jadi bukti riwayat penarikan yang konsisten.</div>`;
 }
@@ -2954,7 +2971,7 @@ function getRiskMeterData(){
 }
 function riskMeterLampRow(label, valueText, zone, hint){
   return `
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #1E2312;text-align:left">
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--bg2);text-align:left">
       <div style="width:14px;height:14px;border-radius:50%;background:${zone.color};box-shadow:0 0 8px ${zone.color};flex-shrink:0"></div>
       <div style="flex:1">
         <div style="font-size:11px;font-weight:700;color:#D4AF37">${label}</div>
@@ -2992,7 +3009,7 @@ function renderRiskMeter(){
     </div>
     ${riskMeterLampRow('Current Drawdown', data.ddPct.toFixed(1)+'%', ddZone, 'Jarak equity ke puncak tertinggi, 6 bulan terakhir')}
     ${rorZone ? riskMeterLampRow('Risk of Ruin', data.ror.toFixed(1)+'%', rorZone, 'Peluang teoretis akun habis, dari win rate & RR historis') : `
-    <div style="padding:10px 0;text-align:center;font-size:10px;color:#7A5D1F;border-bottom:1px solid #1E2312">Risk of Ruin belum bisa dihitung — butuh minimal 5 hari data dengan profit &amp; loss.</div>`}
+    <div style="padding:10px 0;text-align:center;font-size:10px;color:#7A5D1F;border-bottom:1px solid var(--bg2)">Risk of Ruin belum bisa dihitung — butuh minimal 5 hari data dengan profit &amp; loss.</div>`}
     ${riskZoneVal ? riskMeterLampRow('Risk per Trade', data.riskPct.toFixed(2)+'%', riskZoneVal, 'Dari Kalkulator Risiko — % modal dipertaruhkan per entry') : `
     <div style="padding:10px 0;text-align:center;font-size:10px;color:#7A5D1F">Risk per Trade belum terhitung — isi SL &amp; Lot di <span onclick="document.getElementById('secKalkulator').scrollIntoView({behavior:'smooth'})" style="color:#C8A84B;text-decoration:underline;cursor:pointer">Kalkulator Risiko</span> dulu.</div>`}
     <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">🟢 Aman · 🟡 Waspada · 🔴 Bahaya — estimasi otomatis dari data historis, bukan jaminan hasil trading ke depan.</div>`;
@@ -3092,7 +3109,7 @@ function renderGoalTracker(){
       deadlineInfo = daysLeft>=0 ? `${daysLeft} hari lagi (${g.deadline})` : `Lewat deadline (${g.deadline})`;
     }
     html+=`
-      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:14px;margin-bottom:10px;text-align:left">
+      <div style="background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;text-align:left">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
           <div>
             <div style="font-size:12px;font-weight:700;color:#D4AF37">${tercapai?'🏆 ':'🎯 '}${g.judul}</div>
@@ -3104,7 +3121,7 @@ function renderGoalTracker(){
           <span>${fc(current)} / ${fc(g.targetVal)}</span>
           <span style="color:${tercapai?'#4ADE80':'#8A6B26'}">${pct.toFixed(0)}%</span>
         </div>
-        <div style="background:#1E2312;border-radius:20px;height:12px;overflow:hidden">
+        <div style="background:var(--bg2);border-radius:20px;height:12px;overflow:hidden">
           <div style="background:${barColor};height:100%;width:${pct}%;border-radius:20px;transition:width .3s"></div>
         </div>
         ${g.sumber==='manual'?`<div style="text-align:right;margin-top:6px"><span onclick="updateGoalManual('${g.id}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Update Progress</span></div>`:''}
@@ -3173,17 +3190,17 @@ function investorCardHtml(inv, totalProfitAllTime, totalModalInvestorPool, showH
   const joinDate=new Date(inv.tanggal);
   const days=Math.max(0, Math.floor((Date.now()-joinDate.getTime())/86400000));
   return `
-    <div style="border:1.5px solid #B8860B;border-radius:14px;padding:16px;margin-bottom:12px;background:linear-gradient(160deg,#1E2312,#161A0F);position:relative;text-align:left">
+    <div style="border:1.5px solid #B8860B;border-radius:14px;padding:16px;margin-bottom:12px;background:linear-gradient(160deg,var(--bg2),var(--bg1));position:relative;text-align:left">
       <div style="position:absolute;top:12px;right:14px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;border:1px solid #5C4818;border-radius:10px;padding:2px 8px">VIP</div>
       <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px">Selamat datang</div>
       <div style="font-size:18px;font-weight:800;color:#FFD700;margin:2px 0 10px">${inv.nama} 👋</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(inv.modal)}</div><div class="bal-box-lbl">Modal Disetor</div></div>
-        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:#FFD700">${fc(currentVal)}</div><div class="bal-box-lbl">Estimasi Nilai Sekarang</div></div>
-        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val ${profitShare>=0?'cg':'cr'}" style="font-size:14px">${profitShare>=0?'+':''}${fc(profitShare)}</div><div class="bal-box-lbl">Estimasi Profit Share</div></div>
-        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:${roi>=0?'#4ADE80':'#F87171'}">${roi>=0?'+':''}${roi.toFixed(1)}%</div><div class="bal-box-lbl">ROI</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(inv.modal)}</div><div class="bal-box-lbl">Modal Disetor</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#FFD700">${fc(currentVal)}</div><div class="bal-box-lbl">Estimasi Nilai Sekarang</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${profitShare>=0?'cg':'cr'}" style="font-size:14px">${profitShare>=0?'+':''}${fc(profitShare)}</div><div class="bal-box-lbl">Estimasi Profit Share</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:${roi>=0?'#4ADE80':'#F87171'}">${roi>=0?'+':''}${roi.toFixed(1)}%</div><div class="bal-box-lbl">ROI</div></div>
       </div>
-      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:9px;color:#7A5D1F;border-top:1px solid #2A2E1F;padding-top:8px">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:9px;color:#7A5D1F;border-top:1px solid var(--border);padding-top:8px">
         <span>Porsi Modal: <b style="color:#C8A84B">${sharePct.toFixed(1)}%</b></span>
         <span>Bergabung ${days} hari lalu (${inv.tanggal})</span>
       </div>
@@ -3320,7 +3337,7 @@ function renderNotifCenter(){
   notifs.slice(0,15).forEach(n=>{
     const isUnread=!readIds.has(n.id);
     html+=`
-      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #1E2312;${isUnread?'':'opacity:.55'}">
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--bg2);${isUnread?'':'opacity:.55'}">
         <div style="font-size:18px;flex-shrink:0">${n.icon}</div>
         <div style="flex:1">
           <div style="font-size:11px;font-weight:700;color:#D4AF37;display:flex;align-items:center;gap:6px">${n.title}${isUnread?'<span style="width:6px;height:6px;border-radius:50%;background:#F87171;display:inline-block;flex-shrink:0"></span>':''}</div>
@@ -3384,7 +3401,7 @@ function renderInvestorCalc(){
     const gain=val-jumlah;
     const gainPct= jumlah>0 ? (gain/jumlah*100) : 0;
     return `
-      <div style="background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:12px 14px;margin-bottom:8px;text-align:left">
+      <div style="background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;text-align:left">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           <span style="font-size:11px;font-weight:700;color:${color}">${label}</span>
           <span style="font-size:9px;color:#7A5D1F">${rate>=0?'+':''}${rate.toFixed(1)}%/bulan</span>
@@ -3419,7 +3436,7 @@ function renderFAQ(){
   let html='';
   FAQ_ITEMS.forEach((item,i)=>{
     html+=`
-      <details style="background:#161A0F;border:1px solid #2A2E1F;border-radius:10px;margin-bottom:8px" ${i===0?'open':''}>
+      <details style="background:var(--bg1);border:1px solid var(--border);border-radius:10px;margin-bottom:8px" ${i===0?'open':''}>
         <summary style="padding:12px 14px;font-size:12px;font-weight:700;color:#D4AF37;cursor:pointer">${item.q}</summary>
         <div style="padding:0 14px 14px;font-size:11px;color:#8A6B26;line-height:1.6">${item.a}</div>
       </details>`;
@@ -3488,10 +3505,10 @@ function renderWeeklyRecap(){
   }
   el.innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val ${data.profitMinggu>=0?'cg':'cr'}" style="font-size:15px">${data.profitMinggu>=0?'+':''}${fc(data.profitMinggu)}</div><div class="bal-box-lbl">Profit Minggu Ini</div></div>
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cy" style="font-size:15px">${data.winRate.toFixed(0)}%</div><div class="bal-box-lbl">Win Rate</div></div>
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:15px;color:${data.maxDD>0?'#F87171':'#4ADE80'}">${fc(data.maxDD)}</div><div class="bal-box-lbl">Max Drawdown</div></div>
-      <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:15px;color:#D4AF37">${data.topPair}</div><div class="bal-box-lbl">Transaksi Terbanyak (${data.topPairCount}x)</div></div>
+      <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val ${data.profitMinggu>=0?'cg':'cr'}" style="font-size:15px">${data.profitMinggu>=0?'+':''}${fc(data.profitMinggu)}</div><div class="bal-box-lbl">Profit Minggu Ini</div></div>
+      <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val cy" style="font-size:15px">${data.winRate.toFixed(0)}%</div><div class="bal-box-lbl">Win Rate</div></div>
+      <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val" style="font-size:15px;color:${data.maxDD>0?'#F87171':'#4ADE80'}">${fc(data.maxDD)}</div><div class="bal-box-lbl">Max Drawdown</div></div>
+      <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val" style="font-size:15px;color:#D4AF37">${data.topPair}</div><div class="bal-box-lbl">Transaksi Terbanyak (${data.topPairCount}x)</div></div>
     </div>
     <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:6px">${data.rows.length} hari tercatat · ${data.totalSignal} total transaksi minggu ini</div>`;
 }
@@ -3727,7 +3744,7 @@ function renderSertifikat(){
   }
   const nama=getSertifikatNama();
   el.innerHTML=`
-    <div style="border:2px solid #B8860B;border-radius:14px;padding:22px 16px;text-align:center;background:linear-gradient(160deg,#1E2312,#161A0F)">
+    <div style="border:2px solid #B8860B;border-radius:14px;padding:22px 16px;text-align:center;background:linear-gradient(160deg,var(--bg2),var(--bg1))">
       <div style="font-size:26px;margin-bottom:4px">🏆</div>
       <div style="font-size:10px;letter-spacing:2px;color:#8A6B26;text-transform:uppercase;margin-bottom:2px">Certificate of Performance</div>
       <div style="font-size:9px;color:#5C4818;margin-bottom:14px">MARGINKUAT — Catatan Trading Pribadi</div>
@@ -3735,13 +3752,13 @@ function renderSertifikat(){
       <div style="font-size:19px;font-weight:800;color:#FFD700;margin:4px 0 14px;font-family:'JetBrains Mono',monospace">${nama}</div>
       <div style="font-size:10px;color:#8A6B26;margin-bottom:14px">atas performa trading periode <b style="color:#D4AF37">${sertifikatLabel()}</b></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
-        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val ${stats.netProfit>=0?'cg':'cr'}" style="font-size:14px">${stats.netProfit>=0?'+':''}${fc(stats.netProfit)}</div><div class="bal-box-lbl">Net Profit</div></div>
-        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val cy" style="font-size:14px">${stats.winRate.toFixed(0)}%</div><div class="bal-box-lbl">Win Rate</div></div>
-        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val cg" style="font-size:14px">${fc(parseFloat(stats.bestDay.profit||0))}</div><div class="bal-box-lbl">Profit Terbaik (${stats.bestDay.tanggal})</div></div>
-        <div class="bal-box" style="background:#0D0F0A"><div class="bal-box-val" style="font-size:14px;color:${stats.growth>=0?'#4ADE80':'#F87171'}">${stats.growth>=0?'+':''}${stats.growth.toFixed(1)}%</div><div class="bal-box-lbl">Growth</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${stats.netProfit>=0?'cg':'cr'}" style="font-size:14px">${stats.netProfit>=0?'+':''}${fc(stats.netProfit)}</div><div class="bal-box-lbl">Net Profit</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val cy" style="font-size:14px">${stats.winRate.toFixed(0)}%</div><div class="bal-box-lbl">Win Rate</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val cg" style="font-size:14px">${fc(parseFloat(stats.bestDay.profit||0))}</div><div class="bal-box-lbl">Profit Terbaik (${stats.bestDay.tanggal})</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:${stats.growth>=0?'#4ADE80':'#F87171'}">${stats.growth>=0?'+':''}${stats.growth.toFixed(1)}%</div><div class="bal-box-lbl">Growth</div></div>
       </div>
       <div style="font-size:9px;color:#5C4818;margin-top:10px">${stats.totalHari} hari trading tercatat</div>
-      <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #2A2E1F;font-size:9px;color:#7A5D1F">Diterbitkan otomatis oleh Marginkuat pada ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+      <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);font-size:9px;color:#7A5D1F">Diterbitkan otomatis oleh Marginkuat pada ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
     </div>`;
 }
 async function downloadSertifikatPDF(){
@@ -3932,7 +3949,7 @@ function renderNeraca(wrap){
   n.asetLancarList.forEach(a=>{
     html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#D4AF37">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusAsetLain(${a.i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
   });
-  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Aset Lancar</span><span style="color:#D4AF37">${rp(n.totalAsetLancar)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed var(--border);margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Aset Lancar</span><span style="color:#D4AF37">${rp(n.totalAsetLancar)}</span></div>`;
 
   html+=`<div style="font-size:10px;font-weight:700;color:#60A5FA;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px">Aset Tidak Lancar</div>`;
   if(!n.asetTidakLancarList.length){
@@ -3941,24 +3958,24 @@ function renderNeraca(wrap){
   n.asetTidakLancarList.forEach(a=>{
     html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#D4AF37">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusAsetLain(${a.i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
   });
-  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Aset Tidak Lancar</span><span style="color:#D4AF37">${rp(n.totalAsetTidakLancar)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed var(--border);margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Aset Tidak Lancar</span><span style="color:#D4AF37">${rp(n.totalAsetTidakLancar)}</span></div>`;
 
   if(isAdmin){
     html+=`<div style="margin:10px 0 6px">
       <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tambah Aset Perusahaan Cepat</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
-        <span onclick="tambahAsetLain('saham')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid #2A2E1F;color:#C8A84B;cursor:pointer">📈 Saham</span>
-        <span onclick="tambahAsetLain('deposito')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid #2A2E1F;color:#C8A84B;cursor:pointer">🏦 Deposito</span>
-        <span onclick="tambahAsetLain('sun')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid #2A2E1F;color:#C8A84B;cursor:pointer">📜 SUN/Obligasi</span>
-        <span onclick="tambahAsetLain('properti')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid #2A2E1F;color:#C8A84B;cursor:pointer">🏢 Properti</span>
-        <span onclick="tambahAsetLain('tanah')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid #2A2E1F;color:#C8A84B;cursor:pointer">🌳 Tanah</span>
+        <span onclick="tambahAsetLain('saham')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">📈 Saham</span>
+        <span onclick="tambahAsetLain('deposito')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">🏦 Deposito</span>
+        <span onclick="tambahAsetLain('sun')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">📜 SUN/Obligasi</span>
+        <span onclick="tambahAsetLain('properti')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">🏢 Properti</span>
+        <span onclick="tambahAsetLain('tanah')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">🌳 Tanah</span>
       </div>
       <div onclick="tambahAsetLain()" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer">+ Tambah Aset Lain (Kustom)</div>
     </div>`;
   }
   html+=`<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-top:1.5px solid #4ADE80;margin-top:6px;font-weight:800"><span style="color:#4ADE80">TOTAL ASET</span><span style="color:#4ADE80">${rp(n.totalAset)}</span></div>`;
 
-  html+=`<div style="height:1px;background:#2A2E1F;margin:18px 0"></div>`;
+  html+=`<div style="height:1px;background:var(--border);margin:18px 0"></div>`;
 
   html+=`<div style="font-size:12px;font-weight:800;color:#D4AF37;margin-bottom:10px;letter-spacing:.5px">LIABILITAS (KEWAJIBAN / UTANG)</div>`;
 
@@ -3969,7 +3986,7 @@ function renderNeraca(wrap){
   n.kewajibanLancarList.forEach(a=>{
     html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#F87171">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusKewajiban(${a.i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
   });
-  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Kewajiban Lancar</span><span style="color:#F87171">${rp(n.totalKewajibanLancar)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed var(--border);margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Kewajiban Lancar</span><span style="color:#F87171">${rp(n.totalKewajibanLancar)}</span></div>`;
 
   html+=`<div style="font-size:10px;font-weight:700;color:#FB923C;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px">Kewajiban Jangka Panjang (&gt; 1 tahun)</div>`;
   if(!n.kewajibanPanjangList.length){
@@ -3978,12 +3995,12 @@ function renderNeraca(wrap){
   n.kewajibanPanjangList.forEach(a=>{
     html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#F87171">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusKewajiban(${a.i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
   });
-  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Kewajiban Jangka Panjang</span><span style="color:#F87171">${rp(n.totalKewajibanPanjang)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed var(--border);margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Kewajiban Jangka Panjang</span><span style="color:#F87171">${rp(n.totalKewajibanPanjang)}</span></div>`;
 
   if(isAdmin) html+=`<div onclick="tambahKewajiban()" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin:10px 0 6px">+ Tambah Kewajiban</div>`;
   html+=`<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-top:1.5px solid #F87171;margin-top:6px;font-weight:800"><span style="color:#F87171">TOTAL LIABILITAS</span><span style="color:#F87171">${rp(n.totalKewajiban)}</span></div>`;
 
-  html+=`<div class="bal-box" style="background:#1E2312;margin-top:16px"><div class="bal-box-val" style="font-size:20px;color:${n.ekuitas>=0?'#4ADE80':'#F87171'}">${rp(n.ekuitas)}</div><div class="bal-box-lbl">EKUITAS (Kekayaan Bersih) = Total Aset − Total Liabilitas</div></div>`;
+  html+=`<div class="bal-box" style="background:var(--bg2);margin-top:16px"><div class="bal-box-val" style="font-size:20px;color:${n.ekuitas>=0?'#4ADE80':'#F87171'}">${rp(n.ekuitas)}</div><div class="bal-box-lbl">EKUITAS (Kekayaan Bersih) = Total Aset − Total Liabilitas</div></div>`;
 
   // Rincian kepemilikan modal (all-time) — akumulasi semua setoran Modal Pribadi vs Modal Investor
   // sejak awal, dipakai sebagai acuan porsi kepemilikan/bagi hasil kalau nanti ada investor beneran.
@@ -3994,7 +4011,7 @@ function renderNeraca(wrap){
   if(totalModalSemua>0){
     const pctPribadi=(totalModalPribadiCent/totalModalSemua*100);
     const pctInvestor=(totalModalInvestorCent/totalModalSemua*100);
-    html+=`<div style="margin-top:12px;background:#161A0F;border:1px solid #2A2E1F;border-radius:12px;padding:14px">
+    html+=`<div style="margin-top:12px;background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:14px">
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🤝 Rincian Kepemilikan Modal (Akumulasi Sejak Awal)</div>
       <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#60A5FA">💰 Modal Pribadi</span><span style="color:#60A5FA">${fc(totalModalPribadiCent)} · ${pctPribadi.toFixed(1)}%</span></div>
       <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#A78BFA">🤝 Modal Investor</span><span style="color:#A78BFA">${fc(totalModalInvestorCent)} · ${pctInvestor.toFixed(1)}%</span></div>
@@ -4006,7 +4023,7 @@ function renderNeraca(wrap){
     </div>`;
   }
 
-  html+=`<div style="border-top:1px solid #2A2E1F;margin-top:18px;padding-top:12px">
+  html+=`<div style="border-top:1px solid var(--border);margin-top:18px;padding-top:12px">
     <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📊 Rasio Keuangan (ala Laporan Perusahaan)</div>
     <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Current Ratio (Aset Lancar ÷ Kewajiban Lancar)</span><span style="color:#D4AF37">${currentRatio!==null?currentRatio.toFixed(2)+'x':'—'}</span></div>
     <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Debt to Equity Ratio (DER)</span><span style="color:#D4AF37">${der!==null?der.toFixed(2)+'x':'—'}</span></div>
@@ -4077,7 +4094,7 @@ function renderLabaRugi(wrap){
   if(pendapatanLainCent>0){
     html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Pendapatan Lain</span>${fcx(pendapatanLainCent,'#D4AF37')}</div>`;
   }
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#4ADE80">Total Pendapatan</span>${fcx(totalPendapatan,'#4ADE80')}</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid var(--border);margin-top:4px;font-weight:700"><span style="color:#4ADE80">Total Pendapatan</span>${fcx(totalPendapatan,'#4ADE80')}</div>`;
 
   html+=`<div style="font-size:11px;font-weight:700;color:#F87171;margin:16px 0 8px">BEBAN</div>`;
 
@@ -4091,7 +4108,7 @@ function renderLabaRugi(wrap){
     html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:${km.color}">${km.dot} ${km.label}</span>${fcx(total,'#F87171')}</div>`;
   });
   if(!adaBebanPribadi) html+='<div style="font-size:11px;color:#7A5D1F;padding:4px 0 4px 6px">Tidak ada beban pribadi tercatat.</div>';
-  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Beban Pribadi</span>${fcx(bebanPribadiCent,'#F87171')}</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed var(--border);margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Beban Pribadi</span>${fcx(bebanPribadiCent,'#F87171')}</div>`;
 
   html+=`<div style="font-size:10px;font-weight:700;color:#FB923C;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px">Beban Operasional Bisnis (Karyawan &amp; Kantor)</div>`;
   let adaBebanBisnis=false;
@@ -4103,13 +4120,13 @@ function renderLabaRugi(wrap){
     html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:${km.color}">${km.dot} ${km.label}</span>${fcx(total,'#F87171')}</div>`;
   });
   if(!adaBebanBisnis) html+='<div style="font-size:11px;color:#7A5D1F;padding:4px 0 4px 6px">Tidak ada beban operasional bisnis tercatat.</div>';
-  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Beban Bisnis</span>${fcx(bebanBisnisCent,'#F87171')}</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px dashed var(--border);margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Beban Bisnis</span>${fcx(bebanBisnisCent,'#F87171')}</div>`;
 
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:8px;font-weight:700"><span style="color:#F87171">Total Beban</span>${fcx(bebanCent,'#F87171')}</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid var(--border);margin-top:8px;font-weight:700"><span style="color:#F87171">Total Beban</span>${fcx(bebanCent,'#F87171')}</div>`;
 
-  html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${labaRugi>=0?'#4ADE80':'#F87171'}">${labaRugi>=0?'+':''}${fc(labaRugi)}</div><div style="font-size:12px;color:${labaRugi>=0?'#4ADE80':'#F87171'};font-weight:600;margin-top:2px">${labaRugi>=0?'+':''}${fr(labaRugi)}</div><div class="bal-box-lbl">${labaRugi>=0?'LABA':'RUGI'} BERSIH = Pendapatan − Beban</div></div>`;
+  html+=`<div class="bal-box" style="background:var(--bg2);margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${labaRugi>=0?'#4ADE80':'#F87171'}">${labaRugi>=0?'+':''}${fc(labaRugi)}</div><div style="font-size:12px;color:${labaRugi>=0?'#4ADE80':'#F87171'};font-weight:600;margin-top:2px">${labaRugi>=0?'+':''}${fr(labaRugi)}</div><div class="bal-box-lbl">${labaRugi>=0?'LABA':'RUGI'} BERSIH = Pendapatan − Beban</div></div>`;
 
-  html+=`<div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:12px">
+  html+=`<div style="border-top:1px solid var(--border);margin-top:16px;padding-top:12px">
     <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📊 Rasio Kinerja (ala Laporan Perusahaan)</div>
     <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Margin Laba Bersih (Laba Bersih ÷ Pendapatan)</span><span style="color:${marginLaba!==null&&marginLaba>=0?'#4ADE80':'#F87171'}">${marginLaba!==null?marginLaba.toFixed(1)+'%':'—'}</span></div>
     <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">ROE Bulanan (Laba Bersih ÷ Ekuitas Saat Ini)</span><span style="color:${roe!==null&&roe>=0?'#4ADE80':'#F87171'}">${roe!==null?roe.toFixed(2)+'%':'—'}</span></div>
@@ -4161,18 +4178,18 @@ function renderArusKasFormal(wrap){
 
   html+=`<div style="font-size:10px;color:#4ADE80;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px">⬆️ Uang Masuk — Investasi + Profit MT4</div>`;
   html+=breakdownList(masukPerKategori);
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#C8A84B">Total Masuk</span><span style="color:#4ADE80">+${fc(masuk)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid var(--border);margin-top:4px;font-weight:700"><span style="color:#C8A84B">Total Masuk</span><span style="color:#4ADE80">+${fc(masuk)}</span></div>`;
 
   html+=`<div style="font-size:10px;color:#F87171;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:16px 0 6px">⬇️ Uang Keluar — Diambil dari Saldo MT4, Dipakai Kemana</div>`;
   html+=breakdownList(keluarPerKategori);
-  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid #2A2E1F;margin-top:4px;font-weight:700"><span style="color:#C8A84B">Total Keluar</span><span style="color:#F87171">-${fc(keluar)}</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid var(--border);margin-top:4px;font-weight:700"><span style="color:#C8A84B">Total Keluar</span><span style="color:#F87171">-${fc(keluar)}</span></div>`;
 
-  html+=`<div class="bal-box" style="background:#1E2312;margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</div><div class="bal-box-lbl">SELISIH UANG YANG PERNAH DITARIK (masuk − keluar, bukan saldo saat ini)</div></div>`;
-  html+=`<div style="border-top:1px solid #2A2E1F;margin-top:16px;padding-top:12px">
+  html+=`<div class="bal-box" style="background:var(--bg2);margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${bersih>=0?'#4ADE80':'#F87171'}">${bersih>=0?'+':''}${fc(bersih)}</div><div class="bal-box-lbl">SELISIH UANG YANG PERNAH DITARIK (masuk − keluar, bukan saldo saat ini)</div></div>`;
+  html+=`<div style="border-top:1px solid var(--border);margin-top:16px;padding-top:12px">
     <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📊 Kinerja Trading (Terpisah dari Kas)</div>
     <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Total Profit Trading</span><span style="color:#4ADE80">+${fc(profitTrading)}</span></div>
     <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:#C8A84B">Total Loss Trading</span><span style="color:#F87171">-${fc(lossTrading)}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-top:1px solid #2A2E1F;margin-top:2px;font-weight:700"><span style="color:#D4AF37">Performa Bersih Trading</span><span style="color:${performaTrading>=0?'#4ADE80':'#F87171'}">${performaTrading>=0?'+':''}${fc(performaTrading)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-top:1px solid var(--border);margin-top:2px;font-weight:700"><span style="color:#D4AF37">Performa Bersih Trading</span><span style="color:${performaTrading>=0?'#4ADE80':'#F87171'}">${performaTrading>=0?'+':''}${fc(performaTrading)}</span></div>
     <div style="font-size:9px;color:#5C4818;margin-top:6px">Ini catatan untung/rugi trading sejak awal (termasuk yang masih di MT4, belum ditarik) — dipakai buat menilai apakah tradingnya untung atau bangkrut. TIDAK termasuk dalam hitungan Uang Masuk/Keluar di atas.</div>
   </div>`;
   html+='<div style="font-size:10px;color:#7A5D1F;text-align:center;margin-top:14px">Saldo uang yang benar-benar kamu pegang SEKARANG ada di section 💰 "Saldo MT4 Saat Ini" di atas — bukan angka di halaman ini.</div>';
@@ -4320,10 +4337,10 @@ function setPL(type){
   const bp=document.getElementById('btnProfit'),bl=document.getElementById('btnLoss');
   if(type==='profit'){
     bp.style.border='1.5px solid #2E4A1E';bp.style.background='#132D0E';bp.style.color='#4ADE80';
-    bl.style.border='1.5px solid #2A2E1F';bl.style.background='#0D0F0A';bl.style.color='#8A6B26';
+    bl.style.border='1.5px solid var(--border)';bl.style.background='var(--bg0)';bl.style.color='#8A6B26';
   }else{
     bl.style.border='1.5px solid #4A1E1E';bl.style.background='#2D1313';bl.style.color='#F87171';
-    bp.style.border='1.5px solid #2A2E1F';bp.style.background='#0D0F0A';bp.style.color='#8A6B26';
+    bp.style.border='1.5px solid var(--border)';bp.style.background='var(--bg0)';bp.style.color='#8A6B26';
   }
 }
 async function simpanSaldo(){
@@ -4497,7 +4514,7 @@ async function loadScore(){
           </linearGradient>
         </defs>
         <!-- Track background -->
-        <path d="M 40,100 A 80,80 0 0,1 200,100" fill="none" stroke="#2A2E1F" stroke-width="14" stroke-linecap="round"/>
+        <path d="M 40,100 A 80,80 0 0,1 200,100" fill="none" stroke="var(--border)" stroke-width="14" stroke-linecap="round"/>
         <!-- Colored arc -->
         <path d="M 40,100 A 80,80 0 0,1 200,100" fill="none" stroke="url(#gaugeGrad)" stroke-width="12" stroke-linecap="round" opacity="0.8"/>
         <!-- Needle -->
@@ -4602,7 +4619,7 @@ function showInfoSkor(title){
   openModal('mInfoSkor');
 }
 function scoreCard(title, val, skor, label, labelColor){
-  return `<div style="background:#1E2312;border:1px solid #2A2E1F;border-radius:12px;padding:12px">
+  return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <div style="font-size:10px;font-weight:700;color:#9C7A2E">${title}</div>
       <button onclick="showInfoSkor('${title}')" style="width:16px;height:16px;border-radius:50%;border:1px solid #5C4818;background:transparent;color:#9C7A2E;font-size:9px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">i</button>
@@ -4663,7 +4680,7 @@ async function loadModalMinimal(){
     let detailHtml=tiers.map(t=>{
       const centMin=RISK_PER_TRADE*t.lossCount;
       const stdMin=RISK_PER_TRADE*t.lossCount;
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #2A2E1F">
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
         <div style="text-align:left">
           <div style="font-size:10px;font-weight:700;color:#D4AF37">${t.label}</div>
           <div style="font-size:8px;color:#7A5D1F">${t.desc}</div>
@@ -4682,7 +4699,7 @@ async function loadModalMinimal(){
             <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:800;color:#D4AF37">${AGRESIF_CENT} Sen</div>
             <div style="font-size:10px;color:#9C7A2E;font-weight:700">Akun Cent</div>
           </div>
-          <div style="width:1px;background:#2A2E1F"></div>
+          <div style="width:1px;background:var(--border)"></div>
           <div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:800;color:#D4AF37">$${AGRESIF_STD}</div>
             <div style="font-size:10px;color:#9C7A2E;font-weight:700">Akun Standard</div>
@@ -4691,18 +4708,18 @@ async function loadModalMinimal(){
         <div style="font-size:9px;color:#5C4818">Patokan level Agresif (minimal) — angka apa adanya sesuai skala akun kamu</div>
       </div>
 
-      <div style="background:#1E2312;border-radius:10px;padding:10px 12px">
+      <div style="background:var(--bg2);border-radius:10px;padding:10px 12px">
         ${detailHtml}
       </div>
 
       ${maxDdRaw>0?`
-      <div style="background:#1E2312;border-radius:10px;padding:12px;text-align:center;margin-top:10px">
+      <div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center;margin-top:10px">
         <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">DD Terdalam Real (6 Bulan Terakhir)</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:#F87171">${maxDdRaw.toFixed(2)} Sen</div>
         <div style="font-size:9px;color:${ddAman?'#4ADE80':'#F87171'};margin-top:4px">= ${ddVsAgresif.toFixed(1)}% dari modal minimal Agresif (${AGRESIF_CENT} Sen)</div>
       </div>
 
-      <div style="background:#1E2312;border-radius:10px;padding:12px;text-align:center;margin-top:10px">
+      <div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center;margin-top:10px">
         <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Longest Losing Streak Real (Harian)</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:${streakAmanAgresif?'#4ADE80':'#F87171'}">${longestStreak}x</div>
         <div style="font-size:9px;color:${streakAmanAgresif?'#4ADE80':'#F87171'};margin-top:4px">${streakAmanAgresif?`✓ Masih jauh di bawah buffer Agresif (${tiers[2].lossCount}x)`:`✗ Sudah melewati buffer Agresif (${tiers[2].lossCount}x)`}</div>
@@ -4756,14 +4773,14 @@ async function loadRRAnalysis(){
 
     el.innerHTML=`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cr" style="font-size:15px">-${fc(avgRisk)}</div><div class="bal-box-lbl">Avg Risk/Hari</div></div>
-        <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:15px">+${fc(avgReward)}</div><div class="bal-box-lbl">Avg Reward/Hari</div></div>
+        <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val cr" style="font-size:15px">-${fc(avgRisk)}</div><div class="bal-box-lbl">Avg Risk/Hari</div></div>
+        <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val cg" style="font-size:15px">+${fc(avgReward)}</div><div class="bal-box-lbl">Avg Reward/Hari</div></div>
       </div>
-      <div class="bal-box" style="background:#1E2312;margin-bottom:10px">
+      <div class="bal-box" style="background:var(--bg2);margin-bottom:10px">
         <div class="bal-box-val" style="font-size:20px;color:#D4AF37">1 : ${rrReal>=99?'∞':rrReal.toFixed(2)}</div>
         <div class="bal-box-lbl">Risk-Reward Ratio Real</div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8A6B26;border-top:1px solid #2A2E1F;padding-top:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8A6B26;border-top:1px solid var(--border);padding-top:10px">
         <span>Rencana: 1 : ${targetRR}</span>
         <span onclick="editTargetRR()" style="color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah</span>
       </div>
@@ -4801,11 +4818,11 @@ async function loadConsistencySharpe(){
 
     el.innerHTML=`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="bal-box" style="background:#1E2312">
+        <div class="bal-box" style="background:var(--bg2)">
           <div class="bal-box-val" style="font-size:18px;color:${consColor}">${consistencyScore.toFixed(0)}%</div>
           <div class="bal-box-lbl">Consistency Score</div>
         </div>
-        <div class="bal-box" style="background:#1E2312">
+        <div class="bal-box" style="background:var(--bg2)">
           <div class="bal-box-val" style="font-size:18px;color:${sharpeColor}">${sharpe>=99?'∞':sharpe.toFixed(2)}</div>
           <div class="bal-box-lbl">Sharpe Ratio</div>
         </div>
@@ -4878,11 +4895,11 @@ async function loadRiskOfRuin(){
 
     el.innerHTML=`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-        <div class="bal-box" style="background:#1E2312">
+        <div class="bal-box" style="background:var(--bg2)">
           <div class="bal-box-val" style="font-size:18px;color:${rorColor}">${rorFormula.toFixed(1)}%</div>
           <div class="bal-box-lbl">Probabilitas Bangkrut</div>
         </div>
-        <div class="bal-box" style="background:#1E2312">
+        <div class="bal-box" style="background:var(--bg2)">
           <div class="bal-box-val" style="font-size:18px;color:${survColor}">${survivalPct.toFixed(0)}%</div>
           <div class="bal-box-lbl">Bertahan (Monte Carlo)</div>
         </div>
@@ -4929,8 +4946,8 @@ function loadJournalVisual(){
     });
 
     wrap.innerHTML=`
-      <svg id="journalSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:160px;display:block;background:#1E2312;border-radius:10px;touch-action:none;cursor:pointer">
-        <line x1="${padX}" y1="${zeroY}" x2="${W-padX}" y2="${zeroY}" stroke="#2A2E1F" stroke-width="1"/>
+      <svg id="journalSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:160px;display:block;background:var(--bg2);border-radius:10px;touch-action:none;cursor:pointer">
+        <line x1="${padX}" y1="${zeroY}" x2="${W-padX}" y2="${zeroY}" stroke="var(--border)" stroke-width="1"/>
         ${dots}
         <line id="journalIndicatorLine" x1="0" y1="0" x2="0" y2="${H}" class="graph-dashed" style="display:none"/>
         <circle id="journalIndicatorRing" r="9" fill="none" stroke="#D4AF37" stroke-width="1.5" style="display:none"/>
@@ -5058,23 +5075,23 @@ async function loadBenchmark(){
 
     wrap.innerHTML=`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div class="bal-box" style="background:#1E2312;${youWin?'border:1px solid #4ADE80':''}">
+        <div class="bal-box" style="background:var(--bg2);${youWin?'border:1px solid #4ADE80':''}">
           <div class="bal-box-val" style="font-size:16px;color:${yourPct>=0?'#4ADE80':'#F87171'}">${yourPct>=0?'+':''}${yourPct.toFixed(1)}%</div>
           <div class="bal-box-lbl">Performa Anda</div>
         </div>
-        <div class="bal-box" style="background:#1E2312;${!youWin?'border:1px solid #D4AF37':''}">
+        <div class="bal-box" style="background:var(--bg2);${!youWin?'border:1px solid #D4AF37':''}">
           <div class="bal-box-val" style="font-size:16px;color:${benchPct>=0?'#4ADE80':'#F87171'}">${benchPct>=0?'+':''}${benchPct.toFixed(1)}%</div>
           <div class="bal-box-lbl">${assetLabel} (Buy &amp; Hold)</div>
         </div>
       </div>
-      <div id="benchChartWrap" style="background:#1E2312;border-radius:10px;padding:8px 4px;position:relative;touch-action:none;cursor:pointer">
+      <div id="benchChartWrap" style="background:var(--bg2);border-radius:10px;padding:8px 4px;position:relative;touch-action:none;cursor:pointer">
         <svg id="benchSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:130px;display:block">
-          <line x1="${padX}" y1="${zeroY}" x2="${W-padX}" y2="${zeroY}" stroke="#2A2E1F" stroke-width="1"/>
+          <line x1="${padX}" y1="${zeroY}" x2="${W-padX}" y2="${zeroY}" stroke="var(--border)" stroke-width="1"/>
           <path d="${pathFor(benchCurve)}" fill="none" stroke="#8A6B26" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
           <path d="${pathFor(yourCurve)}" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
           <line id="benchIndicatorLine" x1="0" y1="0" x2="0" y2="${H}" class="graph-dashed" style="display:none"/>
-          <circle id="benchDotYou" r="3.5" fill="#4ADE80" stroke="#0D0F0A" stroke-width="1" style="display:none"/>
-          <circle id="benchDotBench" r="3.5" fill="#8A6B26" stroke="#0D0F0A" stroke-width="1" style="display:none"/>
+          <circle id="benchDotYou" r="3.5" fill="#4ADE80" stroke="var(--bg0)" stroke-width="1" style="display:none"/>
+          <circle id="benchDotBench" r="3.5" fill="#8A6B26" stroke="var(--bg0)" stroke-width="1" style="display:none"/>
         </svg>
         <div class="graph-tooltip" id="benchTooltip">
           <div class="graph-tooltip-date" id="benchTooltipDate">-</div>
@@ -5206,7 +5223,7 @@ async function loadMoodStats(){
       const winRate=(g.win/g.count*100).toFixed(0);
       const color=avg>=0?'#4ADE80':'#F87171';
       html+=`
-        <div style="background:#1E2312;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center${m===bestMood?';border:1px solid #B8860B':''}">
+        <div style="background:var(--bg2);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center${m===bestMood?';border:1px solid #B8860B':''}">
           <div style="text-align:left">
             <div style="font-size:13px;color:#D4AF37;font-weight:700">${meta.emoji} ${meta.label}${m===bestMood?' 👑':''}</div>
             <div style="font-size:9px;color:#7A5D1F;margin-top:2px">${g.count} hari · Win Rate ${winRate}%</div>
@@ -5265,10 +5282,10 @@ async function loadStatPair(){
 
     el.innerHTML=`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <div class="bal-box" style="background:#1E2312"><div class="bal-box-val cg" style="font-size:16px">${winRate.toFixed(1)}%</div><div class="bal-box-lbl">Win Rate</div></div>
-        <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:16px;color:#D4AF37">${pf>=99?'∞':pf.toFixed(2)}</div><div class="bal-box-lbl">Profit Factor</div></div>
-        <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:16px;color:${totalProfit>=0?'#4ADE80':'#F87171'}">${totalProfit>=0?'+':''}${fc(totalProfit)}</div><div class="bal-box-lbl">Total Profit</div></div>
-        <div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:16px;color:#F87171">${fc(maxDd)}</div><div class="bal-box-lbl">Max Drawdown</div></div>
+        <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val cg" style="font-size:16px">${winRate.toFixed(1)}%</div><div class="bal-box-lbl">Win Rate</div></div>
+        <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val" style="font-size:16px;color:#D4AF37">${pf>=99?'∞':pf.toFixed(2)}</div><div class="bal-box-lbl">Profit Factor</div></div>
+        <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val" style="font-size:16px;color:${totalProfit>=0?'#4ADE80':'#F87171'}">${totalProfit>=0?'+':''}${fc(totalProfit)}</div><div class="bal-box-lbl">Total Profit</div></div>
+        <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val" style="font-size:16px;color:#F87171">${fc(maxDd)}</div><div class="bal-box-lbl">Max Drawdown</div></div>
       </div>
       <div style="font-size:9px;color:#5C4818">Berdasarkan ${rows.length} hari tercatat${currentPairFilter!=='ALL'?' — pair '+currentPairFilter:' — semua pair'}</div>${warnHtml}`;
   }catch(e){
@@ -5279,7 +5296,7 @@ async function loadStatPair(){
 
 // ══ EQUITY CURVE REAL-TIME (SVG, interaktif) ══
 function eqStat(label,val,color){
-  return `<div class="bal-box" style="background:#1E2312"><div class="bal-box-val" style="font-size:13px;color:${color}">${val}</div><div class="bal-box-lbl">${label}</div></div>`;
+  return `<div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val" style="font-size:13px;color:${color}">${val}</div><div class="bal-box-lbl">${label}</div></div>`;
 }
 function renderEquity(){
   const wrap=document.getElementById('equitySvgWrap');
