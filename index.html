@@ -1444,6 +1444,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 
     <div class="ap-title">💸 Input Aliran Uang</div>
 
+    <label class="lbl">Arah Transaksi</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <button type="button" id="btnArahMasuk" onclick="pilihArahKas('masuk', true)" style="padding:10px 6px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg0);color:#7A5D1F;font-weight:700;font-size:11px;cursor:pointer">⬆️ Tambah Saldo MT4</button>
+      <button type="button" id="btnArahKeluar" onclick="pilihArahKas('keluar', true)" style="padding:10px 6px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg0);color:#7A5D1F;font-weight:700;font-size:11px;cursor:pointer">⬇️ Tarik Saldo MT4</button>
+    </div>
+    <div onclick="toggleKategoriLainnya()" style="font-size:9px;color:#7A5D1F;text-align:center;margin:-6px 0 12px;cursor:pointer;text-decoration:underline">🔧 Kategori lainnya (Operasional Trading / Bisnis)</div>
+
     <label class="lbl">Dari (sumber uang)</label>
     <input class="inp" id="kasDari" placeholder="Contoh: Modal Pribadi / Modal Investor / Profit MT4">
 
@@ -1451,31 +1458,31 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <input class="inp" id="kasKe" placeholder="Contoh: Saldo MT4 / Obat / Listrik">
 
     <label class="lbl">Kategori</label>
-    <select class="inp" id="kasKategori">
-      <optgroup label="⬆️ UANG MASUK">
+    <select class="inp" id="kasKategori" onchange="isiOtomatisDariKe()">
+      <optgroup label="⬆️ UANG MASUK" id="optgroupMasuk">
         <option value="gaji">💰 Modal Pribadi</option>
         <option value="modal_investor">🤝 Modal Investor</option>
         <option value="wd_trading">📈 Profit MT4</option>
       </optgroup>
-      <optgroup label="⬇️ UANG KELUAR — DIPAKAI HABIS (beban, mengurangi kekayaan)">
+      <optgroup label="⬇️ UANG KELUAR — DIPAKAI HABIS (beban, mengurangi kekayaan)" id="optgroupKeluar1">
         <option value="kebutuhan_harian">🔴 Kebutuhan Harian (belanja, listrik, air, wifi, pulsa)</option>
         <option value="kesehatan">🔵 Kesehatan (obat-obatan)</option>
         <option value="gaya_hidup">🟣 Hiburan / Gaya Hidup</option>
         <option value="cicilan_utang">💳 Cicilan Utang</option>
         <option value="sewa_bayar">🏠 Sewa Dibayar (bukan aset)</option>
       </optgroup>
-      <optgroup label="🏗️ UANG KELUAR — JADI MILIK SENDIRI (bukan beban, otomatis tercatat)">
+      <optgroup label="🏗️ UANG KELUAR — JADI MILIK SENDIRI (bukan beban, otomatis tercatat)" id="optgroupKeluar2">
         <option value="dana_darurat">🚨 Dana Darurat (ditabung)</option>
         <option value="investasi">📊 Investasi (Saham/Deposito/SBN/Tabungan)</option>
         <option value="beli_aset">🏗️ Beli Aset Fisik (Kendaraan/Properti/Tanah)</option>
       </optgroup>
-      <optgroup label="💼 OPERASIONAL (Trading, terpisah dari Kas)">
+      <optgroup label="💼 OPERASIONAL (Trading, terpisah dari Kas)" id="optgroupOperasional">
         <option value="profit_trading">📈 Profit Trading (auto-sync harian)</option>
         <option value="loss_trading">📉 Loss Trading (auto-sync harian)</option>
         <option value="komisi">💳 Komisi / Fee Broker</option>
         <option value="swap">🔄 Swap</option>
       </optgroup>
-      <optgroup label="🏢 OPERASIONAL BISNIS (kalau sudah ada investor/karyawan)">
+      <optgroup label="🏢 OPERASIONAL BISNIS (kalau sudah ada investor/karyawan)" id="optgroupBisnis">
         <option value="gaji_karyawan">👤 Gaji Karyawan</option>
         <option value="listrik_kantor">💡 Listrik Kantor</option>
         <option value="internet_kantor">🌐 Internet</option>
@@ -2602,6 +2609,89 @@ function setMataUang(mata){
     bi.style.border='1.5px solid var(--border)';bi.style.background='var(--bg0)';bi.style.color='#7A5D1F';
   }
 }
+
+// ══ ARAH TRANSAKSI: "Tambah Saldo MT4" vs "Tarik Saldo MT4" ══
+// Menyaring pilihan Kategori supaya cuma yang relevan sama arah uangnya yang muncul,
+// plus auto-isi Dari/Ke biar nggak perlu ketik manual tiap kali.
+let kasArahDipilih=null;
+function pilihArahKas(arah, dariTombol){
+  kasArahDipilih=arah;
+  const btnMasuk=document.getElementById('btnArahMasuk'), btnKeluar=document.getElementById('btnArahKeluar');
+  const styleAktif=()=>({border:'1.5px solid #B8860B',background:'var(--bg3)',color:'#D4AF37'});
+  const styleNonaktif=()=>({border:'1.5px solid var(--border)',background:'var(--bg0)',color:'#7A5D1F'});
+  const terapkan=(btn,s)=>{btn.style.border=s.border;btn.style.background=s.background;btn.style.color=s.color;};
+  terapkan(btnMasuk, arah==='masuk'?styleAktif():styleNonaktif());
+  terapkan(btnKeluar, arah==='keluar'?styleAktif():styleNonaktif());
+
+  const gMasuk=document.getElementById('optgroupMasuk');
+  const gKeluar1=document.getElementById('optgroupKeluar1');
+  const gKeluar2=document.getElementById('optgroupKeluar2');
+  const gOperasional=document.getElementById('optgroupOperasional');
+  const gBisnis=document.getElementById('optgroupBisnis');
+  const sel=document.getElementById('kasKategori');
+  const kasDari=document.getElementById('kasDari'), kasKe=document.getElementById('kasKe');
+
+  if(arah==='masuk'){
+    gMasuk.style.display='';
+    gKeluar1.style.display='none';
+    gKeluar2.style.display='none';
+    gOperasional.style.display='none';
+    gBisnis.style.display='none';
+    if(dariTombol){
+      sel.value='gaji';
+      kasKe.value='Saldo MT4';
+      if(!kasDari.value || kasDari.value==='Saldo MT4') kasDari.value='';
+    }
+    kasDari.placeholder='Contoh: Modal Pribadi / Modal Investor';
+  }else{
+    gMasuk.style.display='none';
+    gKeluar1.style.display='';
+    gKeluar2.style.display='';
+    gOperasional.style.display='none';
+    gBisnis.style.display='none';
+    if(dariTombol){
+      sel.value='kebutuhan_harian';
+      kasDari.value='Saldo MT4';
+      if(!kasKe.value || kasKe.value==='Saldo MT4') kasKe.value='';
+    }
+    kasKe.placeholder='Contoh: Obat / Listrik / Dana Darurat / Saham BBRI';
+  }
+}
+// Kalau user ganti kategori manual dari dropdown, sinkronkan tombol arah & Dari/Ke TANPA menimpa kategori yang baru dipilih.
+function isiOtomatisDariKe(){
+  const val=document.getElementById('kasKategori').value;
+  const arah = KATEGORI_MASUK.includes(val) ? 'masuk' : 'keluar';
+  pilihArahKas(arah, false);
+}
+// Tampilkan/sembunyikan kategori "Operasional Trading" & "Operasional Bisnis" — dipakai buat kasus
+// khusus di luar 2 arah utama (Tambah/Tarik Saldo MT4), misal komisi broker atau gaji karyawan.
+function toggleKategoriLainnya(){
+  const gMasuk=document.getElementById('optgroupMasuk');
+  const gKeluar1=document.getElementById('optgroupKeluar1');
+  const gKeluar2=document.getElementById('optgroupKeluar2');
+  const gOperasional=document.getElementById('optgroupOperasional');
+  const gBisnis=document.getElementById('optgroupBisnis');
+  const btnMasuk=document.getElementById('btnArahMasuk'), btnKeluar=document.getElementById('btnArahKeluar');
+  const styleNonaktif={border:'1.5px solid var(--border)',background:'var(--bg0)',color:'#7A5D1F'};
+  const terapkan=(btn,s)=>{btn.style.border=s.border;btn.style.background=s.background;btn.style.color=s.color;};
+
+  const sedangLainnya = gOperasional.style.display==='';
+  if(sedangLainnya){
+    // Balik ke mode default (belum pilih arah) — sembunyikan lagi Operasional/Bisnis
+    gOperasional.style.display='none';
+    gBisnis.style.display='none';
+  }else{
+    gMasuk.style.display='none';
+    gKeluar1.style.display='none';
+    gKeluar2.style.display='none';
+    gOperasional.style.display='';
+    gBisnis.style.display='';
+    kasArahDipilih='lainnya';
+    terapkan(btnMasuk, styleNonaktif);
+    terapkan(btnKeluar, styleNonaktif);
+  }
+}
+
 async function simpanKas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const dari=document.getElementById('kasDari').value.trim();
