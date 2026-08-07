@@ -1463,6 +1463,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
         <option value="kesehatan">🔵 Kesehatan</option>
         <option value="gaya_hidup">🟣 Gaya Hidup</option>
         <option value="cicilan_utang">💳 Cicilan Utang</option>
+        <option value="sewa_bayar">🏠 Sewa Dibayar (bukan aset)</option>
+      </optgroup>
+      <optgroup label="🏗️ JADI ASET (bukan beban — otomatis ke Neraca)">
+        <option value="beli_aset">🏗️ Beli Aset (Kendaraan/Properti/Tanah/dll)</option>
       </optgroup>
       <optgroup label="💼 OPERASIONAL (Trading, terpisah dari Kas)">
         <option value="profit_trading">📈 Profit Trading (auto-sync harian)</option>
@@ -2411,6 +2415,12 @@ const kategoriMeta={
   kesehatan:{label:'Kesehatan', color:'#60A5FA', dot:'🔵', grup:'pribadi'},
   gaya_hidup:{label:'Gaya Hidup', color:'#C084FC', dot:'🟣', grup:'pribadi'},
   cicilan_utang:{label:'Cicilan Utang', color:'#FF8080', dot:'💳', grup:'pribadi'},
+  // "beli_aset" = profit yang dibelikan aset (kendaraan/properti/saham/dll) — BUKAN beban, uangnya
+  // berubah bentuk jadi aset, otomatis dicatat juga ke Daftar Aset (Neraca) supaya jejaknya nyambung.
+  beli_aset:{label:'Beli Aset (Kendaraan/Properti/dll)', color:'#34D399', dot:'🏗️', grup:'pribadi'},
+  // "sewa_bayar" = uang keluar buat SEWA (ruko/rumah/dll) — ini beban murni, BUKAN aset,
+  // karena uangnya nggak balik jadi milik kita.
+  sewa_bayar:{label:'Sewa Dibayar (bukan aset)', color:'#FB923C', dot:'🏠', grup:'pribadi'},
   // 🏢 OPERASIONAL BISNIS — dipakai kalau skala akun ini sudah besar (ada investor/karyawan)
   gaji_karyawan:{label:'Gaji Karyawan', color:'#F97316', dot:'👤', grup:'bisnis'},
   listrik_kantor:{label:'Listrik Kantor', color:'#F97316', dot:'💡', grup:'bisnis'},
@@ -2617,6 +2627,26 @@ async function simpanKas(){
       await api('kas_pribadi','POST',bodyNoKat);
     }
     toast(kategoriSaved?'✅ Catatan tersimpan':'⚠️ Tersimpan, tapi kolom kategori belum ada di Supabase');
+
+    // ── AUTO-LINK: kalau kategori "Beli Aset", langsung catat juga ke Daftar Aset (Neraca) ──
+    // supaya jejaknya nyambung: transaksi kas ↔ aset yang lahir dari situ, nggak perlu input 2x manual.
+    // PENTING: nilai di Aliran Uang satuannya ¢ cent MT4, sedangkan Daftar Aset satuannya Rupiah —
+    // konversi pakai kurs K yang sama dengan yang dipakai buat Saldo MT4, biar nominalnya benar.
+    if(kategori==='beli_aset'){
+      const nilaiRupiah=Math.round(jumlah/100*K);
+      const namaAset=prompt(`Aset apa yang dibeli seharga ${fc(jumlah)} (≈Rp ${nilaiRupiah.toLocaleString('id-ID')})?\nContoh: Motor Honda Beat, Tanah 100m2, dll`);
+      if(namaAset){
+        const lancar=confirm('Apakah ini ASET LANCAR? (mudah dicairkan <1 tahun)\n\nOK = Aset Lancar\nCancel = Aset Tidak Lancar (misal: kendaraan, tanah, properti)');
+        const listAset=getAsetLain();
+        listAset.push({nama:namaAset, jumlah:nilaiRupiah, tipe: lancar?'lancar':'tidak_lancar'});
+        localStorage.setItem('mk_aset_lain', JSON.stringify(listAset));
+        catatRiwayatAset({tanggal:tgl, nama:namaAset, jumlah:nilaiRupiah, aksi:'beli'});
+        toast('✅ Aset "'+namaAset+'" otomatis tercatat di Neraca — terhubung dari transaksi profit ini');
+      }else{
+        toast('⚠️ Transaksi tersimpan tapi aset belum dicatat — tambahkan manual di Neraca kalau perlu');
+      }
+    }
+
     document.getElementById('kasDari').value='';
     document.getElementById('kasKe').value='';
     document.getElementById('kasJumlah').value='';
@@ -3123,7 +3153,7 @@ function renderAlokasiDana(){
 // ══ EMERGENCY FUND & FINANCIAL HEALTH SCORE ══
 // Rata-rata pengeluaran pribadi per bulan (dari kategori kebutuhan pribadi di Aliran Uang)
 function getRataRataPengeluaranPribadiBulanan(){
-  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang'];
+  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'beli_aset' SENGAJA tidak dimasukkan — uangnya jadi aset, bukan hilang
   const rows=(allKasData||[]).filter(r=>BEBAN_PRIBADI.includes(r.kategori));
   if(!rows.length) return {rata:0, adaData:false};
   const byMonth={};
@@ -3148,7 +3178,7 @@ function renderLapSaya(){
   if(!contentEl)return;
   if(labelEl) labelEl.textContent=bulanNamaFull[lapSayaMonth]+' '+lapSayaYear;
 
-  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang'];
+  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'beli_aset' SENGAJA tidak dimasukkan — uangnya jadi aset, bukan hilang
   const rows=(allKasData||[]).filter(r=>{
     const d=new Date(r.tanggal);
     return d.getFullYear()===lapSayaYear && d.getMonth()===lapSayaMonth;
@@ -4389,6 +4419,7 @@ function tambahSaham(){
   savePortofolioSaham(list);
   toast('✅ Saham ditambahkan');
   renderPortofolioSaham();
+  renderLapKeu(); // sinkronkan ke Neraca (Total Aset otomatis update)
 }
 function updateHargaSaham(idx){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
@@ -4403,6 +4434,7 @@ function updateHargaSaham(idx){
   savePortofolioSaham(list);
   toast('✅ Harga pasar diupdate');
   renderPortofolioSaham();
+  renderLapKeu();
 }
 function hapusSaham(idx){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
@@ -4412,6 +4444,7 @@ function hapusSaham(idx){
   list.splice(idx,1);
   savePortofolioSaham(list);
   renderPortofolioSaham();
+  renderLapKeu();
 }
 function renderPortofolioSaham(){
   const listEl=document.getElementById('portofolioSahamList');
@@ -4425,7 +4458,7 @@ function renderPortofolioSaham(){
     return;
   }
 
-  let totalNilaiBeli=0, totalNilaiSekarang=0;
+  let totalNilaiBeli=0, totalNilaiSekarang=0, adaWarningCutLoss=false;
   listEl.innerHTML=list.map((s,i)=>{
     const nilaiBeli=s.lot*LOT_SIZE*s.hargaBeli;
     const nilaiSekarang=s.lot*LOT_SIZE*s.hargaPasar;
@@ -4433,8 +4466,17 @@ function renderPortofolioSaham(){
     const gainPct=nilaiBeli>0?(gain/nilaiBeli*100):0;
     totalNilaiBeli+=nilaiBeli; totalNilaiSekarang+=nilaiSekarang;
     const untung=gain>=0;
+    // Alert cut-loss otomatis: rugi 20-30% ke bawah dianggap sinyal waspada/cut-loss
+    let cutLossHtml='';
+    if(gainPct<=-30){
+      adaWarningCutLoss=true;
+      cutLossHtml=`<div style="font-size:10px;color:#F87171;background:var(--bg3);border:1px solid #5C2E2E;border-radius:8px;padding:7px;margin-top:8px">🚨 Rugi ${Math.abs(gainPct).toFixed(1)}% — sudah lewat batas 30%. Pertimbangkan cut loss sekarang, tunggu momentum buat masuk lagi.</div>`;
+    }else if(gainPct<=-20){
+      adaWarningCutLoss=true;
+      cutLossHtml=`<div style="font-size:10px;color:#EAB308;background:var(--bg3);border:1px solid #5C4818;border-radius:8px;padding:7px;margin-top:8px">⚠️ Rugi ${Math.abs(gainPct).toFixed(1)}% — masuk zona 20-30%, mulai waspada buat cut loss.</div>`;
+    }
     return `
-      <div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--bg1)">
+      <div style="border:1px solid ${gainPct<=-20?'#5C2E2E':'var(--border)'};border-radius:12px;padding:12px;margin-bottom:10px;background:var(--bg1)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <span style="font-size:13px;font-weight:800;color:#D4AF37">${escapeHtml(s.kode)}</span>
           <span style="font-size:9px;color:#7A5D1F">${s.lot} lot (${(s.lot*LOT_SIZE).toLocaleString('id-ID')} lembar)</span>
@@ -4447,6 +4489,7 @@ function renderPortofolioSaham(){
           <span style="color:#7A5D1F">${untung?'📈':'📉'} Gain/Loss</span>
           <span style="font-weight:700;color:${untung?'#4ADE80':'#F87171'}">${untung?'+':''}Rp ${Math.round(gain).toLocaleString('id-ID')} (${untung?'+':''}${gainPct.toFixed(1)}%)</span>
         </div>
+        ${cutLossHtml}
         <div style="display:flex;gap:8px;margin-top:10px">
           <button onclick="updateHargaSaham(${i})" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--border);background:transparent;color:#C8A84B;font-size:10px;cursor:pointer">🔄 Update Harga</button>
           <button onclick="hapusSaham(${i})" style="padding:6px 10px;border-radius:8px;border:1px solid #5C2E2E;background:transparent;color:#F87171;font-size:10px;cursor:pointer">🗑️</button>
@@ -4454,6 +4497,9 @@ function renderPortofolioSaham(){
         <div style="font-size:8px;color:#5C4818;text-align:right;margin-top:6px">Update terakhir: ${fd(s.updatedAt)}</div>
       </div>`;
   }).join('');
+  if(adaWarningCutLoss){
+    listEl.innerHTML=`<div style="font-size:10px;color:#F87171;text-align:center;margin-bottom:10px">⚠️ Ada saham yang rugi 20% atau lebih — cek kartu di bawah buat detail cut loss.</div>`+listEl.innerHTML;
+  }
 
   const totalGain=totalNilaiSekarang-totalNilaiBeli;
   const totalGainPct=totalNilaiBeli>0?(totalGain/totalNilaiBeli*100):0;
@@ -4586,7 +4632,12 @@ function hitungNeraca(){
   const kewajiban=getKewajiban().map((a,i)=>({...a,i}));
   const asetLancarList=asetLain.filter(a=>a.tipe==='lancar');
   const asetTidakLancarList=asetLain.filter(a=>a.tipe==='tidak_lancar');
-  const totalAsetLancar=saldoMt4Rp+asetLancarList.reduce((s,a)=>s+a.jumlah,0);
+  // Nilai Portofolio Saham (dari Dashboard Portofolio Saham) — otomatis ikut Total Aset Lancar
+  const portofolioSaham=getPortofolioSaham();
+  const nilaiPortofolioSaham=portofolioSaham.reduce((s,x)=>s+(x.lot*LOT_SIZE*x.hargaPasar),0);
+  // Deteksi kemungkinan dobel input: ada entri manual di Daftar Aset yang namanya mengandung "saham"
+  const kemungkinanDobelSaham = nilaiPortofolioSaham>0 && asetLancarList.some(a=>/saham/i.test(a.nama));
+  const totalAsetLancar=saldoMt4Rp+nilaiPortofolioSaham+asetLancarList.reduce((s,a)=>s+a.jumlah,0);
   const totalAsetTidakLancar=asetTidakLancarList.reduce((s,a)=>s+a.jumlah,0);
   const totalAset=totalAsetLancar+totalAsetTidakLancar;
   const kewajibanLancarList=kewajiban.filter(a=>a.tipe==='lancar');
@@ -4595,7 +4646,7 @@ function hitungNeraca(){
   const totalKewajibanPanjang=kewajibanPanjangList.reduce((s,a)=>s+a.jumlah,0);
   const totalKewajiban=totalKewajibanLancar+totalKewajibanPanjang;
   const ekuitas=totalAset-totalKewajiban;
-  return {saldoMt4Rp, asetLancarList, asetTidakLancarList, totalAsetLancar, totalAsetTidakLancar, totalAset,
+  return {saldoMt4Rp, nilaiPortofolioSaham, kemungkinanDobelSaham, asetLancarList, asetTidakLancarList, totalAsetLancar, totalAsetTidakLancar, totalAset,
     kewajibanLancarList, kewajibanPanjangList, totalKewajibanLancar, totalKewajibanPanjang, totalKewajiban, ekuitas};
 }
 function renderNeraca(wrap){
@@ -4611,6 +4662,12 @@ function renderNeraca(wrap){
 
   html+=`<div style="font-size:10px;font-weight:700;color:#4ADE80;margin:6px 0 6px;text-transform:uppercase;letter-spacing:.5px">Aset Lancar</div>`;
   html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">Saldo MT4 (Trading)</span><span style="color:#D4AF37">${rp(n.saldoMt4Rp)}</span></div>`;
+  if(n.nilaiPortofolioSaham>0){
+    html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">Portofolio Saham <span style="font-size:8px;color:#7A5D1F">(otomatis)</span></span><span style="color:#D4AF37">${rp(n.nilaiPortofolioSaham)}</span></div>`;
+  }
+  if(n.kemungkinanDobelSaham){
+    html+=`<div style="font-size:9px;color:#F87171;background:var(--bg3);border:1px solid #5C2E2E;border-radius:8px;padding:8px;margin:4px 0 8px">⚠️ Terdeteksi ada entri "Saham" manual di Daftar Aset DAN data di Dashboard Portofolio Saham. Ini bisa DOBEL HITUNG. Hapus salah satu — disarankan hapus entri manual "Saham" di bawah, karena Dashboard Portofolio Saham lebih akurat (per lot & harga real).</div>`;
+  }
   n.asetLancarList.forEach(a=>{
     html+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span style="color:#C8A84B">${escapeHtml(a.nama)}</span><span style="color:#D4AF37">${rp(a.jumlah)}${isAdmin?` <span onclick="hapusAsetLain(${a.i})" style="cursor:pointer;color:#F87171;margin-left:4px">✕</span>`:''}</span></div>`;
   });
@@ -4629,7 +4686,7 @@ function renderNeraca(wrap){
     html+=`<div style="margin:10px 0 6px">
       <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tambah Aset Perusahaan Cepat</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
-        <span onclick="tambahAsetLain('saham')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">📈 Saham</span>
+        <span onclick="toast('📈 Untuk saham, pakai Dashboard Portofolio Saham (lot & harga) biar lebih akurat — scroll ke section 📈 Dashboard Portofolio Saham')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px dashed var(--border);color:#7A5D1F;cursor:pointer">📈 Saham?</span>
         <span onclick="tambahAsetLain('reksadana')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">📊 Reksadana</span>
         <span onclick="tambahAsetLain('deposito')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">🏦 Deposito</span>
         <span onclick="tambahAsetLain('sun')" style="font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);color:#C8A84B;cursor:pointer">📜 SUN/Obligasi</span>
@@ -4734,7 +4791,7 @@ function renderLabaRugi(wrap){
   const modalInvestorBulanIni=rowsKas.filter(r=>r.kategori==='modal_investor').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const modalDisetorBulanIni=modalPribadiBulanIni+modalInvestorBulanIni;
   const profitTradingCent=rowsTrading.reduce((s,r)=>s+parseFloat(r.profit||0),0);
-  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang'];
+  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'beli_aset' SENGAJA tidak dimasukkan — uangnya jadi aset, bukan hilang
   const BEBAN_BISNIS=['gaji_karyawan','listrik_kantor','internet_kantor','air_kantor','sewa_kantor','operasional_lain'];
   const bebanPribadiCent=rowsKas.filter(r=>BEBAN_PRIBADI.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const bebanBisnisCent=rowsKas.filter(r=>BEBAN_BISNIS.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
