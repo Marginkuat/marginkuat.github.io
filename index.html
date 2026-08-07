@@ -1182,6 +1182,20 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
+<!-- DASHBOARD PORTOFOLIO SAHAM -->
+<div class="section" id="secPortofolioSaham">
+  <div class="sec-title">📈 Dashboard Portofolio Saham</div>
+  <div class="graph-card" style="margin-bottom:12px">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Ringkasan status semua saham yang kamu pegang saat ini — lot, harga beli, harga pasar, dan gain/loss. 1 lot = 100 lembar (standar BEI).</div>
+    <div id="portofolioSahamList"></div>
+    <button onclick="tambahSaham()" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1.5px dashed #B8860B;background:transparent;color:#C8A84B;font-size:12px;cursor:pointer">+ Tambah Saham</button>
+  </div>
+  <div class="graph-card">
+    <div id="portofolioSahamTotal"></div>
+    <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">💡 Harga Pasar diupdate manual (misal 1x sehari). Belum ada integrasi API bursa real-time — data ini murni input kamu sendiri.</div>
+  </div>
+</div>
+
 <!-- INVESTMENT PORTFOLIO DASHBOARD -->
 <div class="section" id="secPortofolioInvestasi">
   <div class="sec-title">📊 Investment Portfolio Dashboard</div>
@@ -1665,6 +1679,7 @@ const SEARCH_MENU=[
   {id:'secFINumber', icon:'🎯', label:'Financial Independence (FI) Number', desc:'Modal yang dibutuhkan agar profit bulanan menutup biaya hidup', kw:'financial independence fi number kebebasan finansial simulasi proyeksi target modal pensiun dini'},
   {id:'secSewaBeli', icon:'🏠', label:'What-If: Sewa vs Beli Properti', desc:'Kalkulator perbandingan sewa vs beli properti dengan KPR', kw:'sewa vs beli properti rumah kpr kalkulator what if scenario cicilan dp uang muka apresiasi kekayaan bersih rent buy'},
   {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow'},
+  {id:'secPortofolioSaham', icon:'📈', label:'Dashboard Portofolio Saham', desc:'Lot, harga beli, harga pasar, dan gain/loss tiap saham yang dipegang', kw:'portofolio saham dashboard lot harga beli harga pasar gain loss bbca bbri stock tracker kondisi sekarang'},
   {id:'secPortofolioInvestasi', icon:'📊', label:'Investment Portfolio Dashboard', desc:'Breakdown investasi saham, reksadana, deposito, properti di luar MT4', kw:'investment portfolio dashboard investasi saham reksadana deposito properti tanah obligasi sun breakdown portofolio'},
   {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio riwayat transaksi aset beli jual saham properti tracker'},
   {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf'},
@@ -1874,6 +1889,7 @@ function loadDisqus(){
 window.onload=async()=>{
   applyThemeIcon();
   renderSewaBeli();
+  renderPortofolioSaham();
   try{
     await api('saldo_harian?limit=1');
     hide('loading');
@@ -4345,6 +4361,109 @@ const ASET_PRESET={
   properti:{nama:'Properti', tipe:'tidak_lancar', hint:'estimasi nilai jual properti'},
   tanah:{nama:'Tanah', tipe:'tidak_lancar', hint:'estimasi nilai jual tanah'}
 };
+
+// ══ DASHBOARD PORTOFOLIO SAHAM (Lot, Harga Beli, Harga Pasar, Gain/Loss) ══
+const LOT_SIZE=100; // 1 lot = 100 lembar, standar BEI
+function getPortofolioSaham(){
+  try{ return JSON.parse(localStorage.getItem('mk_portofolio_saham')||'[]'); }catch(e){ return []; }
+}
+function savePortofolioSaham(list){
+  localStorage.setItem('mk_portofolio_saham', JSON.stringify(list));
+}
+function tambahSaham(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const kodeRaw=prompt('Kode saham (contoh: BBCA, BBRI):');
+  if(!kodeRaw)return;
+  const kode=kodeRaw.trim().toUpperCase();
+  const lotStr=prompt(`Jumlah lot ${kode} (1 lot = ${LOT_SIZE} lembar):`, '1');
+  const lot=parseFloat(lotStr);
+  if(isNaN(lot)||lot<=0){toast('❌ Jumlah lot tidak valid');return;}
+  const hargaBeliStr=prompt(`Harga beli rata-rata ${kode} per lembar (Rp):`);
+  const hargaBeli=parseFloat(hargaBeliStr);
+  if(isNaN(hargaBeli)||hargaBeli<=0){toast('❌ Harga beli tidak valid');return;}
+  const hargaPasarStr=prompt(`Harga pasar ${kode} saat ini per lembar (Rp):`, hargaBeliStr);
+  const hargaPasar=parseFloat(hargaPasarStr)||hargaBeli;
+
+  const list=getPortofolioSaham();
+  list.push({kode, lot, hargaBeli, hargaPasar, updatedAt:new Date().toISOString().slice(0,10)});
+  savePortofolioSaham(list);
+  toast('✅ Saham ditambahkan');
+  renderPortofolioSaham();
+}
+function updateHargaSaham(idx){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const list=getPortofolioSaham();
+  const item=list[idx];
+  if(!item)return;
+  const hargaBaruStr=prompt(`Update harga pasar ${item.kode} per lembar (Rp):`, item.hargaPasar);
+  const hargaBaru=parseFloat(hargaBaruStr);
+  if(isNaN(hargaBaru)||hargaBaru<=0){toast('❌ Harga tidak valid');return;}
+  item.hargaPasar=hargaBaru;
+  item.updatedAt=new Date().toISOString().slice(0,10);
+  savePortofolioSaham(list);
+  toast('✅ Harga pasar diupdate');
+  renderPortofolioSaham();
+}
+function hapusSaham(idx){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const list=getPortofolioSaham();
+  const item=list[idx];
+  if(!confirm(`Hapus ${item?item.kode:'saham ini'} dari portofolio?`))return;
+  list.splice(idx,1);
+  savePortofolioSaham(list);
+  renderPortofolioSaham();
+}
+function renderPortofolioSaham(){
+  const listEl=document.getElementById('portofolioSahamList');
+  const totalEl=document.getElementById('portofolioSahamTotal');
+  if(!listEl||!totalEl)return;
+
+  const list=getPortofolioSaham();
+  if(!list.length){
+    listEl.innerHTML=`<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Belum ada saham tercatat. Tap "+ Tambah Saham" untuk mulai.</div>`;
+    totalEl.innerHTML='';
+    return;
+  }
+
+  let totalNilaiBeli=0, totalNilaiSekarang=0;
+  listEl.innerHTML=list.map((s,i)=>{
+    const nilaiBeli=s.lot*LOT_SIZE*s.hargaBeli;
+    const nilaiSekarang=s.lot*LOT_SIZE*s.hargaPasar;
+    const gain=nilaiSekarang-nilaiBeli;
+    const gainPct=nilaiBeli>0?(gain/nilaiBeli*100):0;
+    totalNilaiBeli+=nilaiBeli; totalNilaiSekarang+=nilaiSekarang;
+    const untung=gain>=0;
+    return `
+      <div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--bg1)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:13px;font-weight:800;color:#D4AF37">${escapeHtml(s.kode)}</span>
+          <span style="font-size:9px;color:#7A5D1F">${s.lot} lot (${(s.lot*LOT_SIZE).toLocaleString('id-ID')} lembar)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:#8A6B26;margin-bottom:8px">
+          <div>Harga Beli: <b style="color:#C8A84B">Rp ${Math.round(s.hargaBeli).toLocaleString('id-ID')}</b></div>
+          <div>Harga Pasar: <b style="color:#C8A84B">Rp ${Math.round(s.hargaPasar).toLocaleString('id-ID')}</b></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding-top:8px;border-top:1px solid var(--border)">
+          <span style="color:#7A5D1F">${untung?'📈':'📉'} Gain/Loss</span>
+          <span style="font-weight:700;color:${untung?'#4ADE80':'#F87171'}">${untung?'+':''}Rp ${Math.round(gain).toLocaleString('id-ID')} (${untung?'+':''}${gainPct.toFixed(1)}%)</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button onclick="updateHargaSaham(${i})" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--border);background:transparent;color:#C8A84B;font-size:10px;cursor:pointer">🔄 Update Harga</button>
+          <button onclick="hapusSaham(${i})" style="padding:6px 10px;border-radius:8px;border:1px solid #5C2E2E;background:transparent;color:#F87171;font-size:10px;cursor:pointer">🗑️</button>
+        </div>
+        <div style="font-size:8px;color:#5C4818;text-align:right;margin-top:6px">Update terakhir: ${fd(s.updatedAt)}</div>
+      </div>`;
+  }).join('');
+
+  const totalGain=totalNilaiSekarang-totalNilaiBeli;
+  const totalGainPct=totalNilaiBeli>0?(totalGain/totalNilaiBeli*100):0;
+  const untungTotal=totalGain>=0;
+  totalEl.innerHTML=`
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Ringkasan Total Portofolio Saham</div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#7A5D1F">Total Nilai Beli</span><span style="color:#C8A84B">Rp ${Math.round(totalNilaiBeli).toLocaleString('id-ID')}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#7A5D1F">Total Nilai Sekarang</span><span style="color:#D4AF37;font-weight:700">Rp ${Math.round(totalNilaiSekarang).toLocaleString('id-ID')}</span></div>
+    <div class="bal-box" style="background:var(--bg2);margin-top:10px"><div class="bal-box-val" style="font-size:18px;color:${untungTotal?'#4ADE80':'#F87171'}">${untungTotal?'+':''}Rp ${Math.round(totalGain).toLocaleString('id-ID')} (${untungTotal?'+':''}${totalGainPct.toFixed(1)}%)</div><div class="bal-box-lbl">Total Gain/Loss Portofolio Saham</div></div>`;
+}
 
 // ══ INVESTMENT PORTFOLIO DASHBOARD ══
 // Breakdown visual dari semua aset di luar MT4 (Daftar Aset di Neraca) — pie chart + rincian per aset.
