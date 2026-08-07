@@ -1108,6 +1108,29 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
+<!-- WHAT-IF: SEWA VS BELI PROPERTI -->
+<div class="section" id="secSewaBeli">
+  <div class="sec-title">🏠 "What-If": Sewa vs Beli Properti</div>
+  <div class="graph-card" style="margin-bottom:12px">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Masukkan asumsi harga properti, KPR, dan sewa — sistem hitung mana yang lebih menguntungkan secara kekayaan bersih dalam jangka waktu tertentu.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px">
+      <div><label style="font-size:9px;color:#7A5D1F">Harga Properti (Rp)</label><input class="inp" id="swHarga" type="number" value="500000000" min="0" oninput="renderSewaBeli()" style="margin-bottom:0"></div>
+      <div><label style="font-size:9px;color:#7A5D1F">Uang Muka / DP (%)</label><input class="inp" id="swDp" type="number" value="20" min="0" max="100" oninput="renderSewaBeli()" style="margin-bottom:0"></div>
+      <div><label style="font-size:9px;color:#7A5D1F">Bunga KPR (%/tahun)</label><input class="inp" id="swBunga" type="number" value="8" min="0" step="0.1" oninput="renderSewaBeli()" style="margin-bottom:0"></div>
+      <div><label style="font-size:9px;color:#7A5D1F">Tenor KPR (tahun)</label><input class="inp" id="swTenor" type="number" value="15" min="1" oninput="renderSewaBeli()" style="margin-bottom:0"></div>
+      <div><label style="font-size:9px;color:#7A5D1F">Sewa per Bulan Saat Ini (Rp)</label><input class="inp" id="swSewa" type="number" value="3000000" min="0" oninput="renderSewaBeli()" style="margin-bottom:0"></div>
+      <div><label style="font-size:9px;color:#7A5D1F">Kenaikan Sewa (%/tahun)</label><input class="inp" id="swKenaikanSewa" type="number" value="5" min="0" step="0.1" oninput="renderSewaBeli()" style="margin-bottom:0"></div>
+      <div><label style="font-size:9px;color:#7A5D1F">Apresiasi Properti (%/tahun)</label><input class="inp" id="swApresiasi" type="number" value="4" min="0" step="0.1" oninput="renderSewaBeli()" style="margin-bottom:0"></div>
+      <div><label style="font-size:9px;color:#7A5D1F">Return Investasi Alternatif (%/tahun)</label><input class="inp" id="swInvestasi" type="number" value="8" min="0" step="0.1" oninput="renderSewaBeli()" style="margin-bottom:0"></div>
+      <div style="grid-column:1/-1"><label style="font-size:9px;color:#7A5D1F">Durasi Simulasi (tahun)</label><input class="inp" id="swHorizon" type="number" value="15" min="1" oninput="renderSewaBeli()" style="margin-bottom:0"></div>
+    </div>
+  </div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Hasil Simulasi</div>
+    <div id="sewaBeliResult"></div>
+  </div>
+</div>
+
 <!-- INVESTOR DASHBOARD -->
 <div class="section" id="secInvestorDashboard">
   <div class="sec-title">👥 Investor Dashboard</div>
@@ -1640,6 +1663,7 @@ const SEARCH_MENU=[
   {id:'secAlokasiDana', icon:'🥧', label:'Alokasi Dana (Allocation & Goals)', desc:'Bagi dana hasil WD ke kebutuhan harian, investasi, tabungan, hiburan', kw:'alokasi dana allocation goals budgeting pie chart kebutuhan harian investasi tabungan darurat hiburan'},
   {id:'secDanaDarurat', icon:'🚨', label:'Dana Darurat & Skor Kesehatan Finansial', desc:'Runway dana darurat dan skor kesehatan finansial A-D', kw:'dana darurat emergency fund skor kesehatan finansial financial health score rasio'},
   {id:'secFINumber', icon:'🎯', label:'Financial Independence (FI) Number', desc:'Modal yang dibutuhkan agar profit bulanan menutup biaya hidup', kw:'financial independence fi number kebebasan finansial simulasi proyeksi target modal pensiun dini'},
+  {id:'secSewaBeli', icon:'🏠', label:'What-If: Sewa vs Beli Properti', desc:'Kalkulator perbandingan sewa vs beli properti dengan KPR', kw:'sewa vs beli properti rumah kpr kalkulator what if scenario cicilan dp uang muka apresiasi kekayaan bersih rent buy'},
   {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow'},
   {id:'secPortofolioInvestasi', icon:'📊', label:'Investment Portfolio Dashboard', desc:'Breakdown investasi saham, reksadana, deposito, properti di luar MT4', kw:'investment portfolio dashboard investasi saham reksadana deposito properti tanah obligasi sun breakdown portofolio'},
   {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio riwayat transaksi aset beli jual saham properti tracker'},
@@ -1849,6 +1873,7 @@ function loadDisqus(){
 // ══ INIT ══
 window.onload=async()=>{
   applyThemeIcon();
+  renderSewaBeli();
   try{
     await api('saldo_harian?limit=1');
     hide('loading');
@@ -3276,6 +3301,84 @@ function renderFINumber(){
         ? `<div style="text-align:center;font-size:11px;color:#C8A84B">Estimasi ${estBulan.toFixed(0)} bulan lagi (± ${(estBulan/12).toFixed(1)} tahun) untuk mencapai FI Number, dengan asumsi rata-rata return bulanan tetap konsisten.</div>`
         : '')}
     <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">⚠️ Estimasi berdasarkan performa historis, BUKAN jaminan. Return trading berfluktuasi dan bisa saja negatif di periode tertentu.</div>`;
+}
+
+// ══ WHAT-IF: SEWA VS BELI PROPERTI ══
+// Membandingkan kekayaan bersih di akhir periode simulasi: BELI (equity properti - sisa utang)
+// vs SEWA (DP + selisih cicilan-sewa diinvestasikan di instrumen lain).
+function renderSewaBeli(){
+  const el=document.getElementById('sewaBeliResult');
+  if(!el)return;
+  const g=id=>parseFloat(document.getElementById(id).value)||0;
+
+  const harga=g('swHarga'), dpPct=g('swDp'), bungaPct=g('swBunga'), tenorTahun=Math.max(1,g('swTenor')),
+        sewaAwal=g('swSewa'), kenaikanSewaPct=g('swKenaikanSewa'), apresiasiPct=g('swApresiasi'),
+        investasiPct=g('swInvestasi'), horizonTahun=Math.max(1,g('swHorizon'));
+
+  if(harga<=0){ el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Isi harga properti dulu.</div>'; return; }
+
+  // ── Skenario BELI ──
+  const dp=harga*(dpPct/100);
+  const pinjaman=harga-dp;
+  const rBulanan=bungaPct/100/12;
+  const nBulanTenor=tenorTahun*12;
+  const cicilan = rBulanan>0
+    ? pinjaman*rBulanan*Math.pow(1+rBulanan,nBulanTenor)/(Math.pow(1+rBulanan,nBulanTenor)-1)
+    : pinjaman/nBulanTenor;
+
+  const nBulanHorizon=horizonTahun*12;
+  const bulanBayar=Math.min(nBulanHorizon,nBulanTenor);
+  const totalCicilanDibayar=cicilan*bulanBayar;
+  const sisaPinjaman = bulanBayar>=nBulanTenor ? 0 :
+    pinjaman*(Math.pow(1+rBulanan,nBulanTenor)-Math.pow(1+rBulanan,bulanBayar))/(Math.pow(1+rBulanan,nBulanTenor)-1);
+  const nilaiPropertiAkhir=harga*Math.pow(1+apresiasiPct/100, horizonTahun);
+  const equityBeli=nilaiPropertiAkhir-sisaPinjaman;
+  const totalKeluarBeli=dp+totalCicilanDibayar;
+
+  // ── Skenario SEWA + Investasi ──
+  const nilaiDpInvestasi=dp*Math.pow(1+investasiPct/100, horizonTahun);
+  let totalInvestasiSelisih=0, totalSewaDibayar=0;
+  for(let t=1;t<=horizonTahun;t++){
+    const sewaBulanTahunT=sewaAwal*Math.pow(1+kenaikanSewaPct/100, t-1);
+    totalSewaDibayar+=sewaBulanTahunT*12;
+    const cicilanTahunT = (t*12)<=nBulanTenor ? cicilan : 0; // KPR sudah lunas setelah tenor
+    const diffTahunan=(cicilanTahunT-sewaBulanTahunT)*12;
+    totalInvestasiSelisih += diffTahunan*Math.pow(1+investasiPct/100, horizonTahun-t);
+  }
+  const netWorthSewa=nilaiDpInvestasi+totalInvestasiSelisih;
+
+  const beliMenang=equityBeli>=netWorthSewa;
+  const selisih=Math.abs(equityBeli-netWorthSewa);
+
+  el.innerHTML=`
+    <div style="text-align:center;padding:10px 0 16px 0">
+      <div style="font-size:13px;font-weight:800;color:${beliMenang?'#4ADE80':'#60A5FA'}">${beliMenang?'🏠 BELI lebih menguntungkan':'🏢 SEWA + Investasi lebih menguntungkan'}</div>
+      <div style="font-size:10px;color:#7A5D1F;margin-top:2px">Selisih kekayaan bersih ${fc(selisih)} setelah ${horizonTahun} tahun</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="bal-box" style="background:${beliMenang?'var(--bg3)':'var(--bg2)'};border:${beliMenang?'1px solid #B8860B':'none'}">
+        <div class="bal-box-val" style="font-size:15px;color:#4ADE80">${fc(equityBeli)}</div>
+        <div class="bal-box-lbl">🏠 Kekayaan bila BELI</div>
+      </div>
+      <div class="bal-box" style="background:${!beliMenang?'var(--bg3)':'var(--bg2)'};border:${!beliMenang?'1px solid #B8860B':'none'}">
+        <div class="bal-box-val" style="font-size:15px;color:#60A5FA">${fc(netWorthSewa)}</div>
+        <div class="bal-box-lbl">🏢 Kekayaan bila SEWA+Investasi</div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#8A6B26;margin-bottom:6px">Rincian BELI:</div>
+    <div style="font-size:10px;color:#7A5D1F;line-height:1.9;margin-bottom:10px">
+      Cicilan bulanan: <b style="color:#C8A84B">${fc(cicilan)}</b><br>
+      Total dibayar (DP + cicilan ${horizonTahun} tahun): ${fc(totalKeluarBeli)}<br>
+      Sisa utang di akhir tahun ke-${horizonTahun}: ${fc(sisaPinjaman)}<br>
+      Estimasi nilai properti akhir: ${fc(nilaiPropertiAkhir)}
+    </div>
+    <div style="font-size:10px;color:#8A6B26;margin-bottom:6px">Rincian SEWA:</div>
+    <div style="font-size:10px;color:#7A5D1F;line-height:1.9">
+      Total sewa dibayar ${horizonTahun} tahun: ${fc(totalSewaDibayar)}<br>
+      DP diinvestasikan jadi: ${fc(nilaiDpInvestasi)}<br>
+      Selisih cicilan-sewa yang diinvestasikan jadi: ${fc(totalInvestasiSelisih)}
+    </div>
+    <div style="font-size:9px;color:#5C4818;margin-top:12px;text-align:center">⚠️ Simulasi edukatif berdasarkan asumsi tetap (apresiasi, kenaikan sewa, return investasi konstan). Kondisi pasar nyata bisa sangat berbeda — bukan saran keuangan/properti profesional.</div>`;
 }
 
 // ══ RISK METER (Current Drawdown + Risk of Ruin + Risk per Trade, dalam 1 tampilan) ══
