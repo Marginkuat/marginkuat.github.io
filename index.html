@@ -1218,6 +1218,20 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
+<!-- LAPORAN BULANAN "KEUANGAN SAYA" -->
+<div class="section" id="secKeuanganSaya">
+  <div class="sec-title">🧾 Laporan Bulanan "Keuangan Saya"</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Ringkasan sederhana: (Modal Pribadi + Profit MT4) − Pengeluaran (Kebutuhan + Cicilan) = Tabungan bulan itu. Dihitung otomatis dari catatan Aliran Uang.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <button class="cal-nav-btn" onclick="lapSayaPrev()">‹</button>
+      <div id="lapSayaLabel" style="font-size:14px;font-weight:700;color:#D4AF37">-</div>
+      <button class="cal-nav-btn" onclick="lapSayaNext()">›</button>
+    </div>
+    <div id="lapSayaContent"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+  </div>
+</div>
+
 <!-- PROFIT PER BULAN -->
 <div class="section" id="secProfitBulanan">
   <div class="sec-title">📊 Profit Per Bulan</div>
@@ -1411,6 +1425,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
         <option value="utilitas">🟡 Listrik / Pulsa / Utilitas</option>
         <option value="kesehatan">🔵 Kesehatan</option>
         <option value="gaya_hidup">🟣 Gaya Hidup</option>
+        <option value="cicilan_utang">💳 Cicilan Utang</option>
       </optgroup>
       <optgroup label="💼 OPERASIONAL (Trading, terpisah dari Kas)">
         <option value="profit_trading">📈 Profit Trading (auto-sync harian)</option>
@@ -1629,6 +1644,7 @@ const SEARCH_MENU=[
   {id:'secPortofolioInvestasi', icon:'📊', label:'Investment Portfolio Dashboard', desc:'Breakdown investasi saham, reksadana, deposito, properti di luar MT4', kw:'investment portfolio dashboard investasi saham reksadana deposito properti tanah obligasi sun breakdown portofolio'},
   {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio riwayat transaksi aset beli jual saham properti tracker'},
   {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf'},
+  {id:'secKeuanganSaya', icon:'🧾', label:'Laporan Bulanan Keuangan Saya', desc:'Ringkasan modal pribadi + profit MT4 dikurangi pengeluaran = tabungan', kw:'laporan bulanan keuangan saya gaji profit pengeluaran cicilan tabungan periodic financial report'},
   {id:'secProfitBulanan', icon:'📊', label:'Profit Per Bulan', desc:'Daftar total profit tiap bulan', kw:'profit per bulan bulanan'},
   {id:'secEksporBulanan', icon:'📁', label:'Ekspor Laporan Bulanan', desc:'Download catatan harian per bulan', kw:'ekspor export laporan bulanan csv pdf'},
   {id:'secJournal', icon:'🎨', label:'Trading Journal Visual', desc:'Visualisasi titik profit/loss harian', kw:'trading journal visual jurnal'},
@@ -2353,6 +2369,7 @@ const kategoriMeta={
   utilitas:{label:'Listrik / Pulsa / Utilitas', color:'#EAB308', dot:'🟡', grup:'pribadi'},
   kesehatan:{label:'Kesehatan', color:'#60A5FA', dot:'🔵', grup:'pribadi'},
   gaya_hidup:{label:'Gaya Hidup', color:'#C084FC', dot:'🟣', grup:'pribadi'},
+  cicilan_utang:{label:'Cicilan Utang', color:'#FF8080', dot:'💳', grup:'pribadi'},
   // 🏢 OPERASIONAL BISNIS — dipakai kalau skala akun ini sudah besar (ada investor/karyawan)
   gaji_karyawan:{label:'Gaji Karyawan', color:'#F97316', dot:'👤', grup:'bisnis'},
   listrik_kantor:{label:'Listrik Kantor', color:'#F97316', dot:'💡', grup:'bisnis'},
@@ -2976,6 +2993,7 @@ function renderWdSection(){
   renderAlokasiDana();
   renderDanaDarurat();
   renderFINumber();
+  renderLapSaya();
 }
 
 // ══ ALOKASI DANA (ALLOCATION & GOALS) ══
@@ -3064,7 +3082,7 @@ function renderAlokasiDana(){
 // ══ EMERGENCY FUND & FINANCIAL HEALTH SCORE ══
 // Rata-rata pengeluaran pribadi per bulan (dari kategori kebutuhan pribadi di Aliran Uang)
 function getRataRataPengeluaranPribadiBulanan(){
-  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'];
+  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang'];
   const rows=(allKasData||[]).filter(r=>BEBAN_PRIBADI.includes(r.kategori));
   if(!rows.length) return {rata:0, adaData:false};
   const byMonth={};
@@ -3076,6 +3094,43 @@ function getRataRataPengeluaranPribadiBulanan(){
   const months=Object.keys(byMonth);
   const total=months.reduce((s,k)=>s+byMonth[k],0);
   return {rata: months.length?total/months.length:0, adaData:true};
+}
+
+// ══ LAPORAN BULANAN "KEUANGAN SAYA" ══
+// (Modal Pribadi + Profit MT4 yang ditarik) − Pengeluaran (Kebutuhan + Cicilan) = Tabungan bulan itu.
+let lapSayaYear=new Date().getFullYear(), lapSayaMonth=new Date().getMonth();
+function lapSayaPrev(){ lapSayaMonth--; if(lapSayaMonth<0){lapSayaMonth=11;lapSayaYear--;} renderLapSaya(); }
+function lapSayaNext(){ lapSayaMonth++; if(lapSayaMonth>11){lapSayaMonth=0;lapSayaYear++;} renderLapSaya(); }
+function renderLapSaya(){
+  const labelEl=document.getElementById('lapSayaLabel');
+  const contentEl=document.getElementById('lapSayaContent');
+  if(!contentEl)return;
+  if(labelEl) labelEl.textContent=bulanNamaFull[lapSayaMonth]+' '+lapSayaYear;
+
+  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang'];
+  const rows=(allKasData||[]).filter(r=>{
+    const d=new Date(r.tanggal);
+    return d.getFullYear()===lapSayaYear && d.getMonth()===lapSayaMonth;
+  });
+
+  if(!rows.length){
+    contentEl.innerHTML=`<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada catatan Aliran Uang di bulan ini.</div>`;
+    return;
+  }
+
+  const modalPribadi=rows.filter(r=>r.kategori==='gaji').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const profitMt4=rows.filter(r=>r.kategori==='wd_trading').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const pengeluaran=rows.filter(r=>BEBAN_PRIBADI.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const totalMasuk=modalPribadi+profitMt4;
+  const tabungan=totalMasuk-pengeluaran;
+
+  contentEl.innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#60A5FA">💰 Modal Pribadi</span><span style="color:#60A5FA">+${fc(modalPribadi)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#4ADE80">📈 Profit MT4 (ditarik)</span><span style="color:#4ADE80">+${fc(profitMt4)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px dashed var(--border);margin-top:2px;font-weight:700"><span style="color:#8A6B26">Total Dana Masuk</span><span style="color:#D4AF37">${fc(totalMasuk)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;margin-top:8px"><span style="color:#F87171">🧾 Pengeluaran (Kebutuhan + Cicilan)</span><span style="color:#F87171">-${fc(pengeluaran)}</span></div>
+    <div class="bal-box" style="background:var(--bg2);margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${tabungan>=0?'#4ADE80':'#F87171'}">${tabungan>=0?'+':''}${fc(tabungan)}</div><div class="bal-box-lbl">💵 TABUNGAN BULAN INI = Dana Masuk − Pengeluaran</div></div>
+    <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">Modal Pribadi & Profit MT4 dihitung dari kategori "Modal Pribadi" dan "Profit MT4" di Aliran Uang. Pengeluaran dari kategori Belanja/Utilitas/Kesehatan/Gaya Hidup/Cicilan Utang.</div>`;
 }
 // Rata-rata profit trading per bulan (dari Saldo Harian)
 function getRataRataProfitBulanan(){
@@ -4457,7 +4512,7 @@ function renderLabaRugi(wrap){
   const modalInvestorBulanIni=rowsKas.filter(r=>r.kategori==='modal_investor').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const modalDisetorBulanIni=modalPribadiBulanIni+modalInvestorBulanIni;
   const profitTradingCent=rowsTrading.reduce((s,r)=>s+parseFloat(r.profit||0),0);
-  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup'];
+  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang'];
   const BEBAN_BISNIS=['gaji_karyawan','listrik_kantor','internet_kantor','air_kantor','sewa_kantor','operasional_lain'];
   const bebanPribadiCent=rowsKas.filter(r=>BEBAN_PRIBADI.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const bebanBisnisCent=rowsKas.filter(r=>BEBAN_BISNIS.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
