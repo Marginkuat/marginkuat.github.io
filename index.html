@@ -1457,16 +1457,17 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
         <option value="modal_investor">🤝 Modal Investor</option>
         <option value="wd_trading">📈 Profit MT4</option>
       </optgroup>
-      <optgroup label="⬇️ UANG KELUAR (diambil dari saldo MT4)">
-        <option value="kebutuhan_pokok">🔴 Belanja / Kebutuhan Pokok</option>
-        <option value="utilitas">🟡 Listrik / Pulsa / Utilitas</option>
-        <option value="kesehatan">🔵 Kesehatan</option>
-        <option value="gaya_hidup">🟣 Gaya Hidup</option>
+      <optgroup label="⬇️ UANG KELUAR — DIPAKAI HABIS (beban, mengurangi kekayaan)">
+        <option value="kebutuhan_harian">🔴 Kebutuhan Harian (belanja, listrik, air, wifi, pulsa)</option>
+        <option value="kesehatan">🔵 Kesehatan (obat-obatan)</option>
+        <option value="gaya_hidup">🟣 Hiburan / Gaya Hidup</option>
         <option value="cicilan_utang">💳 Cicilan Utang</option>
         <option value="sewa_bayar">🏠 Sewa Dibayar (bukan aset)</option>
       </optgroup>
-      <optgroup label="🏗️ JADI ASET (bukan beban — otomatis ke Neraca)">
-        <option value="beli_aset">🏗️ Beli Aset (Kendaraan/Properti/Tanah/dll)</option>
+      <optgroup label="🏗️ UANG KELUAR — JADI MILIK SENDIRI (bukan beban, otomatis tercatat)">
+        <option value="dana_darurat">🚨 Dana Darurat (ditabung)</option>
+        <option value="investasi">📊 Investasi (Saham/Deposito/SBN/Tabungan)</option>
+        <option value="beli_aset">🏗️ Beli Aset Fisik (Kendaraan/Properti/Tanah)</option>
       </optgroup>
       <optgroup label="💼 OPERASIONAL (Trading, terpisah dari Kas)">
         <option value="profit_trading">📈 Profit Trading (auto-sync harian)</option>
@@ -2410,14 +2411,23 @@ const kategoriMeta={
   // Kategori legacy di bawah ini TIDAK lagi tersedia di form, hanya dipertahankan supaya data lama tetap terbaca benar.
   modal_mt4:{label:'Setoran Modal ke MT4 (legacy)', color:'#60A5FA', dot:'💰', grup:'modal'},
   pendapatan:{label:'Pendapatan Lain (legacy)', color:'#4ADE80', dot:'🟢', grup:'pribadi'},
-  kebutuhan_pokok:{label:'Belanja / Kebutuhan Pokok', color:'#F87171', dot:'🔴', grup:'pribadi'},
-  utilitas:{label:'Listrik / Pulsa / Utilitas', color:'#EAB308', dot:'🟡', grup:'pribadi'},
-  kesehatan:{label:'Kesehatan', color:'#60A5FA', dot:'🔵', grup:'pribadi'},
-  gaya_hidup:{label:'Gaya Hidup', color:'#C084FC', dot:'🟣', grup:'pribadi'},
+  kebutuhan_pokok:{label:'Belanja / Kebutuhan Pokok (legacy)', color:'#F87171', dot:'🔴', grup:'pribadi'},
+  utilitas:{label:'Listrik / Pulsa / Utilitas (legacy)', color:'#EAB308', dot:'🟡', grup:'pribadi'},
+  // ── KATEGORI PENGGUNAAN PROFIT MT4 (uang keluar dari saldo MT4) ──
+  // "kebutuhan_harian" = gabungan belanja pokok + utilitas: pulsa, listrik, air, wifi, beras, minyak, lauk-pauk.
+  kebutuhan_harian:{label:'Kebutuhan Harian (belanja, listrik, air, wifi, pulsa)', color:'#F87171', dot:'🔴', grup:'pribadi'},
+  kesehatan:{label:'Kesehatan (obat-obatan)', color:'#60A5FA', dot:'🔵', grup:'pribadi'},
+  // "dana_darurat" = profit yang SENGAJA ditabung buat cadangan darurat — BUKAN beban, uangnya
+  // tetap milik kita, cuma dipisah biar nggak kepakai kebutuhan lain.
+  dana_darurat:{label:'Dana Darurat (ditabung, bukan beban)', color:'#FFD700', dot:'🚨', grup:'pribadi'},
+  // "investasi" = profit yang dibelikan instrumen investasi (saham/deposito/SBN/tabungan investasi) —
+  // BUKAN beban, otomatis tercatat juga ke Portofolio Saham / Daftar Aset (Neraca).
+  investasi:{label:'Investasi (Saham/Deposito/SBN/Tabungan)', color:'#4ADE80', dot:'📊', grup:'pribadi'},
+  gaya_hidup:{label:'Hiburan / Gaya Hidup', color:'#C084FC', dot:'🟣', grup:'pribadi'},
   cicilan_utang:{label:'Cicilan Utang', color:'#FF8080', dot:'💳', grup:'pribadi'},
-  // "beli_aset" = profit yang dibelikan aset (kendaraan/properti/saham/dll) — BUKAN beban, uangnya
+  // "beli_aset" = profit yang dibelikan aset fisik (kendaraan/properti/tanah/dll) — BUKAN beban, uangnya
   // berubah bentuk jadi aset, otomatis dicatat juga ke Daftar Aset (Neraca) supaya jejaknya nyambung.
-  beli_aset:{label:'Beli Aset (Kendaraan/Properti/dll)', color:'#34D399', dot:'🏗️', grup:'pribadi'},
+  beli_aset:{label:'Beli Aset Fisik (Kendaraan/Properti/Tanah)', color:'#34D399', dot:'🏗️', grup:'pribadi'},
   // "sewa_bayar" = uang keluar buat SEWA (ruko/rumah/dll) — ini beban murni, BUKAN aset,
   // karena uangnya nggak balik jadi milik kita.
   sewa_bayar:{label:'Sewa Dibayar (bukan aset)', color:'#FB923C', dot:'🏠', grup:'pribadi'},
@@ -2644,6 +2654,40 @@ async function simpanKas(){
         toast('✅ Aset "'+namaAset+'" otomatis tercatat di Neraca — terhubung dari transaksi profit ini');
       }else{
         toast('⚠️ Transaksi tersimpan tapi aset belum dicatat — tambahkan manual di Neraca kalau perlu');
+      }
+    }
+
+    // ── AUTO-LINK: kalau kategori "Investasi", tanya jenisnya — Saham masuk ke Dashboard Portofolio
+    // Saham (lot/harga), selain saham masuk ke Daftar Aset generik (Deposito/SBN/Tabungan Investasi).
+    if(kategori==='investasi'){
+      const nilaiRupiah=Math.round(jumlah/100*K);
+      const jenis=confirm(`Investasi senilai ${fc(jumlah)} (≈Rp ${nilaiRupiah.toLocaleString('id-ID')}) ini buat apa?\n\nOK = Saham (lot/harga per lembar)\nCancel = Selain saham (Deposito/SBN/Tabungan Investasi)`);
+      if(jenis){
+        const kode=prompt('Kode saham (contoh: BBCA, BBRI):');
+        if(kode){
+          const lotStr=prompt(`Jumlah lot ${kode.toUpperCase()} (1 lot = ${LOT_SIZE} lembar):`, '1');
+          const lot=parseFloat(lotStr);
+          if(!isNaN(lot)&&lot>0){
+            const hargaBeli=Math.round(nilaiRupiah/(lot*LOT_SIZE));
+            const listSaham=getPortofolioSaham();
+            listSaham.push({kode:kode.trim().toUpperCase(), lot, hargaBeli, hargaPasar:hargaBeli, updatedAt:tgl});
+            savePortofolioSaham(listSaham);
+            toast('✅ '+kode.toUpperCase()+' otomatis tercatat di Dashboard Portofolio Saham');
+          }else{
+            toast('⚠️ Transaksi tersimpan tapi saham belum dicatat — tambahkan manual di Dashboard Portofolio Saham');
+          }
+        }
+      }else{
+        const namaInvestasi=prompt(`Nama instrumen investasi (contoh: Deposito BCA, SBN Ritel, Reksadana Pasar Uang):`);
+        if(namaInvestasi){
+          const listAset=getAsetLain();
+          listAset.push({nama:namaInvestasi, jumlah:nilaiRupiah, tipe:'lancar'});
+          localStorage.setItem('mk_aset_lain', JSON.stringify(listAset));
+          catatRiwayatAset({tanggal:tgl, nama:namaInvestasi, jumlah:nilaiRupiah, aksi:'beli'});
+          toast('✅ "'+namaInvestasi+'" otomatis tercatat di Neraca');
+        }else{
+          toast('⚠️ Transaksi tersimpan tapi investasi belum dicatat — tambahkan manual di Neraca kalau perlu');
+        }
       }
     }
 
@@ -3153,7 +3197,7 @@ function renderAlokasiDana(){
 // ══ EMERGENCY FUND & FINANCIAL HEALTH SCORE ══
 // Rata-rata pengeluaran pribadi per bulan (dari kategori kebutuhan pribadi di Aliran Uang)
 function getRataRataPengeluaranPribadiBulanan(){
-  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'beli_aset' SENGAJA tidak dimasukkan — uangnya jadi aset, bukan hilang
+  const BEBAN_PRIBADI=['kebutuhan_harian','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'dana_darurat', 'investasi', 'beli_aset' SENGAJA tidak dimasukkan — uangnya tetap jadi milik sendiri, bukan hilang
   const rows=(allKasData||[]).filter(r=>BEBAN_PRIBADI.includes(r.kategori));
   if(!rows.length) return {rata:0, adaData:false};
   const byMonth={};
@@ -3178,7 +3222,7 @@ function renderLapSaya(){
   if(!contentEl)return;
   if(labelEl) labelEl.textContent=bulanNamaFull[lapSayaMonth]+' '+lapSayaYear;
 
-  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'beli_aset' SENGAJA tidak dimasukkan — uangnya jadi aset, bukan hilang
+  const BEBAN_PRIBADI=['kebutuhan_harian','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'dana_darurat', 'investasi', 'beli_aset' SENGAJA tidak dimasukkan — uangnya tetap jadi milik sendiri, bukan hilang
   const rows=(allKasData||[]).filter(r=>{
     const d=new Date(r.tanggal);
     return d.getFullYear()===lapSayaYear && d.getMonth()===lapSayaMonth;
@@ -3222,10 +3266,16 @@ function renderDanaDarurat(){
   const skorEl=document.getElementById('skorKesehatanBox');
   if(!el||!skorEl)return;
 
+  // ── Prioritaskan data NYATA (transaksi ditandai kategori "Dana Darurat"). ──
+  // Kalau belum ada transaksi yang ditandai begitu, jatuh ke estimasi dari porsi Alokasi Dana.
+  const rowsDanaDarurat=(allKasData||[]).filter(r=>r.kategori==='dana_darurat');
+  const nyataDanaDarurat=rowsDanaDarurat.reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const pakaiDataNyata=rowsDanaDarurat.length>0;
+
   const persen=getAlokasiPersen();
   const wdData=getWdProfitPerHari();
   const totalWd=wdData.reduce((s,d)=>s+d.wd,0);
-  const danaDarurat=totalWd*(persen.tabungan/100);
+  const danaDarurat = pakaiDataNyata ? nyataDanaDarurat : totalWd*(persen.tabungan/100);
 
   const {rata:pengeluaranBulanan, adaData:adaPengeluaran}=getRataRataPengeluaranPribadiBulanan();
   const bulanCukup = (adaPengeluaran && pengeluaranBulanan>0.01) ? (danaDarurat/pengeluaranBulanan) : null;
@@ -3233,12 +3283,13 @@ function renderDanaDarurat(){
   el.innerHTML=`
     <div class="bal-box" style="background:var(--bg3);border:1px solid #B8860B;margin-bottom:8px">
       <div class="bal-box-val" style="font-size:22px;color:#FFD700">${fc(danaDarurat)}</div>
-      <div class="bal-box-lbl">🏦 Dana Darurat Tersedia (porsi Tabungan/Darurat)</div>
+      <div class="bal-box-lbl">🏦 Dana Darurat Tersedia ${pakaiDataNyata?'(dari transaksi bertanda "Dana Darurat")':'(estimasi porsi Tabungan/Darurat)'}</div>
     </div>
     <div class="bal-box" style="background:var(--bg2)">
       <div class="bal-box-val" style="font-size:18px;color:${bulanCukup===null?'#7A5D1F':(bulanCukup>=6?'#4ADE80':bulanCukup>=3?'#EAB308':'#F87171')}">${bulanCukup===null?'Belum ada data pengeluaran':bulanCukup.toFixed(1)+' bulan'}</div>
       <div class="bal-box-lbl">Dana darurat cukup untuk berapa lama${adaPengeluaran?` (rata-rata pengeluaran ${fc(pengeluaranBulanan)}/bulan)`:''}</div>
     </div>
+    ${!pakaiDataNyata?'<div style="font-size:9px;color:#5C4818;margin-top:6px;text-align:center">💡 Tandai transaksi WD dengan kategori "🚨 Dana Darurat" di Aliran Uang biar angka ini akurat dari data asli, bukan estimasi.</div>':''}
     ${!adaPengeluaran?'<div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">Belum ada catatan pengeluaran pribadi (Belanja/Utilitas/Kesehatan/Gaya Hidup) di Aliran Uang, jadi estimasi bulan belum bisa dihitung.</div>':''}`;
 
   // ── SKOR KESEHATAN FINANSIAL (A–D) ──
@@ -4791,7 +4842,7 @@ function renderLabaRugi(wrap){
   const modalInvestorBulanIni=rowsKas.filter(r=>r.kategori==='modal_investor').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const modalDisetorBulanIni=modalPribadiBulanIni+modalInvestorBulanIni;
   const profitTradingCent=rowsTrading.reduce((s,r)=>s+parseFloat(r.profit||0),0);
-  const BEBAN_PRIBADI=['kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'beli_aset' SENGAJA tidak dimasukkan — uangnya jadi aset, bukan hilang
+  const BEBAN_PRIBADI=['kebutuhan_harian','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'dana_darurat', 'investasi', 'beli_aset' SENGAJA tidak dimasukkan — uangnya tetap jadi milik sendiri, bukan hilang
   const BEBAN_BISNIS=['gaji_karyawan','listrik_kantor','internet_kantor','air_kantor','sewa_kantor','operasional_lain'];
   const bebanPribadiCent=rowsKas.filter(r=>BEBAN_PRIBADI.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const bebanBisnisCent=rowsKas.filter(r=>BEBAN_BISNIS.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
