@@ -2652,11 +2652,11 @@ async function syncAllHistoricalKas(){
 }
 async function fetchAllKasData(){
   try{
-    allKasData=await api('kas_pribadi?select=tanggal,dari,ke,jumlah,keterangan,kategori&order=tanggal.asc');
+    allKasData=await api('kas_pribadi?select=id,tanggal,dari,ke,jumlah,keterangan,kategori&order=tanggal.asc');
     hasKategoriCol=true;
   }catch(e1){
     try{
-      allKasData=await api('kas_pribadi?select=tanggal,dari,ke,jumlah,keterangan&order=tanggal.asc');
+      allKasData=await api('kas_pribadi?select=id,tanggal,dari,ke,jumlah,keterangan&order=tanggal.asc');
       allKasData=allKasData.map(r=>({...r,kategori:null}));
       hasKategoriCol=false;
     }catch(e2){
@@ -3625,9 +3625,88 @@ function renderRekeningKategori(){
           <div style="font-size:11px;color:#C8A84B">${fd(r.tanggal)} ${r.tipe==='setor' ? (r.dari?`— <span style="color:#8A6B26">dari ${r.dari}</span>`:'') : (r.ke?`— <span style="color:#8A6B26">buat ${r.ke}</span>`:'')}</div>
           ${r.keterangan?`<div style="font-size:9px;color:#5C4818">${r.keterangan}</div>`:''}
         </div>
-        <span style="font-size:12px;font-weight:700;color:${r.tipe==='setor'?'#4ADE80':'#F87171'}">${r.tipe==='setor'?'+':'-'}${fc(r.jumlah)}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;font-weight:700;color:${r.tipe==='setor'?'#4ADE80':'#F87171'}">${r.tipe==='setor'?'+':'-'}${fc(r.jumlah)}</span>
+          ${isAdmin && r.id!=null ? `<span onclick="editRekKatEntry(${r.id})" style="cursor:pointer;font-size:11px" title="Edit">✏️</span><span onclick="hapusRekKatEntry(${r.id})" style="cursor:pointer;font-size:11px" title="Hapus">🗑️</span>` : ''}
+        </div>
       </div>`).join('') + (rows.length>15?`<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">...dan ${rows.length-15} transaksi lainnya</div>`:'')
     : `<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:11px">Belum ada transaksi di ${cfg.label} — mulai setor pertama kamu di atas 👆</div>`;
+}
+// ── EDIT / HAPUS transaksi Rekening per Kategori satuan ──
+// Ini cuma ubah/hapus 1 baris di kas_pribadi (Setor/Pakai kantong), TIDAK menyentuh Saldo Harian
+// (Laporan Harian) sama sekali — aman dipakai buat benerin salah input tanpa takut data trading hilang.
+function hapusRekKatEntry(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const row=(allKasData||[]).find(r=>r.id===id);
+  if(!row){toast('❌ Data tidak ditemukan');return;}
+  if(!confirm(`Hapus transaksi ${fc(row.jumlah)} tanggal ${fd(row.tanggal)}? Ini cuma hapus catatan kantong ini, gak menyentuh Saldo Harian/Laporan Harian.`)) return;
+  (async()=>{
+    try{
+      await api(`kas_pribadi?id=eq.${id}`,'DELETE');
+      toast('✅ Transaksi dihapus');
+      await fetchAllKasData();
+      renderWdSection();
+      renderKasRingkasan();
+      renderKasRekap();
+      renderKasChart();
+    }catch(e){
+      console.error(e);
+      toast('❌ Gagal hapus: '+(e.message||'').slice(0,150));
+    }
+  })();
+}
+function editRekKatEntry(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const row=(allKasData||[]).find(r=>r.id===id);
+  if(!row){toast('❌ Data tidak ditemukan');return;}
+  const cfg=REKENING_KATEGORI.find(k=>k.depositKat===row.kategori||k.usageKat===row.kategori);
+  const isPakai = cfg && row.kategori===cfg.usageKat;
+
+  const jumlahBaruStr=prompt('Ubah nominal (¢):', row.jumlah);
+  if(jumlahBaruStr===null) return;
+  const jumlahBaru=parseFloat(jumlahBaruStr);
+  if(isNaN(jumlahBaru)||jumlahBaru<=0){toast('❌ Nominal tidak valid');return;}
+
+  const tglBaru=prompt('Ubah tanggal (YYYY-MM-DD):', row.tanggal);
+  if(tglBaru===null) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(tglBaru)){toast('❌ Format tanggal salah, pakai YYYY-MM-DD');return;}
+
+  let dariBaru=row.dari, keBaru=row.ke;
+  if(isPakai){
+    const untukApaBaru=prompt('Ubah "dipakai buat apa":', row.ke);
+    if(untukApaBaru===null) return;
+    if(!untukApaBaru.trim()){toast('❌ Rincian "buat apa" wajib diisi');return;}
+    keBaru=untukApaBaru.trim();
+  }else{
+    const sumberBaru=prompt('Ubah sumber setoran:', row.dari);
+    if(sumberBaru===null) return;
+    if(!sumberBaru.trim()){toast('❌ Sumber setoran wajib diisi');return;}
+    dariBaru=sumberBaru.trim();
+  }
+
+  const ketBaruStr=prompt('Ubah catatan tambahan (opsional, kosongkan kalau tidak ada):', row.keterangan||'');
+  const ketBaru = ketBaruStr===null ? row.keterangan : (ketBaruStr.trim()||null);
+
+  (async()=>{
+    try{
+      await api(`kas_pribadi?id=eq.${id}`,'PATCH',{
+        tanggal: tglBaru,
+        jumlah: parseFloat(jumlahBaru.toFixed(2)),
+        dari: dariBaru,
+        ke: keBaru,
+        keterangan: ketBaru
+      });
+      toast('✅ Transaksi diperbarui');
+      await fetchAllKasData();
+      renderWdSection();
+      renderKasRingkasan();
+      renderKasRekap();
+      renderKasChart();
+    }catch(e){
+      console.error(e);
+      toast('❌ Gagal update: '+(e.message||'').slice(0,150));
+    }
+  })();
 }
 function renderDanaDarurat(){
   const el=document.getElementById('danaDaruratBox');
