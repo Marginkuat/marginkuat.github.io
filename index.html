@@ -1107,32 +1107,49 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="sec-title">🚨 Dana Darurat & Skor Kesehatan Finansial</div>
 
   <div class="graph-card" style="margin-bottom:12px;border:1px solid #B8860B">
-    <div style="font-size:12px;font-weight:700;color:#D4AF37;margin-bottom:6px">🏦 Rekening Dana Darurat</div>
-    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Setiap kali profit MT4 sudah cukup buat ditarik, catat setorannya di sini — otomatis jadi saldo Dana Darurat yang nyata (bukan estimasi lagi).</div>
-    <div id="rekeningDaruratSaldo" style="margin-bottom:12px"></div>
+    <div style="font-size:12px;font-weight:700;color:#D4AF37;margin-bottom:6px">🏦 Rekening per Kategori</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Tiap kategori Alokasi Dana punya "kantong" sendiri — catat kapan uang masuk (Setor) dan kapan dipakai (Pakai, wajib isi buat apa) supaya ada riwayat & rincian yang jelas per kategori.</div>
+
+    <div id="rekKatTabs" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"></div>
+
+    <div id="rekKatSaldo" style="margin-bottom:12px"></div>
+
+    <div id="rekKatModeTabs" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"></div>
+
     <div class="calc-row">
       <div>
-        <label class="lbl">Nominal Setoran (¢)</label>
-        <input class="inp" type="number" id="rekDaruratJumlah" placeholder="Contoh: 200" step="0.01" min="0" style="margin-bottom:0">
+        <label class="lbl" id="rekKatJumlahLbl">Nominal (¢)</label>
+        <input class="inp" type="number" id="rekKatJumlah" placeholder="Contoh: 200" step="0.01" min="0" style="margin-bottom:0">
       </div>
       <div>
         <label class="lbl">Tanggal</label>
-        <input class="inp" type="date" id="rekDaruratTgl" style="margin-bottom:0">
+        <input class="inp" type="date" id="rekKatTgl" style="margin-bottom:0">
       </div>
     </div>
-    <label class="lbl" style="margin-top:10px">Sumber Setoran</label>
-    <select class="inp" id="rekDaruratSumber" onchange="toggleSumberDaruratLainnya()">
-      <option value="Profit MT4 (Trading)">📈 Profit MT4 (Trading)</option>
-      <option value="Profit Jual Saham">📊 Profit Jual Saham</option>
-      <option value="Profit Investasi Lain (Properti/Aset)">🏠 Profit Investasi Lain (Properti/Aset)</option>
-      <option value="__lainnya__">✏️ Lainnya (isi manual)</option>
-    </select>
-    <input class="inp" id="rekDaruratSumberLainnya" placeholder="Tulis sumber setoran, contoh: Bonus / Hadiah / dll" style="display:none">
+
+    <div id="rekKatFieldSetor">
+      <label class="lbl" style="margin-top:10px">Sumber Setoran</label>
+      <select class="inp" id="rekKatSumber" onchange="toggleRekKatSumberLainnya()">
+        <option value="Profit MT4 (Trading)">📈 Profit MT4 (Trading)</option>
+        <option value="Profit Jual Saham">📊 Profit Jual Saham</option>
+        <option value="Profit Investasi Lain (Properti/Aset)">🏠 Profit Investasi Lain (Properti/Aset)</option>
+        <option value="__lainnya__">✏️ Lainnya (isi manual)</option>
+      </select>
+      <input class="inp" id="rekKatSumberLainnya" placeholder="Tulis sumber setoran, contoh: Bonus / Hadiah / dll" style="display:none">
+    </div>
+
+    <div id="rekKatFieldPakai" style="display:none">
+      <label class="lbl" style="margin-top:10px">Dipakai Untuk Apa? (wajib diisi)</label>
+      <input class="inp" id="rekKatUntukApa" placeholder="Contoh: Servis motor / Beli emas / Nonton bioskop">
+    </div>
+
     <label class="lbl" style="margin-top:10px">Catatan Tambahan (opsional)</label>
-    <input class="inp" id="rekDaruratKet" placeholder="Contoh: Setoran dari WD profit Agustus">
-    <button class="btn btn-p" onclick="setorDanaDarurat()" style="margin-top:10px">💾 Setor ke Dana Darurat</button>
-    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-top:16px;margin-bottom:8px">Riwayat Setoran</div>
-    <div id="rekeningDaruratHistory"></div>
+    <input class="inp" id="rekKatKet" placeholder="Catatan tambahan, kalau ada">
+
+    <button class="btn btn-p" id="rekKatSubmitBtn" onclick="simpanRekeningKategori()" style="margin-top:10px">💾 Setor</button>
+
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-top:16px;margin-bottom:8px">Riwayat</div>
+    <div id="rekKatHistory"></div>
   </div>
 
   <div class="graph-card" style="margin-bottom:12px">
@@ -3275,7 +3292,7 @@ function renderWdSection(){
   renderWdChart();
   renderWdVsProfitChart();
   renderAlokasiDana();
-  renderRekeningDarurat();
+  renderRekeningKategori();
   renderDanaDarurat();
   renderFINumber();
   renderLapSaya();
@@ -3410,7 +3427,7 @@ function renderAlokasiDana(){
 // ══ EMERGENCY FUND & FINANCIAL HEALTH SCORE ══
 // Rata-rata pengeluaran pribadi per bulan (dari kategori kebutuhan pribadi di Aliran Uang)
 function getRataRataPengeluaranPribadiBulanan(){
-  const BEBAN_PRIBADI=['kebutuhan_harian','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'dana_darurat', 'investasi', 'beli_aset' SENGAJA tidak dimasukkan — uangnya tetap jadi milik sendiri, bukan hilang
+  const BEBAN_PRIBADI=['kebutuhan_harian','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar','pakai_kebutuhan_harian','pakai_hiburan']; // 'dana_darurat', 'investasi', 'beli_aset', 'pakai_dana_darurat', 'pakai_investasi' SENGAJA tidak dimasukkan — uangnya tetap jadi milik sendiri / realokasi antar kantong, bukan hilang. 'pakai_kebutuhan_harian' & 'pakai_hiburan' DIMASUKKAN karena itu pemakaian nyata (uang beneran keluar/habis).
   const rows=(allKasData||[]).filter(r=>BEBAN_PRIBADI.includes(r.kategori));
   if(!rows.length) return {rata:0, adaData:false};
   const byMonth={};
@@ -3435,7 +3452,7 @@ function renderLapSaya(){
   if(!contentEl)return;
   if(labelEl) labelEl.textContent=bulanNamaFull[lapSayaMonth]+' '+lapSayaYear;
 
-  const BEBAN_PRIBADI=['kebutuhan_harian','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'dana_darurat', 'investasi', 'beli_aset' SENGAJA tidak dimasukkan — uangnya tetap jadi milik sendiri, bukan hilang
+  const BEBAN_PRIBADI=['kebutuhan_harian','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar','pakai_kebutuhan_harian','pakai_hiburan']; // 'dana_darurat', 'investasi', 'beli_aset', 'pakai_dana_darurat', 'pakai_investasi' SENGAJA tidak dimasukkan — uangnya tetap jadi milik sendiri / realokasi antar kantong, bukan hilang. 'pakai_kebutuhan_harian' & 'pakai_hiburan' DIMASUKKAN karena itu pemakaian nyata (uang beneran keluar/habis).
   const rows=(allKasData||[]).filter(r=>{
     const d=new Date(r.tanggal);
     return d.getFullYear()===lapSayaYear && d.getMonth()===lapSayaMonth;
@@ -3475,53 +3492,80 @@ function getRataRataProfitBulanan(){
   return months.length?total/months.length:0;
 }
 
-// ══ REKENING DANA DARURAT (setoran cepat + riwayat) ══
-// Pakai tabel kas_pribadi yang sama (kategori='dana_darurat'), cuma disediakan jalan pintas
-// khusus biar gak perlu isi form Aliran Uang yang panjang tiap kali mau nabung ke dana darurat.
-function toggleSumberDaruratLainnya(){
-  const sel=document.getElementById('rekDaruratSumber');
-  const lainnyaEl=document.getElementById('rekDaruratSumberLainnya');
+// ══ REKENING PER KATEGORI (Setor + Pakai, tiap kategori Alokasi Dana punya "kantong" sendiri) ══
+// Pakai tabel kas_pribadi yang sama — deposit & usage dibedakan lewat kategori, biar gampang
+// dihitung saldo (setor - pakai) dan riwayatnya per kategori, tanpa perlu tabel/koneksi baru.
+const REKENING_KATEGORI=[
+  {key:'dana_darurat',      label:'Tabungan / Darurat',        icon:'🚨', depositKat:'dana_darurat',            usageKat:'pakai_dana_darurat',           color:'#60A5FA'},
+  {key:'kebutuhan_harian',  label:'Kebutuhan Harian',          icon:'🍚', depositKat:'pocket_kebutuhan_harian', usageKat:'pakai_kebutuhan_harian',       color:'#D4AF37'},
+  {key:'investasi',         label:'Investasi (Saham/Properti)',icon:'📊', depositKat:'investasi',               usageKat:'pakai_investasi',              color:'#4ADE80'},
+  {key:'hiburan',           label:'Hiburan',                   icon:'🎉', depositKat:'pocket_hiburan',          usageKat:'pakai_hiburan',                color:'#F87171'}
+];
+let rekKatAktif='dana_darurat';
+let rekKatModeAktif='setor';
+function getRekKatConfig(key){ return REKENING_KATEGORI.find(k=>k.key===key); }
+function pilihRekKat(key){ rekKatAktif=key; renderRekeningKategori(); }
+function pilihRekKatMode(mode){ rekKatModeAktif=mode; renderRekeningKategori(); }
+function toggleRekKatSumberLainnya(){
+  const sel=document.getElementById('rekKatSumber');
+  const lainnyaEl=document.getElementById('rekKatSumberLainnya');
   if(!sel||!lainnyaEl)return;
   lainnyaEl.style.display = sel.value==='__lainnya__' ? '' : 'none';
 }
-async function setorDanaDarurat(){
+function getRekKatRows(key){
+  const cfg=getRekKatConfig(key);
+  const deposits=(allKasData||[]).filter(r=>r.kategori===cfg.depositKat).map(r=>({...r,tipe:'setor'}));
+  const usage=(allKasData||[]).filter(r=>r.kategori===cfg.usageKat).map(r=>({...r,tipe:'pakai'}));
+  return [...deposits, ...usage].sort((a,b)=>new Date(b.tanggal)-new Date(a.tanggal));
+}
+function getRekKatSaldo(key){
+  return getRekKatRows(key).reduce((s,r)=> s + (r.tipe==='setor' ? parseFloat(r.jumlah||0) : -parseFloat(r.jumlah||0)), 0);
+}
+async function simpanRekeningKategori(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
-  const jumlahEl=document.getElementById('rekDaruratJumlah');
-  const tglEl=document.getElementById('rekDaruratTgl');
-  const ketEl=document.getElementById('rekDaruratKet');
-  const sumberEl=document.getElementById('rekDaruratSumber');
-  const sumberLainnyaEl=document.getElementById('rekDaruratSumberLainnya');
+  const cfg=getRekKatConfig(rekKatAktif);
+  const jumlahEl=document.getElementById('rekKatJumlah');
+  const tglEl=document.getElementById('rekKatTgl');
+  const ketEl=document.getElementById('rekKatKet');
   const jumlah=parseFloat(jumlahEl.value)||0;
   const tgl=tglEl.value;
   const ket=ketEl.value.trim();
-  let sumber = sumberEl.value;
-  if(sumber==='__lainnya__'){
-    sumber = sumberLainnyaEl.value.trim();
-    if(!sumber){toast('❌ Isi sumber setoran (Lainnya)');return;}
-  }
-  if(!jumlah){toast('❌ Isi nominal setoran');return;}
+  if(!jumlah){toast('❌ Isi nominal');return;}
   if(!tgl){toast('❌ Isi tanggal');return;}
+
+  let bodyData;
+  if(rekKatModeAktif==='setor'){
+    const sumberEl=document.getElementById('rekKatSumber');
+    const sumberLainnyaEl=document.getElementById('rekKatSumberLainnya');
+    let sumber=sumberEl.value;
+    if(sumber==='__lainnya__'){
+      sumber=sumberLainnyaEl.value.trim();
+      if(!sumber){toast('❌ Isi sumber setoran (Lainnya)');return;}
+    }
+    bodyData={ tanggal:tgl, dari:sumber, ke:cfg.label, jumlah:parseFloat(jumlah.toFixed(2)), keterangan:ket||null, kategori:cfg.depositKat };
+  }else{
+    const untukApaEl=document.getElementById('rekKatUntukApa');
+    const untukApa=untukApaEl.value.trim();
+    if(!untukApa){toast('❌ Isi dipakai buat apa (rincian wajib diisi)');return;}
+    const saldoSaatIni=getRekKatSaldo(rekKatAktif);
+    if(jumlah>saldoSaatIni+0.01){
+      if(!confirm(`Saldo ${cfg.label} cuma ${fc(saldoSaatIni)}, tapi kamu mau pakai ${fc(jumlah)} (saldo bakal minus). Lanjut?`)) return;
+    }
+    bodyData={ tanggal:tgl, dari:cfg.label, ke:untukApa, jumlah:parseFloat(jumlah.toFixed(2)), keterangan:ket||null, kategori:cfg.usageKat };
+  }
+
   try{
-    const bodyData={
-      tanggal: tgl,
-      dari: sumber,
-      ke: 'Dana Darurat',
-      jumlah: parseFloat(jumlah.toFixed(2)),
-      keterangan: ket || null,
-      kategori: 'dana_darurat'
-    };
     try{
       await api('kas_pribadi','POST',bodyData);
     }catch(errKat){
       const { kategori:_drop, ...bodyNoKat } = bodyData;
       await api('kas_pribadi','POST',bodyNoKat);
     }
-    toast('✅ Setoran Dana Darurat tersimpan');
+    toast(rekKatModeAktif==='setor' ? '✅ Setoran tersimpan' : '✅ Pemakaian tercatat');
     jumlahEl.value='';
     ketEl.value='';
-    sumberEl.value='Profit MT4 (Trading)';
-    sumberLainnyaEl.value='';
-    toggleSumberDaruratLainnya();
+    const untukApaEl=document.getElementById('rekKatUntukApa');
+    if(untukApaEl) untukApaEl.value='';
     await fetchAllKasData();
     renderWdSection();
     renderKasRingkasan();
@@ -3529,47 +3573,70 @@ async function setorDanaDarurat(){
     renderKasChart();
   }catch(e){
     console.error(e);
-    toast('❌ Gagal simpan setoran: '+(e.message||'').slice(0,150));
+    toast('❌ Gagal simpan: '+(e.message||'').slice(0,150));
   }
 }
-function renderRekeningDarurat(){
-  const saldoEl=document.getElementById('rekeningDaruratSaldo');
-  const histEl=document.getElementById('rekeningDaruratHistory');
-  if(!saldoEl||!histEl) return;
+function renderRekeningKategori(){
+  const tabsEl=document.getElementById('rekKatTabs');
+  const modeTabsEl=document.getElementById('rekKatModeTabs');
+  const saldoEl=document.getElementById('rekKatSaldo');
+  const histEl=document.getElementById('rekKatHistory');
+  if(!tabsEl||!saldoEl||!histEl) return;
+
+  const cfg=getRekKatConfig(rekKatAktif);
+
+  tabsEl.innerHTML = REKENING_KATEGORI.map(k=>`
+    <button type="button" onclick="pilihRekKat('${k.key}')" style="padding:9px 6px;border-radius:9px;border:1.5px solid ${k.key===rekKatAktif?k.color:'var(--border)'};background:${k.key===rekKatAktif?'var(--bg3)':'var(--bg0)'};color:${k.key===rekKatAktif?k.color:'#7A5D1F'};font-weight:700;font-size:10px;cursor:pointer">${k.icon} ${k.label}</button>
+  `).join('');
+
+  modeTabsEl.innerHTML = `
+    <button type="button" onclick="pilihRekKatMode('setor')" style="padding:9px 6px;border-radius:9px;border:1.5px solid ${rekKatModeAktif==='setor'?'#4ADE80':'var(--border)'};background:${rekKatModeAktif==='setor'?'var(--bg3)':'var(--bg0)'};color:${rekKatModeAktif==='setor'?'#4ADE80':'#7A5D1F'};font-weight:700;font-size:11px;cursor:pointer">➕ Setor</button>
+    <button type="button" onclick="pilihRekKatMode('pakai')" style="padding:9px 6px;border-radius:9px;border:1.5px solid ${rekKatModeAktif==='pakai'?'#F87171':'var(--border)'};background:${rekKatModeAktif==='pakai'?'var(--bg3)':'var(--bg0)'};color:${rekKatModeAktif==='pakai'?'#F87171':'#7A5D1F'};font-weight:700;font-size:11px;cursor:pointer">➖ Pakai</button>
+  `;
+
+  const fieldSetor=document.getElementById('rekKatFieldSetor');
+  const fieldPakai=document.getElementById('rekKatFieldPakai');
+  const jumlahLbl=document.getElementById('rekKatJumlahLbl');
+  const submitBtn=document.getElementById('rekKatSubmitBtn');
+  if(fieldSetor) fieldSetor.style.display = rekKatModeAktif==='setor' ? '' : 'none';
+  if(fieldPakai) fieldPakai.style.display = rekKatModeAktif==='pakai' ? '' : 'none';
+  if(jumlahLbl) jumlahLbl.textContent = rekKatModeAktif==='setor' ? 'Nominal Setoran (¢)' : 'Nominal Dipakai (¢)';
+  if(submitBtn) submitBtn.textContent = rekKatModeAktif==='setor' ? `💾 Setor ke ${cfg.label}` : `💾 Catat Pemakaian ${cfg.label}`;
 
   const d=new Date(), pad=n=>String(n).padStart(2,'0');
-  const tglInput=document.getElementById('rekDaruratTgl');
+  const tglInput=document.getElementById('rekKatTgl');
   if(tglInput && !tglInput.value) tglInput.value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 
-  const rows=(allKasData||[]).filter(r=>r.kategori==='dana_darurat').sort((a,b)=>new Date(b.tanggal)-new Date(a.tanggal));
-  const saldo=rows.reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
-
+  const rows=getRekKatRows(rekKatAktif);
+  const saldo=getRekKatSaldo(rekKatAktif);
+  const jumlahSetor=rows.filter(r=>r.tipe==='setor').length;
+  const jumlahPakai=rows.filter(r=>r.tipe==='pakai').length;
   saldoEl.innerHTML=`
-    <div class="bal-box" style="background:var(--bg3);border:1px solid #B8860B">
-      <div class="bal-box-val" style="font-size:24px;color:#FFD700">${fc(saldo)}</div>
-      <div class="bal-box-lbl">🏦 Saldo Rekening Dana Darurat (${rows.length} setoran)</div>
+    <div class="bal-box" style="background:var(--bg3);border:1px solid ${cfg.color}">
+      <div class="bal-box-val" style="font-size:24px;color:${saldo<0?'#F87171':cfg.color}">${fc(saldo)}</div>
+      <div class="bal-box-lbl">${cfg.icon} Saldo Rekening ${cfg.label} (${jumlahSetor} setoran, ${jumlahPakai} pemakaian)</div>
     </div>`;
 
   histEl.innerHTML = rows.length
     ? rows.slice(0,15).map(r=>`
       <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
         <div>
-          <div style="font-size:11px;color:#C8A84B">${fd(r.tanggal)} ${r.dari?`— <span style="color:#8A6B26">${r.dari}</span>`:''}</div>
+          <div style="font-size:11px;color:#C8A84B">${fd(r.tanggal)} ${r.tipe==='setor' ? (r.dari?`— <span style="color:#8A6B26">dari ${r.dari}</span>`:'') : (r.ke?`— <span style="color:#8A6B26">buat ${r.ke}</span>`:'')}</div>
           ${r.keterangan?`<div style="font-size:9px;color:#5C4818">${r.keterangan}</div>`:''}
         </div>
-        <span style="font-size:12px;font-weight:700;color:#4ADE80">+${fc(r.jumlah)}</span>
-      </div>`).join('') + (rows.length>15?`<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">...dan ${rows.length-15} setoran lainnya</div>`:'')
-    : '<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:11px">Belum ada setoran — mulai setor pertama kamu di atas 👆</div>';
+        <span style="font-size:12px;font-weight:700;color:${r.tipe==='setor'?'#4ADE80':'#F87171'}">${r.tipe==='setor'?'+':'-'}${fc(r.jumlah)}</span>
+      </div>`).join('') + (rows.length>15?`<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">...dan ${rows.length-15} transaksi lainnya</div>`:'')
+    : `<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:11px">Belum ada transaksi di ${cfg.label} — mulai setor pertama kamu di atas 👆</div>`;
 }
 function renderDanaDarurat(){
   const el=document.getElementById('danaDaruratBox');
   const skorEl=document.getElementById('skorKesehatanBox');
   if(!el||!skorEl)return;
 
-  // ── Prioritaskan data NYATA (transaksi ditandai kategori "Dana Darurat"). ──
+  // ── Prioritaskan data NYATA (transaksi Setor/Pakai di Rekening per Kategori — Tabungan/Darurat). ──
   // Kalau belum ada transaksi yang ditandai begitu, jatuh ke estimasi dari porsi Alokasi Dana.
-  const rowsDanaDarurat=(allKasData||[]).filter(r=>r.kategori==='dana_darurat');
-  const nyataDanaDarurat=rowsDanaDarurat.reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const rowsDanaDarurat=(allKasData||[]).filter(r=>r.kategori==='dana_darurat'||r.kategori==='pakai_dana_darurat');
+  const nyataDanaDarurat=getRekKatSaldo('dana_darurat');
   const pakaiDataNyata=rowsDanaDarurat.length>0;
 
   const persen=getAlokasiPersen();
@@ -3588,7 +3655,7 @@ function renderDanaDarurat(){
       <div class="bal-box-val" style="font-size:18px;color:${bulanCukup===null?'#7A5D1F':(bulanCukup>=6?'#4ADE80':bulanCukup>=3?'#EAB308':'#F87171')}">${bulanCukup===null?'Belum ada data pengeluaran':bulanCukup.toFixed(1)+' bulan'}</div>
       <div class="bal-box-lbl">Dana darurat cukup untuk berapa lama${adaPengeluaran?` (rata-rata pengeluaran ${fc(pengeluaranBulanan)}/bulan)`:''}</div>
     </div>
-    ${!pakaiDataNyata?'<div style="font-size:9px;color:#5C4818;margin-top:6px;text-align:center">💡 Tandai transaksi WD dengan kategori "🚨 Dana Darurat" di Aliran Uang biar angka ini akurat dari data asli, bukan estimasi.</div>':''}
+    ${!pakaiDataNyata?'<div style="font-size:9px;color:#5C4818;margin-top:6px;text-align:center">💡 Setor lewat "🏦 Rekening per Kategori" di atas (pilih Tabungan/Darurat) biar angka ini akurat dari data asli, bukan estimasi.</div>':''}
     ${!adaPengeluaran?'<div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">Belum ada catatan pengeluaran pribadi (Belanja/Utilitas/Kesehatan/Gaya Hidup) di Aliran Uang, jadi estimasi bulan belum bisa dihitung.</div>':''}`;
 
   // ── SKOR KESEHATAN FINANSIAL (A–D) ──
@@ -5203,7 +5270,7 @@ function renderLabaRugi(wrap){
   const modalInvestorBulanIni=rowsKas.filter(r=>r.kategori==='modal_investor').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const modalDisetorBulanIni=modalPribadiBulanIni+modalInvestorBulanIni;
   const profitTradingCent=rowsTrading.reduce((s,r)=>s+parseFloat(r.profit||0),0);
-  const BEBAN_PRIBADI=['kebutuhan_harian','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar']; // 'dana_darurat', 'investasi', 'beli_aset' SENGAJA tidak dimasukkan — uangnya tetap jadi milik sendiri, bukan hilang
+  const BEBAN_PRIBADI=['kebutuhan_harian','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar','pakai_kebutuhan_harian','pakai_hiburan']; // 'dana_darurat', 'investasi', 'beli_aset', 'pakai_dana_darurat', 'pakai_investasi' SENGAJA tidak dimasukkan — uangnya tetap jadi milik sendiri / realokasi antar kantong, bukan hilang. 'pakai_kebutuhan_harian' & 'pakai_hiburan' DIMASUKKAN karena itu pemakaian nyata (uang beneran keluar/habis).
   const BEBAN_BISNIS=['gaji_karyawan','listrik_kantor','internet_kantor','air_kantor','sewa_kantor','operasional_lain'];
   const bebanPribadiCent=rowsKas.filter(r=>BEBAN_PRIBADI.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const bebanBisnisCent=rowsKas.filter(r=>BEBAN_BISNIS.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
