@@ -861,6 +861,53 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     return {t:'Belum Aman',c:'#F87171'};
   }
 
+  // ── SISTEM LEVEL BUFFER BERTAHAP (10x → 55x) ──
+  // Prinsip: SELAMA lot dipertahankan tetap, buffer otomatis membesar seiring saldo naik dari profit
+  // (karena biaya per trade tetap, sedangkan saldo pembaginya makin besar). Rumus ini otomatis mengikuti
+  // pair/preset SL/lot yang lagi aktif di kalkulator ini — tidak dipatok ke satu pair tertentu.
+  const BUFFER_LEVELS=[10,15,20,25,30,35,40,45,50,55];
+  function buildLevelTableHtml(modal, sl, pipvalue, lotSaatIni, costPerTrade, bufferSaatIni){
+    if(costPerTrade<=0) return '';
+    let levelIdx=-1; // -1 = belum capai Level 1
+    BUFFER_LEVELS.forEach((b,i)=>{ if(bufferSaatIni>=b) levelIdx=i; });
+    const levelSekarang = levelIdx+1; // 0 = belum level 1
+    const nextBuffer = BUFFER_LEVELS[levelIdx+1];
+    const targetSaldoNext = nextBuffer ? costPerTrade*nextBuffer : null;
+
+    const rows=BUFFER_LEVELS.map((b,i)=>{
+      const risk=(100/b).toFixed(2);
+      const targetSaldo=costPerTrade*b;
+      // Lot yang dibutuhkan supaya berada TEPAT di level ini, dihitung dari MODAL SAAT INI
+      // (berapa pun sumbernya — profit atau setoran baru — yang penting angka Modal yang diketik sekarang).
+      // Rumus sama seperti Lot Rekomendasi di atas (yang pakai target tetap buffer 30x / faktor 3000),
+      // di sini faktornya jadi (buffer_level × 100) supaya general untuk semua level 10x–55x.
+      let lotUntukLevel = Math.floor((modal/(b*100*sl*pipvalue))/0.01)*0.01;
+      if(lotUntukLevel<0.01) lotUntukLevel=0.01;
+      lotUntukLevel = Math.round(lotUntukLevel*100)/100;
+      const aktif=i===levelIdx;
+      const tercapai=i<=levelIdx;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:5px 0;border-bottom:1px solid var(--border);${aktif?'background:var(--bg3);border-radius:6px;padding-left:6px;padding-right:6px':''}">
+        <span style="color:${tercapai?'#4ADE80':'#7A5D1F'}">${tercapai?'✓':'○'} Level ${i+1} — ${b}x <span style="color:#5C4818">(${risk}%)</span></span>
+        <span style="text-align:right">
+          <span style="color:${tercapai?'#4ADE80':'#C8A84B'};font-weight:700">lot ${lotUntukLevel.toFixed(2)}</span><br>
+          <span style="font-size:8px;color:#5C4818">min. saldo $${targetSaldo.toLocaleString('en-US',{maximumFractionDigits:2})}</span>
+        </span>
+      </div>`;
+    }).join('');
+
+    return `
+      <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-top:12px">
+        <div style="text-align:center;margin-bottom:10px">
+          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">Level Buffer Saat Ini (Modal $${modal.toLocaleString('en-US')}, Lot ${lotSaatIni.toFixed(2)})</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:${levelSekarang>0?'#4ADE80':'#F87171'}">${levelSekarang>0?'Level '+levelSekarang:'Belum Level 1'}</div>
+          ${targetSaldoNext ? `<div style="font-size:9px;color:#7A5D1F;margin-top:2px">Kalau lot tetap ${lotSaatIni.toFixed(2)}, butuh saldo <b style="color:#D4AF37">$${targetSaldoNext.toLocaleString('en-US',{maximumFractionDigits:2})}</b> buat naik ke Level ${levelIdx+2} (${nextBuffer}x)</div>` : `<div style="font-size:9px;color:#4ADE80;margin-top:2px">🏆 Sudah di level tertinggi (55x)!</div>`}
+        </div>
+        <div style="font-size:8px;color:#8A6B26;text-align:center;margin-bottom:8px">👇 Dengan MODAL SEKARANG ($${modal.toLocaleString('en-US')}), ini lot yang harus dipakai per level:</div>
+        ${rows}
+        <div style="font-size:8px;color:#5C4818;margin-top:10px;line-height:1.6">💡 Angka "lot" di atas dihitung ULANG tiap kali Modal berubah — nggak peduli itu dari profit atau kamu tambah/inject dana baru ke MT4. Tinggal update Modal di kalkulator ini sesuai saldo MT4 kamu sekarang, sistem langsung kasih tahu Level kamu di mana dan lot yang harus dipakai buat tetap di level itu. Kalau kamu ganti lot ke angka lain, buffer & level otomatis berubah ngikutin.</div>
+      </div>`;
+  }
+
   function computeRekom(){
     const modal=parseFloat(modalEl.value)||0;
     const unit=akunTypeEl.value;
@@ -905,7 +952,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
         </div>
         <button type="button" id="calcPakaiLotRekBtn" style="width:100%;margin-top:10px;padding:9px;border:1px solid #D4AF37;border-radius:8px;background:transparent;color:#D4AF37;font-size:11px;font-weight:700;cursor:pointer">Pakai Lot Rekomendasi Ini</button>
         <div style="font-size:8px;color:#5C4818;text-align:center;margin-top:8px;line-height:1.5">*SL &amp; nilai/pip diambil otomatis dari kalkulator di atas — ganti pair/level atau isi SL manual, rekomendasi ini ikut berubah.</div>
-      </div>`;
+      </div>
+      ${buildLevelTableHtml(modal, sl, pipvalue, lotSaatIni, costSaatIni, bufferSaatIni)}`;
 
     const btn=$('calcPakaiLotRekBtn');
     if(btn) btn.addEventListener('click', ()=>{ lottestEl.value=lotRek; calcRun(); });
