@@ -854,43 +854,47 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   // ══ Rekomendasi otomatis Lot & Buffer, berdasarkan Modal + SL/pipvalue yang sedang aktif di kalkulator ini ══
   const modalEl=$('calcModal'), akunTypeEl=$('calcAkunType'), rekomOutEl=$('calcRekomOut');
 
-  function levelOf(buffer){
-    if(buffer>=100) return {t:'Konservatif',c:'#4ADE80'};
-    if(buffer>=60) return {t:'Moderat',c:'#C8A84B'};
-    if(buffer>=30) return {t:'Agresif',c:'#F87171'};
-    return {t:'Belum Aman',c:'#F87171'};
+  // ── SISTEM LEVEL PROGRESIF (lot naik terus, gak pernah turun walau saldo tinggi) ──
+  // Aturan dasar yang dikunci: LOSS_COUNT kali kalah beruntun di level manapun = turun TEPAT 1 level.
+  // Level 1 dimulai di buffer BUFFER_START (mis. 10x) dengan LOT_START (mis. 0.03).
+  // Tiap level berikutnya: lot naik LOT_STEP, dan target saldo levelnya = target saldo level
+  // sebelumnya + (LOSS_COUNT × risk di lot level ini). Ini otomatis bikin buffer ikut naik pelan-pelan
+  // (bukan dipatok flat), dan berlaku exact untuk cek naik maupun turun level.
+  // Semua angka ikut SL pips & nilai/pip yang lagi aktif di kalkulator ini — ganti pair/preset, tabel ini ikut berubah.
+  const LOT_START=0.03, LOT_STEP=0.01, BUFFER_START=10, LOSS_COUNT=3, N_LEVELS=12;
+
+  function buildLevelPlan(sl, pipvalue){
+    const plan=[];
+    let modalPrev=0;
+    for(let i=0;i<N_LEVELS;i++){
+      const lot=Math.round((LOT_START+i*LOT_STEP)*100)/100;
+      const risk=sl*pipvalue*(lot/0.01); // risk $ per trade di lot ini
+      const modal = i===0 ? BUFFER_START*risk : modalPrev + LOSS_COUNT*risk;
+      const buffer = risk>0 ? modal/risk : 0;
+      plan.push({lot, risk, modal, buffer});
+      modalPrev=modal;
+    }
+    return plan;
   }
 
-  // ── SISTEM LEVEL BUFFER BERTAHAP (10x → 55x) ──
-  // Prinsip: SELAMA lot dipertahankan tetap, buffer otomatis membesar seiring saldo naik dari profit
-  // (karena biaya per trade tetap, sedangkan saldo pembaginya makin besar). Rumus ini otomatis mengikuti
-  // pair/preset SL/lot yang lagi aktif di kalkulator ini — tidak dipatok ke satu pair tertentu.
-  const BUFFER_LEVELS=[10,15,20,25,30,35,40,45,50,55];
-  function buildLevelTableHtml(modal, sl, pipvalue, lotSaatIni, costPerTrade, bufferSaatIni){
-    if(costPerTrade<=0) return '';
-    let levelIdx=-1; // -1 = belum capai Level 1
-    BUFFER_LEVELS.forEach((b,i)=>{ if(bufferSaatIni>=b) levelIdx=i; });
-    const levelSekarang = levelIdx+1; // 0 = belum level 1
-    const nextBuffer = BUFFER_LEVELS[levelIdx+1];
-    const targetSaldoNext = nextBuffer ? costPerTrade*nextBuffer : null;
+  function buildLevelTableHtml(modalSaatIni, sl, pipvalue){
+    if(sl<=0 || pipvalue<=0) return '';
+    const plan=buildLevelPlan(sl, pipvalue);
 
-    const rows=BUFFER_LEVELS.map((b,i)=>{
-      const risk=(100/b).toFixed(2);
-      const targetSaldo=costPerTrade*b;
-      // Lot yang dibutuhkan supaya berada TEPAT di level ini, dihitung dari MODAL SAAT INI
-      // (berapa pun sumbernya — profit atau setoran baru — yang penting angka Modal yang diketik sekarang).
-      // Rumus sama seperti Lot Rekomendasi di atas (yang pakai target tetap buffer 30x / faktor 3000),
-      // di sini faktornya jadi (buffer_level × 100) supaya general untuk semua level 10x–55x.
-      let lotUntukLevel = Math.floor((modal/(b*100*sl*pipvalue))/0.01)*0.01;
-      if(lotUntukLevel<0.01) lotUntukLevel=0.01;
-      lotUntukLevel = Math.round(lotUntukLevel*100)/100;
-      const aktif=i===levelIdx;
+    let levelIdx=-1; // -1 = belum capai Level 1
+    plan.forEach((lv,i)=>{ if(modalSaatIni>=lv.modal) levelIdx=i; });
+    const levelSekarang=levelIdx+1;
+    const next=plan[levelIdx+1];
+
+    const rows=plan.map((lv,i)=>{
       const tercapai=i<=levelIdx;
+      const aktif=i===levelIdx;
+      const riskPct=(100/lv.buffer).toFixed(2);
       return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:5px 0;border-bottom:1px solid var(--border);${aktif?'background:var(--bg3);border-radius:6px;padding-left:6px;padding-right:6px':''}">
-        <span style="color:${tercapai?'#4ADE80':'#7A5D1F'}">${tercapai?'✓':'○'} Level ${i+1} — ${b}x <span style="color:#5C4818">(${risk}%)</span></span>
+        <span style="color:${tercapai?'#4ADE80':'#7A5D1F'}">${tercapai?'✓':'○'} Level ${i+1} — lot ${lv.lot.toFixed(2)} <span style="color:#5C4818">(${lv.buffer.toFixed(2)}x, ${riskPct}%)</span></span>
         <span style="text-align:right">
-          <span style="color:${tercapai?'#4ADE80':'#C8A84B'};font-weight:700">lot ${lotUntukLevel.toFixed(2)}</span><br>
-          <span style="font-size:8px;color:#5C4818">min. saldo $${targetSaldo.toLocaleString('en-US',{maximumFractionDigits:2})}</span>
+          <span style="color:${tercapai?'#4ADE80':'#C8A84B'};font-weight:700">$${lv.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</span><br>
+          <span style="font-size:8px;color:#5C4818">risk $${lv.risk.toLocaleString('en-US',{maximumFractionDigits:2})}/trade</span>
         </span>
       </div>`;
     }).join('');
@@ -898,39 +902,25 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     return `
       <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-top:12px">
         <div style="text-align:center;margin-bottom:10px">
-          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">Level Buffer Saat Ini (Modal $${modal.toLocaleString('en-US')}, Lot ${lotSaatIni.toFixed(2)})</div>
+          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">Level Saat Ini (Modal $${modalSaatIni.toLocaleString('en-US')})</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:${levelSekarang>0?'#4ADE80':'#F87171'}">${levelSekarang>0?'Level '+levelSekarang:'Belum Level 1'}</div>
-          ${targetSaldoNext ? `<div style="font-size:9px;color:#7A5D1F;margin-top:2px">Kalau lot tetap ${lotSaatIni.toFixed(2)}, butuh saldo <b style="color:#D4AF37">$${targetSaldoNext.toLocaleString('en-US',{maximumFractionDigits:2})}</b> buat naik ke Level ${levelIdx+2} (${nextBuffer}x)</div>` : `<div style="font-size:9px;color:#4ADE80;margin-top:2px">🏆 Sudah di level tertinggi (55x)!</div>`}
+          ${next ? `<div style="font-size:9px;color:#7A5D1F;margin-top:2px">Butuh saldo <b style="color:#D4AF37">$${next.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</b> (lot ${next.lot.toFixed(2)}) buat naik ke Level ${levelIdx+2}</div>` : `<div style="font-size:9px;color:#4ADE80;margin-top:2px">🏆 Sudah di level tertinggi tabel ini!</div>`}
+          ${levelIdx>=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Kalau ${LOSS_COUNT}x kalah beruntun di lot ${plan[levelIdx].lot.toFixed(2)}, turun ke Level ${levelIdx} (saldo $${(levelIdx>0?plan[levelIdx-1].modal:0).toLocaleString('en-US',{maximumFractionDigits:2})})</div>` : ''}
         </div>
-        <div style="font-size:8px;color:#8A6B26;text-align:center;margin-bottom:8px">👇 Dengan MODAL SEKARANG ($${modal.toLocaleString('en-US')}), ini lot yang harus dipakai per level:</div>
+        <div style="font-size:8px;color:#8A6B26;text-align:center;margin-bottom:8px">👇 Lot naik terus per level — tidak pernah turun lagi walau saldo makin besar. Target saldo & risk dihitung dari SL/nilai-pip yang aktif sekarang:</div>
         ${rows}
-        <div style="font-size:8px;color:#5C4818;margin-top:10px;line-height:1.6">💡 Angka "lot" di atas dihitung ULANG tiap kali Modal berubah — nggak peduli itu dari profit atau kamu tambah/inject dana baru ke MT4. Tinggal update Modal di kalkulator ini sesuai saldo MT4 kamu sekarang, sistem langsung kasih tahu Level kamu di mana dan lot yang harus dipakai buat tetap di level itu. Kalau kamu ganti lot ke angka lain, buffer & level otomatis berubah ngikutin.</div>
+        <div style="font-size:8px;color:#5C4818;margin-top:10px;line-height:1.6">💡 Aturan: ${LOSS_COUNT}× kalah beruntun di level manapun = turun TEPAT 1 level (saldo balik ke target level sebelumnya). Ganti pair/preset atau isi SL manual, semua target saldo & risk di atas otomatis dihitung ulang.</div>
       </div>`;
   }
 
   function computeRekom(){
     const modal=parseFloat(modalEl.value)||0;
-    const unit=akunTypeEl.value;
     const sl=parseFloat(slEl.value)||0;
     const pipvalue=parseFloat(pipvalueEl.value)||0;
-    const lotSaatIni=parseFloat(lottestEl.value)||0.01;
 
     if(modal<=0 || sl<=0 || pipvalue<=0){ rekomOutEl.innerHTML=''; return; }
 
-    // Lot rekomendasi = lot terbesar yang masih menjaga buffer minimal 30x (level Agresif) di modal ini,
-    // rumus umum (tidak dipatok SL 100 pips): lot = modal / (3000 × SL pips × nilai/pip)
-    let lotRek = Math.floor((modal/(3000*sl*pipvalue))/0.01)*0.01;
-    if(lotRek<0.01) lotRek=0.01;
-    lotRek = Math.round(lotRek*100)/100;
-
-    const costRek = sl*pipvalue*(lotRek/0.01);
-    const bufferRek = costRek>0 ? Math.floor(modal/costRek) : 0;
-
-    const costSaatIni = sl*pipvalue*(lotSaatIni/0.01);
-    const bufferSaatIni = costSaatIni>0 ? Math.floor(modal/costSaatIni) : 0;
-    const lvSaatIni = levelOf(bufferSaatIni);
-
-    rekomOutEl.innerHTML = buildLevelTableHtml(modal, sl, pipvalue, lotSaatIni, costSaatIni, bufferSaatIni);
+    rekomOutEl.innerHTML = buildLevelTableHtml(modal, sl, pipvalue);
   }
 
   modalEl.addEventListener('input', computeRekom);
