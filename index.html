@@ -930,33 +930,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     const bufferSaatIni = costSaatIni>0 ? Math.floor(modal/costSaatIni) : 0;
     const lvSaatIni = levelOf(bufferSaatIni);
 
-    rekomOutEl.innerHTML = `
-      <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-top:12px">
-        <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;text-align:center;margin-bottom:10px">💡 Rekomendasi Otomatis — Modal ${modal.toLocaleString('en-US')} ${unit}, SL ${sl} pips</div>
-        <div style="display:flex;justify-content:center;gap:20px;text-align:center">
-          <div>
-            <div style="font-size:9px;color:#8A6B26;font-weight:700">Lot Rekomendasi</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#D4AF37">${lotRek.toFixed(2)}</div>
-            <div style="font-size:8px;color:#5C4818">target min. buffer 30x</div>
-          </div>
-          <div style="width:1px;background:var(--border)"></div>
-          <div>
-            <div style="font-size:9px;color:#8A6B26;font-weight:700">Buffer Rekomendasi</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#4ADE80">${bufferRek}x</div>
-            <div style="font-size:8px;color:#5C4818">pakai lot ${lotRek.toFixed(2)}</div>
-          </div>
-        </div>
-        <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;text-align:center">
-          <div style="font-size:9px;color:#8A6B26">Kalau pakai Lot yang kamu isi manual sekarang (${lotSaatIni.toFixed(2)}):</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:${lvSaatIni.c};margin-top:2px">${bufferSaatIni}x <span style="font-size:10px;font-weight:400">(${lvSaatIni.t})</span></div>
-        </div>
-        <button type="button" id="calcPakaiLotRekBtn" style="width:100%;margin-top:10px;padding:9px;border:1px solid #D4AF37;border-radius:8px;background:transparent;color:#D4AF37;font-size:11px;font-weight:700;cursor:pointer">Pakai Lot Rekomendasi Ini</button>
-        <div style="font-size:8px;color:#5C4818;text-align:center;margin-top:8px;line-height:1.5">*SL &amp; nilai/pip diambil otomatis dari kalkulator di atas — ganti pair/level atau isi SL manual, rekomendasi ini ikut berubah.</div>
-      </div>
-      ${buildLevelTableHtml(modal, sl, pipvalue, lotSaatIni, costSaatIni, bufferSaatIni)}`;
-
-    const btn=$('calcPakaiLotRekBtn');
-    if(btn) btn.addEventListener('click', ()=>{ lottestEl.value=lotRek; calcRun(); });
+    rekomOutEl.innerHTML = buildLevelTableHtml(modal, sl, pipvalue, lotSaatIni, costSaatIni, bufferSaatIni);
   }
 
   modalEl.addEventListener('input', computeRekom);
