@@ -1392,6 +1392,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
         <option value="7">Mingguan</option>
       </select>
       <div id="backupHistoryInfo" style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center"></div>
+
+      <div style="border-top:1px dashed var(--border);margin-top:14px;padding-top:14px">
+        <div style="font-size:11px;font-weight:700;color:#D4AF37;margin-bottom:6px">📤 Restore dari File Backup</div>
+        <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.7">Pakai ini buat nyamain Target Bulanan, Investor, Goal, Aset Lain, Kewajiban, dan pengaturan lokal lainnya di HP ini dengan HP lain — download backup dari HP sumber, lalu import file-nya di sini. Data saldo &amp; kas trading gak kepengaruh (itu udah otomatis sinkron server).</div>
+        <input type="file" id="restoreBackupFile" accept="application/json" style="display:none" onchange="restoreFromBackupFile(event)">
+        <button class="btn btn-ghost" onclick="document.getElementById('restoreBackupFile').click()">📤 Pilih File Backup (.json)</button>
+        <div id="restoreBackupStatus" style="font-size:10px;color:#7A5D1F;margin-top:8px;text-align:center"></div>
+      </div>
     </div>
 
     <div class="ap-title">⚙️ Input Saldo Harian</div>
@@ -4330,6 +4338,68 @@ function doBackupViaEmail(){
   window.location.href=`mailto:${target}?subject=${subject}&body=${body}`;
   toast('✅ File backup terdownload — lampirkan manual ke email yang baru terbuka');
 }
+
+// ══ RESTORE / IMPORT BACKUP DATA ══
+// Memulihkan mk_target_bulanan, mk_investors, mk_goals, dll (data yang cuma tersimpan lokal
+// di HP masing-masing, tidak ikut sinkron server) dari file JSON hasil "Backup Sekarang".
+function restoreFromBackupFile(event){
+  const fileInput=event.target;
+  const statusEl=document.getElementById('restoreBackupStatus');
+  if(!isAdmin){
+    toast('❌ Harus masuk sebagai Admin untuk restore backup');
+    fileInput.value='';
+    return;
+  }
+  const file=fileInput.files && fileInput.files[0];
+  if(!file) return;
+
+  const reader=new FileReader();
+  reader.onload=function(e){
+    let payload;
+    try{
+      payload=JSON.parse(e.target.result);
+    }catch(err){
+      if(statusEl) statusEl.textContent='❌ File rusak / bukan JSON yang valid';
+      toast('❌ File backup tidak bisa dibaca');
+      fileInput.value='';
+      return;
+    }
+    if(!payload || typeof payload!=='object' || !payload.localSettings){
+      if(statusEl) statusEl.textContent='❌ Ini bukan file backup Marginkuat yang valid';
+      toast('❌ Format file tidak dikenali');
+      fileInput.value='';
+      return;
+    }
+
+    const tglBackup = payload.exportedAt ? new Date(payload.exportedAt).toLocaleString('id-ID') : 'tidak diketahui';
+    const keys=Object.keys(payload.localSettings);
+    const ok=confirm(`Restore ${keys.length} pengaturan (Target Bulanan, Investor, Goal, Aset Lain, Kewajiban, dll) dari backup tanggal ${tglBackup}?\n\nIni akan MENIMPA data lokal yang ada di HP ini sekarang.`);
+    if(!ok){ fileInput.value=''; return; }
+
+    let restoredCount=0;
+    Object.entries(payload.localSettings).forEach(([k,v])=>{
+      try{
+        const raw = typeof v==='string' ? v : JSON.stringify(v);
+        localStorage.setItem(k, raw);
+        restoredCount++;
+      }catch(err){
+        console.error('Gagal restore key', k, err);
+      }
+    });
+
+    if(statusEl) statusEl.textContent=`✅ ${restoredCount} pengaturan berhasil di-restore. Memuat ulang halaman...`;
+    toast(`✅ ${restoredCount} pengaturan berhasil di-restore`);
+    fileInput.value='';
+    setTimeout(()=>location.reload(), 1200);
+  };
+  reader.onerror=function(){
+    if(statusEl) statusEl.textContent='❌ Gagal membaca file';
+    toast('❌ Gagal membaca file backup');
+    fileInput.value='';
+  };
+  reader.readAsText(file);
+}
+
 function renderAutoBackupInfo(){
   const s=getBackupSettings();
   const statusEl=document.getElementById('autoBackupStatus');
