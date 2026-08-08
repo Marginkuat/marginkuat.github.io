@@ -1395,7 +1395,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 
       <div style="border-top:1px dashed var(--border);margin-top:14px;padding-top:14px">
         <div style="font-size:11px;font-weight:700;color:#D4AF37;margin-bottom:6px">📤 Restore dari File Backup</div>
-        <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.7">Pakai ini buat nyamain Target Bulanan, Investor, Goal, Aset Lain, Kewajiban, dan pengaturan lokal lainnya di HP ini dengan HP lain — download backup dari HP sumber, lalu import file-nya di sini. Data saldo &amp; kas trading gak kepengaruh (itu udah otomatis sinkron server).</div>
+        <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.7">Pakai ini buat nyamain Investor, Goal, Aset Lain, Kewajiban, dan pengaturan lokal lainnya di HP ini dengan HP lain — download backup dari HP sumber, lalu import file-nya di sini. Data saldo, kas trading, &amp; Target Bulanan gak kepengaruh (itu udah otomatis sinkron server).</div>
         <input type="file" id="restoreBackupFile" accept="application/json" style="display:none" onchange="restoreFromBackupFile(event)">
         <button class="btn btn-ghost" onclick="document.getElementById('restoreBackupFile').click()">📤 Pilih File Backup (.json)</button>
         <div id="restoreBackupStatus" style="font-size:10px;color:#7A5D1F;margin-top:8px;text-align:center"></div>
@@ -1966,6 +1966,7 @@ async function loadAll(){
   loadConsistencySharpe();
   loadRiskOfRuin();
   loadMonthlyComparison();
+  await loadTargetBulanan();
   renderGraph();
   renderEquity();
   loadJournalVisual();
@@ -2200,20 +2201,44 @@ function renderGraph(){
 }
 
 // ══ TARGET PROFIT BULANAN & PROGRESS BAR ══
-function getTargetBulanan(){
-  const v=parseFloat(localStorage.getItem('mk_target_bulanan'));
-  return isNaN(v)?500:v; // default target 500 sen/bulan
+// Target ini milik PEMILIK SITUS (kamu) dan ditampilkan sama ke semua pengunjung —
+// makanya disimpan di server (Supabase, tabel app_settings), bukan localStorage per-HP.
+let cachedTargetBulanan=500; // default sebelum data server kebaca
+async function loadTargetBulanan(){
+  try{
+    const rows=await api('app_settings?select=value&key=eq.target_bulanan');
+    if(rows && rows.length){
+      const v=parseFloat(rows[0].value);
+      if(!isNaN(v)) cachedTargetBulanan=v;
+    }
+  }catch(e){
+    console.error('Gagal load target bulanan dari server, pakai default/cache terakhir', e);
+  }
 }
-function editTargetBulanan(){
+function getTargetBulanan(){
+  return cachedTargetBulanan;
+}
+async function editTargetBulanan(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah target');return;}
   const cur=getTargetBulanan();
-  const input=prompt('Target profit bulanan (dalam ¢ / sen):', cur);
+  const input=prompt('Target profit bulanan (dalam ¢ / sen) — ini akan tampil sama ke semua pengunjung situs:', cur);
   if(input===null)return;
   const v=parseFloat(input);
   if(isNaN(v)||v<=0){toast('❌ Angka target tidak valid');return;}
-  localStorage.setItem('mk_target_bulanan', v);
-  toast('✅ Target bulanan diperbarui');
-  renderGraph();
+  try{
+    const existing=await api('app_settings?select=key&key=eq.target_bulanan');
+    if(existing.length){
+      await api('app_settings?key=eq.target_bulanan','PATCH',{value:String(v)});
+    }else{
+      await api('app_settings','POST',{key:'target_bulanan',value:String(v)});
+    }
+    cachedTargetBulanan=v;
+    toast('✅ Target bulanan diperbarui untuk semua pengunjung');
+    renderGraph();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan target ke server: '+(e.message||'').slice(0,120));
+  }
 }
 function renderTargetProgress(totalBulanIni){
   const wrap=document.getElementById('targetProgressWrap');
@@ -4290,7 +4315,7 @@ function saveBackupInterval(){
   renderAutoBackupInfo();
 }
 function buildBackupPayload(){
-  const localKeys=['mk_investors','mk_goals','mk_aset_lain','mk_kewajiban','mk_target_bulanan','mk_target_rr','mk_sertifikat_nama','mk_kas_threshold','mk_backup_settings'];
+  const localKeys=['mk_investors','mk_goals','mk_aset_lain','mk_kewajiban','mk_target_rr','mk_sertifikat_nama','mk_kas_threshold','mk_backup_settings'];
   const localData={};
   localKeys.forEach(k=>{
     const v=localStorage.getItem(k);
@@ -4340,7 +4365,7 @@ function doBackupViaEmail(){
 }
 
 // ══ RESTORE / IMPORT BACKUP DATA ══
-// Memulihkan mk_target_bulanan, mk_investors, mk_goals, dll (data yang cuma tersimpan lokal
+// Memulihkan mk_investors, mk_goals, mk_aset_lain, dll (data yang cuma tersimpan lokal
 // di HP masing-masing, tidak ikut sinkron server) dari file JSON hasil "Backup Sekarang".
 function restoreFromBackupFile(event){
   const fileInput=event.target;
@@ -4373,7 +4398,7 @@ function restoreFromBackupFile(event){
 
     const tglBackup = payload.exportedAt ? new Date(payload.exportedAt).toLocaleString('id-ID') : 'tidak diketahui';
     const keys=Object.keys(payload.localSettings);
-    const ok=confirm(`Restore ${keys.length} pengaturan (Target Bulanan, Investor, Goal, Aset Lain, Kewajiban, dll) dari backup tanggal ${tglBackup}?\n\nIni akan MENIMPA data lokal yang ada di HP ini sekarang.`);
+    const ok=confirm(`Restore ${keys.length} pengaturan (Investor, Goal, Aset Lain, Kewajiban, dll) dari backup tanggal ${tglBackup}?\n\nIni akan MENIMPA data lokal yang ada di HP ini sekarang.`);
     if(!ok){ fileInput.value=''; return; }
 
     let restoredCount=0;
