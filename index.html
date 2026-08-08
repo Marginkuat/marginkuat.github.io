@@ -1120,7 +1120,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
         <input class="inp" type="date" id="rekDaruratTgl" style="margin-bottom:0">
       </div>
     </div>
-    <label class="lbl" style="margin-top:10px">Keterangan (opsional)</label>
+    <label class="lbl" style="margin-top:10px">Sumber Setoran</label>
+    <select class="inp" id="rekDaruratSumber" onchange="toggleSumberDaruratLainnya()">
+      <option value="Profit MT4 (Trading)">📈 Profit MT4 (Trading)</option>
+      <option value="Profit Jual Saham">📊 Profit Jual Saham</option>
+      <option value="Profit Investasi Lain (Properti/Aset)">🏠 Profit Investasi Lain (Properti/Aset)</option>
+      <option value="__lainnya__">✏️ Lainnya (isi manual)</option>
+    </select>
+    <input class="inp" id="rekDaruratSumberLainnya" placeholder="Tulis sumber setoran, contoh: Bonus / Hadiah / dll" style="display:none">
+    <label class="lbl" style="margin-top:10px">Catatan Tambahan (opsional)</label>
     <input class="inp" id="rekDaruratKet" placeholder="Contoh: Setoran dari WD profit Agustus">
     <button class="btn btn-p" onclick="setorDanaDarurat()" style="margin-top:10px">💾 Setor ke Dana Darurat</button>
     <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-top:16px;margin-bottom:8px">Riwayat Setoran</div>
@@ -3470,20 +3478,33 @@ function getRataRataProfitBulanan(){
 // ══ REKENING DANA DARURAT (setoran cepat + riwayat) ══
 // Pakai tabel kas_pribadi yang sama (kategori='dana_darurat'), cuma disediakan jalan pintas
 // khusus biar gak perlu isi form Aliran Uang yang panjang tiap kali mau nabung ke dana darurat.
+function toggleSumberDaruratLainnya(){
+  const sel=document.getElementById('rekDaruratSumber');
+  const lainnyaEl=document.getElementById('rekDaruratSumberLainnya');
+  if(!sel||!lainnyaEl)return;
+  lainnyaEl.style.display = sel.value==='__lainnya__' ? '' : 'none';
+}
 async function setorDanaDarurat(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const jumlahEl=document.getElementById('rekDaruratJumlah');
   const tglEl=document.getElementById('rekDaruratTgl');
   const ketEl=document.getElementById('rekDaruratKet');
+  const sumberEl=document.getElementById('rekDaruratSumber');
+  const sumberLainnyaEl=document.getElementById('rekDaruratSumberLainnya');
   const jumlah=parseFloat(jumlahEl.value)||0;
   const tgl=tglEl.value;
   const ket=ketEl.value.trim();
+  let sumber = sumberEl.value;
+  if(sumber==='__lainnya__'){
+    sumber = sumberLainnyaEl.value.trim();
+    if(!sumber){toast('❌ Isi sumber setoran (Lainnya)');return;}
+  }
   if(!jumlah){toast('❌ Isi nominal setoran');return;}
   if(!tgl){toast('❌ Isi tanggal');return;}
   try{
     const bodyData={
       tanggal: tgl,
-      dari: 'Profit MT4 (WD)',
+      dari: sumber,
       ke: 'Dana Darurat',
       jumlah: parseFloat(jumlah.toFixed(2)),
       keterangan: ket || null,
@@ -3498,6 +3519,9 @@ async function setorDanaDarurat(){
     toast('✅ Setoran Dana Darurat tersimpan');
     jumlahEl.value='';
     ketEl.value='';
+    sumberEl.value='Profit MT4 (Trading)';
+    sumberLainnyaEl.value='';
+    toggleSumberDaruratLainnya();
     await fetchAllKasData();
     renderWdSection();
     renderKasRingkasan();
@@ -3530,7 +3554,7 @@ function renderRekeningDarurat(){
     ? rows.slice(0,15).map(r=>`
       <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
         <div>
-          <div style="font-size:11px;color:#C8A84B">${fd(r.tanggal)}</div>
+          <div style="font-size:11px;color:#C8A84B">${fd(r.tanggal)} ${r.dari?`— <span style="color:#8A6B26">${r.dari}</span>`:''}</div>
           ${r.keterangan?`<div style="font-size:9px;color:#5C4818">${r.keterangan}</div>`:''}
         </div>
         <span style="font-size:12px;font-weight:700;color:#4ADE80">+${fc(r.jumlah)}</span>
