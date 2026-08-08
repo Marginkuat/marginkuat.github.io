@@ -1101,6 +1101,28 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 <!-- EMERGENCY FUND & FINANCIAL HEALTH SCORE -->
 <div class="section" id="secDanaDarurat">
   <div class="sec-title">🚨 Dana Darurat & Skor Kesehatan Finansial</div>
+
+  <div class="graph-card" style="margin-bottom:12px;border:1px solid #B8860B">
+    <div style="font-size:12px;font-weight:700;color:#D4AF37;margin-bottom:6px">🏦 Rekening Dana Darurat</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Setiap kali profit MT4 sudah cukup buat ditarik, catat setorannya di sini — otomatis jadi saldo Dana Darurat yang nyata (bukan estimasi lagi).</div>
+    <div id="rekeningDaruratSaldo" style="margin-bottom:12px"></div>
+    <div class="calc-row">
+      <div>
+        <label class="lbl">Nominal Setoran (¢)</label>
+        <input class="inp" type="number" id="rekDaruratJumlah" placeholder="Contoh: 200" step="0.01" min="0" style="margin-bottom:0">
+      </div>
+      <div>
+        <label class="lbl">Tanggal</label>
+        <input class="inp" type="date" id="rekDaruratTgl" style="margin-bottom:0">
+      </div>
+    </div>
+    <label class="lbl" style="margin-top:10px">Keterangan (opsional)</label>
+    <input class="inp" id="rekDaruratKet" placeholder="Contoh: Setoran dari WD profit Agustus">
+    <button class="btn btn-p" onclick="setorDanaDarurat()" style="margin-top:10px">💾 Setor ke Dana Darurat</button>
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-top:16px;margin-bottom:8px">Riwayat Setoran</div>
+    <div id="rekeningDaruratHistory"></div>
+  </div>
+
   <div class="graph-card" style="margin-bottom:12px">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Dana Darurat diambil dari porsi "Tabungan/Darurat" di Alokasi Dana. Sistem hitung otomatis berapa bulan pengeluaran pribadi yang bisa ditutup dana ini.</div>
     <div id="danaDaruratBox"></div>
@@ -3241,6 +3263,7 @@ function renderWdSection(){
   renderWdChart();
   renderWdVsProfitChart();
   renderAlokasiDana();
+  renderRekeningDarurat();
   renderDanaDarurat();
   renderFINumber();
   renderLapSaya();
@@ -3395,6 +3418,77 @@ function getRataRataProfitBulanan(){
   const months=Object.keys(byMonth);
   const total=months.reduce((s,k)=>s+byMonth[k],0);
   return months.length?total/months.length:0;
+}
+
+// ══ REKENING DANA DARURAT (setoran cepat + riwayat) ══
+// Pakai tabel kas_pribadi yang sama (kategori='dana_darurat'), cuma disediakan jalan pintas
+// khusus biar gak perlu isi form Aliran Uang yang panjang tiap kali mau nabung ke dana darurat.
+async function setorDanaDarurat(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const jumlahEl=document.getElementById('rekDaruratJumlah');
+  const tglEl=document.getElementById('rekDaruratTgl');
+  const ketEl=document.getElementById('rekDaruratKet');
+  const jumlah=parseFloat(jumlahEl.value)||0;
+  const tgl=tglEl.value;
+  const ket=ketEl.value.trim();
+  if(!jumlah){toast('❌ Isi nominal setoran');return;}
+  if(!tgl){toast('❌ Isi tanggal');return;}
+  try{
+    const bodyData={
+      tanggal: tgl,
+      dari: 'Profit MT4 (WD)',
+      ke: 'Dana Darurat',
+      jumlah: parseFloat(jumlah.toFixed(2)),
+      keterangan: ket || null,
+      kategori: 'dana_darurat'
+    };
+    try{
+      await api('kas_pribadi','POST',bodyData);
+    }catch(errKat){
+      const { kategori:_drop, ...bodyNoKat } = bodyData;
+      await api('kas_pribadi','POST',bodyNoKat);
+    }
+    toast('✅ Setoran Dana Darurat tersimpan');
+    jumlahEl.value='';
+    ketEl.value='';
+    await fetchAllKasData();
+    renderWdSection();
+    renderKasRingkasan();
+    renderKasRekap();
+    renderKasChart();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan setoran: '+(e.message||'').slice(0,150));
+  }
+}
+function renderRekeningDarurat(){
+  const saldoEl=document.getElementById('rekeningDaruratSaldo');
+  const histEl=document.getElementById('rekeningDaruratHistory');
+  if(!saldoEl||!histEl) return;
+
+  const d=new Date(), pad=n=>String(n).padStart(2,'0');
+  const tglInput=document.getElementById('rekDaruratTgl');
+  if(tglInput && !tglInput.value) tglInput.value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+  const rows=(allKasData||[]).filter(r=>r.kategori==='dana_darurat').sort((a,b)=>new Date(b.tanggal)-new Date(a.tanggal));
+  const saldo=rows.reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+
+  saldoEl.innerHTML=`
+    <div class="bal-box" style="background:var(--bg3);border:1px solid #B8860B">
+      <div class="bal-box-val" style="font-size:24px;color:#FFD700">${fc(saldo)}</div>
+      <div class="bal-box-lbl">🏦 Saldo Rekening Dana Darurat (${rows.length} setoran)</div>
+    </div>`;
+
+  histEl.innerHTML = rows.length
+    ? rows.slice(0,15).map(r=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:11px;color:#C8A84B">${fd(r.tanggal)}</div>
+          ${r.keterangan?`<div style="font-size:9px;color:#5C4818">${r.keterangan}</div>`:''}
+        </div>
+        <span style="font-size:12px;font-weight:700;color:#4ADE80">+${fc(r.jumlah)}</span>
+      </div>`).join('') + (rows.length>15?`<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">...dan ${rows.length-15} setoran lainnya</div>`:'')
+    : '<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:11px">Belum ada setoran — mulai setor pertama kamu di atas 👆</div>';
 }
 function renderDanaDarurat(){
   const el=document.getElementById('danaDaruratBox');
