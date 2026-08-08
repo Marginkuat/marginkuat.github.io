@@ -926,6 +926,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   modalEl.addEventListener('input', computeRekom);
   akunTypeEl.addEventListener('change', computeRekom);
   document.addEventListener('datukCalcChanged', computeRekom);
+  document.addEventListener('datukCalcChanged', ()=>{ if(typeof loadModalMinimal==='function') loadModalMinimal(); });
   computeRekom();
 
   calcRun();
@@ -5856,18 +5857,24 @@ async function loadModalMinimal(){
   try{
     const el=document.getElementById('modalMinimal');
 
-    // Patokan TETAP berbasis jumlah LOSS BERUNTUN (bukan persentase lagi):
-    // Risk per trade = 10 (Sen di akun cent, $ di akun standard) — lot 0.01, SL 100 pips
-    const RISK_PER_TRADE=10;
+    // Risk per trade (lot 0.01) DIAMBIL DARI SL & Nilai/Pip yang lagi aktif di "Kalkulator Risiko Per Pair"
+    // di bawah — jadi otomatis ikut berubah kalau kamu ganti pair/preset (Kerdil/Standar/Hard/Forex),
+    // bukan dipatok cuma buat XAUUSD Kerdil 100 pips lagi.
+    const slEl_=document.getElementById('calcSL'), pipvalueEl_=document.getElementById('calcPipValue');
+    const slNow = slEl_ ? (parseFloat(slEl_.value)||100) : 100;
+    const pipvalueNow = pipvalueEl_ ? (parseFloat(pipvalueEl_.value)||0.1) : 0.1;
+    const RISK_PER_TRADE = slNow*pipvalueNow; // cost per 0.01 lot, di pair/preset yang sedang aktif
 
     const tiers=[
       {label:'Konservatif',lossCount:100,color:'#4ADE80',desc:'tahan 100x loss beruntun'},
       {label:'Moderat',lossCount:60,color:'#C8A84B',desc:'tahan 60x loss beruntun'},
-      {label:'Agresif',lossCount:30,color:'#F87171',desc:'tahan 30x loss beruntun'}
+      {label:'Agresif',lossCount:30,color:'#F87171',desc:'tahan 30x loss beruntun'},
+      {label:'Teruji Real (kamu)',lossCount:20,color:'#4ADE80',desc:'tahan 20x loss beruntun — syarat: lot 0.01, cuma 1 order aktif, order ke-2 baru setelah order pertama kena SL/TP'}
     ];
 
-    const AGRESIF_CENT=RISK_PER_TRADE*tiers[2].lossCount; // 300
-    const AGRESIF_STD=RISK_PER_TRADE*tiers[2].lossCount; // 300
+    const utama=tiers[3]; // "Teruji Real" (buffer 20x) = patokan utama sekarang, bukan Agresif lagi
+    const UTAMA_CENT=RISK_PER_TRADE*utama.lossCount;
+    const UTAMA_STD=RISK_PER_TRADE*utama.lossCount;
 
     // Ambil saldo saat ini + hitung DD Historis REAL (6 bulan terakhir) buat dibandingkan
     let saldoRawSekarang=0, maxDdRaw=0, longestStreak=0;
@@ -5890,11 +5897,10 @@ async function loadModalMinimal(){
       });
     }catch(e){}
 
-    const utama=tiers[2]; // Agresif = patokan tunggal
-    const cukupCent = saldoRawSekarang>=AGRESIF_CENT;
-    const ddVsAgresif = AGRESIF_CENT>0 ? (maxDdRaw/AGRESIF_CENT*100) : 0;
-    const ddAman = ddVsAgresif<=30;
-    const streakAmanAgresif = longestStreak<=tiers[2].lossCount;
+    const cukupCent = saldoRawSekarang>=UTAMA_CENT;
+    const ddVsUtama = UTAMA_CENT>0 ? (maxDdRaw/UTAMA_CENT*100) : 0;
+    const ddAman = ddVsUtama<=30;
+    const streakAmanUtama = longestStreak<=utama.lossCount;
 
     let detailHtml=tiers.map(t=>{
       const centMin=RISK_PER_TRADE*t.lossCount;
@@ -5915,16 +5921,26 @@ async function loadModalMinimal(){
         <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Modal Minimal Untuk Trading Aman (Lot 0.01)</div>
         <div style="display:flex;justify-content:center;gap:20px;margin-bottom:6px">
           <div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:800;color:#D4AF37">${AGRESIF_CENT} Sen</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:800;color:#D4AF37">${UTAMA_CENT.toFixed(0)} Sen</div>
             <div style="font-size:10px;color:#9C7A2E;font-weight:700">Akun Cent</div>
           </div>
           <div style="width:1px;background:var(--border)"></div>
           <div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:800;color:#D4AF37">$${AGRESIF_STD}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:800;color:#D4AF37">$${UTAMA_STD.toFixed(0)}</div>
             <div style="font-size:10px;color:#9C7A2E;font-weight:700">Akun Standard</div>
           </div>
         </div>
-        <div style="font-size:9px;color:#5C4818">Patokan level Agresif (minimal) — angka apa adanya sesuai skala akun kamu</div>
+        <div style="font-size:9px;color:#5C4818">Patokan level "Teruji Real" (buffer 20x) — dihitung dari SL & nilai/pip pair yang aktif sekarang</div>
+      </div>
+
+      <div style="background:var(--bg3);border:1px solid #2E5C2E;border-radius:10px;padding:12px;margin-bottom:12px;text-align:left">
+        <div style="font-size:10px;font-weight:700;color:#4ADE80;margin-bottom:6px">✓ Syarat metode "Teruji Real" (buffer 20x)</div>
+        <div style="font-size:9px;color:#8A6B26;line-height:1.8">
+          • Lot tetap 0.01<br>
+          • Cuma boleh 1 order aktif dalam satu waktu<br>
+          • Order ke-2 baru dibuka SETELAH order pertama kena SL atau TP (gak boleh nge-stack/nambah posisi bareng)<br>
+          • Sudah dites di akun rill, max loss beruntun cuma 8x — buffer 20x masih jauh lebih aman dari itu
+        </div>
       </div>
 
       <div style="background:var(--bg2);border-radius:10px;padding:10px 12px">
@@ -5935,19 +5951,19 @@ async function loadModalMinimal(){
       <div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center;margin-top:10px">
         <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">DD Terdalam Real (6 Bulan Terakhir)</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:#F87171">${maxDdRaw.toFixed(2)} Sen</div>
-        <div style="font-size:9px;color:${ddAman?'#4ADE80':'#F87171'};margin-top:4px">= ${ddVsAgresif.toFixed(1)}% dari modal minimal Agresif (${AGRESIF_CENT} Sen)</div>
+        <div style="font-size:9px;color:${ddAman?'#4ADE80':'#F87171'};margin-top:4px">= ${ddVsUtama.toFixed(1)}% dari modal minimal Teruji Real (${UTAMA_CENT.toFixed(0)} Sen)</div>
       </div>
 
       <div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center;margin-top:10px">
         <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Longest Losing Streak Real (Harian)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:${streakAmanAgresif?'#4ADE80':'#F87171'}">${longestStreak}x</div>
-        <div style="font-size:9px;color:${streakAmanAgresif?'#4ADE80':'#F87171'};margin-top:4px">${streakAmanAgresif?`✓ Masih jauh di bawah buffer Agresif (${tiers[2].lossCount}x)`:`✗ Sudah melewati buffer Agresif (${tiers[2].lossCount}x)`}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:${streakAmanUtama?'#4ADE80':'#F87171'}">${longestStreak}x</div>
+        <div style="font-size:9px;color:${streakAmanUtama?'#4ADE80':'#F87171'};margin-top:4px">${streakAmanUtama?`✓ Masih jauh di bawah buffer Teruji Real (${utama.lossCount}x)`:`✗ Sudah melewati buffer Teruji Real (${utama.lossCount}x)`}</div>
         <div style="font-size:8px;color:#5C4818;margin-top:4px">*Dihitung dari hari rugi berturut-turut, bukan per-trade — cuma pendekatan</div>
       </div>`:''}
 
       ${saldoRawSekarang>0?`
       <div style="background:${cukupCent?'#152016':'#241414'};border:1px solid ${cukupCent?'#2E5C2E':'#5C2E2E'};border-radius:10px;padding:12px;text-align:center;margin-top:14px">
-        <div style="font-size:11px;font-weight:700;color:${cukupCent?'#4ADE80':'#F87171'}">${cukupCent?'✓ Modal Kamu Sudah Cukup (level Agresif)':'✗ Modal Kamu Belum Cukup (level Agresif)'}</div>
+        <div style="font-size:11px;font-weight:700;color:${cukupCent?'#4ADE80':'#F87171'}">${cukupCent?'✓ Modal Kamu Sudah Cukup (level Teruji Real)':'✗ Modal Kamu Belum Cukup (level Teruji Real)'}</div>
         <div style="font-size:9px;color:#8A6B26;margin-top:2px">Saldo kamu sekarang: ${saldoRawSekarang.toFixed(2)} Sen</div>
       </div>`:''}`;
   }catch(e){
