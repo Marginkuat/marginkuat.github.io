@@ -1094,7 +1094,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="graph-card">
     <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Rincian Nominal</div>
     <div id="alokasiTable"></div>
-    <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">Berdasarkan total WD all-time (dihitung otomatis dari selisih Saldo Harian) — bukan modal trading yang masih aktif.</div>
+    <div id="alokasiResetInfo" style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" onclick="resetAlokasiDana()" style="flex:1;font-size:10px;padding:8px">🔄 Reset ke $0 (anggap sudah terpakai)</button>
+      <button id="btnBatalResetAlokasi" class="btn btn-ghost" onclick="batalkanResetAlokasiDana()" style="flex:1;font-size:10px;padding:8px;display:none">↩️ Batalkan Reset</button>
+    </div>
   </div>
 </div>
 
@@ -3295,6 +3299,40 @@ function saveAlokasiPersenInput(){
   localStorage.setItem('mk_alokasi_persen', JSON.stringify(persen));
   renderAlokasiDana();
 }
+// ── RESET ALOKASI DANA KE $0 ──
+// WD sebelum tanggal reset dianggap "sudah terpakai habis di masa lalu" (kebutuhan harian dll),
+// jadi TIDAK dihitung lagi di pie chart/rincian nominal Alokasi Dana maupun estimasi Dana Darurat.
+// Data Saldo Harian & WD asli TIDAK dihapus/diubah — ini cuma titik potong buat tampilan alokasi.
+function getAlokasiResetTanggal(){
+  return localStorage.getItem('mk_alokasi_reset_tanggal') || null;
+}
+function getTotalWdUntukAlokasi(){
+  const data=getWdProfitPerHari();
+  const resetTgl=getAlokasiResetTanggal();
+  const filtered = resetTgl ? data.filter(d=>new Date(d.tanggal) > new Date(resetTgl)) : data;
+  return filtered.reduce((s,d)=>s+d.wd,0);
+}
+function resetAlokasiDana(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const cur=getAlokasiResetTanggal();
+  const d=new Date(), pad=n=>String(n).padStart(2,'0');
+  const today=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const input=prompt('WD sebelum tanggal ini dianggap SUDAH TERPAKAI (rincian nominal & pie chart Alokasi Dana mulai hitung dari $0 sejak tanggal ini). Data Saldo Harian asli tidak berubah, cuma tampilan alokasi yang direset.\n\nTanggal reset (YYYY-MM-DD):', cur||today);
+  if(input===null)return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(input)){toast('❌ Format tanggal tidak valid, pakai YYYY-MM-DD');return;}
+  localStorage.setItem('mk_alokasi_reset_tanggal', input);
+  toast('✅ Alokasi Dana direset — mulai hitung dari $0 sejak '+fd(input));
+  renderAlokasiDana();
+  renderDanaDarurat();
+}
+function batalkanResetAlokasiDana(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!confirm('Batalkan reset? Rincian nominal & pie chart Alokasi Dana akan balik hitung dari total WD all-time lagi.'))return;
+  localStorage.removeItem('mk_alokasi_reset_tanggal');
+  toast('✅ Reset dibatalkan, kembali ke total WD all-time');
+  renderAlokasiDana();
+  renderDanaDarurat();
+}
 function renderAlokasiInputs(){
   const el=document.getElementById('alokasiInputs');
   if(!el)return;
@@ -3319,8 +3357,7 @@ function renderAlokasiDana(){
   const totalPersen=ALOKASI_META.reduce((s,m)=>s+persen[m.key],0);
   if(warnEl) warnEl.style.display = Math.abs(totalPersen-100)>0.5 ? 'block' : 'none';
 
-  const data=getWdProfitPerHari();
-  const totalWd=data.reduce((s,d)=>s+d.wd,0);
+  const totalWd=getTotalWdUntukAlokasi();
 
   // ── PIE CHART pakai CSS conic-gradient, tidak perlu canvas ──
   let acc=0;
@@ -3350,6 +3387,16 @@ function renderAlokasiDana(){
         <span style="font-size:11px;color:#8A6B26;font-weight:700">Total Dana WD</span>
         <span style="font-size:13px;font-weight:800;color:#FFD700">${fc(totalWd)}</span>
       </div>`;
+
+  const resetTgl=getAlokasiResetTanggal();
+  const resetInfoEl=document.getElementById('alokasiResetInfo');
+  if(resetInfoEl){
+    resetInfoEl.innerHTML = resetTgl
+      ? `🔄 Direset — cuma hitung WD sejak <b style="color:#D4AF37">${fd(resetTgl)}</b> (WD sebelum tanggal ini dianggap sudah terpakai buat kebutuhan harian, gak dihitung lagi di sini)`
+      : `Berdasarkan total WD all-time (dihitung otomatis dari selisih Saldo Harian) — bukan modal trading yang masih aktif.`;
+  }
+  const btnBatal=document.getElementById('btnBatalResetAlokasi');
+  if(btnBatal) btnBatal.style.display = resetTgl ? '' : 'none';
 }
 
 // ══ EMERGENCY FUND & FINANCIAL HEALTH SCORE ══
@@ -3502,8 +3549,7 @@ function renderDanaDarurat(){
   const pakaiDataNyata=rowsDanaDarurat.length>0;
 
   const persen=getAlokasiPersen();
-  const wdData=getWdProfitPerHari();
-  const totalWd=wdData.reduce((s,d)=>s+d.wd,0);
+  const totalWd=getTotalWdUntukAlokasi();
   const danaDarurat = pakaiDataNyata ? nyataDanaDarurat : totalWd*(persen.tabungan/100);
 
   const {rata:pengeluaranBulanan, adaData:adaPengeluaran}=getRataRataPengeluaranPribadiBulanan();
