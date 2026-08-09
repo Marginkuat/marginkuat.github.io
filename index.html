@@ -1060,9 +1060,28 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
-<!-- RIWAYAT PENARIKAN (WD) -->
+<!-- RIWAYAT DEPOSIT & PENARIKAN (WD) -->
 <div class="section" id="secWdHistory">
-  <div class="sec-title">💰 Riwayat Penarikan (WD)</div>
+  <div class="sec-title">📥📤 Ringkasan Deposit &amp; Penarikan (WD)</div>
+
+  <div class="graph-card" style="margin-bottom:12px">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Dihitung 100% otomatis dari selisih Saldo Harian yang sudah kamu input — bukan input manual terpisah, jadi dijamin selalu sinkron sama data Saldo MT4 kamu (gak akan pernah beda angka).</div>
+    <div id="depositWdRingkasan">
+      <div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    </div>
+  </div>
+
+  <div class="graph-card" style="margin-bottom:12px">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px">Grafik Deposit vs WD per Bulan — 6 Bulan Terakhir</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:8px">Hijau = deposit/modal masuk, Merah = WD/dana keluar</div>
+    <div id="depositWdChart"><div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+  </div>
+
+  <div class="graph-card" style="margin-bottom:12px">
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Riwayat Deposit/WD</div>
+    <div id="depositWdRiwayat"><div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+  </div>
+
   <div class="graph-card" style="margin-bottom:12px">
     <div id="wdRingkasan">
       <div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div>
@@ -1110,6 +1129,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="graph-card" style="margin-bottom:12px;border:1px solid #B8860B">
     <div style="font-size:12px;font-weight:700;color:#D4AF37;margin-bottom:6px">🏦 Rekening per Kategori</div>
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Alur uang: WD dari MT4 → masuk 🏦 <b>KAS</b> dulu (transit di dalam app) → dari KAS, "Alokasikan" ke salah satu rekening tujuan: 🍚 Kebutuhan Harian (BNI), 🚨 Tabungan/Darurat (BCA Blu), 📊 Investasi (Stockbit), 🎉 Hiburan (OVO). Tiap kantong punya riwayat & rincian sendiri.</div>
+
+    <div id="kasTransitBox" style="margin-bottom:14px"></div>
 
     <div id="rekKatTabs" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"></div>
 
@@ -3215,13 +3236,18 @@ function getWdProfitPerHari(){
   dataUrut.forEach(r=>{
     const saldo=parseFloat(r.saldo_mt4||0);
     const profit=parseFloat(r.profit||0);
-    let wd=0;
-    if(prevSaldo!==null){
+    let wd=0, deposit=0;
+    if(prevSaldo===null){
+      // Hari pertama tercatat: saldo sebelum profit hari itu dianggap modal awal/setoran pertama
+      const modalAwal=saldo-profit;
+      if(modalAwal>0.01) deposit=modalAwal;
+    }else{
       const selisih=saldo-prevSaldo;
       const implisit=selisih-profit; // bagian selisih saldo yang BUKAN dari hasil trading hari itu
       if(implisit<-0.01) wd=Math.abs(implisit);
+      else if(implisit>0.01) deposit=implisit;
     }
-    out.push({tanggal:r.tanggal, wd, profit});
+    out.push({tanggal:r.tanggal, wd, deposit, profit});
     prevSaldo=saldo;
   });
   return out;
@@ -3235,6 +3261,97 @@ function last6Bulan(){
     list.push({y:d.getFullYear(), m:d.getMonth(), label:bulanSingkat[d.getMonth()]});
   }
   return list;
+}
+// ══ RINGKASAN DEPOSIT/WD (dari data Saldo Harian yang SUDAH ADA — bukan input manual baru) ══
+// Sengaja TIDAK dibuatkan form input terpisah "Tambah Deposit"/"Tambah WD". Kalau ada 2 tempat input
+// yang mencatat hal sama, keduanya gampang saling gak sinkron (misal lupa isi salah satu). Jadi tools
+// ini murni MENAMPILKAN data yang udah otomatis kehitung dari selisih Saldo Harian, dijamin selalu
+// cocok dengan Saldo MT4 kamu — cukup terusin isi "Input Saldo Harian" seperti biasa.
+function renderDepositWdRingkasan(){
+  const el=document.getElementById('depositWdRingkasan');
+  if(!el)return;
+  const data=getWdProfitPerHari();
+  if(!data.length){
+    el.innerHTML='<div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Belum ada data Saldo Harian.</div>';
+    return;
+  }
+  const totalDeposit=data.reduce((s,d)=>s+d.deposit,0);
+  const totalWd=data.reduce((s,d)=>s+d.wd,0);
+  const selisih=totalDeposit-totalWd;
+  const jumlahDeposit=data.filter(d=>d.deposit>0.01).length;
+  const jumlahWd=data.filter(d=>d.wd>0.01).length;
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="bal-box" style="background:var(--bg2);border:1px solid #2E5C2E"><div class="bal-box-val cg" style="font-size:18px">+${fc(totalDeposit)}</div><div class="bal-box-lbl">📥 Total Deposit (${jumlahDeposit}x)</div></div>
+      <div class="bal-box" style="background:var(--bg2);border:1px solid #5C2E2E"><div class="bal-box-val cr" style="font-size:18px">-${fc(totalWd)}</div><div class="bal-box-lbl">📤 Total WD (${jumlahWd}x)</div></div>
+    </div>
+    <div class="bal-box" style="background:var(--bg3);border:1px solid #B8860B">
+      <div class="bal-box-val" style="font-size:20px;color:${selisih>=0?'#4ADE80':'#F87171'}">${selisih>=0?'+':''}${fc(selisih)}</div>
+      <div class="bal-box-lbl">Selisih (Deposit − WD) — modal bersih yang masih "ketanam" di MT4</div>
+    </div>`;
+}
+function renderDepositWdChart(){
+  const el=document.getElementById('depositWdChart');
+  if(!el)return;
+  const data=getWdProfitPerHari();
+  if(!data.length){
+    el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:12px">Belum ada data.</div>';
+    return;
+  }
+  const monthly=last6Bulan().map(b=>{
+    let deposit=0, wd=0;
+    data.forEach(d=>{
+      const dt=new Date(d.tanggal);
+      if(dt.getFullYear()===b.y && dt.getMonth()===b.m){ deposit+=d.deposit; wd+=d.wd; }
+    });
+    return {...b, deposit, wd};
+  });
+  const maxVal=Math.max(1,...monthly.map(d=>Math.max(d.deposit,d.wd)));
+  let html='<div style="display:flex;align-items:flex-end;justify-content:space-around;height:140px;gap:6px;padding:0 2px">';
+  monthly.forEach(d=>{
+    const hDep=Math.max(2,(d.deposit/maxVal)*100);
+    const hWd=Math.max(2,(d.wd/maxVal)*100);
+    html+=`
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;flex:1">
+        <div style="display:flex;align-items:flex-end;gap:2px;height:100%">
+          <div style="width:10px;height:${hDep}%;background:#4ADE80;border-radius:3px 3px 0 0;min-height:2px"></div>
+          <div style="width:10px;height:${hWd}%;background:#F87171;border-radius:3px 3px 0 0;min-height:2px"></div>
+        </div>
+      </div>`;
+  });
+  html+='</div>';
+  html+='<div style="display:flex;justify-content:space-around;margin-top:6px">';
+  monthly.forEach(d=>{ html+=`<div style="flex:1;text-align:center;font-size:9px;color:#7A5D1F">${d.label}</div>`; });
+  html+='</div>';
+  html+=`<div style="display:flex;justify-content:center;gap:16px;margin-top:10px;font-size:9px;color:#8A6B26">
+    <span><span style="color:#4ADE80">■</span> Deposit</span>
+    <span><span style="color:#F87171">■</span> WD</span>
+  </div>`;
+  el.innerHTML=html;
+}
+function renderDepositWdRiwayat(){
+  const el=document.getElementById('depositWdRiwayat');
+  if(!el)return;
+  const data=getWdProfitPerHari();
+  const events=[];
+  data.forEach(d=>{
+    if(d.deposit>0.01) events.push({tanggal:d.tanggal, tipe:'deposit', jumlah:d.deposit});
+    if(d.wd>0.01) events.push({tanggal:d.tanggal, tipe:'wd', jumlah:d.wd});
+  });
+  events.sort((a,b)=>new Date(b.tanggal)-new Date(a.tanggal));
+  if(!events.length){
+    el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:11px">Belum ada deposit/WD yang terdeteksi.</div>';
+    return;
+  }
+  el.innerHTML = events.slice(0,20).map(e=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:11px;color:#C8A84B">${fd(e.tanggal)}</div>
+        <div style="font-size:9px;color:${e.tipe==='deposit'?'#4ADE80':'#F87171'}">${e.tipe==='deposit'?'📥 Deposit':'📤 WD'}</div>
+      </div>
+      <span style="font-size:13px;font-weight:700;color:${e.tipe==='deposit'?'#4ADE80':'#F87171'}">${e.tipe==='deposit'?'+':'-'}${fc(e.jumlah)}</span>
+    </div>`).join('') + (events.length>20?`<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">...dan ${events.length-20} transaksi lainnya (dihitung dari total di atas, cuma yang ditampilkan dibatasi 20 terbaru)</div>`:'')
+    + `<div style="font-size:8px;color:#5C4818;text-align:center;margin-top:10px">Sumber: dihitung dari Saldo Harian, bukan input manual — mau tambah/ubah, edit lewat "Input Saldo Harian".</div>`;
 }
 function renderWdRingkasan(){
   const el=document.getElementById('wdRingkasan');
@@ -3331,10 +3448,14 @@ function renderWdVsProfitChart(){
   el.innerHTML=html;
 }
 function renderWdSection(){
+  renderDepositWdRingkasan();
+  renderDepositWdChart();
+  renderDepositWdRiwayat();
   renderWdRingkasan();
   renderWdChart();
   renderWdVsProfitChart();
   renderAlokasiDana();
+  renderKasTransitBox();
   renderRekeningKategori();
   renderDanaDarurat();
   renderFINumber();
@@ -3651,6 +3772,38 @@ async function simpanRekeningKategori(){
     console.error(e);
     toast('❌ Gagal simpan: '+(e.message||'').slice(0,150));
   }
+}
+// ── KAS (TRANSIT) — dana yang sudah ditarik dari MT4 (WD) tapi belum "dialokasikan" ke salah satu
+// dari 4 rekening tujuan (BNI/BCA Blu/Stockbit/OVO). Selisih = Total WD − Total yang sudah di-Setor
+// ke semua kantong kategori. Ini murni hitungan, bukan tabel baru — jadi otomatis akurat & konsisten
+// dengan reset Alokasi Dana ("Reset ke $0") kalau lagi aktif.
+function getTotalSudahDialokasikan(){
+  return REKENING_KATEGORI.reduce((total,k)=>{
+    const rows=(allKasData||[]).filter(r=>r.kategori===k.depositKat);
+    return total + rows.reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  },0);
+}
+function renderKasTransitBox(){
+  const el=document.getElementById('kasTransitBox');
+  if(!el)return;
+  const totalWd=getTotalWdUntukAlokasi();
+  const totalAlokasi=getTotalSudahDialokasikan();
+  const sisaKas=totalWd-totalAlokasi;
+  const pct=totalWd>0?Math.min(100,(totalAlokasi/totalWd*100)):0;
+  el.innerHTML=`
+    <div class="bal-box" style="background:var(--bg3);border:1px solid #B8860B">
+      <div class="bal-box-val" style="font-size:22px;color:${sisaKas<0?'#F87171':'#FFD700'}">${fc(sisaKas)}</div>
+      <div class="bal-box-lbl">🏦 Sisa di KAS (belum dialokasikan ke BNI/Blu/Stockbit/OVO)</div>
+    </div>
+    <div style="background:var(--bg2);border-radius:8px;height:8px;margin-top:8px;overflow:hidden">
+      <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#B8860B,#D4AF37)"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:#7A5D1F;margin-top:6px">
+      <span>Total WD: ${fc(totalWd)}</span>
+      <span>Sudah dialokasikan: ${fc(totalAlokasi)} (${pct.toFixed(0)}%)</span>
+    </div>
+    ${sisaKas>0.01?`<div style="font-size:9px;color:#D4AF37;text-align:center;margin-top:8px">💡 Masih ada ${fc(sisaKas)} di KAS — alokasikan ke salah satu kantong di bawah kalau sudah dipindah ke BNI/Blu/Stockbit/OVO.</div>`:''}
+    ${sisaKas<-0.01?`<div style="font-size:9px;color:#F87171;text-align:center;margin-top:8px">⚠️ Total yang dialokasikan (${fc(totalAlokasi)}) lebih besar dari Total WD (${fc(totalWd)}) — cek lagi riwayat Setor di tiap kantong, mungkin ada yang dobel/salah catat.</div>`:''}`;
 }
 function renderRekeningKategori(){
   const tabsEl=document.getElementById('rekKatTabs');
