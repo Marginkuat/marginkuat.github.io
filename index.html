@@ -1524,13 +1524,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <label class="lbl">Gross Loss Hari Ini (total dari transaksi yang rugi, angka positif)</label>
     <input class="inp" type="number" id="inpGrossLoss" placeholder="0.00" step="0.01" min="0" oninput="syncProfitFromGross()">
 
+    <label class="lbl">Swap Hari Ini (opsional, dari histori MT4 — boleh minus)</label>
+    <input class="inp" type="number" id="inpSwap" placeholder="0.00 (kosongkan kalau gak ada/gak dicatat)" step="0.01" oninput="syncProfitFromGross()">
+
     <label class="lbl">Profit / Loss Hari Ini (angka dari MT4)</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
       <button id="btnProfit" onclick="setPL('profit')" style="padding:9px;border-radius:8px;border:1.5px solid #2E4A1E;background:#132D0E;color:#4ADE80;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📈 PROFIT</button>
       <button id="btnLoss" onclick="setPL('loss')" style="padding:9px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg0);color:#8A6B26;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📉 LOSS</button>
     </div>
     <input class="inp" type="number" id="inpProfit" placeholder="0.00 (tulis angka positif)" step="0.01" min="0">
-    <div id="profitAutoNote" style="font-size:9px;color:#4ADE80;margin-top:-6px;margin-bottom:10px;display:none">✓ Dihitung otomatis dari Gross Profit − Gross Loss (biar gak selisih/typo)</div>
+    <div id="profitAutoNote" style="font-size:9px;color:#4ADE80;margin-top:-6px;margin-bottom:10px;display:none">✓ Dihitung otomatis dari Gross Profit − Gross Loss + Swap (biar gak selisih/typo)</div>
     <input type="hidden" id="plType" value="profit">
 
     <label class="lbl">Catatan (opsional)</label>
@@ -2507,6 +2510,7 @@ function editRiwayatHarian(tanggal){
   document.getElementById('inpCatatan').value=r.catatan||'';
   document.getElementById('inpGrossProfit').value=r.gross_profit!=null?r.gross_profit:'';
   document.getElementById('inpGrossLoss').value=r.gross_loss!=null?r.gross_loss:'';
+  document.getElementById('inpSwap').value=r.swap!=null?r.swap:'';
   const pairEl=document.getElementById('inpPair');
   if(pairEl) pairEl.value=r.pair||'XAUUSD';
   const moodEl=document.getElementById('inpMood');
@@ -5941,12 +5945,13 @@ function setPL(type){
 // dan dikunci (read-only) — gak bisa diketik manual lagi selama gross-nya masih terisi. Kalau kamu
 // gak nyatet breakdown gross (kosongkan salah satu/kedua field gross), Profit balik jadi bisa diisi manual.
 function syncProfitFromGross(){
-  const gpEl=document.getElementById('inpGrossProfit'), glEl=document.getElementById('inpGrossLoss');
+  const gpEl=document.getElementById('inpGrossProfit'), glEl=document.getElementById('inpGrossLoss'), swapEl=document.getElementById('inpSwap');
   const profitEl=document.getElementById('inpProfit'), noteEl=document.getElementById('profitAutoNote');
   const gpRaw=gpEl.value.trim(), glRaw=glEl.value.trim();
   if(gpRaw!=='' && glRaw!==''){
     const gp=parseFloat(gpRaw)||0, gl=parseFloat(glRaw)||0;
-    const net=gp-gl;
+    const swap=parseFloat(swapEl.value)||0; // swap kosong dianggap 0
+    const net=gp-gl+swap;
     profitEl.value=Math.abs(net).toFixed(2);
     profitEl.readOnly=true;
     profitEl.style.opacity='0.7';
@@ -5969,12 +5974,13 @@ async function simpanSaldo(){
   const catatan=document.getElementById('inpCatatan').value.trim();
   const grossProfit=parseFloat(document.getElementById('inpGrossProfit').value)||0;
   const grossLoss=parseFloat(document.getElementById('inpGrossLoss').value)||0;
+  const swap=parseFloat(document.getElementById('inpSwap').value)||0;
   const gpFilled=document.getElementById('inpGrossProfit').value.trim()!=='';
   const glFilled=document.getElementById('inpGrossLoss').value.trim()!=='';
   if(gpFilled && glFilled){
-    const calc=grossProfit-grossLoss;
+    const calc=grossProfit-grossLoss+swap;
     if(Math.abs(calc-profit)>0.02){
-      if(!confirm(`⚠️ Profit (${profit.toFixed(2)}) gak sama dengan Gross Profit − Gross Loss (${calc.toFixed(2)}). Selisih ${(profit-calc).toFixed(2)}.\n\nIni bisa bikin data situs kamu gak cocok kalau diaudit. Lanjut simpan pakai angka Profit manual ini? (Disarankan: Batal, lalu perbaiki salah satu angkanya dulu)`)){
+      if(!confirm(`⚠️ Profit (${profit.toFixed(2)}) gak sama dengan Gross Profit − Gross Loss + Swap (${calc.toFixed(2)}). Selisih ${(profit-calc).toFixed(2)}.\n\nCek lagi angka Swap-nya (kalau ada trade yang nginap/overnight, biasanya ada swap). Lanjut simpan pakai angka Profit manual ini? (Disarankan: Batal, lalu cek ulang)`)){
         return;
       }
     }
@@ -5991,35 +5997,43 @@ async function simpanSaldo(){
       catatan: catatan || null,
       gross_profit: grossProfit||null,
       gross_loss: grossLoss||null,
+      swap: document.getElementById('inpSwap').value.trim()!==''?swap:null,
       pair: pair,
       mood: mood
     };
-    let savedOk=false, moodSaved=true;
+    let savedOk=false, moodSaved=true, swapSaved=true;
     try{
       const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
       if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyData);
       else await api('saldo_harian','POST',{tanggal:tgl,...bodyData});
       savedOk=true;
     }catch(errMood){
-      // Kemungkinan kolom 'mood' belum ada di Supabase — coba lagi tanpa mood
-      moodSaved=false;
-      const { mood:_drop, ...bodyNoMood } = bodyData;
-      const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
-      if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyNoMood);
-      else await api('saldo_harian','POST',{tanggal:tgl,...bodyNoMood});
-      savedOk=true;
+      // Kemungkinan kolom 'mood' dan/atau 'swap' belum ada di Supabase — coba lagi tanpa keduanya
+      moodSaved=false; swapSaved=false;
+      const { mood:_drop, swap:_drop2, ...bodyNoMood } = bodyData;
+      try{
+        const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
+        if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyNoMood);
+        else await api('saldo_harian','POST',{tanggal:tgl,...bodyNoMood});
+        savedOk=true;
+      }catch(errSwap){
+        console.error(errSwap);
+        toast('❌ Gagal simpan: '+(errSwap.message||'').slice(0,150));
+        return;
+      }
     }
     if(document.getElementById('inpAutoSyncKas').checked){
       await syncKasFromProfit(tgl, profit);
     }
 
-    toast(savedOk&&moodSaved?'✅ Catatan tersimpan':'⚠️ Tersimpan, tapi kolom mood belum ada di Supabase');
+    toast(savedOk&&moodSaved&&swapSaved?'✅ Catatan tersimpan':(savedOk?'⚠️ Tersimpan, tapi kolom mood/swap belum ada di Supabase (data lain tetap tersimpan)':'❌ Gagal simpan'));
     document.getElementById('inpSaldo').value='';
     document.getElementById('inpProfit').value='';
     document.getElementById('inpSignal').value='';
     document.getElementById('inpCatatan').value='';
     document.getElementById('inpGrossProfit').value='';
     document.getElementById('inpGrossLoss').value='';
+    document.getElementById('inpSwap').value='';
     syncProfitFromGross();
     document.getElementById('pvBox').style.display='none';
     await loadAll();
