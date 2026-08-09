@@ -1524,9 +1524,19 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <div onclick="toggleKategoriLainnya()" style="font-size:9px;color:#7A5D1F;text-align:center;margin:-6px 0 12px;cursor:pointer;text-decoration:underline">🔧 Kategori lainnya (Operasional Trading / Bisnis)</div>
 
     <label class="lbl">Dari (sumber uang)</label>
+    <div id="kasDariCepat" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <button type="button" onclick="pilihDariCepat('Modal Pribadi','gaji')" style="padding:9px 6px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg0);color:#C8A84B;font-weight:700;font-size:11px;cursor:pointer">💰 Modal Pribadi</button>
+      <button type="button" onclick="pilihDariCepat('Modal Investor','modal_investor')" style="padding:9px 6px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg0);color:#C8A84B;font-weight:700;font-size:11px;cursor:pointer">🤝 Modal Investor</button>
+    </div>
     <input class="inp" id="kasDari" placeholder="Contoh: Modal Pribadi / Modal Investor / Profit MT4">
 
     <label class="lbl">Ke (tujuan uang)</label>
+    <div id="kasKeCepat" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <button type="button" onclick="pilihKeCepat('Kebutuhan Harian','kebutuhan_harian')" style="padding:9px 6px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg0);color:#C8A84B;font-weight:700;font-size:11px;cursor:pointer">🔴 Kebutuhan Harian</button>
+      <button type="button" onclick="pilihKeCepat('Investasi (Saham/Properti)','investasi')" style="padding:9px 6px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg0);color:#C8A84B;font-weight:700;font-size:11px;cursor:pointer">📊 Investasi</button>
+      <button type="button" onclick="pilihKeCepat('Tabungan/Dana Darurat','dana_darurat')" style="padding:9px 6px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg0);color:#C8A84B;font-weight:700;font-size:11px;cursor:pointer">🚨 Tabungan/Darurat</button>
+      <button type="button" onclick="pilihKeCepat('Hiburan','gaya_hidup')" style="padding:9px 6px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg0);color:#C8A84B;font-weight:700;font-size:11px;cursor:pointer">🎉 Hiburan</button>
+    </div>
     <input class="inp" id="kasKe" placeholder="Contoh: Saldo MT4 / Obat / Listrik">
 
     <label class="lbl">Kategori</label>
@@ -2727,6 +2737,7 @@ function pilihArahKas(arah, dariTombol){
   const gBisnis=document.getElementById('optgroupBisnis');
   const sel=document.getElementById('kasKategori');
   const kasDari=document.getElementById('kasDari'), kasKe=document.getElementById('kasKe');
+  const kasDariCepat=document.getElementById('kasDariCepat'), kasKeCepat=document.getElementById('kasKeCepat');
 
   if(arah==='masuk'){
     gMasuk.style.display='';
@@ -2734,6 +2745,8 @@ function pilihArahKas(arah, dariTombol){
     gKeluar2.style.display='none';
     gOperasional.style.display='none';
     gBisnis.style.display='none';
+    if(kasDariCepat) kasDariCepat.style.display='';
+    if(kasKeCepat) kasKeCepat.style.display='none';
     if(dariTombol){
       sel.value='gaji';
       kasKe.value='Saldo MT4';
@@ -2746,6 +2759,8 @@ function pilihArahKas(arah, dariTombol){
     gKeluar2.style.display='';
     gOperasional.style.display='none';
     gBisnis.style.display='none';
+    if(kasDariCepat) kasDariCepat.style.display='none';
+    if(kasKeCepat) kasKeCepat.style.display='';
     if(dariTombol){
       sel.value='kebutuhan_harian';
       kasDari.value='Saldo MT4';
@@ -2753,6 +2768,23 @@ function pilihArahKas(arah, dariTombol){
     }
     kasKe.placeholder='Contoh: Obat / Listrik / Dana Darurat / Saham BBRI';
   }
+}
+// Tombol tap-pilih buat "Dari" (dipakai pas arah = Tambah Saldo MT4) — sekali tap langsung isi
+// Dari + sinkron Kategori, gak perlu ngetik manual.
+function pilihDariCepat(label, kategoriVal){
+  const kasDari=document.getElementById('kasDari'), kasKe=document.getElementById('kasKe'), sel=document.getElementById('kasKategori');
+  kasDari.value=label;
+  kasKe.value='Saldo MT4';
+  sel.value=kategoriVal;
+}
+// Tombol tap-pilih buat "Ke" (dipakai pas arah = Tarik Saldo MT4) — sekali tap langsung isi
+// Ke + sinkron Kategori. Kalau mau lebih detail (misal "Obat" bukan cuma "Kebutuhan Harian"),
+// tinggal edit manual field "Ke" setelah tap — kategorinya tetap ikut yang dipilih.
+function pilihKeCepat(label, kategoriVal){
+  const kasDari=document.getElementById('kasDari'), kasKe=document.getElementById('kasKe'), sel=document.getElementById('kasKategori');
+  kasKe.value=label;
+  kasDari.value='Saldo MT4';
+  sel.value=kategoriVal;
 }
 // Kalau user ganti kategori manual dari dropdown, sinkronkan tombol arah & Dari/Ke TANPA menimpa kategori yang baru dipilih.
 function isiOtomatisDariKe(){
