@@ -1109,7 +1109,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 
   <div class="graph-card" style="margin-bottom:12px;border:1px solid #B8860B">
     <div style="font-size:12px;font-weight:700;color:#D4AF37;margin-bottom:6px">🏦 Rekening per Kategori</div>
-    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Tiap kategori Alokasi Dana punya "kantong" sendiri — catat kapan uang masuk (Setor) dan kapan dipakai (Pakai, wajib isi buat apa) supaya ada riwayat & rincian yang jelas per kategori.</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Alur uang: WD dari MT4 → masuk 🏦 <b>KAS</b> dulu (transit di dalam app) → dari KAS, "Alokasikan" ke salah satu rekening tujuan: 🍚 Kebutuhan Harian (BNI), 🚨 Tabungan/Darurat (BCA Blu), 📊 Investasi (Stockbit), 🎉 Hiburan (OVO). Tiap kantong punya riwayat & rincian sendiri.</div>
 
     <div id="rekKatTabs" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"></div>
 
@@ -1142,6 +1142,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <div id="rekKatFieldPakai" style="display:none">
       <label class="lbl" style="margin-top:10px">Dipakai Untuk Apa? (wajib diisi)</label>
       <input class="inp" id="rekKatUntukApa" placeholder="Contoh: Servis motor / Beli emas / Nonton bioskop">
+    </div>
+
+    <div id="rekKatFieldAlokasi" style="display:none">
+      <label class="lbl" style="margin-top:10px">Alokasikan ke Rekening Tujuan</label>
+      <select class="inp" id="rekKatAlokasiTarget">
+        <option value="kebutuhan_harian">🍚 Kebutuhan Harian (BNI)</option>
+        <option value="dana_darurat">🚨 Tabungan/Darurat (BCA Blu)</option>
+        <option value="investasi">📊 Investasi (Stockbit)</option>
+        <option value="hiburan">🎉 Hiburan (OVO)</option>
+      </select>
     </div>
 
     <label class="lbl" style="margin-top:10px">Catatan Tambahan (opsional)</label>
@@ -3529,12 +3539,13 @@ function getRataRataProfitBulanan(){
 // Pakai tabel kas_pribadi yang sama — deposit & usage dibedakan lewat kategori, biar gampang
 // dihitung saldo (setor - pakai) dan riwayatnya per kategori, tanpa perlu tabel/koneksi baru.
 const REKENING_KATEGORI=[
-  {key:'dana_darurat',      label:'Tabungan / Darurat',        icon:'🚨', depositKat:'dana_darurat',            usageKat:'pakai_dana_darurat',           color:'#60A5FA'},
-  {key:'kebutuhan_harian',  label:'Kebutuhan Harian',          icon:'🍚', depositKat:'pocket_kebutuhan_harian', usageKat:'pakai_kebutuhan_harian',       color:'#D4AF37'},
-  {key:'investasi',         label:'Investasi (Saham/Properti)',icon:'📊', depositKat:'investasi',               usageKat:'pakai_investasi',              color:'#4ADE80'},
-  {key:'hiburan',           label:'Hiburan',                   icon:'🎉', depositKat:'pocket_hiburan',          usageKat:'pakai_hiburan',                color:'#F87171'}
+  {key:'kas',                label:'KAS (Belum Dialokasikan)',        icon:'🏦', depositKat:'kas',                     usageKat:'pakai_kas',                    color:'#FBBF24'},
+  {key:'kebutuhan_harian',  label:'Kebutuhan Harian (BNI)',          icon:'🍚', depositKat:'pocket_kebutuhan_harian', usageKat:'pakai_kebutuhan_harian',       color:'#D4AF37'},
+  {key:'dana_darurat',      label:'Tabungan/Darurat (BCA Blu)',      icon:'🚨', depositKat:'dana_darurat',            usageKat:'pakai_dana_darurat',           color:'#60A5FA'},
+  {key:'investasi',         label:'Investasi (Stockbit)',            icon:'📊', depositKat:'investasi',               usageKat:'pakai_investasi',              color:'#4ADE80'},
+  {key:'hiburan',           label:'Hiburan (OVO)',                   icon:'🎉', depositKat:'pocket_hiburan',          usageKat:'pakai_hiburan',                color:'#F87171'}
 ];
-let rekKatAktif='dana_darurat';
+let rekKatAktif='kas';
 let rekKatModeAktif='setor';
 function getRekKatConfig(key){ return REKENING_KATEGORI.find(k=>k.key===key); }
 function pilihRekKat(key){ rekKatAktif=key; renderRekeningKategori(); }
@@ -3565,6 +3576,38 @@ async function simpanRekeningKategori(){
   const ket=ketEl.value.trim();
   if(!jumlah){toast('❌ Isi nominal');return;}
   if(!tgl){toast('❌ Isi tanggal');return;}
+
+  // ── KAS + mode Pakai = "Alokasikan" (transfer KAS → salah satu rekening tujuan) ──
+  // Ini bikin 2 baris sekaligus: KAS berkurang, rekening tujuan bertambah, jumlahnya sama persis.
+  if(rekKatAktif==='kas' && rekKatModeAktif==='pakai'){
+    const targetEl=document.getElementById('rekKatAlokasiTarget');
+    const targetKey=targetEl.value;
+    const targetCfg=getRekKatConfig(targetKey);
+    const saldoKasSaatIni=getRekKatSaldo('kas');
+    if(jumlah>saldoKasSaatIni+0.01){
+      if(!confirm(`Saldo KAS cuma ${fc(saldoKasSaatIni)}, tapi kamu mau alokasikan ${fc(jumlah)} (KAS bakal minus). Lanjut?`)) return;
+    }
+    try{
+      const bodyKeluarKas={ tanggal:tgl, dari:cfg.label, ke:targetCfg.label, jumlah:parseFloat(jumlah.toFixed(2)), keterangan:ket||null, kategori:cfg.usageKat };
+      const bodyMasukTarget={ tanggal:tgl, dari:cfg.label, ke:targetCfg.label, jumlah:parseFloat(jumlah.toFixed(2)), keterangan:ket||null, kategori:targetCfg.depositKat };
+      for(const body of [bodyKeluarKas, bodyMasukTarget]){
+        try{ await api('kas_pribadi','POST',body); }
+        catch(errKat){ const { kategori:_drop, ...bodyNoKat } = body; await api('kas_pribadi','POST',bodyNoKat); }
+      }
+      toast(`✅ ${fc(jumlah)} dialokasikan dari KAS ke ${targetCfg.label}`);
+      jumlahEl.value='';
+      ketEl.value='';
+      await fetchAllKasData();
+      renderWdSection();
+      renderKasRingkasan();
+      renderKasRekap();
+      renderKasChart();
+    }catch(e){
+      console.error(e);
+      toast('❌ Gagal alokasikan: '+(e.message||'').slice(0,150));
+    }
+    return;
+  }
 
   let bodyData;
   if(rekKatModeAktif==='setor'){
@@ -3622,19 +3665,22 @@ function renderRekeningKategori(){
     <button type="button" onclick="pilihRekKat('${k.key}')" style="padding:9px 6px;border-radius:9px;border:1.5px solid ${k.key===rekKatAktif?k.color:'var(--border)'};background:${k.key===rekKatAktif?'var(--bg3)':'var(--bg0)'};color:${k.key===rekKatAktif?k.color:'#7A5D1F'};font-weight:700;font-size:10px;cursor:pointer">${k.icon} ${k.label}</button>
   `).join('');
 
+  const isKas = rekKatAktif==='kas';
   modeTabsEl.innerHTML = `
     <button type="button" onclick="pilihRekKatMode('setor')" style="padding:9px 6px;border-radius:9px;border:1.5px solid ${rekKatModeAktif==='setor'?'#4ADE80':'var(--border)'};background:${rekKatModeAktif==='setor'?'var(--bg3)':'var(--bg0)'};color:${rekKatModeAktif==='setor'?'#4ADE80':'#7A5D1F'};font-weight:700;font-size:11px;cursor:pointer">➕ Setor</button>
-    <button type="button" onclick="pilihRekKatMode('pakai')" style="padding:9px 6px;border-radius:9px;border:1.5px solid ${rekKatModeAktif==='pakai'?'#F87171':'var(--border)'};background:${rekKatModeAktif==='pakai'?'var(--bg3)':'var(--bg0)'};color:${rekKatModeAktif==='pakai'?'#F87171':'#7A5D1F'};font-weight:700;font-size:11px;cursor:pointer">➖ Pakai</button>
+    <button type="button" onclick="pilihRekKatMode('pakai')" style="padding:9px 6px;border-radius:9px;border:1.5px solid ${rekKatModeAktif==='pakai'?'#F87171':'var(--border)'};background:${rekKatModeAktif==='pakai'?'var(--bg3)':'var(--bg0)'};color:${rekKatModeAktif==='pakai'?'#F87171':'#7A5D1F'};font-weight:700;font-size:11px;cursor:pointer">${isKas?'🔀 Alokasikan':'➖ Pakai'}</button>
   `;
 
   const fieldSetor=document.getElementById('rekKatFieldSetor');
   const fieldPakai=document.getElementById('rekKatFieldPakai');
+  const fieldAlokasi=document.getElementById('rekKatFieldAlokasi');
   const jumlahLbl=document.getElementById('rekKatJumlahLbl');
   const submitBtn=document.getElementById('rekKatSubmitBtn');
   if(fieldSetor) fieldSetor.style.display = rekKatModeAktif==='setor' ? '' : 'none';
-  if(fieldPakai) fieldPakai.style.display = rekKatModeAktif==='pakai' ? '' : 'none';
-  if(jumlahLbl) jumlahLbl.textContent = rekKatModeAktif==='setor' ? 'Nominal Setoran (¢)' : 'Nominal Dipakai (¢)';
-  if(submitBtn) submitBtn.textContent = rekKatModeAktif==='setor' ? `💾 Setor ke ${cfg.label}` : `💾 Catat Pemakaian ${cfg.label}`;
+  if(fieldPakai) fieldPakai.style.display = (rekKatModeAktif==='pakai' && !isKas) ? '' : 'none';
+  if(fieldAlokasi) fieldAlokasi.style.display = (rekKatModeAktif==='pakai' && isKas) ? '' : 'none';
+  if(jumlahLbl) jumlahLbl.textContent = rekKatModeAktif==='setor' ? 'Nominal Setoran (¢)' : (isKas?'Nominal Dialokasikan (¢)':'Nominal Dipakai (¢)');
+  if(submitBtn) submitBtn.textContent = rekKatModeAktif==='setor' ? `💾 Setor ke ${cfg.label}` : (isKas?'🔀 Alokasikan dari KAS':`💾 Catat Pemakaian ${cfg.label}`);
 
   const d=new Date(), pad=n=>String(n).padStart(2,'0');
   const tglInput=document.getElementById('rekKatTgl');
@@ -3671,7 +3717,9 @@ function hapusRekKatEntry(id){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const row=(allKasData||[]).find(r=>r.id===id);
   if(!row){toast('❌ Data tidak ditemukan');return;}
-  if(!confirm(`Hapus transaksi ${fc(row.jumlah)} tanggal ${fd(row.tanggal)}? Ini cuma hapus catatan kantong ini, gak menyentuh Saldo Harian/Laporan Harian.`)) return;
+  const isPasanganAlokasi = row.kategori==='pakai_kas' || row.dari==='KAS (Belum Dialokasikan)';
+  const pesanPasangan = isPasanganAlokasi ? '\n\n⚠️ Ini bagian dari transaksi "Alokasikan dari KAS" (2 baris berpasangan). Menghapus ini TIDAK otomatis menghapus baris pasangannya di rekening tujuan/KAS — cek & hapus manual baris pasangannya juga kalau perlu, biar saldo KAS & tujuan tetap sama-sama benar.' : '';
+  if(!confirm(`Hapus transaksi ${fc(row.jumlah)} tanggal ${fd(row.tanggal)}? Ini cuma hapus catatan kantong ini, gak menyentuh Saldo Harian/Laporan Harian.${pesanPasangan}`)) return;
   (async()=>{
     try{
       await api(`kas_pribadi?id=eq.${id}`,'DELETE');
