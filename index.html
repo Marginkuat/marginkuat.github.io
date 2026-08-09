@@ -1485,7 +1485,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       </div>
     </div>
 
-    <div class="ap-title">⚙️ Input Saldo Harian</div>
+    <div class="ap-title" id="inpSaldoHarianTitle">⚙️ Input Saldo Harian</div>
 
     <label class="lbl">Pair</label>
     <select class="inp" id="inpPair">
@@ -2473,17 +2473,19 @@ function graphPrev(){graphMonth--;if(graphMonth<0){graphMonth=11;graphYear--;}re
 function graphNext(){graphMonth++;if(graphMonth>11){graphMonth=0;graphYear++;}renderGraph();}
 
 // ══ RIWAYAT ══
+let riwayatCache=[];
 async function loadRiwayat(){
   try{
     const rows=await api('saldo_harian?select=*&order=tanggal.desc&limit=30');
+    riwayatCache=rows;
     const el=document.getElementById('riwayatList');
     if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada catatan</div>';return;}
     el.innerHTML=rows.map(r=>{
       const p=parseFloat(r.profit||0);
       const pColor=p>0?'#4ADE80':(p<0?'#F87171':'#8A6B26');
-      return `<div class="riwayat-item">
+      return `<div class="riwayat-item" onclick="editRiwayatHarian('${r.tanggal}')" style="cursor:pointer">
         <div class="ri-info">
-          <div class="ri-date">${fd(r.tanggal)}</div>
+          <div class="ri-date">${fd(r.tanggal)} <span style="font-size:9px;color:#5C4818">✏️ tap buat edit</span></div>
           <div class="ri-saldo">${fc(r.saldo_mt4)}</div>
           ${r.catatan?`<div class="ri-cat">${escapeHtml(r.catatan)}</div>`:''}
         </div>
@@ -2491,6 +2493,33 @@ async function loadRiwayat(){
       </div>`;
     }).join('');
   }catch(e){console.error(e);}
+}
+// Ketuk baris di "Riwayat Harian" -> isi ulang form "Input Saldo Harian" dengan data hari itu,
+// biar bisa langsung dikoreksi tanpa harus pilih tanggal manual & ngetik ulang semuanya dari nol.
+function editRiwayatHarian(tanggal){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin buat edit — tap ikon 🔐 dulu');return;}
+  const r=(riwayatCache||[]).find(x=>x.tanggal===tanggal);
+  if(!r){toast('❌ Data tidak ditemukan');return;}
+
+  document.getElementById('inpTgl').value=r.tanggal;
+  document.getElementById('inpSaldo').value=r.saldo_mt4;
+  document.getElementById('inpSignal').value=r.jumlah_signal||'';
+  document.getElementById('inpCatatan').value=r.catatan||'';
+  document.getElementById('inpGrossProfit').value=r.gross_profit!=null?r.gross_profit:'';
+  document.getElementById('inpGrossLoss').value=r.gross_loss!=null?r.gross_loss:'';
+  const pairEl=document.getElementById('inpPair');
+  if(pairEl) pairEl.value=r.pair||'XAUUSD';
+  const moodEl=document.getElementById('inpMood');
+  if(moodEl && r.mood) moodEl.value=r.mood;
+
+  const p=parseFloat(r.profit||0);
+  setPL(p<0?'loss':'profit');
+  document.getElementById('inpProfit').value=Math.abs(p).toFixed(2);
+  syncProfitFromGross(); // ini juga yang bikin field profit ke-lock lagi kalau gross-nya ada
+
+  const titleEl=document.getElementById('inpSaldoHarianTitle');
+  if(titleEl) titleEl.scrollIntoView({behavior:'smooth', block:'start'});
+  toast(`✏️ Data ${fd(tanggal)} dimuat ke form — edit lalu tekan "Simpan Catatan Hari Ini"`);
 }
 
 // ══ PROFIT PER BULAN ══
@@ -4782,6 +4811,28 @@ async function downloadWeeklyRecapPDF(){
     const { jsPDF }=window.jspdf;
     const doc=new jsPDF();
     const labelText=weeklyRecapLabelText(data.start,data.end);
+
+    // Hitung WD/Deposit per hari (pakai histori penuh biar akurat), sama seperti Laporan Bulanan.
+    const allRowsHistW=await api('saldo_harian?select=tanggal,saldo_mt4,profit&order=tanggal.asc');
+    const wdDepositMapW={};
+    let prevSaldoHistW=null;
+    allRowsHistW.forEach(r=>{
+      const saldo=parseFloat(r.saldo_mt4||0);
+      const profit=parseFloat(r.profit||0);
+      let wd=0, deposit=0;
+      if(prevSaldoHistW===null){
+        const modalAwal=saldo-profit;
+        if(modalAwal>0.01) deposit=modalAwal;
+      }else{
+        const selisih=saldo-prevSaldoHistW;
+        const implisit=selisih-profit;
+        if(implisit<-0.01) wd=Math.abs(implisit);
+        else if(implisit>0.01) deposit=implisit;
+      }
+      wdDepositMapW[r.tanggal]={wd, deposit};
+      prevSaldoHistW=saldo;
+    });
+
     doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(20);
     doc.text('Weekly Recap — Laporan Mingguan', 14, 20);
     doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(100);
@@ -4814,18 +4865,25 @@ async function downloadWeeklyRecapPDF(){
     doc.text('Rincian Harian', 14, y); y+=8;
     doc.setFontSize(9);
     doc.setFont('helvetica','bold'); doc.setTextColor(90);
-    doc.text('Tanggal', 14, y); doc.text('Pair', 60, y); doc.text('Signal', 95, y); doc.text('Profit/Loss', 140, y);
+    doc.text('Tanggal', 14, y); doc.text('Saldo', 42, y); doc.text('Pair', 68, y); doc.text('Signal', 90, y); doc.text('P/L', 112, y); doc.text('WD/Deposit', 140, y);
     y+=2; doc.setDrawColor(220); doc.line(14,y,196,y); y+=6;
     doc.setFont('helvetica','normal');
     data.rows.forEach(r=>{
       if(y>270){ doc.addPage(); y=20; }
       const p=parseFloat(r.profit||0);
+      const wdDep=wdDepositMapW[r.tanggal]||{wd:0,deposit:0};
+      let wdDepText='-';
+      if(wdDep.deposit>0.01) wdDepText='+'+fc(wdDep.deposit)+' dep';
+      else if(wdDep.wd>0.01) wdDepText='-'+fc(wdDep.wd)+' WD';
       doc.setTextColor(90);
       doc.text(fd(r.tanggal), 14, y);
-      doc.text(r.pair||'-', 60, y);
-      doc.text(String(r.jumlah_signal||0), 95, y);
+      doc.text(fc(r.saldo_mt4), 42, y);
+      doc.text(r.pair||'-', 68, y);
+      doc.text(String(r.jumlah_signal||0), 90, y);
       if(p>=0) doc.setTextColor(34,150,60); else doc.setTextColor(200,60,60);
-      doc.text((p>=0?'+':'')+fc(p), 140, y);
+      doc.text((p>=0?'+':'')+fc(p), 112, y);
+      doc.setTextColor(90);
+      doc.text(wdDepText, 140, y);
       y+=7;
     });
 
@@ -7240,6 +7298,31 @@ async function exportLaporanPDF(){
     const rows=await getExportRows();
     if(!rows.length){statusEl.textContent='❌ Tidak ada data tercatat di bulan ini.';return;}
 
+    // Ambil SEMUA histori (bukan cuma bulan ini) buat hitung WD/Deposit yang akurat — sama seperti
+    // export CSV. Ini nutup komplain "saldo loncat-loncat tanpa penjelasan" karena sekarang tiap
+    // baris di PDF nunjukin persis kapan ada WD/Deposit yang bikin saldo naik/turun di luar P/L.
+    const allRowsHist=await api('saldo_harian?select=tanggal,saldo_mt4,profit&order=tanggal.asc');
+    const wdDepositMap={};
+    let prevSaldoHist=null;
+    allRowsHist.forEach(r=>{
+      const saldo=parseFloat(r.saldo_mt4||0);
+      const profit=parseFloat(r.profit||0);
+      let wd=0, deposit=0;
+      if(prevSaldoHist===null){
+        const modalAwal=saldo-profit;
+        if(modalAwal>0.01) deposit=modalAwal;
+      }else{
+        const selisih=saldo-prevSaldoHist;
+        const implisit=selisih-profit;
+        if(implisit<-0.01) wd=Math.abs(implisit);
+        else if(implisit>0.01) deposit=implisit;
+      }
+      wdDepositMap[r.tanggal]={wd, deposit};
+      prevSaldoHist=saldo;
+    });
+    const totalDepositBulanIni=rows.reduce((s,r)=>s+(wdDepositMap[r.tanggal]?.deposit||0),0);
+    const totalWdBulanIni=rows.reduce((s,r)=>s+(wdDepositMap[r.tanggal]?.wd||0),0);
+
     const { jsPDF }=window.jspdf;
     const doc=new jsPDF();
     const judul=`Laporan Bulanan — ${bulanNamaFull[exportMonth]} ${exportYear}`;
@@ -7292,12 +7375,14 @@ async function exportLaporanPDF(){
     const statRight=[
       `Saldo awal: ${fc(saldoAwal)}`,
       `Saldo akhir: ${fc(saldoAkhir)}`,
+      `Total Deposit bulan ini: +${fc(totalDepositBulanIni)}`,
+      `Total WD bulan ini: -${fc(totalWdBulanIni)}`,
       `Pertumbuhan saldo: ${pertumbuhan}%`,
       `Hari terbaik: ${best.tanggal} (${parseFloat(best.profit||0)>=0?'+':''}${fc(best.profit)})`
     ];
     statLeft.forEach((t,i)=>doc.text(t,14,y+i*6));
     statRight.forEach((t,i)=>doc.text(t,105,y+i*6));
-    y+=statLeft.length*6+6;
+    y+=Math.max(statLeft.length,statRight.length)*6+6;
 
     // ── RINGKASAN OTOMATIS ──
     doc.setFontSize(11); doc.setFont(undefined,'bold');
@@ -7319,10 +7404,11 @@ async function exportLaporanPDF(){
     doc.setFontSize(9);
     doc.setFont(undefined,'bold');
     doc.text('Tanggal',14,y);
-    doc.text('Saldo',58,y);
-    doc.text('P/L',90,y);
-    doc.text('Pair',118,y);
-    doc.text('Catatan',145,y);
+    doc.text('Saldo',44,y);
+    doc.text('P/L',68,y);
+    doc.text('WD/Deposit',90,y);
+    doc.text('Pair',125,y);
+    doc.text('Catatan',148,y);
     doc.setFont(undefined,'normal');
     y+=4;
     doc.setDrawColor(200);
@@ -7332,11 +7418,16 @@ async function exportLaporanPDF(){
     rows.forEach(r=>{
       if(y>282){doc.addPage();y=20;}
       const p=parseFloat(r.profit||0);
+      const wdDep=wdDepositMap[r.tanggal]||{wd:0,deposit:0};
+      let wdDepText='-';
+      if(wdDep.deposit>0.01) wdDepText='+'+fc(wdDep.deposit)+' dep';
+      else if(wdDep.wd>0.01) wdDepText='-'+fc(wdDep.wd)+' WD';
       doc.text(String(r.tanggal),14,y);
-      doc.text(fc(r.saldo_mt4),58,y);
-      doc.text((p>=0?'+':'')+fc(p),90,y);
-      doc.text(r.pair||'-',118,y);
-      doc.text(String(r.catatan||'-').slice(0,22),145,y);
+      doc.text(fc(r.saldo_mt4),44,y);
+      doc.text((p>=0?'+':'')+fc(p),68,y);
+      doc.text(wdDepText,90,y);
+      doc.text(r.pair||'-',125,y);
+      doc.text(String(r.catatan||'-').slice(0,16),148,y);
       y+=6;
     });
 
