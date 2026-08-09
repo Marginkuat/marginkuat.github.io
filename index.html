@@ -1518,19 +1518,20 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <label class="lbl">Jumlah Signal / Orderan Hari Ini</label>
     <input class="inp" type="number" id="inpSignal" placeholder="0" step="1" min="0">
 
+    <label class="lbl">Gross Profit Hari Ini (total dari transaksi yang untung)</label>
+    <input class="inp" type="number" id="inpGrossProfit" placeholder="0.00" step="0.01" min="0" oninput="syncProfitFromGross()">
+
+    <label class="lbl">Gross Loss Hari Ini (total dari transaksi yang rugi, angka positif)</label>
+    <input class="inp" type="number" id="inpGrossLoss" placeholder="0.00" step="0.01" min="0" oninput="syncProfitFromGross()">
+
     <label class="lbl">Profit / Loss Hari Ini (angka dari MT4)</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
       <button id="btnProfit" onclick="setPL('profit')" style="padding:9px;border-radius:8px;border:1.5px solid #2E4A1E;background:#132D0E;color:#4ADE80;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📈 PROFIT</button>
       <button id="btnLoss" onclick="setPL('loss')" style="padding:9px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg0);color:#8A6B26;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:10px">📉 LOSS</button>
     </div>
     <input class="inp" type="number" id="inpProfit" placeholder="0.00 (tulis angka positif)" step="0.01" min="0">
+    <div id="profitAutoNote" style="font-size:9px;color:#4ADE80;margin-top:-6px;margin-bottom:10px;display:none">✓ Dihitung otomatis dari Gross Profit − Gross Loss (biar gak selisih/typo)</div>
     <input type="hidden" id="plType" value="profit">
-
-    <label class="lbl">Gross Profit Hari Ini (total dari transaksi yang untung)</label>
-    <input class="inp" type="number" id="inpGrossProfit" placeholder="0.00" step="0.01" min="0">
-
-    <label class="lbl">Gross Loss Hari Ini (total dari transaksi yang rugi, angka positif)</label>
-    <input class="inp" type="number" id="inpGrossLoss" placeholder="0.00" step="0.01" min="0">
 
     <label class="lbl">Catatan (opsional)</label>
     <input class="inp" id="inpCatatan" placeholder="Contoh: Setelah WD 600">
@@ -5875,6 +5876,30 @@ function setPL(type){
     bp.style.border='1.5px solid var(--border)';bp.style.background='var(--bg0)';bp.style.color='#8A6B26';
   }
 }
+// ══ AUTO-HITUNG PROFIT DARI GROSS PROFIT − GROSS LOSS ══
+// Ini nutup celah paling umum penyebab data selisih: sebelumnya "Profit" & "Gross Profit/Loss" itu
+// 2 kolom manual yang independen, jadi gampang typo & gak nyambung satu sama lain (misal salah ketik
+// 263.7 padahal harusnya 254.7). Sekarang begitu KEDUA gross field diisi, Profit otomatis dihitung
+// dan dikunci (read-only) — gak bisa diketik manual lagi selama gross-nya masih terisi. Kalau kamu
+// gak nyatet breakdown gross (kosongkan salah satu/kedua field gross), Profit balik jadi bisa diisi manual.
+function syncProfitFromGross(){
+  const gpEl=document.getElementById('inpGrossProfit'), glEl=document.getElementById('inpGrossLoss');
+  const profitEl=document.getElementById('inpProfit'), noteEl=document.getElementById('profitAutoNote');
+  const gpRaw=gpEl.value.trim(), glRaw=glEl.value.trim();
+  if(gpRaw!=='' && glRaw!==''){
+    const gp=parseFloat(gpRaw)||0, gl=parseFloat(glRaw)||0;
+    const net=gp-gl;
+    profitEl.value=Math.abs(net).toFixed(2);
+    profitEl.readOnly=true;
+    profitEl.style.opacity='0.7';
+    setPL(net>=0?'profit':'loss');
+    noteEl.style.display='';
+  }else{
+    profitEl.readOnly=false;
+    profitEl.style.opacity='1';
+    noteEl.style.display='none';
+  }
+}
 async function simpanSaldo(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const saldo=parseFloat(document.getElementById('inpSaldo').value)||0;
@@ -5886,6 +5911,16 @@ async function simpanSaldo(){
   const catatan=document.getElementById('inpCatatan').value.trim();
   const grossProfit=parseFloat(document.getElementById('inpGrossProfit').value)||0;
   const grossLoss=parseFloat(document.getElementById('inpGrossLoss').value)||0;
+  const gpFilled=document.getElementById('inpGrossProfit').value.trim()!=='';
+  const glFilled=document.getElementById('inpGrossLoss').value.trim()!=='';
+  if(gpFilled && glFilled){
+    const calc=grossProfit-grossLoss;
+    if(Math.abs(calc-profit)>0.02){
+      if(!confirm(`⚠️ Profit (${profit.toFixed(2)}) gak sama dengan Gross Profit − Gross Loss (${calc.toFixed(2)}). Selisih ${(profit-calc).toFixed(2)}.\n\nIni bisa bikin data situs kamu gak cocok kalau diaudit. Lanjut simpan pakai angka Profit manual ini? (Disarankan: Batal, lalu perbaiki salah satu angkanya dulu)`)){
+        return;
+      }
+    }
+  }
   const pair=document.getElementById('inpPair').value||'XAUUSD';
   const mood=document.getElementById('inpMood').value||'biasa';
   if(!saldo){toast('❌ Isi saldo MT4');return;}
@@ -5927,6 +5962,7 @@ async function simpanSaldo(){
     document.getElementById('inpCatatan').value='';
     document.getElementById('inpGrossProfit').value='';
     document.getElementById('inpGrossLoss').value='';
+    syncProfitFromGross();
     document.getElementById('pvBox').style.display='none';
     await loadAll();
     await fetchAllKasData();
@@ -7034,15 +7070,25 @@ async function importCSV(){
     const idxPair=header.indexOf('pair');
     const idxCatatan=header.indexOf('catatan');
 
-    let sukses=0,gagal=0;
+    let sukses=0,gagal=0,dikoreksi=0;
     for(let i=1;i<lines.length;i++){
       const cols=parseCsvLine(lines[i]);
       if(!cols[idxTgl])continue;
       const tgl=cols[idxTgl];
       if(!/^\d{4}-\d{2}-\d{2}$/.test(tgl)){gagal++;continue;}
+      let profitVal=idxProfit>-1?(parseFloat(cols[idxProfit])||0):0;
+      const gpVal=idxGP>-1?parseFloat(cols[idxGP]):NaN;
+      const glVal=idxGL>-1?parseFloat(cols[idxGL]):NaN;
+      // Kalau gross_profit & gross_loss ada di CSV, Profit SELALU dihitung ulang dari situ —
+      // supaya kolom "profit" yang mungkin salah ketik pas ekspor/diedit manual gak ikut ke-import.
+      if(!isNaN(gpVal) && !isNaN(glVal)){
+        const calc=gpVal-glVal;
+        if(Math.abs(calc-profitVal)>0.02) dikoreksi++;
+        profitVal=calc;
+      }
       const bodyData={
         saldo_mt4: parseFloat(cols[idxSaldo])||0,
-        profit: idxProfit>-1?(parseFloat(cols[idxProfit])||0):0,
+        profit: profitVal,
         gross_profit: idxGP>-1?(parseFloat(cols[idxGP])||null):null,
         gross_loss: idxGL>-1?(parseFloat(cols[idxGL])||null):null,
         jumlah_signal: idxSignal>-1?(parseInt(cols[idxSignal])||0):0,
@@ -7060,7 +7106,7 @@ async function importCSV(){
         gagal++;
       }
     }
-    statusEl.textContent=`✅ Selesai. ${sukses} baris tersimpan${gagal?', '+gagal+' baris gagal (cek format/kolom pair di Supabase)':''}.`;
+    statusEl.textContent=`✅ Selesai. ${sukses} baris tersimpan${dikoreksi?', '+dikoreksi+' baris profit-nya otomatis dikoreksi biar cocok sama Gross Profit−Loss':''}${gagal?', '+gagal+' baris gagal (cek format/kolom pair di Supabase)':''}.`;
     toast(gagal===0?'✅ Import CSV berhasil':'⚠️ Import selesai dengan beberapa error');
     fileInput.value='';
     await loadAll();
@@ -7092,11 +7138,38 @@ async function exportLaporanCSV(){
   try{
     const rows=await getExportRows();
     if(!rows.length){statusEl.textContent='❌ Tidak ada data tercatat di bulan ini.';return;}
-    const header=['tanggal','saldo_mt4','profit','gross_profit','gross_loss','jumlah_signal','pair','catatan'];
+
+    // Ambil SEMUA histori (bukan cuma bulan ini) buat hitung wd/deposit yang akurat — biar hari
+    // pertama di bulan ini tetap dibandingkan ke saldo hari terakhir bulan sebelumnya, bukan dianggap
+    // "modal awal" keliru. Ini juga jawab masukan: WD & deposit sekarang eksplisit ada di laporan,
+    // gak perlu dihitung manual antar baris lagi.
+    const allRows=await api('saldo_harian?select=tanggal,saldo_mt4,profit&order=tanggal.asc');
+    const wdDepositMap={};
+    let prevSaldo=null;
+    allRows.forEach(r=>{
+      const saldo=parseFloat(r.saldo_mt4||0);
+      const profit=parseFloat(r.profit||0);
+      let wd=0, deposit=0;
+      if(prevSaldo===null){
+        const modalAwal=saldo-profit;
+        if(modalAwal>0.01) deposit=modalAwal;
+      }else{
+        const selisih=saldo-prevSaldo;
+        const implisit=selisih-profit;
+        if(implisit<-0.01) wd=Math.abs(implisit);
+        else if(implisit>0.01) deposit=implisit;
+      }
+      wdDepositMap[r.tanggal]={wd:parseFloat(wd.toFixed(2)), deposit:parseFloat(deposit.toFixed(2))};
+      prevSaldo=saldo;
+    });
+
+    const header=['tanggal','saldo_mt4','profit','gross_profit','gross_loss','wd','deposit','jumlah_signal','pair','catatan'];
     let csv=header.join(',')+'\n';
     rows.forEach(r=>{
+      const wdDep=wdDepositMap[r.tanggal]||{wd:0,deposit:0};
+      const rowWithWdDep={...r, wd:wdDep.wd||'', deposit:wdDep.deposit||''};
       const line=header.map(h=>{
-        let v=r[h]==null?'':r[h];
+        let v=rowWithWdDep[h]==null?'':rowWithWdDep[h];
         v=String(v).replace(/"/g,'""');
         if(v.includes(',')||v.includes('"')||v.includes('\n')) v=`"${v}"`;
         return v;
