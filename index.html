@@ -1431,6 +1431,30 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
+<!-- ANALISA GAP BROKER -->
+<div class="section" id="secGapAnalysis">
+  <div class="sec-title">📉 Analisa Gap / Slip Broker</div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#7A5D1F;margin-bottom:12px;line-height:1.6">
+      Upload atau tempel laporan (statement) broker berformat HTML. Situs otomatis menghitung selisih antara harga S/L atau T/P yang di-set dengan harga eksekusi aktual di tiap transaksi tertutup, lalu menandai transaksi dengan gap tidak wajar.
+    </div>
+
+    <label style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Upload file laporan (.html)</label>
+    <input type="file" id="gapFileInput" accept=".html,.htm,text/html" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:#D4AF37;font-size:11px;margin-bottom:12px">
+
+    <label style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Atau tempel isi laporan (HTML) di sini</label>
+    <textarea id="gapPasteInput" rows="4" placeholder="Tempel HTML laporan broker di sini..." style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:#D4AF37;font-size:11px;margin-bottom:12px;font-family:monospace"></textarea>
+
+    <label style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Ambang batas gap dianggap "besar" (% dari harga)</label>
+    <input type="number" id="gapThreshold" value="0.1" step="0.01" min="0" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:#D4AF37;font-size:13px;margin-bottom:14px;font-family:'JetBrains Mono',monospace">
+
+    <button onclick="analisaGapBroker()" style="width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(90deg,#8A6B26,#D4AF37);color:#161A0F;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:14px">🔍 Analisa Gap Sekarang</button>
+
+    <div id="gapAnalysisStatus" style="font-size:11px;color:#8A6B26;text-align:center;margin-bottom:10px"></div>
+    <div id="gapAnalysisResult"></div>
+  </div>
+</div>
+
 <!-- DISKUSI KOMUNITAS -->
 <div class="section" id="secDiskusi">
   <div class="sec-title">💬 Diskusi &amp; Komentar</div>
@@ -1486,6 +1510,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     </div>
 
     <div class="ap-title" id="inpSaldoHarianTitle">⚙️ Input Saldo Harian</div>
+
+    <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.6">📧 Auto-baca laporan harian dari email broker (file HTML) — Saldo, Tanggal, Jumlah Signal, Gross Profit/Loss &amp; Swap otomatis terisi ke form di bawah. Tetap cek dulu sebelum simpan.</div>
+      <input type="file" id="brokerDailyFile" accept=".html,.htm,text/html" style="width:100%;padding:9px;background:var(--bg0);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px">
+      <textarea id="brokerDailyPaste" rows="3" placeholder="Atau tempel isi HTML laporan di sini..." style="width:100%;padding:9px;background:var(--bg0);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px;font-family:monospace"></textarea>
+      <button onclick="bacaLaporanEmailHarian()" style="width:100%;padding:10px;border-radius:9px;border:none;background:linear-gradient(90deg,#8A6B26,#D4AF37);color:#161A0F;font-size:12px;font-weight:800;cursor:pointer">📥 Baca &amp; Isi Otomatis</button>
+      <div id="brokerDailyStatus" style="font-size:10px;color:#8A6B26;text-align:center;margin-top:8px"></div>
+    </div>
 
     <label class="lbl">Pair</label>
     <select class="inp" id="inpPair">
@@ -7453,6 +7485,286 @@ async function exportLaporanPDF(){
     statusEl.textContent='❌ Gagal ekspor PDF: '+(e.message||'').slice(0,150);
   }
 }
+// ══════════════════════════════════════════
+// ANALISA GAP / SLIP BROKER
+// ══════════════════════════════════════════
+function parseNumBroker(str){
+  if(str===undefined||str===null) return NaN;
+  let s=String(str).trim();
+  if(s==='') return NaN;
+  s=s.replace(/\s/g,'').replace(/'/g,'');
+  if(s.includes(',') && s.includes('.')){
+    s=s.replace(/,/g,'');
+  }else if(s.includes(',') && !s.includes('.')){
+    const parts=s.split(',');
+    if(parts.length===2 && parts[1].length<=2) s=parts.join('.');
+    else s=s.replace(/,/g,'');
+  }
+  return parseFloat(s);
+}
+
+function extractClosedTrades(htmlString){
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(htmlString,'text/html');
+  const trs=Array.from(doc.querySelectorAll('tr'));
+  let section=null;
+  const out=[];
+  for(const tr of trs){
+    const text=tr.textContent.replace(/\s+/g,' ').trim();
+    if(/^(Transaksi Tertutup|Closed Transactions)/i.test(text)){ section='closed'; continue; }
+    if(/^(Order Terbuka|Open Trades|Order Tertunda|Working Orders|Ringkasan|Summary|Deleted Orders|Ditutup Sebagian)/i.test(text)){ section='other'; continue; }
+    if(section!=='closed') continue;
+    const tds=Array.from(tr.querySelectorAll('td'));
+    if(tds.length<10) continue;
+    const vals=tds.map(td=>td.textContent.trim());
+    const type=(vals[2]||'').toLowerCase();
+    if(type!=='buy' && type!=='sell') continue;
+    out.push({
+      ticket:vals[0], openTime:vals[1], type, size:vals[3], item:vals[4],
+      openPrice:parseNumBroker(vals[5]), sl:parseNumBroker(vals[6]), tp:parseNumBroker(vals[7]),
+      closeTime:vals[8], closePrice:parseNumBroker(vals[9]), swap:vals[10], profit:vals[11]
+    });
+  }
+  return out;
+}
+
+function analisaGapBroker(){
+  const statusEl=document.getElementById('gapAnalysisStatus');
+  const resultEl=document.getElementById('gapAnalysisResult');
+  const thresholdPct=parseFloat(document.getElementById('gapThreshold').value)||0.1;
+  const fileInput=document.getElementById('gapFileInput');
+  const pasteVal=document.getElementById('gapPasteInput').value.trim();
+
+  statusEl.textContent='⏳ Memproses...';
+  resultEl.innerHTML='';
+
+  function processHtml(htmlStr){
+    let trades;
+    try{ trades=extractClosedTrades(htmlStr); }
+    catch(e){ statusEl.textContent='❌ Gagal membaca laporan: '+(e.message||''); return; }
+    if(!trades.length){ statusEl.textContent='⚠️ Tidak ditemukan transaksi tertutup di file/teks ini. Pastikan formatnya sesuai laporan statement broker (HTML).'; return; }
+
+    const analyzed=[];
+    trades.forEach(t=>{
+      const hasSL=t.sl && !isNaN(t.sl) && t.sl>0;
+      const hasTP=t.tp && !isNaN(t.tp) && t.tp>0;
+      if(!hasSL && !hasTP) return;
+      if(isNaN(t.closePrice)) return;
+      const diffSL=hasSL?Math.abs(t.closePrice-t.sl):Infinity;
+      const diffTP=hasTP?Math.abs(t.closePrice-t.tp):Infinity;
+      const minDiff=Math.min(diffSL,diffTP);
+      const refPrice=t.openPrice||t.closePrice;
+      if(!refPrice) return;
+      const closeProximityPct=(minDiff/refPrice)*100;
+      if(closeProximityPct>2) return; // kemungkinan close manual, bukan kena S/L atau T/P
+      const trigger=diffSL<=diffTP?'S/L':'T/P';
+      const triggerPrice=diffSL<=diffTP?t.sl:t.tp;
+      const gapAbs=minDiff;
+      const gapPct=(gapAbs/refPrice)*100;
+      analyzed.push(Object.assign({},t,{trigger, triggerPrice, gapAbs, gapPct, besar:gapPct>thresholdPct}));
+    });
+
+    const flagged=analyzed.filter(a=>a.besar).sort((a,b)=>b.gapPct-a.gapPct);
+
+    statusEl.textContent=`✅ ${analyzed.length} transaksi (dari ${trades.length} total closed) dianalisa • ${flagged.length} gap besar ditemukan`;
+
+    if(!analyzed.length){
+      resultEl.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:11px">Tidak ada transaksi dengan S/L atau T/P yang bisa dianalisa gap-nya.</div>';
+      return;
+    }
+
+    let html='';
+    if(flagged.length){
+      html+='<div style="font-size:11px;font-weight:700;color:#F87171;margin:14px 0 8px">⚠️ Transaksi dengan gap besar:</div>';
+      flagged.forEach(a=>{
+        html+=`<div class="riwayat-item" style="border-left:3px solid #F87171">
+          <div class="ri-info">
+            <div class="ri-date">${a.item} · ${a.type.toUpperCase()} ${a.size} · #${a.ticket}</div>
+            <div class="ri-cat">${a.closeTime} · kena ${a.trigger} @ ${a.triggerPrice} → close @ ${a.closePrice}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="ri-saldo" style="color:#F87171">$${a.gapAbs.toFixed(2)}</div>
+            <div class="ri-cat">${a.gapPct.toFixed(3)}%</div>
+          </div>
+        </div>`;
+      });
+    }else{
+      html+='<div style="text-align:center;padding:14px;color:#4ADE80;font-size:11px">✅ Tidak ada gap besar. Semua transaksi normal (di bawah ambang batas '+thresholdPct+'%).</div>';
+    }
+
+    const analyzedSorted=analyzed.slice().sort((a,b)=> (a.closeTime<b.closeTime?1:-1));
+    html+='<details style="margin-top:14px"><summary style="font-size:10px;color:#8A6B26;cursor:pointer">Lihat semua '+analyzed.length+' transaksi yang dianalisa</summary><div style="margin-top:8px">';
+    analyzedSorted.forEach(a=>{
+      const color=a.besar?'#F87171':'#4ADE80';
+      html+=`<div class="riwayat-item">
+        <div class="ri-info">
+          <div class="ri-date">${a.item} · ${a.type.toUpperCase()} ${a.size} · #${a.ticket}</div>
+          <div class="ri-cat">${a.closeTime} · ${a.trigger} @ ${a.triggerPrice} → ${a.closePrice}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="ri-saldo" style="color:${color}">$${a.gapAbs.toFixed(2)}</div>
+          <div class="ri-cat">${a.gapPct.toFixed(3)}%</div>
+        </div>
+      </div>`;
+    });
+    html+='</div></details>';
+
+    window.__lastGapAnalysis={analyzed:analyzedSorted, flagged, thresholdPct};
+    html+='<button onclick="exportGapAnalysisPDF()" style="width:100%;padding:10px;border-radius:10px;border:1px solid #B8860B;background:transparent;color:#C8A84B;font-size:11px;font-weight:700;cursor:pointer;margin-top:14px">📄 Ekspor Laporan Gap (PDF)</button>';
+
+    resultEl.innerHTML=html;
+  }
+
+  if(fileInput.files && fileInput.files[0]){
+    const reader=new FileReader();
+    reader.onload=e=>processHtml(e.target.result);
+    reader.onerror=()=>{ statusEl.textContent='❌ Gagal membaca file.'; };
+    reader.readAsText(fileInput.files[0]);
+  }else if(pasteVal){
+    processHtml(pasteVal);
+  }else{
+    statusEl.textContent='⚠️ Upload file atau tempel isi laporan dulu.';
+  }
+}
+
+function exportGapAnalysisPDF(){
+  try{
+    if(typeof window.jspdf==='undefined'){ alert('Library PDF gagal dimuat, cek koneksi internet.'); return; }
+    const data=window.__lastGapAnalysis;
+    if(!data) return;
+    const { jsPDF }=window.jspdf;
+    const doc=new jsPDF();
+    doc.setFontSize(14); doc.setFont(undefined,'bold');
+    doc.text('Laporan Analisa Gap / Slip Broker',14,16);
+    doc.setFont(undefined,'normal'); doc.setFontSize(9); doc.setTextColor(120);
+    doc.text('MARGINKUAT — Digenerate otomatis: '+new Date().toLocaleString('id-ID'),14,22);
+    doc.setTextColor(0);
+    let y=32;
+    doc.setFontSize(10);
+    doc.text(`Total transaksi dianalisa: ${data.analyzed.length}`,14,y); y+=6;
+    doc.text(`Ambang batas gap besar: ${data.thresholdPct}%`,14,y); y+=6;
+    doc.text(`Jumlah gap besar ditemukan: ${data.flagged.length}`,14,y); y+=10;
+
+    doc.setFont(undefined,'bold');
+    doc.text('Tiket',14,y); doc.text('Item',36,y); doc.text('Waktu Close',60,y); doc.text('Trigger',105,y); doc.text('Close',130,y); doc.text('Gap $',155,y); doc.text('Gap %',175,y);
+    doc.setFont(undefined,'normal'); y+=4; doc.line(14,y,196,y); y+=6;
+    const list=data.flagged.length?data.flagged:data.analyzed;
+    list.forEach(a=>{
+      if(y>282){ doc.addPage(); y=20; }
+      doc.text(String(a.ticket),14,y);
+      doc.text(String(a.item),36,y);
+      doc.text(String(a.closeTime),60,y);
+      doc.text(`${a.trigger} ${a.triggerPrice}`,105,y);
+      doc.text(String(a.closePrice),130,y);
+      doc.text(a.gapAbs.toFixed(2),155,y);
+      doc.text(a.gapPct.toFixed(3)+'%',175,y);
+      y+=6;
+    });
+    doc.save('Laporan_Analisa_Gap_'+new Date().toISOString().slice(0,10)+'.pdf');
+  }catch(e){
+    console.error(e);
+    alert('Gagal ekspor PDF: '+(e.message||''));
+  }
+}
+
+// ══════════════════════════════════════════
+// AUTO-BACA LAPORAN HARIAN EMAIL BROKER
+// (pakai parseNumBroker & extractClosedTrades yang sama dengan Analisa Gap)
+// ══════════════════════════════════════════
+function extractOpenTradesCount(doc){
+  const trs=Array.from(doc.querySelectorAll('tr'));
+  let section=null, count=0;
+  for(const tr of trs){
+    const text=tr.textContent.replace(/\s+/g,' ').trim();
+    if(/^(Order Terbuka|Open Trades)/i.test(text)){ section='open'; continue; }
+    if(/^(Order Tertunda|Working Orders|Ringkasan|Summary|Transaksi Tertutup|Closed Transactions|Deleted Orders)/i.test(text)){ section=(section==='open')?'other':section; continue; }
+    if(section!=='open') continue;
+    const tds=Array.from(tr.querySelectorAll('td'));
+    if(tds.length<10) continue;
+    const type=(tds[2]?tds[2].textContent.trim():'').toLowerCase();
+    if(type==='buy'||type==='sell') count++;
+  }
+  return count;
+}
+
+function extractRingkasanHarian(doc){
+  const bodyText=(doc.body?doc.body.textContent:'').replace(/\s+/g,' ');
+  const saldoMatch=bodyText.match(/Saldo:\s*([\d.,\s]+?)(?=\s|$|Ekuitas)/i);
+  const tglMatch=bodyText.match(/Tanggal:\s*(\d{2})\.(\d{2})\.(\d{4})/);
+  return {
+    saldo: saldoMatch ? parseNumBroker(saldoMatch[1]) : null,
+    tanggalISO: tglMatch ? `${tglMatch[3]}-${tglMatch[2]}-${tglMatch[1]}` : null
+  };
+}
+
+function bacaLaporanEmailHarian(){
+  const statusEl=document.getElementById('brokerDailyStatus');
+  const fileInput=document.getElementById('brokerDailyFile');
+  const pasteVal=document.getElementById('brokerDailyPaste').value.trim();
+  statusEl.textContent='⏳ Membaca laporan...';
+
+  function process(htmlStr){
+    let doc, trades;
+    try{
+      const parser=new DOMParser();
+      doc=parser.parseFromString(htmlStr,'text/html');
+      trades=extractClosedTrades(htmlStr);
+    }catch(e){ statusEl.textContent='❌ Gagal membaca file: '+(e.message||''); return; }
+
+    const ringkasan=extractRingkasanHarian(doc);
+    if(!trades.length && ringkasan.saldo==null){
+      statusEl.textContent='⚠️ Format laporan tidak dikenali. Pastikan ini file HTML laporan asli dari broker (bukan hasil screenshot/PDF).';
+      return;
+    }
+
+    let grossProfit=0, grossLoss=0, swapTotal=0;
+    trades.forEach(t=>{
+      const p=parseNumBroker(t.profit), s=parseNumBroker(t.swap);
+      if(!isNaN(p)){ if(p>=0) grossProfit+=p; else grossLoss+=Math.abs(p); }
+      if(!isNaN(s)) swapTotal+=s;
+    });
+
+    const openCount=extractOpenTradesCount(doc);
+    const jumlahSignal=trades.length+openCount;
+
+    const itemCounts={};
+    trades.forEach(t=>{ itemCounts[t.item]=(itemCounts[t.item]||0)+1; });
+    let pairDominan=null, maxCount=0;
+    Object.keys(itemCounts).forEach(k=>{ if(itemCounts[k]>maxCount){ maxCount=itemCounts[k]; pairDominan=k; } });
+
+    if(ringkasan.saldo!=null){
+      document.getElementById('inpSaldo').value=ringkasan.saldo.toFixed(2);
+      if(typeof previewSaldo==='function') previewSaldo();
+    }
+    if(ringkasan.tanggalISO) document.getElementById('inpTgl').value=ringkasan.tanggalISO;
+    document.getElementById('inpSignal').value=jumlahSignal;
+    document.getElementById('inpGrossProfit').value=grossProfit.toFixed(2);
+    document.getElementById('inpGrossLoss').value=grossLoss.toFixed(2);
+    document.getElementById('inpSwap').value=swapTotal.toFixed(2);
+
+    if(pairDominan){
+      const pairSel=document.getElementById('inpPair');
+      const opt=Array.from(pairSel.options).find(o=>o.value===pairDominan);
+      pairSel.value=opt?pairDominan:'FOREX';
+    }
+
+    if(typeof syncProfitFromGross==='function') syncProfitFromGross();
+
+    statusEl.innerHTML=`✅ Terisi otomatis: ${trades.length} transaksi closed + ${openCount} order terbuka = <b>${jumlahSignal} signal</b>. Gross Profit $${grossProfit.toFixed(2)}, Gross Loss $${grossLoss.toFixed(2)}${ringkasan.saldo!=null?', Saldo $'+ringkasan.saldo.toFixed(2):''}. Cek ulang sebelum tekan Simpan.`;
+  }
+
+  if(fileInput.files && fileInput.files[0]){
+    const reader=new FileReader();
+    reader.onload=e=>process(e.target.result);
+    reader.onerror=()=>{ statusEl.textContent='❌ Gagal membaca file.'; };
+    reader.readAsText(fileInput.files[0]);
+  }else if(pasteVal){
+    process(pasteVal);
+  }else{
+    statusEl.textContent='⚠️ Upload file atau tempel isi laporan dulu.';
+  }
+}
+
 renderExportLabel();
 </script>
 </body>
