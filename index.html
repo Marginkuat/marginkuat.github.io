@@ -1530,6 +1530,18 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 
     <div style="height:1px;background:var(--border);margin:16px 0"></div>
 
+    <div class="ap-title">🧾 Ekstrak & Kelompokkan Transaksi per Hari</div>
+    <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.6">Upload laporan HTML dari FBS (boleh laporan resmi email, atau laporan bulanan custom seperti yang biasa Anda pakai). Semua transaksi closed otomatis dibaca &amp; dikelompokkan per tanggal — Gross Profit, Gross Loss, Swap, dan Net P/L per hari langsung ketauan. Ini biar gak salah hitung manual lagi.</div>
+    <input type="file" id="ekstrakFile" accept=".html,.htm,text/html" style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px">
+    <textarea id="ekstrakPaste" rows="3" placeholder="Atau tempel isi HTML laporan di sini..." style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px;font-family:monospace"></textarea>
+    <label class="lbl">Saldo Awal Sebelum Periode Laporan Ini (opsional — buat hitung Saldo Akhir per hari)</label>
+    <input class="inp" type="number" step="0.01" id="ekstrakSaldoAwal" placeholder="Kosongkan kalau gak tau / gak perlu">
+    <button class="btn btn-ghost" onclick="ekstrakPerHari()" style="margin-top:10px">🧾 Ekstrak &amp; Kelompokkan</button>
+    <div id="ekstrakStatus" style="font-size:10px;color:#8A6B26;text-align:center;margin-top:8px"></div>
+    <div id="ekstrakResult" style="margin-top:10px"></div>
+
+    <div style="height:1px;background:var(--border);margin:16px 0"></div>
+
     <div class="ap-title" id="inpSaldoHarianTitle">⚙️ Input Saldo Harian</div>
 
     <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-bottom:16px">
@@ -7524,29 +7536,87 @@ function parseNumBroker(str){
   return parseFloat(s);
 }
 
+// Deteksi kolom dari teks header (bukan posisi tetap) — biar tahan banting ke berbagai
+// format laporan broker: export harian FBS (12 kolom, ada S/L T/P), laporan bulanan custom
+// (10 kolom, tanpa S/L T/P), versi Indonesia (Tiket/Jenis/Instrumen/Harga/Waktu Ditutup), dst.
+function buildColumnMap(headerRow){
+  const cells=Array.from(headerRow.querySelectorAll('th,td'));
+  const map={};
+  cells.forEach((c,i)=>{
+    const tl=c.textContent.trim().toLowerCase();
+    if(/^(ticket|tiket)$/.test(tl)) map.ticket=i;
+    else if(/open time|waktu.*dibuka/.test(tl)) map.openTime=i;
+    else if(/^(type|jenis)$/.test(tl)) map.type=i;
+    else if(/^(size|volume)$/.test(tl)) map.size=i;
+    else if(/^(item|instrumen)$/.test(tl)) map.item=i;
+    else if(/^s\/l$/.test(tl)) map.sl=i;
+    else if(/^t\/p$/.test(tl)) map.tp=i;
+    else if(/close time|waktu.*ditutup/.test(tl)) map.closeTime=i;
+    else if(/^(open price|close price|price|harga)$/.test(tl)){
+      if(map.closeTime!==undefined && map.closePrice===undefined) map.closePrice=i;
+      else if(map.openPrice===undefined) map.openPrice=i;
+      else if(map.closePrice===undefined) map.closePrice=i;
+    }
+    else if(/^swap$/.test(tl)) map.swap=i;
+    else if(/^profit$/.test(tl)) map.profit=i;
+  });
+  return map;
+}
+
 function extractClosedTrades(htmlString){
   const parser=new DOMParser();
   const doc=parser.parseFromString(htmlString,'text/html');
-  const trs=Array.from(doc.querySelectorAll('tr'));
-  let section=null;
-  const out=[];
-  for(const tr of trs){
-    const text=tr.textContent.replace(/\s+/g,' ').trim();
-    if(/^(Transaksi Tertutup|Closed Transactions)/i.test(text)){ section='closed'; continue; }
-    if(/^(Order Terbuka|Open Trades|Order Tertunda|Working Orders|Ringkasan|Summary|Deleted Orders|Ditutup Sebagian)/i.test(text)){ section='other'; continue; }
-    if(section!=='closed') continue;
-    const tds=Array.from(tr.querySelectorAll('td'));
-    if(tds.length<10) continue;
-    const vals=tds.map(td=>td.textContent.trim());
-    const type=(vals[2]||'').toLowerCase();
-    if(type!=='buy' && type!=='sell') continue;
-    out.push({
-      ticket:vals[0], openTime:vals[1], type, size:vals[3], item:vals[4],
-      openPrice:parseNumBroker(vals[5]), sl:parseNumBroker(vals[6]), tp:parseNumBroker(vals[7]),
-      closeTime:vals[8], closePrice:parseNumBroker(vals[9]), swap:vals[10], profit:vals[11]
-    });
-  }
-  return out;
+  const tables=Array.from(doc.querySelectorAll('table'));
+  // Pakai Map keyed by tiket: laporan HTML broker/email sering pakai table BERSARANG
+  // (table di dalam table buat layout), dan querySelectorAll('table')+querySelectorAll('tr')
+  // ikut narik baris dari table anak berkali-kali. Dedup di sini biar transaksi gak kehitung dobel.
+  const out=new Map();
+  tables.forEach(table=>{
+    const trs=Array.from(table.querySelectorAll('tr'));
+    if(!trs.length) return;
+    let headerIdx=-1, colMap=null;
+    for(let i=0;i<trs.length;i++){
+      const cells=Array.from(trs[i].querySelectorAll('th,td'));
+      if(!cells.length) continue;
+      const firstText=cells[0].textContent.trim().toLowerCase();
+      if(firstText==='ticket'||firstText==='tiket'){
+        const map=buildColumnMap(trs[i]);
+        if(map.type!==undefined && map.item!==undefined && map.profit!==undefined && map.closeTime!==undefined){
+          headerIdx=i; colMap=map; break;
+        }
+      }
+    }
+    if(headerIdx===-1) return; // bukan tabel transaksi trading (mis. tabel balance/deposit)
+    for(let i=headerIdx+1;i<trs.length;i++){
+      const cells=Array.from(trs[i].querySelectorAll('td'));
+      if(!cells.length) continue;
+      const vals=cells.map(c=>c.textContent.trim());
+      const type=(vals[colMap.type]||'').toLowerCase();
+      if(type!=='buy' && type!=='sell') continue;
+      if(colMap.closePrice===undefined || !vals[colMap.closePrice]) continue; // baris tanpa harga close = posisi masih terbuka, bukan closed trade
+      if(!vals[colMap.closeTime]) continue; // Order Terbuka tetap punya "harga sekarang" tapi Waktu/Ditutup kosong — bukan trade yang sudah closed
+      const closePriceParsed=parseNumBroker(vals[colMap.closePrice]);
+      if(isNaN(closePriceParsed)) continue;
+      const ticket=vals[colMap.ticket];
+      const dedupKey=ticket||(vals[colMap.openTime||0]+'|'+vals[colMap.closeTime]+'|'+vals[colMap.profit]);
+      if(out.has(dedupKey)) continue;
+      out.set(dedupKey,{
+        ticket,
+        openTime: colMap.openTime!==undefined?vals[colMap.openTime]:'',
+        type,
+        size: colMap.size!==undefined?vals[colMap.size]:'',
+        item: vals[colMap.item],
+        openPrice: colMap.openPrice!==undefined?parseNumBroker(vals[colMap.openPrice]):NaN,
+        sl: colMap.sl!==undefined?parseNumBroker(vals[colMap.sl]):NaN,
+        tp: colMap.tp!==undefined?parseNumBroker(vals[colMap.tp]):NaN,
+        closeTime: vals[colMap.closeTime],
+        closePrice: closePriceParsed,
+        swap: colMap.swap!==undefined?vals[colMap.swap]:'0',
+        profit: vals[colMap.profit]
+      });
+    }
+  });
+  return Array.from(out.values());
 }
 
 function analisaGapBroker(){
@@ -7914,6 +7984,216 @@ async function verifikasiData(){
   }else{
     statusEl.textContent='⚠️ Upload file atau tempel isi laporan dulu.';
   }
+}
+
+// ══════════════════════════════════════════
+// EKSTRAK & KELOMPOKKAN TRANSAKSI PER HARI
+// Parser fleksibel: deteksi kolom dari header tabel, jadi bisa baca
+// format resmi FBS (12 kolom, ada S/L T/P) MAUPUN format custom
+// laporan bulanan (10 kolom, tanpa S/L T/P) — asal masih ada
+// header: Ticket/Tiket, Type/Jenis, Close Time, Profit.
+// ══════════════════════════════════════════
+function extractTransactionsFlexible(htmlString){
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(htmlString,'text/html');
+  const trs=Array.from(doc.querySelectorAll('tr'));
+  const out=[];
+  let colMap=null;
+
+  function detectHeader(vals){
+    const low=vals.map(v=>v.toLowerCase().trim());
+    const idx=(names)=>{ for(const n of names){ const i=low.indexOf(n); if(i>-1) return i; } return -1; };
+    const map={
+      ticket: idx(['ticket','tiket']),
+      type: idx(['type','jenis']),
+      item: idx(['item','instrumen']),
+      closeTime: idx(['close time','waktu/ditutup','tanggal']),
+      swap: idx(['swap']),
+      profit: idx(['profit'])
+    };
+    if(map.ticket>-1 && map.type>-1 && map.closeTime>-1 && map.profit>-1) return map;
+    return null;
+  }
+
+  for(const tr of trs){
+    const ths=Array.from(tr.querySelectorAll('th'));
+    if(ths.length){
+      const maybeHeader=detectHeader(ths.map(th=>th.textContent.trim()));
+      if(maybeHeader){ colMap=maybeHeader; continue; }
+    }
+    const tds=Array.from(tr.querySelectorAll('td'));
+    if(!tds.length) continue;
+    const vals=tds.map(td=>td.textContent.trim());
+    if(tds.length===1) continue; // baris section marker/anotasi, lewati
+
+    const maybeHeader=detectHeader(vals);
+    if(maybeHeader){ colMap=maybeHeader; continue; }
+    if(!colMap) continue;
+
+    const type=(vals[colMap.type]||'').toLowerCase();
+    if(type!=='buy' && type!=='sell' && type!=='balance') continue; // skip pending order (buy limit dll)
+
+    if(type==='buy' || type==='sell'){
+      const ct=vals[colMap.closeTime]||'';
+      if(!/^\d{4}-\d{2}-\d{2}/.test(ct)) continue; // posisi masih terbuka (Close Time kosong) -> skip
+      out.push({
+        ticket:vals[colMap.ticket], type, item: colMap.item>-1?vals[colMap.item]:'',
+        closeTime:ct, swap: colMap.swap>-1?vals[colMap.swap]:'0', profit: vals[colMap.profit]
+      });
+    }else if(type==='balance'){
+      const ct=vals[colMap.closeTime]||'';
+      out.push({ ticket:vals[colMap.ticket], type:'balance', item:'', closeTime:ct, swap:'0', profit: vals[colMap.profit] });
+    }
+  }
+  return out;
+}
+
+function groupTransaksiPerHari(transaksi){
+  const byDate={};
+  transaksi.forEach(t=>{
+    const d=(t.closeTime||'').trim().split(' ')[0];
+    if(!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    if(!byDate[d]) byDate[d]={gp:0, gl:0, swap:0, deposit:0, withdrawal:0, count:0, pairs:{}};
+    const p=parseNumBroker(t.profit), s=parseNumBroker(t.swap);
+    if(t.type==='balance'){
+      if(!isNaN(p)){ if(p>=0) byDate[d].deposit+=p; else byDate[d].withdrawal+=Math.abs(p); }
+      return;
+    }
+    if(!isNaN(p)){ if(p>=0) byDate[d].gp+=p; else byDate[d].gl+=Math.abs(p); }
+    if(!isNaN(s)) byDate[d].swap+=s;
+    byDate[d].count++;
+    if(t.item) byDate[d].pairs[t.item]=(byDate[d].pairs[t.item]||0)+1;
+  });
+  return byDate;
+}
+
+let __ekstrakHasil=null;
+
+function ekstrakPerHari(){
+  const statusEl=document.getElementById('ekstrakStatus');
+  const resultEl=document.getElementById('ekstrakResult');
+  const fileInput=document.getElementById('ekstrakFile');
+  const pasteVal=document.getElementById('ekstrakPaste').value.trim();
+  const saldoAwalRaw=document.getElementById('ekstrakSaldoAwal').value.trim();
+  const saldoAwal=saldoAwalRaw!==''?parseFloat(saldoAwalRaw):null;
+
+  statusEl.textContent='⏳ Memproses...';
+  resultEl.innerHTML='';
+
+  function process(htmlStr){
+    let transaksi;
+    try{ transaksi=extractTransactionsFlexible(htmlStr); }
+    catch(e){ statusEl.textContent='❌ Gagal membaca file: '+(e.message||''); return; }
+    if(!transaksi.length){ statusEl.textContent='⚠️ Tidak ada transaksi closed yang terbaca. Pastikan file HTML laporan broker asli (bukan screenshot/PDF).'; return; }
+
+    const byDate=groupTransaksiPerHari(transaksi);
+    const dates=Object.keys(byDate).sort();
+    if(!dates.length){ statusEl.textContent='⚠️ Gagal baca tanggal dari transaksi di file ini.'; return; }
+
+    let running=saldoAwal;
+    const days=dates.map(d=>{
+      const b=byDate[d];
+      const net=b.gp-b.gl+b.swap;
+      const netTotal=net+b.deposit-b.withdrawal;
+      if(running!=null) running=running+netTotal;
+      const pairDominan=Object.keys(b.pairs).sort((a,c)=>b.pairs[c]-b.pairs[a])[0]||'XAUUSD';
+      return {tanggal:d, count:b.count, gp:b.gp, gl:b.gl, swap:b.swap, net, deposit:b.deposit, withdrawal:b.withdrawal, saldoAkhir:running, pair:pairDominan};
+    });
+
+    __ekstrakHasil=days;
+
+    const totalNet=days.reduce((s,d)=>s+d.net,0);
+    statusEl.textContent=`✅ ${transaksi.filter(t=>t.type!=='balance').length} transaksi closed dikelompokkan jadi ${days.length} hari (${dates[0]} s/d ${dates[dates.length-1]}). Total Net P/L: ${totalNet>=0?'+':''}$${totalNet.toFixed(2)}`;
+
+    let html='<div style="display:flex;gap:8px;margin-bottom:10px">';
+    html+='<button onclick="downloadEkstrakCSV()" style="flex:1;padding:9px;border-radius:9px;border:1px solid #B8860B;background:transparent;color:#C8A84B;font-size:11px;font-weight:700;cursor:pointer">⬇️ Download CSV</button>';
+    html+='<button onclick="copyEkstrakTeks()" style="flex:1;padding:9px;border-radius:9px;border:1px solid #B8860B;background:transparent;color:#C8A84B;font-size:11px;font-weight:700;cursor:pointer">📋 Copy Teks</button>';
+    html+='</div>';
+
+    days.forEach((d,i)=>{
+      const color=d.net>=0?'#4ADE80':'#F87171';
+      html+=`<div class="riwayat-item">
+        <div class="ri-info">
+          <div class="ri-date">${d.tanggal} · ${d.count} transaksi (${d.pair})</div>
+          <div class="ri-cat">GP $${d.gp.toFixed(2)} · GL $${d.gl.toFixed(2)} · Swap $${d.swap.toFixed(2)}${d.deposit?' · Dep +$'+d.deposit.toFixed(2):''}${d.withdrawal?' · WD -$'+d.withdrawal.toFixed(2):''}${d.saldoAkhir!=null?' · Saldo $'+d.saldoAkhir.toFixed(2):''}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="ri-saldo" style="color:${color}">${d.net>=0?'+':''}$${d.net.toFixed(2)}</div>
+          <button onclick="isiFormDariEkstrak(${i})" style="font-size:9px;padding:3px 8px;border-radius:6px;border:1px solid #8A6B26;background:transparent;color:#C8A84B;cursor:pointer;margin-top:4px">📋 Isi ke Form</button>
+        </div>
+      </div>`;
+    });
+    resultEl.innerHTML=html;
+  }
+
+  if(fileInput.files && fileInput.files[0]){
+    const reader=new FileReader();
+    reader.onload=e=>process(e.target.result);
+    reader.onerror=()=>{ statusEl.textContent='❌ Gagal membaca file.'; };
+    reader.readAsText(fileInput.files[0]);
+  }else if(pasteVal){
+    process(pasteVal);
+  }else{
+    statusEl.textContent='⚠️ Upload file atau tempel isi laporan dulu.';
+  }
+}
+
+function isiFormDariEkstrak(i){
+  if(!__ekstrakHasil || !__ekstrakHasil[i]) return;
+  const d=__ekstrakHasil[i];
+  document.getElementById('inpTgl').value=d.tanggal;
+  document.getElementById('inpSignal').value=d.count;
+  document.getElementById('inpGrossProfit').value=d.gp.toFixed(2);
+  document.getElementById('inpGrossLoss').value=d.gl.toFixed(2);
+  document.getElementById('inpSwap').value=d.swap.toFixed(2);
+  if(d.saldoAkhir!=null) document.getElementById('inpSaldo').value=d.saldoAkhir.toFixed(2);
+  const pairSel=document.getElementById('inpPair');
+  const opt=Array.from(pairSel.options).find(o=>o.value===d.pair);
+  pairSel.value=opt?d.pair:'FOREX';
+  if(typeof syncProfitFromGross==='function') syncProfitFromGross();
+  if(typeof previewSaldo==='function') previewSaldo();
+  const titleEl=document.getElementById('inpSaldoHarianTitle');
+  if(titleEl) titleEl.scrollIntoView({behavior:'smooth', block:'start'});
+  toast(`✅ Form terisi untuk ${d.tanggal} — cek dulu sebelum Simpan`);
+}
+
+function downloadEkstrakCSV(){
+  if(!__ekstrakHasil || !__ekstrakHasil.length) return;
+  let csv='tanggal,saldo_mt4,profit,gross_profit,gross_loss,jumlah_signal,pair,catatan\n';
+  __ekstrakHasil.forEach(d=>{
+    const saldo=d.saldoAkhir!=null?d.saldoAkhir.toFixed(2):'';
+    csv+=`${d.tanggal},${saldo},${d.net.toFixed(2)},${d.gp.toFixed(2)},${d.gl.toFixed(2)},${d.count},${d.pair},\n`;
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='ekstrak_harian_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  if(__ekstrakHasil.some(d=>d.saldoAkhir==null)) toast('⚠️ Kolom saldo_mt4 kosong — isi manual dulu sebelum Import CSV (karena "Saldo Awal" gak diisi tadi)');
+}
+
+function copyEkstrakTeks(){
+  if(!__ekstrakHasil || !__ekstrakHasil.length) return;
+  let text='Ringkasan Transaksi per Hari\n\n';
+  __ekstrakHasil.forEach(d=>{
+    text+=`${d.tanggal} | ${d.count} transaksi | GP $${d.gp.toFixed(2)} | GL $${d.gl.toFixed(2)} | Swap $${d.swap.toFixed(2)} | Net ${d.net>=0?'+':''}$${d.net.toFixed(2)}${d.saldoAkhir!=null?' | Saldo $'+d.saldoAkhir.toFixed(2):''}\n`;
+  });
+  const totalNet=__ekstrakHasil.reduce((s,d)=>s+d.net,0);
+  text+=`\nTotal Net P/L: ${totalNet>=0?'+':''}$${totalNet.toFixed(2)}`;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>toast('✅ Disalin ke clipboard')).catch(()=>fallbackCopyEkstrak(text));
+  }else{
+    fallbackCopyEkstrak(text);
+  }
+}
+function fallbackCopyEkstrak(text){
+  const ta=document.createElement('textarea');
+  ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); toast('✅ Disalin ke clipboard'); }
+  catch(e){ toast('❌ Gagal copy, coba manual'); }
+  document.body.removeChild(ta);
 }
 
 renderExportLabel();
