@@ -1509,6 +1509,27 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       </div>
     </div>
 
+    <div class="ap-title">🗑️ Hapus Data Periode (Riwayat Saldo Harian)</div>
+    <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.6">Hapus permanen catatan "Saldo Harian" dalam rentang tanggal tertentu — misalnya data lama yang salah input manual. Cek dulu daftarnya sebelum konfirmasi hapus. Tindakan ini TIDAK BISA dibatalkan.</div>
+    <div class="calc-row">
+      <div><label class="lbl">Dari Tanggal</label><input class="inp" type="date" id="hapusDari" style="margin-bottom:0"></div>
+      <div><label class="lbl">Sampai Tanggal</label><input class="inp" type="date" id="hapusSampai" style="margin-bottom:0"></div>
+    </div>
+    <button class="btn btn-ghost" onclick="cekDataUntukHapus()" style="margin-top:12px">🔍 Cek Data di Rentang Ini</button>
+    <div id="hapusPreview" style="margin-top:10px"></div>
+
+    <div style="height:1px;background:var(--border);margin:16px 0"></div>
+
+    <div class="ap-title">🔎 Verifikasi Data vs Laporan Broker</div>
+    <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.6">Upload laporan statement broker (HTML, boleh cover banyak hari/bulan sekaligus). Situs akan kelompokkan transaksi per tanggal, hitung net P/L-nya, lalu bandingkan dengan catatan "Saldo Harian" yang sudah tersimpan — supaya ketahuan hari mana yang datanya beda atau belum tercatat.</div>
+    <input type="file" id="verifikasiFile" accept=".html,.htm,text/html" style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px">
+    <textarea id="verifikasiPaste" rows="3" placeholder="Atau tempel isi HTML laporan di sini..." style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px;font-family:monospace"></textarea>
+    <button class="btn btn-ghost" onclick="verifikasiData()">🔎 Verifikasi Sekarang</button>
+    <div id="verifikasiStatus" style="font-size:10px;color:#8A6B26;text-align:center;margin-top:8px"></div>
+    <div id="verifikasiResult" style="margin-top:10px"></div>
+
+    <div style="height:1px;background:var(--border);margin:16px 0"></div>
+
     <div class="ap-title" id="inpSaldoHarianTitle">⚙️ Input Saldo Harian</div>
 
     <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-bottom:16px">
@@ -7751,6 +7772,136 @@ function bacaLaporanEmailHarian(){
     if(typeof syncProfitFromGross==='function') syncProfitFromGross();
 
     statusEl.innerHTML=`✅ Terisi otomatis: ${trades.length} transaksi closed + ${openCount} order terbuka = <b>${jumlahSignal} signal</b>. Gross Profit $${grossProfit.toFixed(2)}, Gross Loss $${grossLoss.toFixed(2)}${ringkasan.saldo!=null?', Saldo $'+ringkasan.saldo.toFixed(2):''}. Cek ulang sebelum tekan Simpan.`;
+  }
+
+  if(fileInput.files && fileInput.files[0]){
+    const reader=new FileReader();
+    reader.onload=e=>process(e.target.result);
+    reader.onerror=()=>{ statusEl.textContent='❌ Gagal membaca file.'; };
+    reader.readAsText(fileInput.files[0]);
+  }else if(pasteVal){
+    process(pasteVal);
+  }else{
+    statusEl.textContent='⚠️ Upload file atau tempel isi laporan dulu.';
+  }
+}
+
+// ══════════════════════════════════════════
+// HAPUS DATA PERIODE (Saldo Harian)
+// ══════════════════════════════════════════
+async function cekDataUntukHapus(){
+  if(!isAdmin){ toast('❌ Harus masuk sebagai Admin'); return; }
+  const dari=document.getElementById('hapusDari').value;
+  const sampai=document.getElementById('hapusSampai').value;
+  const previewEl=document.getElementById('hapusPreview');
+  if(!dari||!sampai){ previewEl.innerHTML='<div style="color:#F87171;font-size:11px">Isi tanggal "Dari" & "Sampai" dulu.</div>'; return; }
+  if(dari>sampai){ previewEl.innerHTML='<div style="color:#F87171;font-size:11px">Tanggal "Dari" harus sebelum atau sama dengan "Sampai".</div>'; return; }
+  previewEl.innerHTML='⏳ Mengecek...';
+  try{
+    const rows=await api(`saldo_harian?tanggal=gte.${dari}&tanggal=lte.${sampai}&select=id,tanggal,saldo_mt4,profit&order=tanggal.asc`);
+    if(!rows.length){ previewEl.innerHTML='<div style="color:#8A6B26;font-size:11px">Tidak ada data tersimpan di rentang tanggal ini.</div>'; return; }
+    let html=`<div style="font-size:11px;color:#F87171;font-weight:700;margin-bottom:8px">⚠️ Ditemukan ${rows.length} catatan — akan DIHAPUS PERMANEN kalau dilanjutkan:</div>`;
+    rows.forEach(r=>{
+      const p=parseFloat(r.profit||0);
+      html+=`<div style="font-size:10px;color:#8A6B26;padding:3px 0;border-bottom:1px solid var(--border)">${r.tanggal} — saldo $${parseFloat(r.saldo_mt4||0).toFixed(2)}, P/L ${p>=0?'+':''}$${p.toFixed(2)}</div>`;
+    });
+    html+=`<button onclick="hapusDataPeriode('${dari}','${sampai}',${rows.length})" style="width:100%;padding:10px;border-radius:9px;border:1.5px solid #4A1E1E;background:#2D1313;color:#F87171;font-weight:800;font-size:12px;cursor:pointer;margin-top:10px">🗑️ Ya, Hapus ${rows.length} Catatan Ini Permanen</button>`;
+    previewEl.innerHTML=html;
+  }catch(e){ previewEl.innerHTML='<div style="color:#F87171;font-size:11px">❌ Gagal cek data: '+(e.message||'')+'</div>'; }
+}
+
+async function hapusDataPeriode(dari, sampai, count){
+  if(!isAdmin){ toast('❌ Harus masuk sebagai Admin'); return; }
+  if(!confirm(`Yakin hapus ${count} catatan dari ${dari} sampai ${sampai}?\n\nTindakan ini TIDAK BISA dibatalkan.`)) return;
+  const previewEl=document.getElementById('hapusPreview');
+  previewEl.innerHTML='⏳ Menghapus...';
+  try{
+    await api(`saldo_harian?tanggal=gte.${dari}&tanggal=lte.${sampai}`,'DELETE');
+    previewEl.innerHTML=`<div style="color:#4ADE80;font-size:11px">✅ Berhasil menghapus ${count} catatan (${dari} s/d ${sampai}).</div>`;
+    toast('✅ Data terhapus, refresh halaman untuk lihat perubahan');
+  }catch(e){ previewEl.innerHTML='<div style="color:#F87171;font-size:11px">❌ Gagal menghapus: '+(e.message||'')+'</div>'; }
+}
+
+// ══════════════════════════════════════════
+// VERIFIKASI DATA vs LAPORAN BROKER
+// ══════════════════════════════════════════
+function groupTradesByDate(trades){
+  const byDate={};
+  trades.forEach(t=>{
+    const d=(t.closeTime||'').trim().split(' ')[0];
+    if(!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    if(!byDate[d]) byDate[d]={gp:0, gl:0, swap:0, count:0};
+    const p=parseNumBroker(t.profit), s=parseNumBroker(t.swap);
+    if(!isNaN(p)){ if(p>=0) byDate[d].gp+=p; else byDate[d].gl+=Math.abs(p); }
+    if(!isNaN(s)) byDate[d].swap+=s;
+    byDate[d].count++;
+  });
+  return byDate;
+}
+
+async function verifikasiData(){
+  if(!isAdmin){ toast('❌ Harus masuk sebagai Admin'); return; }
+  const statusEl=document.getElementById('verifikasiStatus');
+  const resultEl=document.getElementById('verifikasiResult');
+  const fileInput=document.getElementById('verifikasiFile');
+  const pasteVal=document.getElementById('verifikasiPaste').value.trim();
+  statusEl.textContent='⏳ Memproses...';
+  resultEl.innerHTML='';
+
+  async function process(htmlStr){
+    let trades;
+    try{ trades=extractClosedTrades(htmlStr); }
+    catch(e){ statusEl.textContent='❌ Gagal membaca file: '+(e.message||''); return; }
+    if(!trades.length){ statusEl.textContent='⚠️ Tidak ada transaksi tertutup ditemukan di file ini.'; return; }
+
+    const byDate=groupTradesByDate(trades);
+    const dates=Object.keys(byDate).sort();
+    if(!dates.length){ statusEl.textContent='⚠️ Gagal baca tanggal transaksi dari file ini.'; return; }
+    statusEl.textContent=`⏳ Data broker ${dates.length} hari (${dates[0]} s/d ${dates[dates.length-1]}). Membandingkan dengan database...`;
+
+    let rows;
+    try{
+      rows=await api(`saldo_harian?tanggal=gte.${dates[0]}&tanggal=lte.${dates[dates.length-1]}&select=tanggal,saldo_mt4,profit&order=tanggal.asc`);
+    }catch(e){ statusEl.textContent='❌ Gagal ambil data database: '+(e.message||''); return; }
+
+    const dbByDate={};
+    rows.forEach(r=>{ dbByDate[r.tanggal]=r; });
+
+    const mismatches=[], missingInDb=[];
+    let matchCount=0;
+    dates.forEach(d=>{
+      const b=byDate[d];
+      const netBroker=b.gp-b.gl+b.swap;
+      const dbRow=dbByDate[d];
+      if(!dbRow){ missingInDb.push({tanggal:d, netBroker, count:b.count}); return; }
+      const dbProfit=parseFloat(dbRow.profit||0);
+      const diff=dbProfit-netBroker;
+      if(Math.abs(diff)>0.05){ mismatches.push({tanggal:d, netBroker, dbProfit, diff, count:b.count}); }
+      else matchCount++;
+    });
+
+    statusEl.textContent=`✅ Selesai. ${matchCount} hari cocok • ${mismatches.length} hari beda • ${missingInDb.length} hari belum tercatat di situs.`;
+
+    let html='';
+    if(mismatches.length){
+      html+='<div style="font-size:11px;font-weight:700;color:#F87171;margin:10px 0 8px">⚠️ Data beda dengan broker:</div>';
+      mismatches.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff)).forEach(m=>{
+        html+=`<div class="riwayat-item" style="border-left:3px solid #F87171">
+          <div class="ri-info"><div class="ri-date">${m.tanggal} · ${m.count} transaksi</div><div class="ri-cat">Broker: ${m.netBroker>=0?'+':''}$${m.netBroker.toFixed(2)} · Situs: ${m.dbProfit>=0?'+':''}$${m.dbProfit.toFixed(2)}</div></div>
+          <div style="text-align:right"><div class="ri-saldo" style="color:#F87171">Δ${m.diff>=0?'+':''}$${m.diff.toFixed(2)}</div></div>
+        </div>`;
+      });
+    }
+    if(missingInDb.length){
+      html+='<div style="font-size:11px;font-weight:700;color:#FBBF24;margin:14px 0 8px">📭 Ada di broker, belum tercatat di situs:</div>';
+      missingInDb.forEach(m=>{
+        html+=`<div class="riwayat-item"><div class="ri-info"><div class="ri-date">${m.tanggal}</div><div class="ri-cat">${m.count} transaksi, net ${m.netBroker>=0?'+':''}$${m.netBroker.toFixed(2)}</div></div></div>`;
+      });
+    }
+    if(!mismatches.length && !missingInDb.length){
+      html+='<div style="text-align:center;padding:14px;color:#4ADE80;font-size:11px">✅ Semua data yang tersimpan cocok dengan laporan broker.</div>';
+    }
+    resultEl.innerHTML=html;
   }
 
   if(fileInput.files && fileInput.files[0]){
