@@ -2100,6 +2100,7 @@ async function loadAll(){
   await fetchSharedSaldoData();
   await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore(),loadModalMinimal()]);
   await fetchAllKasData();
+  await loadAlokasiResetTanggal();
   renderKasRingkasan();
   renderKasRekap();
   renderKasChart();
@@ -3588,8 +3589,22 @@ function saveAlokasiPersenInput(){
 // WD sebelum tanggal reset dianggap "sudah terpakai habis di masa lalu" (kebutuhan harian dll),
 // jadi TIDAK dihitung lagi di pie chart/rincian nominal Alokasi Dana maupun estimasi Dana Darurat.
 // Data Saldo Harian & WD asli TIDAK dihapus/diubah — ini cuma titik potong buat tampilan alokasi.
+// Disimpan di server (Supabase, tabel app_settings) — BUKAN localStorage — biar sinkron di semua HP/device.
+let cachedAlokasiResetTanggal=null;
+async function loadAlokasiResetTanggal(){
+  try{
+    const rows=await api('app_settings?select=value&key=eq.alokasi_reset_tanggal');
+    if(rows && rows.length && rows[0].value){
+      cachedAlokasiResetTanggal=rows[0].value;
+    }else{
+      cachedAlokasiResetTanggal=null;
+    }
+  }catch(e){
+    console.error('Gagal load tanggal reset alokasi dari server', e);
+  }
+}
 function getAlokasiResetTanggal(){
-  return localStorage.getItem('mk_alokasi_reset_tanggal') || null;
+  return cachedAlokasiResetTanggal;
 }
 function getTotalWdUntukAlokasi(){
   const data=getWdProfitPerHari();
@@ -3597,7 +3612,7 @@ function getTotalWdUntukAlokasi(){
   const filtered = resetTgl ? data.filter(d=>new Date(d.tanggal) > new Date(resetTgl)) : data;
   return filtered.reduce((s,d)=>s+d.wd,0);
 }
-function resetAlokasiDana(){
+async function resetAlokasiDana(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const cur=getAlokasiResetTanggal();
   const d=new Date(), pad=n=>String(n).padStart(2,'0');
@@ -3605,18 +3620,35 @@ function resetAlokasiDana(){
   const input=prompt('WD sebelum tanggal ini dianggap SUDAH TERPAKAI (rincian nominal & pie chart Alokasi Dana mulai hitung dari $0 sejak tanggal ini). Data Saldo Harian asli tidak berubah, cuma tampilan alokasi yang direset.\n\nTanggal reset (YYYY-MM-DD):', cur||today);
   if(input===null)return;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(input)){toast('❌ Format tanggal tidak valid, pakai YYYY-MM-DD');return;}
-  localStorage.setItem('mk_alokasi_reset_tanggal', input);
-  toast('✅ Alokasi Dana direset — mulai hitung dari $0 sejak '+fd(input));
-  renderAlokasiDana();
-  renderDanaDarurat();
+  try{
+    const existing=await api('app_settings?select=key&key=eq.alokasi_reset_tanggal');
+    if(existing.length){
+      await api('app_settings?key=eq.alokasi_reset_tanggal','PATCH',{value:input});
+    }else{
+      await api('app_settings','POST',{key:'alokasi_reset_tanggal',value:input});
+    }
+    cachedAlokasiResetTanggal=input;
+    toast('✅ Alokasi Dana direset — mulai hitung dari $0 sejak '+fd(input)+' (sinkron ke semua HP)');
+    renderAlokasiDana();
+    renderDanaDarurat();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan reset ke server: '+(e.message||''));
+  }
 }
-function batalkanResetAlokasiDana(){
+async function batalkanResetAlokasiDana(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   if(!confirm('Batalkan reset? Rincian nominal & pie chart Alokasi Dana akan balik hitung dari total WD all-time lagi.'))return;
-  localStorage.removeItem('mk_alokasi_reset_tanggal');
-  toast('✅ Reset dibatalkan, kembali ke total WD all-time');
-  renderAlokasiDana();
-  renderDanaDarurat();
+  try{
+    await api('app_settings?key=eq.alokasi_reset_tanggal','DELETE');
+    cachedAlokasiResetTanggal=null;
+    toast('✅ Reset dibatalkan, kembali ke total WD all-time (sinkron ke semua HP)');
+    renderAlokasiDana();
+    renderDanaDarurat();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal batalkan reset di server: '+(e.message||''));
+  }
 }
 function renderAlokasiInputs(){
   const el=document.getElementById('alokasiInputs');
