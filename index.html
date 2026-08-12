@@ -1204,7 +1204,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </div>
 
 <!-- WHAT-IF: SEWA VS BELI PROPERTI -->
-<div class="section" id="secSewaBeli">
+<div class="section" id="secSewaBeli" style="display:none">
   <div class="sec-title">🏠 "What-If": Sewa vs Beli Properti</div>
   <div class="graph-card" style="margin-bottom:12px">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Masukkan asumsi harga properti, KPR, dan sewa — sistem hitung mana yang lebih menguntungkan secara kekayaan bersih dalam jangka waktu tertentu.</div>
@@ -1227,7 +1227,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </div>
 
 <!-- INVESTOR DASHBOARD -->
-<div class="section" id="secInvestorDashboard">
+<div class="section" id="secInvestorDashboard" style="display:none">
   <div class="sec-title">👥 Investor Dashboard</div>
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Login khusus investor — tiap investor punya kode akses sendiri buat lihat porsi modal, estimasi profit, dan ROI mereka.</div>
@@ -1252,7 +1252,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </div>
 
 <!-- INVESTOR CALCULATOR -->
-<div class="section" id="secInvestorCalc">
+<div class="section" id="secInvestorCalc" style="display:none">
   <div class="sec-title">🧮 Investor Calculator</div>
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Simulasi potensi return berdasarkan performa historis — investor bisa coba sendiri skenario investasinya.</div>
@@ -1278,7 +1278,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </div>
 
 <!-- DASHBOARD PORTOFOLIO SAHAM -->
-<div class="section" id="secPortofolioSaham">
+<div class="section" id="secPortofolioSaham" style="display:none">
   <div class="sec-title">📈 Dashboard Portofolio Saham</div>
   <div class="graph-card" style="margin-bottom:12px">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Ringkasan status semua saham yang kamu pegang saat ini — lot, harga beli, harga pasar, dan gain/loss. 1 lot = 100 lembar (standar BEI).</div>
@@ -1292,7 +1292,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </div>
 
 <!-- INVESTMENT PORTFOLIO DASHBOARD -->
-<div class="section" id="secPortofolioInvestasi">
+<div class="section" id="secPortofolioInvestasi" style="display:none">
   <div class="sec-title">📊 Investment Portfolio Dashboard</div>
   <div class="graph-card" style="margin-bottom:12px">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Breakdown investasi di luar MT4 — saham, reksadana, deposito, SUN/obligasi, properti, tanah, dan aset lain yang kamu input di Neraca (Laporan Keuangan).</div>
@@ -1871,10 +1871,7 @@ const SEARCH_MENU=[
   {id:'secAlokasiDana', icon:'🥧', label:'Alokasi Dana (Allocation & Goals)', desc:'Bagi dana hasil WD ke kebutuhan harian, investasi, tabungan, hiburan', kw:'alokasi dana allocation goals budgeting pie chart kebutuhan harian investasi tabungan darurat hiburan'},
   {id:'secDanaDarurat', icon:'🚨', label:'Dana Darurat & Skor Kesehatan Finansial', desc:'Runway dana darurat dan skor kesehatan finansial A-D', kw:'dana darurat emergency fund skor kesehatan finansial financial health score rasio'},
   {id:'secFINumber', icon:'🎯', label:'Financial Independence (FI) Number', desc:'Modal yang dibutuhkan agar profit bulanan menutup biaya hidup', kw:'financial independence fi number kebebasan finansial simulasi proyeksi target modal pensiun dini'},
-  {id:'secSewaBeli', icon:'🏠', label:'What-If: Sewa vs Beli Properti', desc:'Kalkulator perbandingan sewa vs beli properti dengan KPR', kw:'sewa vs beli properti rumah kpr kalkulator what if scenario cicilan dp uang muka apresiasi kekayaan bersih rent buy'},
   {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow'},
-  {id:'secPortofolioSaham', icon:'📈', label:'Dashboard Portofolio Saham', desc:'Lot, harga beli, harga pasar, dan gain/loss tiap saham yang dipegang', kw:'portofolio saham dashboard lot harga beli harga pasar gain loss bbca bbri stock tracker kondisi sekarang'},
-  {id:'secPortofolioInvestasi', icon:'📊', label:'Investment Portfolio Dashboard', desc:'Breakdown investasi saham, reksadana, deposito, properti di luar MT4', kw:'investment portfolio dashboard investasi saham reksadana deposito properti tanah obligasi sun breakdown portofolio'},
   {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio riwayat transaksi aset beli jual saham properti tracker'},
   {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf'},
   {id:'secKeuanganSaya', icon:'🧾', label:'Laporan Bulanan Keuangan Saya', desc:'Ringkasan modal pribadi + profit MT4 dikurangi pengeluaran = tabungan', kw:'laporan bulanan keuangan saya gaji profit pengeluaran cicilan tabungan periodic financial report'},
