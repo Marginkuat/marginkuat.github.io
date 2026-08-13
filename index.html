@@ -861,7 +861,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   // sebelumnya + (LOSS_COUNT × risk di lot level ini). Ini otomatis bikin buffer ikut naik pelan-pelan
   // (bukan dipatok flat), dan berlaku exact untuk cek naik maupun turun level.
   // Semua angka ikut SL pips & nilai/pip yang lagi aktif di kalkulator ini — ganti pair/preset, tabel ini ikut berubah.
-  const LOT_START=0.03, LOT_STEP=0.01, BUFFER_START=10, LOSS_COUNT=3, N_LEVELS=12;
+  const LOT_START=0.01, LOT_STEP=0.01, BUFFER_START=10, LOSS_COUNT=3, N_LEVELS=14;
 
   function buildLevelPlan(sl, pipvalue){
     const plan=[];
@@ -903,7 +903,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-top:12px">
         <div style="text-align:center;margin-bottom:10px">
           <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">Level Saat Ini (Modal $${modalSaatIni.toLocaleString('en-US')})</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:${levelSekarang>0?'#4ADE80':'#F87171'}">${levelSekarang>0?'Level '+levelSekarang:'Belum Level 1'}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:${levelSekarang>0?'#4ADE80':'#F87171'}">${levelSekarang>0?'Level '+levelSekarang:'⚠️ Modal Habis'}</div>
+          ${levelSekarang<=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Modal di bawah $${plan[0].modal.toLocaleString('en-US',{maximumFractionDigits:2})} (lot minimum ${plan[0].lot.toFixed(2)}) — belum cukup buat masuk Level 1 sama sekali.</div>` : ''}
           ${next ? `<div style="font-size:9px;color:#7A5D1F;margin-top:2px">Butuh saldo <b style="color:#D4AF37">$${next.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</b> (lot ${next.lot.toFixed(2)}) buat naik ke Level ${levelIdx+2}</div>` : `<div style="font-size:9px;color:#4ADE80;margin-top:2px">🏆 Sudah di level tertinggi tabel ini!</div>`}
           ${levelIdx>=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Kalau ${LOSS_COUNT}x kalah beruntun di lot ${plan[levelIdx].lot.toFixed(2)}, turun ke Level ${levelIdx} (saldo $${(levelIdx>0?plan[levelIdx-1].modal:0).toLocaleString('en-US',{maximumFractionDigits:2})})</div>` : ''}
         </div>
