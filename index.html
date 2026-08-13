@@ -1543,6 +1543,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <div id="ekstrakStatus" style="font-size:10px;color:#8A6B26;text-align:center;margin-top:8px"></div>
     <div id="ekstrakResult" style="margin-top:10px"></div>
 
+    <div style="margin-top:14px">
+      <div style="font-size:11px;font-weight:700;color:#D4AF37;margin-bottom:8px">📁 Statement Asli Tersimpan</div>
+      <div style="font-size:9px;color:#7A5D1F;margin-bottom:8px;line-height:1.5">File laporan broker asli yang sudah diupload &amp; disimpan — bisa didownload lagi kapan aja (buat cek ulang, dikirim ke investor, dll).</div>
+      <div id="statementListBox" style="font-size:10px;color:#7A5D1F">Memuat...</div>
+    </div>
+
     <div style="height:1px;background:var(--border);margin:16px 0"></div>
 
     <div class="ap-title" id="inpSaldoHarianTitle">⚙️ Input Saldo Harian</div>
@@ -2130,6 +2136,7 @@ async function loadAll(){
   loadRiskOfRuin();
   loadMonthlyComparison();
   await loadTargetBulanan();
+  loadStatementList();
   renderGraph();
   renderEquity();
   loadJournalVisual();
@@ -8135,6 +8142,8 @@ function groupTransaksiPerHari(transaksi){
 }
 
 let __ekstrakHasil=null;
+let __ekstrakRawHtml=null;
+let __ekstrakFileName=null;
 
 function ekstrakPerHari(){
   const statusEl=document.getElementById('ekstrakStatus');
@@ -8147,7 +8156,7 @@ function ekstrakPerHari(){
   statusEl.textContent='⏳ Memproses...';
   resultEl.innerHTML='';
 
-  function process(htmlStr){
+  function process(htmlStr, fileName){
     let transaksi;
     try{ transaksi=extractTransactionsFlexible(htmlStr); }
     catch(e){ statusEl.textContent='❌ Gagal membaca file: '+(e.message||''); return; }
@@ -8168,14 +8177,18 @@ function ekstrakPerHari(){
     });
 
     __ekstrakHasil=days;
+    __ekstrakRawHtml=htmlStr;
+    __ekstrakFileName=fileName || ('laporan_'+dates[0]+'_sd_'+dates[dates.length-1]+'.html');
 
     const totalNet=days.reduce((s,d)=>s+d.net,0);
     statusEl.textContent=`✅ ${transaksi.filter(t=>t.type!=='balance').length} transaksi closed dikelompokkan jadi ${days.length} hari (${dates[0]} s/d ${dates[dates.length-1]}). Total Net P/L: ${totalNet>=0?'+':''}$${totalNet.toFixed(2)}`;
 
-    let html='<div style="display:flex;gap:8px;margin-bottom:10px">';
+    let html='<div style="display:flex;gap:8px;margin-bottom:8px">';
     html+='<button onclick="downloadEkstrakCSV()" style="flex:1;padding:9px;border-radius:9px;border:1px solid #B8860B;background:transparent;color:#C8A84B;font-size:11px;font-weight:700;cursor:pointer">⬇️ Download CSV</button>';
     html+='<button onclick="copyEkstrakTeks()" style="flex:1;padding:9px;border-radius:9px;border:1px solid #B8860B;background:transparent;color:#C8A84B;font-size:11px;font-weight:700;cursor:pointer">📋 Copy Teks</button>';
     html+='</div>';
+    html+='<button onclick="simpanSemuaKeDatabase()" id="btnSimpanSemuaDB" style="width:100%;padding:11px;border-radius:9px;border:none;background:linear-gradient(90deg,#8A6B26,#D4AF37);color:#161A0F;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:10px">💾 Simpan Semua Langsung ke Database (Kalender, WD/Dep, Alokasi Dana ikut update)</button>';
+    html+='<div id="simpanSemuaDBStatus" style="font-size:10px;color:#8A6B26;text-align:center;margin-bottom:10px"></div>';
 
     days.forEach((d,i)=>{
       const color=d.net>=0?'#4ADE80':'#F87171';
@@ -8195,11 +8208,11 @@ function ekstrakPerHari(){
 
   if(fileInput.files && fileInput.files[0]){
     const reader=new FileReader();
-    reader.onload=e=>process(e.target.result);
+    reader.onload=e=>process(e.target.result, fileInput.files[0].name);
     reader.onerror=()=>{ statusEl.textContent='❌ Gagal membaca file.'; };
     reader.readAsText(fileInput.files[0]);
   }else if(pasteVal){
-    process(pasteVal);
+    process(pasteVal, null);
   }else{
     statusEl.textContent='⚠️ Upload file atau tempel isi laporan dulu.';
   }
@@ -8261,6 +8274,136 @@ function fallbackCopyEkstrak(text){
   try{ document.execCommand('copy'); toast('✅ Disalin ke clipboard'); }
   catch(e){ toast('❌ Gagal copy, coba manual'); }
   document.body.removeChild(ta);
+}
+
+// ══════════════════════════════════════════
+// SIMPAN LANGSUNG KE DATABASE (skip CSV manual)
+// + ARSIP FILE STATEMENT ASLI (bisa didownload lagi kapan aja)
+// Nyambung otomatis ke semua fitur yang baca tabel saldo_harian:
+// Kalender Trading, Riwayat Harian, WD/Deposit, Alokasi Dana, Dana Darurat, dll.
+// ══════════════════════════════════════════
+async function simpanSemuaKeDatabase(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!__ekstrakHasil || !__ekstrakHasil.length){toast('❌ Belum ada hasil ekstrak.');return;}
+  const btn=document.getElementById('btnSimpanSemuaDB');
+  const statusEl=document.getElementById('simpanSemuaDBStatus');
+  const missingSaldo=__ekstrakHasil.some(d=>d.saldoAkhir==null);
+  if(missingSaldo){
+    if(!confirm('Kolom "Saldo Awal" tadi gak diisi, jadi Saldo MT4 per hari akan kosong (0). Lanjutkan simpan? (Bisa edit saldo manual nanti per hari lewat Riwayat Harian)')) return;
+  }
+  if(!confirm(`Simpan ${__ekstrakHasil.length} hari ini langsung ke database? Kalau tanggalnya udah ada, datanya akan DITIMPA dengan angka baru ini.`)) return;
+
+  btn.disabled=true;
+  let sukses=0, gagal=0;
+  for(let i=0;i<__ekstrakHasil.length;i++){
+    const d=__ekstrakHasil[i];
+    statusEl.textContent=`⏳ Menyimpan ${i+1}/${__ekstrakHasil.length} (${d.tanggal})...`;
+    try{
+      const payload={
+        tanggal:d.tanggal,
+        saldo_mt4: d.saldoAkhir!=null ? parseFloat(d.saldoAkhir.toFixed(2)) : 0,
+        profit: parseFloat(d.net.toFixed(2)),
+        gross_profit: parseFloat((d.gp+Math.max(d.swap,0)).toFixed(2)),
+        gross_loss: parseFloat((d.gl+Math.max(-d.swap,0)).toFixed(2)),
+        jumlah_signal: d.count,
+        pair: d.pair
+      };
+      const existing=await api(`saldo_harian?select=id&tanggal=eq.${d.tanggal}`);
+      if(existing.length){
+        await api(`saldo_harian?tanggal=eq.${d.tanggal}`,'PATCH',payload);
+      }else{
+        await api('saldo_harian','POST',payload);
+      }
+      sukses++;
+    }catch(e){
+      console.error('Gagal simpan '+d.tanggal, e);
+      gagal++;
+    }
+  }
+  btn.disabled=false;
+  statusEl.innerHTML = gagal===0
+    ? `✅ Semua ${sukses} hari berhasil tersimpan ke database! Kalender Trading, Riwayat Harian, WD/Deposit, Alokasi Dana otomatis ikut update.`
+    : `⚠️ ${sukses} berhasil, ${gagal} gagal. Cek koneksi lalu coba lagi buat yang gagal.`;
+  toast(gagal===0 ? '✅ Semua data tersimpan ke database' : '⚠️ Sebagian gagal tersimpan');
+
+  // Sekalian arsipkan file statement aslinya biar bisa didownload lagi nanti
+  if(__ekstrakRawHtml){
+    await simpanStatementAsli();
+  }
+
+  // Refresh semua tampilan yang bergantung ke saldo_harian
+  try{
+    saldoData=await api('saldo_harian?select=*&order=tanggal.desc&limit=120');
+    if(typeof loadRiwayat==='function') await loadRiwayat();
+    if(typeof renderKalender==='function') renderKalender();
+    if(typeof renderWdSection==='function') renderWdSection();
+    if(typeof renderGraph==='function') renderGraph();
+    if(typeof renderEquity==='function') renderEquity();
+    if(typeof loadJournalVisual==='function') loadJournalVisual();
+  }catch(e){ console.error('Gagal refresh tampilan', e); }
+}
+
+async function simpanStatementAsli(){
+  if(!__ekstrakRawHtml || !__ekstrakHasil || !__ekstrakHasil.length) return;
+  try{
+    const dates=__ekstrakHasil.map(d=>d.tanggal).sort();
+    const periodeDari=dates[0], periodeSampai=dates[dates.length-1];
+    const key='statement_'+periodeDari+'_sd_'+periodeSampai+'_'+Date.now();
+    const meta={
+      filename: __ekstrakFileName || 'statement.html',
+      periode_dari: periodeDari,
+      periode_sampai: periodeSampai,
+      uploaded_at: new Date().toISOString(),
+      jumlah_hari: __ekstrakHasil.length,
+      content: __ekstrakRawHtml
+    };
+    await api('app_settings','POST',{key, value: JSON.stringify(meta)});
+    if(typeof loadStatementList==='function') loadStatementList();
+  }catch(e){
+    console.error('Gagal arsipkan statement asli', e);
+  }
+}
+
+async function loadStatementList(){
+  const box=document.getElementById('statementListBox');
+  if(!box) return;
+  try{
+    const rows=await api(`app_settings?select=key,value&key=like.statement_*&order=key.desc`);
+    if(!rows.length){ box.innerHTML='<div style="color:#5C4818">Belum ada statement yang tersimpan.</div>'; return; }
+    let html='';
+    rows.forEach(r=>{
+      let meta;
+      try{ meta=JSON.parse(r.value); }catch(e){ return; }
+      html+=`<div class="riwayat-item">
+        <div class="ri-info">
+          <div class="ri-date">${meta.periode_dari}${meta.periode_sampai!==meta.periode_dari?' s/d '+meta.periode_sampai:''}</div>
+          <div class="ri-cat">${meta.filename} · ${meta.jumlah_hari} hari · diupload ${new Date(meta.uploaded_at).toLocaleDateString('id-ID')}</div>
+        </div>
+        <button onclick="downloadStatementAsli('${r.key}')" style="font-size:9px;padding:5px 10px;border-radius:6px;border:1px solid #8A6B26;background:transparent;color:#C8A84B;cursor:pointer">⬇️ Download</button>
+      </div>`;
+    });
+    box.innerHTML=html;
+  }catch(e){
+    console.error(e);
+    box.innerHTML='<div style="color:#F87171">Gagal memuat daftar statement.</div>';
+  }
+}
+
+async function downloadStatementAsli(key){
+  try{
+    const rows=await api(`app_settings?select=value&key=eq.${key}`);
+    if(!rows.length){ toast('❌ File tidak ditemukan.'); return; }
+    const meta=JSON.parse(rows[0].value);
+    const blob=new Blob([meta.content],{type:'text/html;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=meta.filename||'statement.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal download file.');
+  }
 }
 
 renderExportLabel();
