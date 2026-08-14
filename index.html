@@ -1443,7 +1443,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     </div>
 
     <label style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Upload file laporan (.html)</label>
-    <input type="file" id="gapFileInput" accept=".html,.htm,text/html" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:#D4AF37;font-size:11px;margin-bottom:12px">
+    <input type="file" id="gapFileInput" accept=".html,.htm,.eml,text/html,message/rfc822" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:#D4AF37;font-size:11px;margin-bottom:12px">
 
     <label style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Atau tempel isi laporan (HTML) di sini</label>
     <textarea id="gapPasteInput" rows="4" placeholder="Tempel HTML laporan broker di sini..." style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:#D4AF37;font-size:11px;margin-bottom:12px;font-family:monospace"></textarea>
@@ -1525,7 +1525,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 
     <div class="ap-title">🔎 Verifikasi Data vs Laporan Broker</div>
     <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.6">Upload laporan statement broker (HTML, boleh cover banyak hari/bulan sekaligus). Situs akan kelompokkan transaksi per tanggal, hitung net P/L-nya, lalu bandingkan dengan catatan "Saldo Harian" yang sudah tersimpan — supaya ketahuan hari mana yang datanya beda atau belum tercatat.</div>
-    <input type="file" id="verifikasiFile" accept=".html,.htm,text/html" style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px">
+    <input type="file" id="verifikasiFile" accept=".html,.htm,.eml,text/html,message/rfc822" style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px">
     <textarea id="verifikasiPaste" rows="3" placeholder="Atau tempel isi HTML laporan di sini..." style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px;font-family:monospace"></textarea>
     <button class="btn btn-ghost" onclick="verifikasiData()">🔎 Verifikasi Sekarang</button>
     <div id="verifikasiStatus" style="font-size:10px;color:#8A6B26;text-align:center;margin-top:8px"></div>
@@ -1535,7 +1535,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 
     <div class="ap-title">🧾 Ekstrak & Kelompokkan Transaksi per Hari</div>
     <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.6">Upload laporan HTML dari FBS (boleh laporan resmi email, atau laporan bulanan custom seperti yang biasa Anda pakai). Semua transaksi closed otomatis dibaca &amp; dikelompokkan per tanggal — Gross Profit, Gross Loss, Swap, dan Net P/L per hari langsung ketauan. Ini biar gak salah hitung manual lagi.</div>
-    <input type="file" id="ekstrakFile" accept=".html,.htm,text/html" style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px">
+    <input type="file" id="ekstrakFile" accept=".html,.htm,.eml,text/html,message/rfc822" style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px">
     <textarea id="ekstrakPaste" rows="3" placeholder="Atau tempel isi HTML laporan di sini..." style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px;font-family:monospace"></textarea>
     <label class="lbl">Saldo Awal Sebelum Periode Laporan Ini (opsional — buat hitung Saldo Akhir per hari)</label>
     <input class="inp" type="number" step="0.01" id="ekstrakSaldoAwal" placeholder="Kosongkan kalau gak tau / gak perlu">
@@ -1555,7 +1555,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 
     <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-bottom:16px">
       <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.6">📧 Auto-baca laporan harian dari email broker (file HTML) — Saldo, Tanggal, Jumlah Signal, Gross Profit/Loss &amp; Swap otomatis terisi ke form di bawah. Tetap cek dulu sebelum simpan.</div>
-      <input type="file" id="brokerDailyFile" accept=".html,.htm,text/html" style="width:100%;padding:9px;background:var(--bg0);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px">
+      <input type="file" id="brokerDailyFile" accept=".html,.htm,.eml,text/html,message/rfc822" style="width:100%;padding:9px;background:var(--bg0);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px">
       <textarea id="brokerDailyPaste" rows="3" placeholder="Atau tempel isi HTML laporan di sini..." style="width:100%;padding:9px;background:var(--bg0);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px;font-family:monospace"></textarea>
       <button onclick="bacaLaporanEmailHarian()" style="width:100%;padding:10px;border-radius:9px;border:none;background:linear-gradient(90deg,#8A6B26,#D4AF37);color:#161A0F;font-size:12px;font-weight:800;cursor:pointer">📥 Baca &amp; Isi Otomatis</button>
       <div id="brokerDailyStatus" style="font-size:10px;color:#8A6B26;text-align:center;margin-top:8px"></div>
@@ -7595,7 +7595,104 @@ async function exportLaporanPDF(){
 // ══════════════════════════════════════════
 // ANALISA GAP / SLIP BROKER
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// PARSER FILE .EML (EMAIL MENTAH)
+// Dipakai di semua tool upload (Ekstrak, Verifikasi Data, Auto-baca Harian,
+// Analisa Gap) biar bisa langsung terima file .eml, gak perlu extract HTML
+// manual dulu. Mendukung multipart/alternative & multipart/mixed (nested),
+// encoding quoted-printable & base64.
+// ══════════════════════════════════════════
+function decodeQuotedPrintableToText(str){
+  const s=str.replace(/=\r?\n/g,''); // soft line break
+  const bytes=[];
+  for(let i=0;i<s.length;i++){
+    if(s[i]==='=' && i+2<s.length && /^[0-9A-Fa-f]{2}$/.test(s.substr(i+1,2))){
+      bytes.push(parseInt(s.substr(i+1,2),16));
+      i+=2;
+    }else{
+      bytes.push(s.charCodeAt(i) & 0xFF);
+    }
+  }
+  try{ return new TextDecoder('utf-8').decode(new Uint8Array(bytes)); }
+  catch(e){ return s; }
+}
+function decodeBase64ToText(str){
+  try{
+    const clean=str.replace(/[^A-Za-z0-9+/=]/g,'');
+    const binary=atob(clean);
+    const bytes=Uint8Array.from(binary, c=>c.charCodeAt(0));
+    return new TextDecoder('utf-8').decode(bytes);
+  }catch(e){ return ''; }
+}
+function extractHtmlFromEml(emlText){
+  const norm=emlText.replace(/\r\n/g,'\n');
+
+  function headerValue(headerBlock, name){
+    const re=new RegExp('^'+name+':[ \\t]*(.+(?:\\n[ \\t]+.+)*)','im');
+    const m=headerBlock.match(re);
+    if(!m) return null;
+    return m[1].replace(/\n[ \t]+/g,' ').trim();
+  }
+
+  function parsePart(content){
+    const headerEnd=content.indexOf('\n\n');
+    if(headerEnd===-1) return null;
+    const headers=content.slice(0,headerEnd);
+    const body=content.slice(headerEnd+2);
+    const contentType=headerValue(headers,'Content-Type')||'';
+    const encoding=(headerValue(headers,'Content-Transfer-Encoding')||'7bit').toLowerCase();
+
+    if(/multipart\//i.test(contentType)){
+      const bm=contentType.match(/boundary="?([^";\n]+)"?/i);
+      if(!bm) return null;
+      const boundary=bm[1];
+      const parts=body.split('--'+boundary);
+      let htmlResult=null, plainResult=null;
+      for(const part of parts){
+        const trimmed=part.trim();
+        if(!trimmed || trimmed==='--') continue;
+        const sub=parsePart(trimmed.startsWith('\n')?trimmed.slice(1):trimmed);
+        if(sub && sub.type==='html'){ htmlResult=sub.content; }
+        else if(sub && sub.type==='plain'){ plainResult=sub.content; }
+      }
+      if(htmlResult) return {type:'html', content:htmlResult};
+      if(plainResult) return {type:'plain', content:plainResult};
+      return null;
+    }else if(/text\/html/i.test(contentType)){
+      let decoded=body;
+      if(encoding.includes('quoted-printable')) decoded=decodeQuotedPrintableToText(body);
+      else if(encoding.includes('base64')) decoded=decodeBase64ToText(body);
+      return {type:'html', content:decoded};
+    }else if(/text\/plain/i.test(contentType)){
+      let decoded=body;
+      if(encoding.includes('quoted-printable')) decoded=decodeQuotedPrintableToText(body);
+      else if(encoding.includes('base64')) decoded=decodeBase64ToText(body);
+      return {type:'plain', content:decoded};
+    }
+    return null;
+  }
+
+  const result=parsePart(norm.trim());
+  return result ? result.content : null;
+}
+function looksLikeEmlFile(text, filename){
+  if(filename && /\.eml$/i.test(filename)) return true;
+  const head=text.slice(0,2000);
+  if(/<!DOCTYPE\s+html/i.test(head) || /<html[\s>]/i.test(head)) return false;
+  return /^(Delivered-To|Received|From|To|Subject|Date|Content-Type|Return-Path|Message-ID):/im.test(head);
+}
+// Ambil isi HTML dari sebuah file (deteksi otomatis .eml vs .html biasa)
+function resolveHtmlFromUploadedText(rawText, filename){
+  if(looksLikeEmlFile(rawText, filename)){
+    const html=extractHtmlFromEml(rawText);
+    if(html) return html;
+    throw new Error('File .eml terbaca tapi gak ketemu bagian HTML di dalamnya.');
+  }
+  return rawText;
+}
+
 function parseNumBroker(str){
+
   if(str===undefined||str===null) return NaN;
   let s=String(str).trim();
   if(s==='') return NaN;
@@ -7782,7 +7879,12 @@ function analisaGapBroker(){
 
   if(fileInput.files && fileInput.files[0]){
     const reader=new FileReader();
-    reader.onload=e=>processHtml(e.target.result);
+    reader.onload=e=>{
+      let htmlStr;
+      try{ htmlStr=resolveHtmlFromUploadedText(e.target.result, fileInput.files[0].name); }
+      catch(err){ statusEl.textContent='❌ '+(err.message||'Gagal proses file .eml'); return; }
+      processHtml(htmlStr);
+    };
     reader.onerror=()=>{ statusEl.textContent='❌ Gagal membaca file.'; };
     reader.readAsText(fileInput.files[0]);
   }else if(pasteVal){
@@ -7920,7 +8022,12 @@ function bacaLaporanEmailHarian(){
 
   if(fileInput.files && fileInput.files[0]){
     const reader=new FileReader();
-    reader.onload=e=>process(e.target.result);
+    reader.onload=e=>{
+      let htmlStr;
+      try{ htmlStr=resolveHtmlFromUploadedText(e.target.result, fileInput.files[0].name); }
+      catch(err){ statusEl.textContent='❌ '+(err.message||'Gagal proses file .eml'); return; }
+      process(htmlStr);
+    };
     reader.onerror=()=>{ statusEl.textContent='❌ Gagal membaca file.'; };
     reader.readAsText(fileInput.files[0]);
   }else if(pasteVal){
@@ -8050,7 +8157,12 @@ async function verifikasiData(){
 
   if(fileInput.files && fileInput.files[0]){
     const reader=new FileReader();
-    reader.onload=e=>process(e.target.result);
+    reader.onload=e=>{
+      let htmlStr;
+      try{ htmlStr=resolveHtmlFromUploadedText(e.target.result, fileInput.files[0].name); }
+      catch(err){ statusEl.textContent='❌ '+(err.message||'Gagal proses file .eml'); return; }
+      process(htmlStr);
+    };
     reader.onerror=()=>{ statusEl.textContent='❌ Gagal membaca file.'; };
     reader.readAsText(fileInput.files[0]);
   }else if(pasteVal){
@@ -8219,7 +8331,12 @@ function ekstrakPerHari(){
 
   if(fileInput.files && fileInput.files[0]){
     const reader=new FileReader();
-    reader.onload=e=>process(e.target.result, fileInput.files[0].name);
+    reader.onload=e=>{
+      let htmlStr;
+      try{ htmlStr=resolveHtmlFromUploadedText(e.target.result, fileInput.files[0].name); }
+      catch(err){ statusEl.textContent='❌ '+(err.message||'Gagal proses file .eml'); return; }
+      process(htmlStr, fileInput.files[0].name);
+    };
     reader.onerror=()=>{ statusEl.textContent='❌ Gagal membaca file.'; };
     reader.readAsText(fileInput.files[0]);
   }else if(pasteVal){
