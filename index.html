@@ -566,6 +566,183 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
+<!-- KALKULATOR RISIKO FLAT 2% (REAL-TIME PER SALDO) -->
+<div class="section" id="secKalkulatorFlat2">
+  <div class="sec-title">🧮 Kalkulator Flat 2% (Real-time per Saldo)</div>
+  <div class="graph-card">
+    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.5">Beda dari kalkulator Level 5% di atas: di sini lot dihitung ULANG setiap saat langsung dari saldo sekarang (risk dikunci 2%), jadi lot bisa naik <b>maupun turun</b> ikut saldo — bukan dikunci per level.</div>
+
+    <label class="lbl">Pilih Pair</label>
+    <select class="inp" id="calcPairSelect2" style="margin-bottom:0">
+      <optgroup label="XAUUSD">
+        <option value="100|300">XAUUSD Kerdil (100 pips)</option>
+        <option value="166.66|500" selected>XAUUSD Standar (166,66 pips)</option>
+        <option value="250|500">XAUUSD Medium (250 pips)</option>
+        <option value="500|500">XAUUSD Hard (500 pips)</option>
+      </optgroup>
+      <optgroup label="Forex Standar (SL 10 pips)">
+        <option value="10|20">AUDUSD Standar (10 pips)</option>
+        <option value="10|20">EURGBP Standar (10 pips)</option>
+        <option value="10|20">NZDUSD Standar (10 pips)</option>
+        <option value="10|20">USDCHF Standar (10 pips)</option>
+      </optgroup>
+      <optgroup label="Forex Standar (SL 15 pips)">
+        <option value="15|30">AUDJPY Standar (15 pips)</option>
+        <option value="15|30">CADJPY Standar (15 pips)</option>
+        <option value="15|30">EURUSD Standar (15 pips)</option>
+        <option value="15|30">GBPUSD Standar (15 pips)</option>
+        <option value="15|30">NZDJPY Standar (15 pips)</option>
+        <option value="15|30">USDCAD Standar (15 pips)</option>
+      </optgroup>
+      <optgroup label="Forex Standar (SL 20 pips)">
+        <option value="20|40">CHFJPY Standar (20 pips)</option>
+        <option value="20|40">EURJPY Standar (20 pips)</option>
+        <option value="20|40">EURNZD Standar (20 pips)</option>
+        <option value="20|40">GBPJPY Standar (20 pips)</option>
+        <option value="20|40">USDJPY Standar (20 pips)</option>
+      </optgroup>
+      <optgroup label="BTCUSD">
+        <option value="300|600">BTCUSD Standar (300 poin)</option>
+      </optgroup>
+      <optgroup label="Forex Medium (SL 20 pips)">
+        <option value="20|40">AUDUSD Medium (20 pips)</option>
+        <option value="20|40">EURGBP Medium (20 pips)</option>
+        <option value="20|40">NZDUSD Medium (20 pips)</option>
+        <option value="20|40">USDCHF Medium (20 pips)</option>
+      </optgroup>
+      <optgroup label="Forex Medium (SL 30 pips)">
+        <option value="30|60">AUDJPY Medium (30 pips)</option>
+        <option value="30|60">CADJPY Medium (30 pips)</option>
+        <option value="30|60">EURUSD Medium (30 pips)</option>
+        <option value="30|60">GBPUSD Medium (30 pips)</option>
+        <option value="30|60">NZDJPY Medium (30 pips)</option>
+        <option value="30|60">USDCAD Medium (30 pips)</option>
+      </optgroup>
+      <optgroup label="Forex Medium (SL 40 pips)">
+        <option value="40|80">CHFJPY Medium (40 pips)</option>
+        <option value="40|80">EURJPY Medium (40 pips)</option>
+        <option value="40|80">EURNZD Medium (40 pips)</option>
+        <option value="40|80">GBPJPY Medium (40 pips)</option>
+        <option value="40|80">USDJPY Medium (40 pips)</option>
+      </optgroup>
+      <optgroup label="Forex Hard (SL 30 pips)">
+        <option value="30|30">AUDUSD Hard (30 pips)</option>
+        <option value="30|30">EURGBP Hard (30 pips)</option>
+        <option value="30|30">NZDUSD Hard (30 pips)</option>
+        <option value="30|30">USDCHF Hard (30 pips)</option>
+      </optgroup>
+      <optgroup label="Forex Hard (SL 45 pips)">
+        <option value="45|45">AUDJPY Hard (45 pips)</option>
+        <option value="45|45">CADJPY Hard (45 pips)</option>
+        <option value="45|45">EURUSD Hard (45 pips)</option>
+        <option value="45|45">GBPUSD Hard (45 pips)</option>
+        <option value="45|45">NZDJPY Hard (45 pips)</option>
+        <option value="45|45">USDCAD Hard (45 pips)</option>
+      </optgroup>
+      <optgroup label="Forex Hard (SL 60 pips)">
+        <option value="60|60">CHFJPY Hard (60 pips)</option>
+        <option value="60|60">EURJPY Hard (60 pips)</option>
+        <option value="60|60">EURNZD Hard (60 pips)</option>
+        <option value="60|60">GBPJPY Hard (60 pips)</option>
+        <option value="60|60">USDJPY Hard (60 pips)</option>
+      </optgroup>
+    </select>
+
+    <div class="calc-row" style="margin-top:12px">
+      <div>
+        <label class="lbl">Pips Dipertaruhkan (SL)</label>
+        <input type="number" class="inp" id="calcSL2" value="166.66" step="0.01">
+      </div>
+      <div>
+        <label class="lbl">Nilai/Pip ($)</label>
+        <input type="number" class="inp" id="calcPipValue2" value="0.1" step="0.01">
+      </div>
+    </div>
+
+    <label class="lbl">Modal Kamu</label>
+    <input type="number" class="inp" id="calcModal2" value="500" step="1" min="0" style="margin-bottom:0">
+
+    <div id="calcFlat2Out"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const slEl2=document.getElementById('calcSL2'), pipvalueEl2=document.getElementById('calcPipValue2'),
+        modalEl2=document.getElementById('calcModal2'), pairSelectEl2=document.getElementById('calcPairSelect2'),
+        flat2OutEl=document.getElementById('calcFlat2Out');
+
+  pairSelectEl2.addEventListener('change', ()=>{
+    const [sl] = pairSelectEl2.value.split('|');
+    slEl2.value=sl;
+    computeFlat2();
+  });
+
+  // Band saldo: kelipatan $50 di rentang $500-$2000 (transisi paling sering terjadi di situ),
+  // lanjut kelipatan lebih besar ($500) untuk $2000-$5000, dan ($1000) di atas $5000.
+  function buildFlatBands(){
+    const bands=[];
+    for(let s=500;s<=2000;s+=50) bands.push(s);
+    for(let s=2500;s<=5000;s+=500) bands.push(s);
+    for(let s=6000;s<=10000;s+=1000) bands.push(s);
+    return bands;
+  }
+
+  function buildFlat2TableHtml(modalSaatIni, sl, pipvalue){
+    if(sl<=0 || pipvalue<=0) return '';
+    const riskPerLot = sl*pipvalue; // $ risk per 0.01 lot di SL ini
+    const bands = buildFlatBands();
+
+    let activeIdx=-1;
+    bands.forEach((s,i)=>{ if(modalSaatIni>=s) activeIdx=i; });
+
+    const rows = bands.map((saldo,i)=>{
+      const targetRisk = saldo*0.02;
+      let count = Math.floor(targetRisk/riskPerLot);
+      if(count<1) count=1; // minimum lot 0.01
+      const lot = count*0.01;
+      const riskDollar = count*riskPerLot;
+      const riskPct = (riskDollar/saldo)*100;
+      const aktif = i===activeIdx;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:5px 0;border-bottom:1px solid var(--border);${aktif?'background:var(--bg3);border-radius:6px;padding-left:6px;padding-right:6px':''}">
+        <span style="color:${aktif?'#4ADE80':'#C8A84B'}">${aktif?'▶':'○'} $${saldo.toLocaleString('en-US')} — lot ${lot.toFixed(2)}</span>
+        <span style="text-align:right">
+          <span style="color:${aktif?'#4ADE80':'#C8A84B'};font-weight:700">$${riskDollar.toLocaleString('en-US',{maximumFractionDigits:2})}</span><br>
+          <span style="font-size:8px;color:#5C4818">${riskPct.toFixed(2)}% dari saldo</span>
+        </span>
+      </div>`;
+    }).join('');
+
+    const currentLot = activeIdx>=0 ? (Math.max(1,Math.floor((modalSaatIni*0.02)/riskPerLot))*0.01) : 0;
+
+    return `
+      <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-top:12px">
+        <div style="text-align:center;margin-bottom:10px">
+          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">Lot Sekarang (Modal $${modalSaatIni.toLocaleString('en-US')})</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:${currentLot>0?'#4ADE80':'#F87171'}">${currentLot>0?'Lot '+currentLot.toFixed(2):'⚠️ Saldo di bawah $500'}</div>
+          <div style="font-size:9px;color:#7A5D1F;margin-top:2px">Lot dihitung ULANG tiap saat dari saldo — beda dari kalkulator Level 5% yang dikunci per level.</div>
+        </div>
+        <div style="font-size:8px;color:#8A6B26;text-align:center;margin-bottom:8px">👇 Tabel per kelipatan saldo, basis risk 2%, lot dibulatkan ke bawah ke kelipatan 0.01 terdekat:</div>
+        ${rows}
+        <div style="font-size:8px;color:#5C4818;margin-top:10px;line-height:1.6">💡 Karena lot dibulatkan ke bawah, risk % riil kadang di bawah 2% (bukan berarti salah) — cuma di saldo yang persis kelipatan bulat, risk-nya pas 2.00%. Ganti pair/preset di atas, tabel ini otomatis dihitung ulang.</div>
+      </div>`;
+  }
+
+  function computeFlat2(){
+    const modal=parseFloat(modalEl2.value)||0;
+    const sl=parseFloat(slEl2.value)||0;
+    const pipvalue=parseFloat(pipvalueEl2.value)||0;
+    if(modal<=0 || sl<=0 || pipvalue<=0){ flat2OutEl.innerHTML=''; return; }
+    flat2OutEl.innerHTML = buildFlat2TableHtml(modal, sl, pipvalue);
+  }
+
+  modalEl2.addEventListener('input', computeFlat2);
+  slEl2.addEventListener('input', computeFlat2);
+  pipvalueEl2.addEventListener('input', computeFlat2);
+  computeFlat2();
+})();
+</script>
+
 <script>
 (function(){
   const $ = id => document.getElementById(id);
@@ -855,24 +1032,23 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   const modalEl=$('calcModal'), akunTypeEl=$('calcAkunType'), rekomOutEl=$('calcRekomOut');
 
   // ── SISTEM LEVEL PROGRESIF (lot naik terus, gak pernah turun walau saldo tinggi) ──
-  // Aturan dasar yang dikunci: LOSS_COUNT kali kalah beruntun di level manapun = turun TEPAT 1 level.
-  // Level 1 dimulai di buffer BUFFER_START (mis. 10x) dengan LOT_START (mis. 0.03).
-  // Tiap level berikutnya: lot naik LOT_STEP, dan target saldo levelnya = target saldo level
-  // sebelumnya + (LOSS_COUNT × risk di lot level ini). Ini otomatis bikin buffer ikut naik pelan-pelan
-  // (bukan dipatok flat), dan berlaku exact untuk cek naik maupun turun level.
+  // Risk per trade DIKUNCI FLAT di RISK_PCT (mis. 5%) di SEMUA level — bukan naik-turun kayak versi lama.
+  // Level 1 dimulai di lot LOT_START, tiap level berikutnya lot naik LOT_STEP.
+  // Target saldo tiap level = BUFFER × risk di lot level itu, dengan BUFFER = 1/RISK_PCT (mis. 5% → buffer 20x).
+  // Jadi risk % riil di level manapun selalu tepat RISK_PCT, gak peduli levelnya.
+  // Aturan dasar yang dikunci: LOSS_COUNT kali kalah beruntun di level manapun = turun TEPAT 1 level
+  // (saldo balik ke target modal level sebelumnya).
   // Semua angka ikut SL pips & nilai/pip yang lagi aktif di kalkulator ini — ganti pair/preset, tabel ini ikut berubah.
-  const LOT_START=0.01, LOT_STEP=0.01, BUFFER_START=10, LOSS_COUNT=3, N_LEVELS=14;
+  const LOT_START=0.01, LOT_STEP=0.01, RISK_PCT=0.05, BUFFER=1/RISK_PCT, LOSS_COUNT=3, N_LEVELS=14;
 
   function buildLevelPlan(sl, pipvalue){
     const plan=[];
-    let modalPrev=0;
     for(let i=0;i<N_LEVELS;i++){
       const lot=Math.round((LOT_START+i*LOT_STEP)*100)/100;
       const risk=sl*pipvalue*(lot/0.01); // risk $ per trade di lot ini
-      const modal = i===0 ? BUFFER_START*risk : modalPrev + LOSS_COUNT*risk;
-      const buffer = risk>0 ? modal/risk : 0;
+      const modal=BUFFER*risk; // flat: risk % riil selalu = RISK_PCT di semua level
+      const buffer=BUFFER;
       plan.push({lot, risk, modal, buffer});
-      modalPrev=modal;
     }
     return plan;
   }
@@ -1872,6 +2048,7 @@ const SEARCH_MENU=[
   {id:'secBenchmark', icon:'📈', label:'Performance vs Benchmark', desc:'Perbandingan performa vs XAUUSD/BTCUSD pasar', kw:'benchmark perbandingan pasar market vs'},
   {id:'secModalMinimal', icon:'💵', label:'Rekomendasi Modal Minimal', desc:'Saran modal minimal berdasarkan gaya trading', kw:'modal minimal rekomendasi saran capital'},
   {id:'secKalkulator', icon:'🧮', label:'Kalkulator Risiko per Pair', desc:'Hitung lot, SL/TP, risk $, breakeven win rate', kw:'kalkulator risiko lot sl tp stop loss take profit breakeven kalkulator lot'},
+  {id:'secKalkulatorFlat2', icon:'🧮', label:'Kalkulator Flat 2% (Real-time)', desc:'Hitung lot ulang tiap saat dari saldo, risk dikunci 2%', kw:'kalkulator flat 2% real time saldo lot risiko dua persen'},
   {id:'secGrafikBulanan', icon:'📈', label:'Grafik Kinerja Bulanan & Target', desc:'Grafik profit bulanan dan progress target', kw:'grafik kinerja bulanan target bulan ini progress'},
   {id:'secPerbandingan', icon:'📊', label:'Perbandingan Bulanan', desc:'Bandingkan performa antar bulan', kw:'perbandingan bulanan monthly comparison'},
   {id:'secKalender', icon:'📅', label:'Kalender Trading', desc:'Kalender harian profit/loss', kw:'kalender trading calendar harian'},
