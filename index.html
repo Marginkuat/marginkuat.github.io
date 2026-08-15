@@ -1413,7 +1413,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </div>
 
 <!-- WHAT-IF: SEWA VS BELI PROPERTI -->
-<div class="section" id="secSewaBeli" style="display:none">
+<div class="section" id="secSewaBeli">
   <div class="sec-title">🏠 "What-If": Sewa vs Beli Properti</div>
   <div class="graph-card" style="margin-bottom:12px">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Masukkan asumsi harga properti, KPR, dan sewa — sistem hitung mana yang lebih menguntungkan secara kekayaan bersih dalam jangka waktu tertentu.</div>
@@ -1436,7 +1436,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </div>
 
 <!-- INVESTOR DASHBOARD -->
-<div class="section" id="secInvestorDashboard" style="display:none">
+<div class="section" id="secInvestorDashboard">
   <div class="sec-title">👥 Investor Dashboard</div>
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Login khusus investor — tiap investor punya kode akses sendiri buat lihat porsi modal, estimasi profit, dan ROI mereka.</div>
@@ -1461,7 +1461,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </div>
 
 <!-- INVESTOR CALCULATOR -->
-<div class="section" id="secInvestorCalc" style="display:none">
+<div class="section" id="secInvestorCalc">
   <div class="sec-title">🧮 Investor Calculator</div>
   <div class="graph-card" style="border:1.5px solid #F87171;background:rgba(248,113,113,0.08);margin-bottom:12px">
     <div style="font-size:10px;color:#F87171;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚠️ Disclaimer Penting</div>
@@ -1491,7 +1491,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </div>
 
 <!-- DASHBOARD PORTOFOLIO SAHAM -->
-<div class="section" id="secPortofolioSaham" style="display:none">
+<div class="section" id="secPortofolioSaham">
   <div class="sec-title">📈 Dashboard Portofolio Saham</div>
   <div class="graph-card" style="margin-bottom:12px">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Ringkasan status semua saham yang kamu pegang saat ini — lot, harga beli, harga pasar, dan gain/loss. 1 lot = 100 lembar (standar BEI).</div>
@@ -1505,7 +1505,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </div>
 
 <!-- INVESTMENT PORTFOLIO DASHBOARD -->
-<div class="section" id="secPortofolioInvestasi" style="display:none">
+<div class="section" id="secPortofolioInvestasi">
   <div class="sec-title">📊 Investment Portfolio Dashboard</div>
   <div class="graph-card" style="margin-bottom:12px">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Breakdown investasi di luar MT4 — saham, reksadana, deposito, SUN/obligasi, properti, tanah, dan aset lain yang kamu input di Neraca (Laporan Keuangan).</div>
@@ -1831,7 +1831,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     </label>
 
     <button class="btn btn-p" onclick="simpanSaldo()">💾 Simpan Catatan Hari Ini</button>
-    <button class="btn btn-ghost" onclick="openModal('mGantiPin')">🔐 Ganti PIN</button>
+    <button class="btn btn-ghost" onclick="openModal('mGantiPin')">🔐 Ganti Password</button>
 
     <div style="height:1px;background:var(--border);margin:16px 0"></div>
 
@@ -1992,8 +1992,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="modal-box">
     <div class="modal-bar"></div>
     <div class="modal-title">🔑 Masuk sebagai Admin</div>
-    <label class="lbl">PIN</label>
-    <input class="inp" type="password" id="loginPin" placeholder="Masukkan PIN">
+    <label class="lbl">Email</label>
+    <input class="inp" type="email" id="loginEmail" placeholder="Email admin" autocomplete="username">
+    <label class="lbl">Password</label>
+    <input class="inp" type="password" id="loginPin" placeholder="Masukkan password" autocomplete="current-password">
     <button class="btn btn-p" onclick="doLogin()">Masuk</button>
     <button class="btn btn-ghost" onclick="closeModal('mLogin')">Batal</button>
   </div>
@@ -2015,18 +2017,17 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
-<!-- MODAL GANTI PIN -->
+<!-- MODAL GANTI PASSWORD (dulu: Ganti PIN) -->
 <div class="modal" id="mGantiPin">
   <div class="modal-box">
     <div class="modal-bar"></div>
-    <div class="modal-title">🔐 Ganti PIN</div>
-    <label class="lbl">PIN Lama</label>
-    <input class="inp" type="password" id="pinLama" placeholder="Masukkan PIN saat ini">
-    <label class="lbl">PIN Baru</label>
-    <input class="inp" type="password" id="pinBaru" placeholder="Minimal 4 digit">
-    <label class="lbl">Ulangi PIN Baru</label>
-    <input class="inp" type="password" id="pinBaru2" placeholder="Ulangi PIN baru">
-    <button class="btn btn-p" onclick="doGantiPin()">Simpan PIN Baru</button>
+    <div class="modal-title">🔐 Ganti Password Admin</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Password diverifikasi & disimpan oleh Supabase Auth di server — bukan lagi di browser ini. Harus dalam keadaan login buat ganti password.</div>
+    <label class="lbl">Password Baru</label>
+    <input class="inp" type="password" id="pinBaru" placeholder="Minimal 6 karakter" autocomplete="new-password">
+    <label class="lbl">Ulangi Password Baru</label>
+    <input class="inp" type="password" id="pinBaru2" placeholder="Ulangi password baru" autocomplete="new-password">
+    <button class="btn btn-p" onclick="doGantiPin()">Simpan Password Baru</button>
     <button class="btn btn-ghost" onclick="closeModal('mGantiPin')">Batal</button>
   </div>
 </div>
@@ -2039,18 +2040,92 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 // Tabel 'nasabah' dan 'transaksi' (investor & bagi hasil) TIDAK dipakai sama sekali di file ini.
 const SB='https://tnucvqhlyngjxzpxpnsv.supabase.co';
 const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRudWN2cWhseW5nanh6cHhwbnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NzY1NzUsImV4cCI6MjA5NjE1MjU3NX0.f-Jtqb6F38ypJr7VNy0Kki1ME3Y0Qe1OrvjMqrb5pDk';
-const H={'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=representation'};
 async function api(p,m='GET',b=null){
-  const o={method:m,headers:H};if(b)o.body=JSON.stringify(b);
+  let session=getSession();
+  if(session && !isSessionValid(session)){ session=await supabaseRefresh(); } // access token expired, coba refresh dulu
+  const token=(session && session.access_token) ? session.access_token : KEY;
+  const headers={'apikey':KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'};
+  const o={method:m,headers};if(b)o.body=JSON.stringify(b);
   const r=await fetch(SB+'/rest/v1/'+p,o);
   if(!r.ok)throw new Error(await r.text());
   const t=await r.text();return t?JSON.parse(t):[];
 }
 
-// ══ ADMIN PIN ══
-// PIN default. Setelah diganti lewat tombol "Ganti PIN", nilai baru tersimpan
-// di localStorage browser ini (tidak dikirim ke server). Ganti PIN ini sebelum publikasi.
-const DEFAULT_PIN='123456';
+// ══ SESI ADMIN (Supabase Auth — menggantikan sistem PIN lama) ══
+// Kenapa diganti: PIN lama cuma ngunci tampilan UI di browser, TIDAK ngunci database-nya —
+// siapapun yang tau anon key bisa langsung tulis/hapus data lewat API tanpa PIN sama sekali.
+// Supabase Auth + RLS memastikan hak tulis diverifikasi di server, bukan cuma di layar HP.
+// Sesi (access_token & refresh_token) tetap disimpan di localStorage device ini supaya gak perlu
+// login ulang tiap buka situs, tapi ini cuma "kunci mobil" — validasinya tetap dicek server tiap request.
+function getSession(){
+  try{ return JSON.parse(localStorage.getItem('mk_admin_session')||'null'); }catch(e){ return null; }
+}
+function setSession(d){
+  const session={access_token:d.access_token, refresh_token:d.refresh_token, expires_at: Date.now()+((d.expires_in||3600)*1000)};
+  localStorage.setItem('mk_admin_session', JSON.stringify(session));
+  return session;
+}
+function clearSession(){ localStorage.removeItem('mk_admin_session'); }
+function isSessionValid(session){ return !!(session && session.access_token && session.expires_at > Date.now()+5000); }
+
+async function supabaseSignIn(email,password){
+  const r=await fetch(SB+'/auth/v1/token?grant_type=password',{
+    method:'POST',
+    headers:{'apikey':KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email,password})
+  });
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error_description||d.msg||'Login gagal');
+  return setSession(d);
+}
+async function supabaseRefresh(){
+  const session=getSession();
+  if(!session||!session.refresh_token) return null;
+  try{
+    const r=await fetch(SB+'/auth/v1/token?grant_type=refresh_token',{
+      method:'POST',
+      headers:{'apikey':KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({refresh_token:session.refresh_token})
+    });
+    if(!r.ok){clearSession();return null;}
+    const d=await r.json();
+    return setSession(d);
+  }catch(e){return null;}
+}
+async function supabaseSignOut(){
+  const session=getSession();
+  if(session && session.access_token){
+    try{ await fetch(SB+'/auth/v1/logout',{method:'POST',headers:{'apikey':KEY,'Authorization':'Bearer '+session.access_token}}); }catch(e){}
+  }
+  clearSession();
+}
+async function supabaseChangePassword(newPassword){
+  let session=getSession();
+  if(session && !isSessionValid(session)) session=await supabaseRefresh();
+  if(!isSessionValid(session)) throw new Error('Sesi admin sudah habis, login ulang dulu');
+  const r=await fetch(SB+'/auth/v1/user',{
+    method:'PUT',
+    headers:{'apikey':KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
+    body:JSON.stringify({password:newPassword})
+  });
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error_description||d.msg||'Gagal ganti password');
+  return d;
+}
+// Coba pulihkan sesi admin yang masih tersimpan di device ini (dipanggil sekali saat halaman dibuka)
+async function restoreAdminSession(){
+  let session=getSession();
+  if(!session) return false;
+  if(!isSessionValid(session)){
+    session=await supabaseRefresh();
+    if(!session) return false;
+  }
+  isAdmin=true;
+  hide('btnAdmin');show('btnLogout');document.getElementById('btnLogout').style.display='inline-block';
+  show('adminPanel');
+  return true;
+}
+
 // ══ DARK / LIGHT MODE TOGGLE ══
 function applyThemeIcon(){
   const btn=document.getElementById('btnTheme');
@@ -2062,8 +2137,6 @@ function toggleTheme(){
   try{ localStorage.setItem('mk_theme', isLight?'light':'dark'); }catch(e){}
   applyThemeIcon();
 }
-function getAdminPin(){ return localStorage.getItem('mk_admin_pin') || DEFAULT_PIN; }
-function setAdminPin(p){ localStorage.setItem('mk_admin_pin', p); }
 
 // ══ CURRENCY ══
 let K=16700;
@@ -2085,6 +2158,11 @@ const SEARCH_MENU=[
   {id:'secModalMinimal', icon:'💵', label:'Rekomendasi Modal Minimal', desc:'Saran modal minimal berdasarkan gaya trading', kw:'modal minimal rekomendasi saran capital'},
   {id:'secKalkulator', icon:'🧮', label:'Kalkulator Risiko per Pair', desc:'Hitung lot, SL/TP, risk $, breakeven win rate', kw:'kalkulator risiko lot sl tp stop loss take profit breakeven kalkulator lot'},
   {id:'secKalkulatorFlat2', icon:'🧮', label:'Kalkulator Flat 2% (Real-time)', desc:'Hitung lot ulang tiap saat dari saldo, risk dikunci 2%', kw:'kalkulator flat 2% real time saldo lot risiko dua persen'},
+  {id:'secSewaBeli', icon:'🏠', label:'What-If: Sewa vs Beli Properti', desc:'Simulasi mana lebih untung, sewa atau KPR', kw:'sewa beli properti kpr rumah what if simulasi'},
+  {id:'secInvestorDashboard', icon:'👥', label:'Investor Dashboard', desc:'Login investor lihat porsi modal, profit, ROI', kw:'investor dashboard login kode akses modal roi'},
+  {id:'secInvestorCalc', icon:'🧮', label:'Investor Calculator', desc:'Simulasi potensi return investasi berdasarkan histori', kw:'investor calculator simulasi return investasi'},
+  {id:'secPortofolioSaham', icon:'📈', label:'Dashboard Portofolio Saham', desc:'Ringkasan saham yang dipegang, gain/loss', kw:'portofolio saham dashboard gain loss lot lembar'},
+  {id:'secPortofolioInvestasi', icon:'📊', label:'Investment Portfolio Dashboard', desc:'Breakdown investasi di luar MT4 dari Neraca', kw:'investment portfolio dashboard neraca aset reksadana deposito obligasi'},
   {id:'secGrafikBulanan', icon:'📈', label:'Grafik Kinerja Bulanan & Target', desc:'Grafik profit bulanan dan progress target', kw:'grafik kinerja bulanan target bulan ini progress'},
   {id:'secPerbandingan', icon:'📊', label:'Perbandingan Bulanan', desc:'Bandingkan performa antar bulan', kw:'perbandingan bulanan monthly comparison'},
   {id:'secKalender', icon:'📅', label:'Kalender Trading', desc:'Kalender harian profit/loss', kw:'kalender trading calendar harian'},
@@ -2301,6 +2379,7 @@ function loadDisqus(){
 // ══ INIT ══
 window.onload=async()=>{
   applyThemeIcon();
+  await restoreAdminSession(); // pulihkan sesi admin (Supabase Auth) kalau device ini pernah login & sesinya masih valid
   renderSewaBeli();
   renderPortofolioSaham();
   try{
@@ -6296,41 +6375,47 @@ async function exportKasPDF(){
   }
 }
 
-// ══ ADMIN LOGIN ══
-function doLogin(){
-  const pin=document.getElementById('loginPin').value;
-  if(pin===getAdminPin()){
+// ══ ADMIN LOGIN (Supabase Auth) ══
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPin').value;
+  if(!email||!pass){toast('❌ Isi email & password');return;}
+  try{
+    await supabaseSignIn(email,pass);
     isAdmin=true;
     closeModal('mLogin');
+    document.getElementById('loginEmail').value='';
     document.getElementById('loginPin').value='';
     hide('btnAdmin');show('btnLogout');document.getElementById('btnLogout').style.display='inline-block';
     show('adminPanel');
     toast('✅ Masuk sebagai Admin');
-  }else{
-    toast('❌ PIN salah');
+  }catch(e){
+    toast('❌ '+(e.message||'Login gagal').slice(0,100));
   }
 }
-function logout(){
+async function logout(){
+  await supabaseSignOut();
   isAdmin=false;
   show('btnAdmin');hide('btnLogout');
   hide('adminPanel');
   toast('↩ Keluar dari mode Admin');
 }
 
-// ══ GANTI PIN ══
-function doGantiPin(){
-  const lama=document.getElementById('pinLama').value;
+// ══ GANTI PASSWORD ADMIN (dulu: Ganti PIN) ══
+async function doGantiPin(){
   const baru=document.getElementById('pinBaru').value;
   const baru2=document.getElementById('pinBaru2').value;
-  if(lama!==getAdminPin()){toast('❌ PIN lama salah');return;}
-  if(baru.length<4){toast('❌ PIN baru minimal 4 digit');return;}
-  if(baru!==baru2){toast('❌ PIN baru tidak sama');return;}
-  setAdminPin(baru);
-  document.getElementById('pinLama').value='';
-  document.getElementById('pinBaru').value='';
-  document.getElementById('pinBaru2').value='';
-  closeModal('mGantiPin');
-  toast('✅ PIN berhasil diganti');
+  if(baru.length<6){toast('❌ Password baru minimal 6 karakter');return;}
+  if(baru!==baru2){toast('❌ Password baru tidak sama');return;}
+  try{
+    await supabaseChangePassword(baru);
+    document.getElementById('pinBaru').value='';
+    document.getElementById('pinBaru2').value='';
+    closeModal('mGantiPin');
+    toast('✅ Password berhasil diganti');
+  }catch(e){
+    toast('❌ '+(e.message||'Gagal ganti password').slice(0,100));
+  }
 }
 
 // ══ PREVIEW & SIMPAN SALDO ══
