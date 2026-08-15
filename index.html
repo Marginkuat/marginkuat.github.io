@@ -1462,6 +1462,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 <!-- INVESTOR CALCULATOR -->
 <div class="section" id="secInvestorCalc" style="display:none">
   <div class="sec-title">🧮 Investor Calculator</div>
+  <div class="graph-card" style="border:1.5px solid #F87171;background:rgba(248,113,113,0.08);margin-bottom:12px">
+    <div style="font-size:10px;color:#F87171;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚠️ Disclaimer Penting</div>
+    <div style="font-size:11px;color:#FCA5A5;line-height:1.6">Data historis di kalkulator ini berasal dari <b>akun sen (risk 5%)</b>, bukan dari <b>akun standard (risk 2%)</b> tempat modal investor akan ditempatkan. Angka di bawah <b>belum bisa dijadikan acuan</b> sampai ada cukup data historis dari akun standard.</div>
+  </div>
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Simulasi potensi return berdasarkan performa historis — investor bisa coba sendiri skenario investasinya.</div>
     <label class="lbl">Jumlah Investasi (dalam ¢ / sen, sama seperti format saldo di app ini)</label>
@@ -5056,7 +5060,8 @@ function renderInvestorCalc(){
     ${row('🚀 Skenario Optimis', stats.best, bestVal, '#4ADE80')}
     ${row('📊 Skenario Rata-rata', stats.avg, avgVal, '#D4AF37')}
     ${row('⚠️ Skenario Konservatif', stats.worst, worstVal, '#F87171')}
-    <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:10px;line-height:1.6">⚠️ Ini simulasi berdasarkan performa historis, BUKAN jaminan atau janji return di masa depan. Trading forex/emas/kripto memiliki risiko, termasuk risiko kerugian modal.</div>`;
+    <div style="font-size:9px;color:#F87171;text-align:center;margin-top:10px;line-height:1.6;font-weight:700">⚠️ Data historis di atas berasal dari akun sen (risk 5%), bukan dari akun standard (risk 2%) tempat modal investor akan ditempatkan. Belum bisa dijadikan acuan sampai ada cukup data dari akun standard.</div>
+    <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:6px;line-height:1.6">Ini simulasi berdasarkan performa historis, BUKAN jaminan atau janji return di masa depan. Trading forex/emas/kripto memiliki risiko, termasuk risiko kerugian modal.</div>`;
 }
 
 // ══ FAQ SECTION ══
