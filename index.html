@@ -1160,10 +1160,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <div id="graphSvgWrap" style="position:relative"></div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">🎯 Target Bulan Ini</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">🚦 Batas Bulanan (Circuit Breaker)</div>
         <span onclick="editTargetBulanan()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Target</span>
       </div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Batas dua arah: kena +target = berhenti karena udah cuan, kena -target = REM wajib stop loss trading bulan ini. Bisa diatur pakai % dari saldo awal bulan atau nominal $ tetap.</div>
       <div id="targetProgressWrap">
         <div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div>
       </div>
@@ -2510,7 +2511,7 @@ function renderGraph(){
     set('graphPct','0%');
     document.getElementById('graphPct').style.color='#8A6B26';
     wrap.innerHTML='<div style="text-align:center;padding:30px 0;color:#7A5D1F;font-size:12px">Belum ada data bulan ini</div>';
-    renderTargetProgress(0);
+    renderTargetProgress(0, 0);
     return;
   }
 
@@ -2579,19 +2580,32 @@ function renderGraph(){
     </div>`;
 
   setupGraphInteraction(points, dailyInfo, xFor, yFor, mainColor, W, pad);
-  renderTargetProgress(total);
+  renderTargetProgress(total, saldoAwalBulan);
 }
 
-// ══ TARGET PROFIT BULANAN & PROGRESS BAR ══
+// ══ BATAS BULANAN (CIRCUIT BREAKER) — DUA ARAH, DUA MODE ══
 // Target ini milik PEMILIK SITUS (kamu) dan ditampilkan sama ke semua pengunjung —
 // makanya disimpan di server (Supabase, tabel app_settings), bukan localStorage per-HP.
-let cachedTargetBulanan=500; // default sebelum data server kebaca
+// Format tersimpan: JSON string {mode:'persen'|'fixed', value:10}
+//   - mode 'persen': batas atas/bawah = ±(value% dari saldo awal bulan berjalan)
+//   - mode 'fixed': batas atas/bawah = ±(value dalam ¢/sen, tetap tiap bulan)
+// Kompatibel mundur: kalau isi lama cuma angka polos (bukan JSON), dianggap mode 'fixed'.
+let cachedTargetBulanan={mode:'persen', value:10}; // default sebelum data server kebaca
 async function loadTargetBulanan(){
   try{
     const rows=await api('app_settings?select=value&key=eq.target_bulanan');
     if(rows && rows.length){
-      const v=parseFloat(rows[0].value);
-      if(!isNaN(v)) cachedTargetBulanan=v;
+      const raw=rows[0].value;
+      try{
+        const parsed=JSON.parse(raw);
+        if(parsed && parsed.mode && !isNaN(parseFloat(parsed.value))){
+          cachedTargetBulanan={mode:parsed.mode==='fixed'?'fixed':'persen', value:parseFloat(parsed.value)};
+        }
+      }catch(_){
+        // format lama: angka polos = nominal $ tetap
+        const v=parseFloat(raw);
+        if(!isNaN(v)) cachedTargetBulanan={mode:'fixed', value:v};
+      }
     }
   }catch(e){
     console.error('Gagal load target bulanan dari server, pakai default/cache terakhir', e);
@@ -2600,47 +2614,98 @@ async function loadTargetBulanan(){
 function getTargetBulanan(){
   return cachedTargetBulanan;
 }
+// Hitung batas atas (+) dan batas bawah (-) dalam ¢/sen, berdasar mode aktif.
+// saldoAwalBulan dibutuhkan untuk mode 'persen' — kalau 0/tidak ada, mode persen gak bisa dihitung.
+function hitungBatasBulanan(saldoAwalBulan){
+  const cfg=getTargetBulanan();
+  let batas;
+  if(cfg.mode==='persen'){
+    batas = saldoAwalBulan>0 ? (saldoAwalBulan*cfg.value/100) : 0;
+  }else{
+    batas = cfg.value;
+  }
+  return {atas:batas, bawah:-batas};
+}
 async function editTargetBulanan(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah target');return;}
   const cur=getTargetBulanan();
-  const input=prompt('Target profit bulanan (dalam ¢ / sen) — ini akan tampil sama ke semua pengunjung situs:', cur);
+  const contoh = cur.mode==='persen' ? cur.value+'%' : String(cur.value);
+  const input=prompt('Ketik batas profit/loss bulanan (dua arah, +/- sama besar) — ini tampil sama ke semua pengunjung.\n\nContoh: "10%" (persen dari saldo awal bulan, otomatis nyesuain modal) atau "500" (nominal ¢/sen tetap tiap bulan).', contoh);
   if(input===null)return;
-  const v=parseFloat(input);
+  const trimmed=input.trim();
+  const isPersen = trimmed.endsWith('%');
+  const v=parseFloat(trimmed.replace('%',''));
   if(isNaN(v)||v<=0){toast('❌ Angka target tidak valid');return;}
+  const newCfg={mode: isPersen?'persen':'fixed', value:v};
   try{
+    const payload=JSON.stringify(newCfg);
     const existing=await api('app_settings?select=key&key=eq.target_bulanan');
     if(existing.length){
-      await api('app_settings?key=eq.target_bulanan','PATCH',{value:String(v)});
+      await api('app_settings?key=eq.target_bulanan','PATCH',{value:payload});
     }else{
-      await api('app_settings','POST',{key:'target_bulanan',value:String(v)});
+      await api('app_settings','POST',{key:'target_bulanan',value:payload});
     }
-    cachedTargetBulanan=v;
-    toast('✅ Target bulanan diperbarui untuk semua pengunjung');
+    cachedTargetBulanan=newCfg;
+    toast(`✅ Batas bulanan diperbarui: ±${isPersen?v+'%':fc(v)} untuk semua pengunjung`);
     renderGraph();
   }catch(e){
     console.error(e);
     toast('❌ Gagal simpan target ke server: '+(e.message||'').slice(0,120));
   }
 }
-function renderTargetProgress(totalBulanIni){
+function renderTargetProgress(totalBulanIni, saldoAwalBulan){
   const wrap=document.getElementById('targetProgressWrap');
   if(!wrap)return;
-  const target=getTargetBulanan();
-  const progress=Math.max(0, totalBulanIni);
-  const pct=Math.min(100, (progress/target)*100);
-  const tercapai=totalBulanIni>=target;
-  const barColor=tercapai?'#4ADE80':'#D4AF37';
+  const cfg=getTargetBulanan();
+  const {atas, bawah} = hitungBatasBulanan(saldoAwalBulan||0);
+
+  if(cfg.mode==='persen' && !(saldoAwalBulan>0)){
+    wrap.innerHTML=`<div style="text-align:center;font-size:10px;color:#7A5D1F;padding:6px">Mode % butuh data saldo awal bulan — belum ada catatan bulan ini.</div>`;
+    return;
+  }
+
+  const total=totalBulanIni||0;
+  const range=(atas-bawah)||1;
+  const pctPos=Math.max(0, Math.min(100, ((total-bawah)/range)*100));
+  const pctZero=Math.max(0, Math.min(100, ((0-bawah)/range)*100));
+  const kenaAtas = total>=atas;
+  const kenaBawah = total<=bawah;
+  const dekatBatas = !kenaAtas && !kenaBawah && (pctPos>=80 || pctPos<=20);
+
+  let statusHtml, barColor;
+  if(kenaAtas){
+    statusHtml='🎉 Target profit tercapai — pertimbangkan berhenti trading bulan ini';
+    barColor='#4ADE80';
+  }else if(kenaBawah){
+    statusHtml='🔴 KENA REM — batas rugi bulanan tercapai, disiplin berhenti trading!';
+    barColor='#F87171';
+  }else if(dekatBatas){
+    statusHtml='🟡 Mendekati batas — mulai kurangi risiko';
+    barColor = pctPos>=80 ? '#4ADE80' : '#F87171';
+  }else{
+    statusHtml='🟢 Aman';
+    barColor = total>=0 ? '#4ADE80' : '#F87171';
+  }
+
+  const labelAtas = cfg.mode==='persen' ? `+${cfg.value}%` : `+${fc(atas)}`;
+  const labelBawah = cfg.mode==='persen' ? `-${cfg.value}%` : `-${fc(atas)}`;
+
   wrap.innerHTML=`
-    <div style="display:flex;justify-content:space-between;font-size:11px;color:#C8A84B;margin-bottom:6px">
-      <span>Target: ${fc(target)}</span>
-      <span style="color:${totalBulanIni>=0?'#4ADE80':'#F87171'}">${totalBulanIni>=0?'+':''}${fc(totalBulanIni)}</span>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#F87171;margin-bottom:6px">
+      <span>${labelBawah}</span>
+      <span style="color:#8A6B26">saldo awal: ${fc(saldoAwalBulan||0)}</span>
+      <span style="color:#4ADE80">${labelAtas}</span>
     </div>
     <div style="background:var(--bg2);border-radius:20px;height:14px;overflow:hidden;position:relative">
-      <div style="background:${barColor};height:100%;width:${pct}%;border-radius:20px;transition:width .3s"></div>
+      <div style="position:absolute;left:${pctZero}%;top:0;bottom:0;width:2px;background:var(--border)"></div>
+      <div style="position:absolute;top:0;bottom:0;background:${barColor};border-radius:20px;transition:all .3s;
+        ${total>=0 ? `left:${pctZero}%;width:${Math.max(0,pctPos-pctZero)}%` : `left:${pctPos}%;width:${Math.max(0,pctZero-pctPos)}%`}"></div>
     </div>
-    <div style="text-align:center;font-size:10px;color:#7A5D1F;margin-top:6px">
-      ${tercapai?'🎉 Target tercapai!':'Progress: '+pct.toFixed(1)+'%'}
-    </div>`;
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:#7A5D1F;margin-top:4px">
+      <span>${total>=0?'+':''}${fc(total)}</span>
+      <span>${pctPos.toFixed(0)}% dari rentang</span>
+    </div>
+    <div style="text-align:center;font-size:10px;color:${barColor};margin-top:8px;font-weight:700">${statusHtml}</div>`;
 }
 
 // ══ MONTHLY COMPARISON ══
