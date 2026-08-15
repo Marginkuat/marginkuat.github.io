@@ -654,29 +654,57 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
         <input type="number" class="inp" id="calcSL2" value="166.66" step="0.01">
       </div>
       <div>
-        <label class="lbl">Nilai/Pip ($)</label>
-        <input type="number" class="inp" id="calcPipValue2" value="0.1" step="0.01">
+        <label class="lbl">Pips Target (TP)</label>
+        <input type="number" class="inp" id="calcTP2" value="500" step="0.01">
       </div>
     </div>
+
+    <label class="lbl">Nilai/Pip ($)</label>
+    <input type="number" class="inp" id="calcPipValue2" value="0.1" step="0.01">
 
     <label class="lbl">Modal Kamu</label>
     <input type="number" class="inp" id="calcModal2" value="500" step="1" min="0" style="margin-bottom:0">
 
     <div id="calcFlat2Out"></div>
+
+    <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-top:14px;text-align:center">
+      <div style="font-size:9px;color:#8A6B26;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Breakeven Win Rate</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:800;color:#D4AF37" id="calcOutBEHero2">0%</div>
+      <div style="font-size:9px;color:#5C4818;margin-top:4px" id="calcOutBENote2">Isi SL/TP dulu buat lihat win rate minimal.</div>
+    </div>
   </div>
 </div>
 
 <script>
 (function(){
-  const slEl2=document.getElementById('calcSL2'), pipvalueEl2=document.getElementById('calcPipValue2'),
+  const slEl2=document.getElementById('calcSL2'), tpEl2=document.getElementById('calcTP2'),
+        pipvalueEl2=document.getElementById('calcPipValue2'),
         modalEl2=document.getElementById('calcModal2'), pairSelectEl2=document.getElementById('calcPairSelect2'),
-        flat2OutEl=document.getElementById('calcFlat2Out');
+        flat2OutEl=document.getElementById('calcFlat2Out'),
+        beHeroEl2=document.getElementById('calcOutBEHero2'), beNoteEl2=document.getElementById('calcOutBENote2');
 
   pairSelectEl2.addEventListener('change', ()=>{
-    const [sl] = pairSelectEl2.value.split('|');
-    slEl2.value=sl;
+    const [sl, tp] = pairSelectEl2.value.split('|');
+    slEl2.value=sl; tpEl2.value=tp;
     computeFlat2();
   });
+
+  function fmtPct2(n){return (n*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
+
+  function computeBE2(sl, tp){
+    if(!beHeroEl2 || !beNoteEl2) return;
+    const rr = sl>0 ? tp/sl : 0;
+    if(rr>0){
+      const beWinRate = 1/(1+rr);
+      beHeroEl2.textContent = fmtPct2(beWinRate);
+      const denom = 1+rr;
+      const denomTxt = Number.isInteger(denom) ? denom : denom.toFixed(2);
+      beNoteEl2.textContent = `Minimal harus menang 1 dari ${denomTxt} trade biar nggak rugi (RR 1:${rr.toFixed(2)} → butuh win rate ≥${fmtPct2(beWinRate)})`;
+    } else {
+      beHeroEl2.textContent = '0%';
+      beNoteEl2.textContent = 'Isi SL/TP dulu buat lihat win rate minimal.';
+    }
+  }
 
   // Band saldo: kelipatan $50 di rentang $500-$2000 (transisi paling sering terjadi di situ),
   // lanjut kelipatan lebih besar ($500) untuk $2000-$5000, dan ($1000) di atas $5000.
@@ -731,13 +759,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   function computeFlat2(){
     const modal=parseFloat(modalEl2.value)||0;
     const sl=parseFloat(slEl2.value)||0;
+    const tp=parseFloat(tpEl2.value)||0;
     const pipvalue=parseFloat(pipvalueEl2.value)||0;
+    computeBE2(sl, tp);
     if(modal<=0 || sl<=0 || pipvalue<=0){ flat2OutEl.innerHTML=''; return; }
     flat2OutEl.innerHTML = buildFlat2TableHtml(modal, sl, pipvalue);
   }
 
   modalEl2.addEventListener('input', computeFlat2);
   slEl2.addEventListener('input', computeFlat2);
+  tpEl2.addEventListener('input', computeFlat2);
   pipvalueEl2.addEventListener('input', computeFlat2);
   computeFlat2();
 })();
