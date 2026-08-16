@@ -1173,6 +1173,49 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
+<!-- BUKU TRADING (CERITA BULANAN) -->
+<div class="section" id="secBukuTrading">
+  <div class="sec-title">📖 Buku Trading (Cerita Bulanan)</div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#8A6B26;line-height:1.6;margin-bottom:12px">Tiap bulan, rangkum perjalanan trading kamu jadi satu cerita. Setelah 12 bulan kekumpul, tinggal disusun jadi naskah buku pengalaman trading kamu.</div>
+    <div id="bukuProgressWrap" style="margin-bottom:16px"></div>
+
+    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:10px">
+      <div>
+        <label class="lbl">Bulan</label>
+        <select class="inp" id="bukuBulan" onchange="renderBukuProgress()">
+          <option value="1">Januari</option><option value="2">Februari</option><option value="3">Maret</option>
+          <option value="4">April</option><option value="5">Mei</option><option value="6">Juni</option>
+          <option value="7">Juli</option><option value="8">Agustus</option><option value="9">September</option>
+          <option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl">Tahun</label>
+        <input class="inp" type="number" id="bukuTahun" placeholder="2026" oninput="renderBukuProgress()">
+      </div>
+    </div>
+
+    <label class="lbl">Judul Bab (opsional)</label>
+    <input class="inp" id="inpBukuJudul" placeholder="Contoh: Bulan Penuh Kesabaran">
+
+    <label class="lbl">Cerita Bulan Ini</label>
+    <textarea class="inp" id="inpBukuCerita" rows="8" style="resize:vertical;font-family:inherit;line-height:1.6" placeholder="Tulis cerita, perasaan, dan pelajaran trading kamu bulan ini... atau pakai tombol Draft Otomatis di bawah buat bantuan awal."></textarea>
+
+    <button class="btn btn-ghost" onclick="generateBukuDraft()">🪄 Buat Draft Otomatis dari Data (Admin)</button>
+    <div style="font-size:9px;color:#5C4818;margin:-2px 0 10px;line-height:1.5">Draft otomatis cuma rangkuman angka (profit, win rate, hari terbaik/terberat) — tetap kamu yang nulis ceritanya jadi personal.</div>
+    <button class="btn btn-p" onclick="simpanBukuBulanan()">💾 Simpan Cerita Bulan Ini</button>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">📚 Cerita Tersimpan</div>
+        <span onclick="exportBukuNaskah()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">⬇️ Export Naskah</span>
+      </div>
+      <div id="bukuListWrap"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+    </div>
+  </div>
+</div>
+
 <!-- KALENDER -->
 <div class="section" id="secKalender">
   <div class="sec-title">📅 Kalender Trading</div>
@@ -2261,6 +2304,7 @@ const SEARCH_MENU=[
   {id:'secPortofolioInvestasi', icon:'📊', label:'Investment Portfolio Dashboard', desc:'Breakdown investasi di luar MT4 dari Neraca', kw:'investment portfolio dashboard neraca aset reksadana deposito obligasi', cat:'keuangan'},
   {id:'secGrafikBulanan', icon:'📈', label:'Grafik Kinerja Bulanan & Target', desc:'Grafik profit bulanan dan progress target', kw:'grafik kinerja bulanan target bulan ini progress', cat:'grafik'},
   {id:'secPerbandingan', icon:'📊', label:'Perbandingan Bulanan', desc:'Bandingkan performa antar bulan', kw:'perbandingan bulanan monthly comparison', cat:'grafik'},
+  {id:'secBukuTrading', icon:'📖', label:'Buku Trading (Cerita Bulanan)', desc:'Tulis rangkuman cerita tiap bulan, jadi bahan buku setelah 1 tahun', kw:'buku trading cerita bulanan jurnal diary pengalaman naskah menulis bab', cat:'jurnal'},
   {id:'secKalender', icon:'📅', label:'Kalender Trading', desc:'Kalender harian profit/loss', kw:'kalender trading calendar harian', cat:'grafik'},
   {id:'secKalenderDD', icon:'🗓️', label:'Kalender Drawdown', desc:'Kalender level drawdown harian', kw:'kalender drawdown dd', cat:'grafik'},
   {id:'secAliranUang', icon:'💸', label:'Aliran Uang Masuk & Keluar', desc:'Catatan investasi, profit MT4, dan pengeluaran', kw:'aliran uang masuk keluar investasi profit mt4 kas pribadi belanja', cat:'keuangan'},
@@ -2288,6 +2332,7 @@ const SEARCH_CATEGORIES=[
   {cat:'kalkulator', label:'🧮 Kalkulator & Simulasi'},
   {cat:'investor', label:'👥 Investor'},
   {cat:'grafik', label:'📅 Grafik, Kalender & Riwayat'},
+  {cat:'jurnal', label:'📖 Buku & Jurnal Trading'},
   {cat:'keuangan', label:'💰 Keuangan Pribadi & Portofolio'},
   {cat:'lain', label:'⚙️ Admin, Komunitas & Info'}
 ];
@@ -2504,6 +2549,8 @@ window.onload=async()=>{
     document.getElementById('inpTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     document.getElementById('inpAutoSyncKas').checked = localStorage.getItem('mk_autosync_kas')!=='0';
     document.getElementById('kasTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    document.getElementById('bukuBulan').value=String(d.getMonth()+1);
+    document.getElementById('bukuTahun').value=String(d.getFullYear());
     await loadAll();
     loadDisqus();
   }catch(e){
@@ -2549,6 +2596,7 @@ async function loadAll(){
   renderEquity();
   loadJournalVisual();
   loadBenchmark();
+  await loadBukuTrading();
 }
 let hasPairCol=true, hasMoodCol=true;
 async function fetchSharedSaldoData(){
@@ -6799,6 +6847,162 @@ async function simpanSaldo(){
     console.error(e);
     toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,200));
   }
+}
+
+// ══ BUKU TRADING (CERITA BULANAN → BAHAN NASKAH BUKU) ══
+// Tabel Supabase: jurnal_bulanan (bulan int, tahun int, judul text, cerita text, unique(bulan,tahun))
+// Kalau tabel belum ada, simpan/load bakal gagal dengan pesan yang jelas ke Admin.
+const BUKU_BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+let bukuData=[], bukuTableMissing=false;
+async function loadBukuTrading(){
+  try{
+    bukuData=await api('jurnal_bulanan?select=*&order=tahun.asc,bulan.asc');
+    bukuTableMissing=false;
+  }catch(e){
+    bukuData=[]; bukuTableMissing=true;
+  }
+  renderBukuProgress();
+  renderBukuList();
+}
+function renderBukuProgress(){
+  const el=document.getElementById('bukuProgressWrap');
+  if(!el)return;
+  if(bukuTableMissing){
+    el.innerHTML=`<div style="font-size:10px;color:#F87171;line-height:1.6">⚠️ Tabel <code>jurnal_bulanan</code> belum ada di Supabase. Minta yang bikin situs ini tambahkan tabelnya dulu biar cerita bisa tersimpan.</div>`;
+    return;
+  }
+  const tahun=parseInt(document.getElementById('bukuTahun')?.value)||new Date().getFullYear();
+  const count=bukuData.filter(r=>r.tahun===tahun).length;
+  const pct=Math.min(100, count/12*100);
+  el.innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#8A6B26;margin-bottom:4px">
+      <span>📖 Progress Buku ${tahun}</span>
+      <span style="color:#C8A84B">${count}/12 bulan</span>
+    </div>
+    <div class="progress-bar"><div style="height:100%;width:${pct}%;background:linear-gradient(135deg,#B8860B,#C8A84B);border-radius:3px"></div></div>
+    ${count>=12?`<div style="font-size:10px;color:#4ADE80;margin-top:6px">🎉 Lengkap 12 bulan! Saatnya mulai susun jadi buku.</div>`:''}
+  `;
+}
+function renderBukuList(){
+  const wrap=document.getElementById('bukuListWrap');
+  if(!wrap)return;
+  if(bukuTableMissing){ wrap.innerHTML=''; return; }
+  if(!bukuData.length){ wrap.innerHTML=`<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Belum ada cerita tersimpan. Mulai dari bulan ini yuk!</div>`; return; }
+  const sorted=[...bukuData].sort((a,b)=> b.tahun-a.tahun || b.bulan-a.bulan);
+  wrap.innerHTML=sorted.map(r=>{
+    const isi=r.cerita||'';
+    const preview=isi.slice(0,140);
+    const more=isi.length>140?'…':'';
+    return `<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px">
+        <span style="font-size:12px;font-weight:700;color:#D4AF37">${BUKU_BULAN[r.bulan-1]} ${r.tahun}${r.judul?' — '+escapeHtml(r.judul):''}</span>
+        ${isAdmin?`<span style="display:flex;gap:10px;flex-shrink:0">
+          <span onclick="editBukuEntry(${r.id})" style="cursor:pointer;font-size:12px">✏️</span>
+          <span onclick="hapusBukuEntry(${r.id})" style="cursor:pointer;font-size:12px">🗑️</span>
+        </span>`:''}
+      </div>
+      <div style="font-size:11px;color:#8A6B26;line-height:1.6;white-space:pre-wrap">${escapeHtml(preview)}${more}</div>
+    </div>`;
+  }).join('');
+}
+async function generateBukuDraft(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const bulan=parseInt(document.getElementById('bukuBulan').value);
+  const tahun=parseInt(document.getElementById('bukuTahun').value);
+  if(!bulan||!tahun){toast('❌ Pilih bulan & tahun dulu');return;}
+  const ta=document.getElementById('inpBukuCerita');
+  if(ta.value.trim() && !confirm('Textarea cerita udah ada isinya. Timpa dengan draft otomatis dari data?')) return;
+  toast('⏳ Menyusun draft dari data...');
+  const mm=String(bulan).padStart(2,'0');
+  const start=`${tahun}-${mm}-01`;
+  const lastDay=new Date(tahun,bulan,0).getDate();
+  const end=`${tahun}-${mm}-${String(lastDay).padStart(2,'0')}`;
+  let rows=[];
+  try{
+    rows=await api(`saldo_harian?select=tanggal,profit,catatan,mood,jumlah_signal&tanggal=gte.${start}&tanggal=lte.${end}&order=tanggal.asc`);
+  }catch(e1){
+    try{ rows=await api(`saldo_harian?select=tanggal,profit,catatan,jumlah_signal&tanggal=gte.${start}&tanggal=lte.${end}&order=tanggal.asc`); }
+    catch(e2){ toast('❌ Gagal ambil data bulan ini'); return; }
+  }
+  if(!rows.length){ toast('⚠️ Belum ada catatan trading di bulan ini'); return; }
+  const totalProfit=rows.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+  const hariTrading=rows.length;
+  const hariProfit=rows.filter(r=>parseFloat(r.profit||0)>0).length;
+  const winRate=hariTrading?(hariProfit/hariTrading*100):0;
+  const best=rows.reduce((a,b)=>parseFloat(b.profit||0)>parseFloat(a.profit||0)?b:a);
+  const worst=rows.reduce((a,b)=>parseFloat(b.profit||0)<parseFloat(a.profit||0)?b:a);
+  const moodCount={};
+  rows.forEach(r=>{ if(r.mood){ moodCount[r.mood]=(moodCount[r.mood]||0)+1; } });
+  const moodTop=Object.keys(moodCount).sort((a,b)=>moodCount[b]-moodCount[a])[0];
+  const catatanList=rows.filter(r=>r.catatan && r.catatan.trim()).map(r=>`- ${fd(r.tanggal)}: ${r.catatan.trim()}`);
+
+  let draft=`Bulan ini saya trading selama ${hariTrading} hari, dengan ${hariProfit} hari profit dan ${hariTrading-hariProfit} hari loss (win rate ${winRate.toFixed(0)}%). `;
+  draft+=totalProfit>=0 ? `Total hasil bulan ini profit ${fc(totalProfit)}.` : `Total hasil bulan ini rugi ${fc(Math.abs(totalProfit))}.`;
+  draft+=`\n\nHari terbaik ada di ${fd(best.tanggal)} dengan ${parseFloat(best.profit)>=0?'profit':'loss'} ${fc(Math.abs(best.profit))}, sedangkan hari paling berat di ${fd(worst.tanggal)} dengan ${parseFloat(worst.profit)>=0?'profit':'loss'} ${fc(Math.abs(worst.profit))}.`;
+  if(moodTop) draft+=`\n\nMood yang paling sering saya rasakan bulan ini: ${moodTop}.`;
+  if(catatanList.length) draft+=`\n\nCatatan-catatan penting bulan ini:\n${catatanList.join('\n')}`;
+  draft+=`\n\n[Lanjutkan di sini — ceritain lebih personal: apa yang bikin susah, apa yang dipelajari, apa targetnya bulan depan...]`;
+  ta.value=draft;
+  toast('✅ Draft dibuat — edit jadi cerita personal kamu ya');
+}
+async function simpanBukuBulanan(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const bulan=parseInt(document.getElementById('bukuBulan').value);
+  const tahun=parseInt(document.getElementById('bukuTahun').value);
+  const judul=document.getElementById('inpBukuJudul').value.trim();
+  const cerita=document.getElementById('inpBukuCerita').value.trim();
+  if(!bulan||!tahun){toast('❌ Pilih bulan & tahun');return;}
+  if(!cerita){toast('❌ Cerita belum diisi');return;}
+  try{
+    const ex=bukuData.find(r=>r.bulan===bulan&&r.tahun===tahun);
+    const body={bulan,tahun,judul:judul||null,cerita};
+    if(ex) await api(`jurnal_bulanan?id=eq.${ex.id}`,'PATCH',body);
+    else await api('jurnal_bulanan','POST',body);
+    toast('✅ Cerita bulan ini tersimpan');
+    document.getElementById('inpBukuJudul').value='';
+    document.getElementById('inpBukuCerita').value='';
+    await loadBukuTrading();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan — pastikan tabel "jurnal_bulanan" sudah dibuat di Supabase');
+  }
+}
+function editBukuEntry(id){
+  const r=bukuData.find(x=>x.id===id);
+  if(!r)return;
+  document.getElementById('bukuBulan').value=r.bulan;
+  document.getElementById('bukuTahun').value=r.tahun;
+  document.getElementById('inpBukuJudul').value=r.judul||'';
+  document.getElementById('inpBukuCerita').value=r.cerita||'';
+  renderBukuProgress();
+  document.getElementById('secBukuTrading').scrollIntoView({behavior:'smooth', block:'start'});
+  toast('✏️ Edit mode — ubah teksnya lalu tap Simpan lagi');
+}
+async function hapusBukuEntry(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!confirm('Hapus cerita bulan ini? Tindakan ini tidak bisa dibatalkan.'))return;
+  try{
+    await api(`jurnal_bulanan?id=eq.${id}`,'DELETE');
+    toast('🗑️ Cerita dihapus');
+    await loadBukuTrading();
+  }catch(e){ toast('❌ Gagal hapus'); }
+}
+function exportBukuNaskah(){
+  if(!bukuData.length){ toast('⚠️ Belum ada cerita untuk diexport'); return; }
+  const sorted=[...bukuData].sort((a,b)=> a.tahun-b.tahun || a.bulan-b.bulan);
+  let text=`BUKU TRADING — KUMPULAN CERITA BULANAN\n${'='.repeat(50)}\n\n`;
+  sorted.forEach(r=>{
+    text+=`${BUKU_BULAN[r.bulan-1].toUpperCase()} ${r.tahun}\n`;
+    if(r.judul) text+=`"${r.judul}"\n`;
+    text+=`${'-'.repeat(30)}\n\n${r.cerita}\n\n\n`;
+  });
+  const blob=new Blob([text], {type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`Buku_Trading_${new Date().getFullYear()}.txt`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('⬇️ Naskah buku berhasil didownload');
 }
 
 // ══ SCORE DASHBOARD ══
