@@ -241,7 +241,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="bal-label" style="display:flex;align-items:center;justify-content:center;gap:8px">
     <span>Saldo MT4 Saat Ini</span>
     <span style="background:#0ECB81;color:var(--bg0);font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;letter-spacing:.5px">FBS</span>
-    <span id="btnMaskBalance" onclick="toggleBalanceMask()" title="Sembunyikan nominal" style="cursor:pointer;font-size:12px;line-height:1;padding:2px 4px;border-radius:6px;border:1px solid var(--border)">👁</span>
+    <span id="btnMaskBalance" onclick="toggleBalanceMask()" title="Mode Privasi: sembunyikan nominal, tampilkan performa (%)" style="cursor:pointer;font-size:12px;line-height:1;padding:2px 4px;border-radius:6px;border:1px solid var(--border)">👁</span>
   </div>
   <div class="bal-cent" id="balCent">¢0.00</div>
   <div class="bal-usd" id="balUSD">= $0.00 USD nyata</div>
@@ -249,8 +249,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="bal-grid">
     <div class="bal-box"><div class="bal-box-val cg" id="bWinRate">0%</div><div class="bal-box-lbl">Win Rate</div></div>
     <div class="bal-box"><div class="bal-box-val cy" id="bHari">0</div><div class="bal-box-lbl">Hari Trading</div></div>
-    <div class="bal-box"><div class="bal-box-val cg" id="bProfit">¢0</div><div class="bal-box-lbl">Total Profit</div></div>
+    <div class="bal-box"><div class="bal-box-val cg" id="bProfit">¢0</div><div class="bal-box-lbl" id="bProfitLbl">Total Profit</div></div>
   </div>
+  <div id="balDrawdownRow" style="margin-top:10px;text-align:center;font-size:10px;color:#8A6B26"></div>
 
   <!-- EQUITY CURVE REAL-TIME (gabung dengan Saldo MT4) -->
   <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px;text-align:left">
@@ -2160,25 +2161,58 @@ const fc=v=>'¢'+parseFloat(v||0).toFixed(2);
 const fu=v=>'$'+(parseFloat(v||0)/100).toFixed(2);
 const fr=v=>'Rp '+Math.round(parseFloat(v||0)/100*K).toLocaleString('id-ID');
 
-// ══ MASK SALDO (sembunyikan nominal absolut dari shoulder-surfing / screen share) ══
+// ══ MODE PRIVASI SALDO (sembunyikan nominal absolut dari shoulder-surfing / screen share) ══
 // Status disimpan lokal per-device (localStorage) — tidak memengaruhi data di server.
+// Saat aktif: nominal $ / Rp diganti dengan metrik performa relatif (%) yang tetap informatif
+// tapi tidak membocorkan angka uang sebenarnya — Pertumbuhan Saldo, ROI/Win Rate, & Current Drawdown.
 let balanceMasked=(localStorage.getItem('mk_balance_masked')==='1');
 const MASK_STR='••••••';
-// Bungkus fc/fu/fr — dipakai di tempat yang menampilkan nominal absolut (saldo, profit, modal investor, dll)
+// Dipakai di tempat lain yang menampilkan nominal absolut tapi gak punya versi %-nya sendiri (mis. kartu investor)
 const mfc=v=>balanceMasked?'¢'+MASK_STR:fc(v);
 const mfu=v=>balanceMasked?'$'+MASK_STR:fu(v);
 const mfr=v=>balanceMasked?'Rp '+MASK_STR:fr(v);
-let lastSaldoTerakhir=0, lastTotalProfitAll=0;
+let lastSaldoTerakhir=0, lastTotalProfitAll=0, lastSaldoAwal=0;
+
+// Render ulang Balance Hero dari nilai yang sudah di-cache (gak perlu fetch ulang ke server)
+function renderBalanceHero(){
+  if(balanceMasked){
+    const pct = lastSaldoAwal!==0 ? ((lastSaldoTerakhir-lastSaldoAwal)/Math.abs(lastSaldoAwal)*100) : 0;
+    const pctSign = pct>=0?'+':'';
+    set('balCent', pctSign+pct.toFixed(1)+'%');
+    set('balUSD', 'Pertumbuhan saldo (all-time)');
+    set('balRp', 'Mode privasi aktif — nominal disembunyikan');
+
+    const roi = lastSaldoAwal!==0 ? (lastTotalProfitAll/Math.abs(lastSaldoAwal)*100) : 0;
+    const roiSign = roi>=0?'+':'';
+    set('bProfit', roiSign+roi.toFixed(1)+'%');
+    set('bProfitLbl', 'ROI Trading');
+  }else{
+    set('balCent', fc(lastSaldoTerakhir));
+    set('balUSD', '= '+fu(lastSaldoTerakhir)+' USD nyata');
+    set('balRp', '≈ '+fr(lastSaldoTerakhir));
+    set('bProfit', fc(lastTotalProfitAll));
+    set('bProfitLbl', 'Total Profit');
+  }
+  renderBalanceDrawdown();
+}
+// Current Drawdown (%) — selalu ditampilkan (persentase relatif, bukan nominal, jadi aman dilihat siapa saja),
+// dihitung ulang pakai data yang sama dengan Risk Meter biar konsisten satu sumber kebenaran.
+function renderBalanceDrawdown(){
+  const el=document.getElementById('balDrawdownRow');
+  if(!el) return;
+  try{
+    const data=(typeof getRiskMeterData==='function') ? getRiskMeterData() : null;
+    if(!data){ el.innerHTML=''; return; }
+    const zone=riskZone(data.ddPct, 15, 35);
+    el.innerHTML=`🛡️ Current Drawdown: <b style="color:${zone.color}">${data.ddPct.toFixed(1)}%</b> <span style="color:${zone.color}">(${zone.label})</span>`;
+  }catch(e){ el.innerHTML=''; }
+}
 function toggleBalanceMask(){
   balanceMasked=!balanceMasked;
   try{ localStorage.setItem('mk_balance_masked', balanceMasked?'1':'0'); }catch(e){}
   const btn=document.getElementById('btnMaskBalance');
   if(btn) btn.textContent=balanceMasked?'🙈':'👁';
-  // Render ulang saldo hero dari nilai yang sudah di-cache — gak perlu fetch ulang ke server
-  set('balCent', mfc(lastSaldoTerakhir));
-  set('balUSD', '= '+mfu(lastSaldoTerakhir)+' USD nyata');
-  set('balRp', '≈ '+mfr(lastSaldoTerakhir));
-  set('bProfit', mfc(lastTotalProfitAll));
+  renderBalanceHero();
   // Render ulang dashboard investor kalau lagi kebuka (nominal modal/profit share juga sensitif)
   const dashBox=document.getElementById('investorDashboard');
   if(dashBox && dashBox.style.display!=='none') renderInvestorDashboard();
@@ -2508,9 +2542,8 @@ async function loadBalance(){
 
     const saldoTerakhir = sh.length ? parseFloat(sh[0].saldo_mt4||0) : 0;
     lastSaldoTerakhir=saldoTerakhir;
-    set('balCent', mfc(saldoTerakhir));
-    set('balUSD', '= '+mfu(saldoTerakhir)+' USD nyata');
-    set('balRp', '≈ '+mfr(saldoTerakhir));
+    // saldoAwal = saldo tercatat pertama (allSaldoData sudah ascending, diambil di fetchSharedSaldoData sebelum ini)
+    lastSaldoAwal = (allSaldoData && allSaldoData.length) ? parseFloat(allSaldoData[0].saldo_mt4||0) : 0;
 
     const hariProfit = allSh.filter(r=>parseFloat(r.profit||0)>0).length;
     const hariTotal = allSh.length;
@@ -2520,10 +2553,11 @@ async function loadBalance(){
 
     const totalProfit = allSh.reduce((s,r)=>s+parseFloat(r.profit||0),0);
     lastTotalProfitAll=totalProfit;
-    set('bProfit', mfc(totalProfit));
 
     const maskBtn=document.getElementById('btnMaskBalance');
     if(maskBtn) maskBtn.textContent=balanceMasked?'🙈':'👁';
+
+    renderBalanceHero();
   }catch(e){console.error(e);}
 }
 
