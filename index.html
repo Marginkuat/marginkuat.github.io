@@ -2124,8 +2124,32 @@ async function restoreAdminSession(){
   isAdmin=true;
   hide('btnAdmin');show('btnLogout');document.getElementById('btnLogout').style.display='inline-block';
   show('adminPanel');
+  resetAdminIdleTimer();
   return true;
 }
+
+// ══ AUTO-LOGOUT KALAU DIDIEMIN (IDLE TIMEOUT) ══
+// Kenapa perlu: sesi admin sekarang bisa aktif tanpa batas waktu (auto-refresh terus).
+// Kalau HP/laptop ketinggalan atau dipinjem orang dalam keadaan masih login, orang itu
+// otomatis punya akses admin penuh. Auto-logout ini kayak "kunci layar otomatis" —
+// begitu situs didiemin (gak ada klik/ketik/sentuh/scroll) lebih dari 15 menit, admin
+// otomatis di-logout, wajib login ulang pakai email+password buat lanjut.
+const ADMIN_IDLE_TIMEOUT_MS = 15*60*1000; // 15 menit
+let adminIdleTimer=null;
+function resetAdminIdleTimer(){
+  if(!isAdmin) return;
+  if(adminIdleTimer) clearTimeout(adminIdleTimer);
+  adminIdleTimer=setTimeout(async()=>{
+    await logout();
+    toast('⏱️ Otomatis logout — situs didiemin lebih dari 15 menit');
+  }, ADMIN_IDLE_TIMEOUT_MS);
+}
+function stopAdminIdleTimer(){
+  if(adminIdleTimer){ clearTimeout(adminIdleTimer); adminIdleTimer=null; }
+}
+['mousemove','keydown','touchstart','click','scroll'].forEach(evt=>{
+  document.addEventListener(evt, resetAdminIdleTimer, {passive:true});
+});
 
 // ══ DARK / LIGHT MODE TOGGLE ══
 function applyThemeIcon(){
@@ -4383,8 +4407,8 @@ function renderRekeningKategori(){
     ? rows.slice(0,15).map(r=>`
       <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
         <div>
-          <div style="font-size:11px;color:#C8A84B">${fd(r.tanggal)} ${r.tipe==='setor' ? (r.dari?`— <span style="color:#8A6B26">dari ${r.dari}</span>`:'') : (r.ke?`— <span style="color:#8A6B26">buat ${r.ke}</span>`:'')}</div>
-          ${r.keterangan?`<div style="font-size:9px;color:#5C4818">${r.keterangan}</div>`:''}
+          <div style="font-size:11px;color:#C8A84B">${fd(r.tanggal)} ${r.tipe==='setor' ? (r.dari?`— <span style="color:#8A6B26">dari ${escapeHtml(r.dari)}</span>`:'') : (r.ke?`— <span style="color:#8A6B26">buat ${escapeHtml(r.ke)}</span>`:'')}</div>
+          ${r.keterangan?`<div style="font-size:9px;color:#5C4818">${escapeHtml(r.keterangan)}</div>`:''}
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;font-weight:700;color:${r.tipe==='setor'?'#4ADE80':'#F87171'}">${r.tipe==='setor'?'+':'-'}${fc(r.jumlah)}</span>
@@ -6389,6 +6413,7 @@ async function doLogin(){
     document.getElementById('loginPin').value='';
     hide('btnAdmin');show('btnLogout');document.getElementById('btnLogout').style.display='inline-block';
     show('adminPanel');
+    resetAdminIdleTimer();
     toast('✅ Masuk sebagai Admin');
   }catch(e){
     toast('❌ '+(e.message||'Login gagal').slice(0,100));
@@ -6397,6 +6422,7 @@ async function doLogin(){
 async function logout(){
   await supabaseSignOut();
   isAdmin=false;
+  stopAdminIdleTimer();
   show('btnAdmin');hide('btnLogout');
   hide('adminPanel');
   toast('↩ Keluar dari mode Admin');
@@ -6491,6 +6517,8 @@ async function simpanSaldo(){
   const pair=document.getElementById('inpPair').value||'XAUUSD';
   const mood=document.getElementById('inpMood').value||'biasa';
   if(!saldo){toast('❌ Isi saldo MT4');return;}
+  if(saldo<0){toast('❌ Saldo MT4 gak boleh negatif');return;}
+  if(!isFinite(saldo)||!isFinite(profit)){toast('❌ Angka gak valid');return;}
   if(!tgl){toast('❌ Isi tanggal');return;}
   try{
     const bodyData={
