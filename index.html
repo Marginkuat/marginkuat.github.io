@@ -8959,7 +8959,7 @@ renderExportLabel();async function doInvestorLogin(){
   try{
     const r = await fetch(SB+'/rest/v1/rpc/verify_investor_code', {
       method:'POST',
-      headers:{'apikey':KEY, 'Content-Type':'application/json'},
+      headers:{'apikey':KEY, 'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
       body: JSON.stringify({p_code: code})
     });
     const data = await r.json();
