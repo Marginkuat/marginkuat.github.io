@@ -2433,6 +2433,7 @@ async function loadAll(){
   renderWdSection();
   renderRiskMeter();
   renderGoalTracker();
+  await loadModalOwner();
   renderInvestorDashboard();
   renderNotifCenter();
   renderWeeklyRecap();
@@ -4928,6 +4929,41 @@ function renderGoalTracker(){
 }
 
 // ══ INVESTOR DASHBOARD (dengan login khusus per investor) ══
+// ── MODAL OWNER (kamu, Arif) — dipisah dari modal investor supaya perhitungan bagi hasil adil ──
+// Disimpan di Supabase (app_settings), bukan localStorage, biar konsisten di semua device.
+let cachedModalOwner=0;
+async function loadModalOwner(){
+  try{
+    const rows=await api('app_settings?select=value&key=eq.modal_owner');
+    if(rows && rows.length){
+      const v=parseFloat(rows[0].value);
+      if(!isNaN(v)) cachedModalOwner=v;
+    }
+  }catch(e){ console.error('Gagal load modal owner', e); }
+}
+function getModalOwner(){ return cachedModalOwner; }
+async function editModalOwner(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah ini');return;}
+  const cur=getModalOwner();
+  const input=prompt('Modal kamu sendiri (Arif) yang ikut ditradingkan di akun ini (dalam ¢ / sen) — dipisah dari modal investor supaya bagi hasil investor dihitung adil, gak kebawa profit/rugi dari modal kamu:', cur||'');
+  if(input===null)return;
+  const v=parseFloat(input);
+  if(isNaN(v)||v<0){toast('❌ Angka tidak valid');return;}
+  try{
+    const existing=await api('app_settings?select=key&key=eq.modal_owner');
+    if(existing.length){
+      await api('app_settings?key=eq.modal_owner','PATCH',{value:String(v)});
+    }else{
+      await api('app_settings','POST',{key:'modal_owner',value:String(v)});
+    }
+    cachedModalOwner=v;
+    toast('✅ Modal owner diperbarui');
+    renderInvestorDashboard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan: '+(e.message||'').slice(0,120));
+  }
+}
 let loggedInInvestorId=null;
 function getInvestorList(){
   try{ return JSON.parse(localStorage.getItem('mk_investors')||'[]'); }catch(e){ return []; }
@@ -5050,19 +5086,38 @@ function renderInvestorDashboard(){
   const rows=allSaldoData||[];
   const totalProfitAllTime=rows.reduce((s,r)=>s+parseFloat(r.profit||0),0);
   const totalModalInvestorPool=investors.reduce((s,v)=>s+parseFloat(v.modal||0),0);
+  const modalOwner=getModalOwner();
+  const totalPoolCapital=modalOwner+totalModalInvestorPool; // ← dasar pembagian profit yang adil, bukan cuma modal investor
 
   // ── PORTFOLIO OVERVIEW: ringkasan total dana kelola, tanpa membocorkan data investor lain ──
-  let html=`
+  let ownerCardHtml='';
+  if(isAdmin){
+    const ownerSharePct = totalPoolCapital>0 ? (modalOwner/totalPoolCapital*100) : 0;
+    const ownerProfitShare = totalProfitAllTime * (ownerSharePct/100);
+    ownerCardHtml=`
+    <div style="border:1.5px solid #4ADE80;border-radius:14px;padding:14px 16px;margin-bottom:14px;background:var(--bg1)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px">💼 Modal Kamu (Arif) — Terpisah dari Investor</span>
+        <span onclick="editModalOwner()" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#4ADE80">${fc(modalOwner)}</div><div class="bal-box-lbl">Modal Kamu</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${ownerProfitShare>=0?'cg':'cr'}" style="font-size:14px">${ownerProfitShare>=0?'+':''}${fc(ownerProfitShare)}</div><div class="bal-box-lbl">Profit Share Kamu</div></div>
+      </div>
+      <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:6px">Porsi kamu: <b style="color:#C8A84B">${ownerSharePct.toFixed(1)}%</b> dari total dana yang ditradingkan</div>
+    </div>`;
+  }
+  let html=ownerCardHtml+`
     <div style="border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;background:var(--bg1)">
       <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Investor Portfolio Overview</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(totalModalInvestorPool)}</div><div class="bal-box-lbl">Total Dana Kelola</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(totalModalInvestorPool)}</div><div class="bal-box-lbl">Total Dana Investor</div></div>
         <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${totalProfitAllTime>=0?'cg':'cr'}" style="font-size:14px">${totalProfitAllTime>=0?'+':''}${fc(totalProfitAllTime)}</div><div class="bal-box-lbl">Total Profit Trading</div></div>
       </div>
-      <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">${investors.length} investor tercatat</div>
+      <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">${investors.length} investor tercatat${isAdmin?' · Total dana ditradingkan (kamu + investor): '+fc(totalPoolCapital):''}</div>
     </div>`;
-  visibleInvestors.forEach(inv=>{ html+=investorCardHtml(inv, totalProfitAllTime, totalModalInvestorPool, showHapus, investors); });
-  html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal investor terhadap total modal investor tercatat — bukan kalkulasi bagi hasil resmi/legal.</div>';
+  visibleInvestors.forEach(inv=>{ html+=investorCardHtml(inv, totalProfitAllTime, totalPoolCapital, showHapus, investors); });
+  html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal (kamu + investor) terhadap total dana yang ditradingkan — bukan kalkulasi bagi hasil resmi/legal.</div>';
   dashBox.innerHTML=html;
 }
 
@@ -8952,28 +9007,7 @@ async function downloadStatementAsli(key){
   }
 }
 
-renderExportLabel();async function doInvestorLogin(){
-  const codeInput = document.getElementById('investorLoginCode');
-  const code = (codeInput ? codeInput.value : '').trim();
-  if(!code){toast('❌ Masukkan kode akses dulu');return;}
-  try{
-    const r = await fetch(SB+'/rest/v1/rpc/verify_investor_code', {
-      method:'POST',
-      headers:{'apikey':KEY, 'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
-      body: JSON.stringify({p_code: code})
-    });
-    const data = await r.json();
-    if(!data || data.length===0){toast('❌ Kode akses tidak ditemukan');return;}
-    const found = data[0];
-    loggedInInvestorId = found.id;
-    sessionStorage.setItem('mk_investor_session', found.id);
-    if(codeInput) codeInput.value='';
-    toast('✅ Selamat datang, '+found.nama);
-    renderInvestorDashboard();
-  }catch(e){
-    toast('❌ Gagal terhubung ke server');
-  }
-  }
+renderExportLabel();
 </script>
 </body>
 </html>
