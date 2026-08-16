@@ -8952,7 +8952,28 @@ async function downloadStatementAsli(key){
   }
 }
 
-renderExportLabel();
+renderExportLabel();async function doInvestorLogin(){
+  const codeInput = document.getElementById('investorLoginCode');
+  const code = (codeInput ? codeInput.value : '').trim();
+  if(!code){toast('❌ Masukkan kode akses dulu');return;}
+  try{
+    const r = await fetch(SB+'/rest/v1/rpc/verify_investor_code', {
+      method:'POST',
+      headers:{'apikey':KEY, 'Content-Type':'application/json'},
+      body: JSON.stringify({p_code: code})
+    });
+    const data = await r.json();
+    if(!data || data.length===0){toast('❌ Kode akses tidak ditemukan');return;}
+    const found = data[0];
+    loggedInInvestorId = found.id;
+    sessionStorage.setItem('mk_investor_session', found.id);
+    if(codeInput) codeInput.value='';
+    toast('✅ Selamat datang, '+found.nama);
+    renderInvestorDashboard();
+  }catch(e){
+    toast('❌ Gagal terhubung ke server');
+  }
+  }
 </script>
 </body>
 </html>
