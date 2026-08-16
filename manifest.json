@@ -1,25 +1,28 @@
 {
-  "name": "MarginKuat - Trading Emas di MT4",
+  "name": "MarginKuat — Catatan & Kalkulator Trading",
   "short_name": "MarginKuat",
-  "description": "Dashboard trading emas MT4: saldo, equity curve, kalender drawdown, dan analitik risiko.",
+  "description": "Kalkulator risk/reward trading pribadi untuk XAUUSD, BTCUSD, dan pasangan forex. Hitung SL, TP, RR, lot, dan VP secara otomatis.",
   "start_url": "./index.html",
   "scope": "./",
+  "id": "./index.html",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0D0F0A",
   "theme_color": "#B8860B",
-  "orientation": "portrait",
+  "lang": "id",
+  "dir": "ltr",
   "icons": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "icon-512.png",
-      "sizes": "512x512",
+      "src": "icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ]
 }
