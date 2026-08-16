@@ -251,6 +251,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="bal-label" style="display:flex;align-items:center;justify-content:center;gap:8px">
     <span>Saldo MT4 Saat Ini</span>
     <span style="background:#0ECB81;color:var(--bg0);font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;letter-spacing:.5px">FBS</span>
+    <span id="btnMaskBalance" onclick="toggleBalanceMask()" title="Sembunyikan nominal" style="cursor:pointer;font-size:12px;line-height:1;padding:2px 4px;border-radius:6px;border:1px solid var(--border)">👁</span>
   </div>
   <div class="bal-cent" id="balCent">¢0.00</div>
   <div class="bal-usd" id="balUSD">= $0.00 USD nyata</div>
@@ -2168,6 +2169,30 @@ let K=16700;
 const fc=v=>'¢'+parseFloat(v||0).toFixed(2);
 const fu=v=>'$'+(parseFloat(v||0)/100).toFixed(2);
 const fr=v=>'Rp '+Math.round(parseFloat(v||0)/100*K).toLocaleString('id-ID');
+
+// ══ MASK SALDO (sembunyikan nominal absolut dari shoulder-surfing / screen share) ══
+// Status disimpan lokal per-device (localStorage) — tidak memengaruhi data di server.
+let balanceMasked=(localStorage.getItem('mk_balance_masked')==='1');
+const MASK_STR='••••••';
+// Bungkus fc/fu/fr — dipakai di tempat yang menampilkan nominal absolut (saldo, profit, modal investor, dll)
+const mfc=v=>balanceMasked?'¢'+MASK_STR:fc(v);
+const mfu=v=>balanceMasked?'$'+MASK_STR:fu(v);
+const mfr=v=>balanceMasked?'Rp '+MASK_STR:fr(v);
+let lastSaldoTerakhir=0, lastTotalProfitAll=0;
+function toggleBalanceMask(){
+  balanceMasked=!balanceMasked;
+  try{ localStorage.setItem('mk_balance_masked', balanceMasked?'1':'0'); }catch(e){}
+  const btn=document.getElementById('btnMaskBalance');
+  if(btn) btn.textContent=balanceMasked?'🙈':'👁';
+  // Render ulang saldo hero dari nilai yang sudah di-cache — gak perlu fetch ulang ke server
+  set('balCent', mfc(lastSaldoTerakhir));
+  set('balUSD', '= '+mfu(lastSaldoTerakhir)+' USD nyata');
+  set('balRp', '≈ '+mfr(lastSaldoTerakhir));
+  set('bProfit', mfc(lastTotalProfitAll));
+  // Render ulang dashboard investor kalau lagi kebuka (nominal modal/profit share juga sensitif)
+  const dashBox=document.getElementById('investorDashboard');
+  if(dashBox && dashBox.style.display!=='none') renderInvestorDashboard();
+}
 const fd=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';
 
 // ══ SEARCH MENU: cari & lompat ke bagian manapun di situs ══
@@ -2492,9 +2517,10 @@ async function loadBalance(){
     const allSh=await api('saldo_harian?select=profit&order=tanggal.desc');
 
     const saldoTerakhir = sh.length ? parseFloat(sh[0].saldo_mt4||0) : 0;
-    set('balCent', fc(saldoTerakhir));
-    set('balUSD', '= '+fu(saldoTerakhir)+' USD nyata');
-    set('balRp', '≈ '+fr(saldoTerakhir));
+    lastSaldoTerakhir=saldoTerakhir;
+    set('balCent', mfc(saldoTerakhir));
+    set('balUSD', '= '+mfu(saldoTerakhir)+' USD nyata');
+    set('balRp', '≈ '+mfr(saldoTerakhir));
 
     const hariProfit = allSh.filter(r=>parseFloat(r.profit||0)>0).length;
     const hariTotal = allSh.length;
@@ -2503,7 +2529,11 @@ async function loadBalance(){
     set('bHari', hariTotal);
 
     const totalProfit = allSh.reduce((s,r)=>s+parseFloat(r.profit||0),0);
-    set('bProfit', fc(totalProfit));
+    lastTotalProfitAll=totalProfit;
+    set('bProfit', mfc(totalProfit));
+
+    const maskBtn=document.getElementById('btnMaskBalance');
+    if(maskBtn) maskBtn.textContent=balanceMasked?'🙈':'👁';
   }catch(e){console.error(e);}
 }
 
@@ -5051,9 +5081,9 @@ function investorCardHtml(inv, totalProfitAllTime, totalModalInvestorPool, showH
       <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px">Selamat datang</div>
       <div style="font-size:18px;font-weight:800;color:#FFD700;margin:2px 0 10px">${inv.nama} 👋</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(inv.modal)}</div><div class="bal-box-lbl">Modal Disetor</div></div>
-        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#FFD700">${fc(currentVal)}</div><div class="bal-box-lbl">Estimasi Nilai Sekarang</div></div>
-        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${profitShare>=0?'cg':'cr'}" style="font-size:14px">${profitShare>=0?'+':''}${fc(profitShare)}</div><div class="bal-box-lbl">Estimasi Profit Share</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${mfc(inv.modal)}</div><div class="bal-box-lbl">Modal Disetor</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#FFD700">${mfc(currentVal)}</div><div class="bal-box-lbl">Estimasi Nilai Sekarang</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${profitShare>=0?'cg':'cr'}" style="font-size:14px">${profitShare>=0?'+':''}${mfc(profitShare)}</div><div class="bal-box-lbl">Estimasi Profit Share</div></div>
         <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:${roi>=0?'#4ADE80':'#F87171'}">${roi>=0?'+':''}${roi.toFixed(1)}%</div><div class="bal-box-lbl">ROI</div></div>
       </div>
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:9px;color:#7A5D1F;border-top:1px solid var(--border);padding-top:8px">
@@ -5101,8 +5131,8 @@ async function renderInvestorDashboard(){
         <span onclick="editModalOwner()" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#4ADE80">${fc(modalOwner)}</div><div class="bal-box-lbl">Modal Kamu</div></div>
-        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${ownerProfitShare>=0?'cg':'cr'}" style="font-size:14px">${ownerProfitShare>=0?'+':''}${fc(ownerProfitShare)}</div><div class="bal-box-lbl">Profit Share Kamu</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#4ADE80">${mfc(modalOwner)}</div><div class="bal-box-lbl">Modal Kamu</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${ownerProfitShare>=0?'cg':'cr'}" style="font-size:14px">${ownerProfitShare>=0?'+':''}${mfc(ownerProfitShare)}</div><div class="bal-box-lbl">Profit Share Kamu</div></div>
       </div>
       <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:6px">Porsi kamu: <b style="color:#C8A84B">${ownerSharePct.toFixed(1)}%</b> dari total dana yang ditradingkan</div>
     </div>`;
@@ -5111,10 +5141,10 @@ async function renderInvestorDashboard(){
     <div style="border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;background:var(--bg1)">
       <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Investor Portfolio Overview</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(totalModalInvestorPool)}</div><div class="bal-box-lbl">Total Dana Investor</div></div>
-        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${totalProfitAllTime>=0?'cg':'cr'}" style="font-size:14px">${totalProfitAllTime>=0?'+':''}${fc(totalProfitAllTime)}</div><div class="bal-box-lbl">Total Profit Trading</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${mfc(totalModalInvestorPool)}</div><div class="bal-box-lbl">Total Dana Investor</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${totalProfitAllTime>=0?'cg':'cr'}" style="font-size:14px">${totalProfitAllTime>=0?'+':''}${mfc(totalProfitAllTime)}</div><div class="bal-box-lbl">Total Profit Trading</div></div>
       </div>
-      <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">${investors.length} investor tercatat · Total dana ditradingkan (kamu + investor): ${fc(totalPoolCapital)}</div>
+      <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">${investors.length} investor tercatat · Total dana ditradingkan (kamu + investor): ${mfc(totalPoolCapital)}</div>
     </div>`;
 
     const sorted=investors.slice().sort((a,b)=>parseFloat(b.modal||0)-parseFloat(a.modal||0));
@@ -5164,7 +5194,7 @@ async function renderInvestorDashboard(){
       <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Investor Portfolio Overview</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(found.total_pool)}</div><div class="bal-box-lbl">Total Dana Investor</div></div>
-        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${totalProfitAllTime>=0?'cg':'cr'}" style="font-size:14px">${totalProfitAllTime>=0?'+':''}${fc(totalProfitAllTime)}</div><div class="bal-box-lbl">Total Profit Trading</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${totalProfitAllTime>=0?'cg':'cr'}" style="font-size:14px">${totalProfitAllTime>=0?'+':''}${mfc(totalProfitAllTime)}</div><div class="bal-box-lbl">Total Profit Trading</div></div>
       </div>
       <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">${found.total_investors} investor tercatat</div>
     </div>`;
