@@ -2117,6 +2117,7 @@ async function restoreAdminSession(){
   hide('btnAdmin');show('btnLogout');document.getElementById('btnLogout').style.display='inline-block';
   show('adminPanel');
   resetAdminIdleTimer();
+  if(typeof renderBalanceHero==='function') renderBalanceHero();
   return true;
 }
 
@@ -2174,13 +2175,18 @@ const mfr=v=>balanceMasked?'Rp '+MASK_STR:fr(v);
 let lastSaldoTerakhir=0, lastTotalProfitAll=0, lastSaldoAwal=0;
 
 // Render ulang Balance Hero dari nilai yang sudah di-cache (gak perlu fetch ulang ke server)
+// ATURAN PRIVASI: nominal $ / Rp cuma boleh kelihatan kalau login sebagai Admin (Fund Manager).
+// Publik (belum login) & Investor SELALU lihat versi Persentase (%) — gak bisa ditoggle,
+// biar total dana yang dikelola tetap privat dan gak bocor ke siapapun yang buka situs ini.
 function renderBalanceHero(){
-  if(balanceMasked){
+  const effectiveMasked = isAdmin ? balanceMasked : true;
+
+  if(effectiveMasked){
     const pct = lastSaldoAwal!==0 ? ((lastSaldoTerakhir-lastSaldoAwal)/Math.abs(lastSaldoAwal)*100) : 0;
     const pctSign = pct>=0?'+':'';
     set('balCent', pctSign+pct.toFixed(1)+'%');
     set('balUSD', 'Pertumbuhan saldo (all-time)');
-    set('balRp', 'Mode privasi aktif — nominal disembunyikan');
+    set('balRp', isAdmin ? 'Mode privasi aktif — nominal disembunyikan' : 'Nominal saldo bersifat privat');
 
     const roi = lastSaldoAwal!==0 ? (lastTotalProfitAll/Math.abs(lastSaldoAwal)*100) : 0;
     const roiSign = roi>=0?'+':'';
@@ -2192,6 +2198,20 @@ function renderBalanceHero(){
     set('balRp', '≈ '+fr(lastSaldoTerakhir));
     set('bProfit', fc(lastTotalProfitAll));
     set('bProfitLbl', 'Total Profit');
+  }
+
+  // Ikon toggle: Admin bisa pilih (👁/🙈), non-Admin dikunci (🔒) — gak bisa diklik buat buka nominal
+  const btn=document.getElementById('btnMaskBalance');
+  if(btn){
+    if(isAdmin){
+      btn.textContent=balanceMasked?'🙈':'👁';
+      btn.title='Mode Privasi: sembunyikan nominal, tampilkan performa (%)';
+      btn.style.opacity='1';
+    }else{
+      btn.textContent='🔒';
+      btn.title='Nominal saldo hanya terlihat oleh Admin';
+      btn.style.opacity='.7';
+    }
   }
   renderBalanceDrawdown();
 }
@@ -2208,10 +2228,12 @@ function renderBalanceDrawdown(){
   }catch(e){ el.innerHTML=''; }
 }
 function toggleBalanceMask(){
+  if(!isAdmin){
+    toast('🔒 Nominal saldo cuma bisa dilihat Admin. Publik & investor cuma lihat performa (%).');
+    return;
+  }
   balanceMasked=!balanceMasked;
   try{ localStorage.setItem('mk_balance_masked', balanceMasked?'1':'0'); }catch(e){}
-  const btn=document.getElementById('btnMaskBalance');
-  if(btn) btn.textContent=balanceMasked?'🙈':'👁';
   renderBalanceHero();
   // Render ulang dashboard investor kalau lagi kebuka (nominal modal/profit share juga sensitif)
   const dashBox=document.getElementById('investorDashboard');
@@ -2221,43 +2243,53 @@ const fd=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short
 
 // ══ SEARCH MENU: cari & lompat ke bagian manapun di situs ══
 const SEARCH_MENU=[
-  {id:'secSaldo', icon:'💰', label:'Saldo MT4 & Equity Curve', desc:'Saldo saat ini, win rate, total profit, grafik equity', kw:'saldo mt4 equity curve balance modal akun win rate'},
-  {id:'secScore', icon:'🏆', label:'Score Dashboard', desc:'Skor keseluruhan performa trading kamu', kw:'score dashboard skor nilai rating'},
-  {id:'secStatPair', icon:'📊', label:'Statistik Per Pair', desc:'Performa per XAUUSD, BTCUSD, Forex', kw:'statistik pair xauusd btcusd forex per pasangan'},
-  {id:'secRR', icon:'⚖️', label:'Risk Reward Analysis (RR Analisa)', desc:'Analisa rasio risk/reward dari profit-loss harian', kw:'rr analisa risk reward ratio rasio'},
-  {id:'secConsistency', icon:'📐', label:'Consistency Score & Sharpe Ratio', desc:'Konsistensi profit & rasio sharpe', kw:'consistency score sharpe ratio konsistensi konsultasi risk stabilitas'},
-  {id:'secRiskRuin', icon:'🚨', label:'Risk of Ruin (Peluang Bangkrut)', desc:'Estimasi peluang akun kena margin call', kw:'risk of ruin peluang bangkrut margin call resiko rugi total'},
-  {id:'secMood', icon:'🧠', label:'Psikologi Trading (Mood vs Profit)', desc:'Hubungan mood harian dengan hasil trading', kw:'psikologi mood tracker mental emosi'},
-  {id:'secBenchmark', icon:'📈', label:'Performance vs Benchmark', desc:'Perbandingan performa vs XAUUSD/BTCUSD pasar', kw:'benchmark perbandingan pasar market vs'},
-  {id:'secModalMinimal', icon:'💵', label:'Rekomendasi Modal Minimal', desc:'Saran modal minimal berdasarkan gaya trading', kw:'modal minimal rekomendasi saran capital'},
-  {id:'secKalkulator', icon:'🧮', label:'Kalkulator Risiko per Pair', desc:'Hitung lot, SL/TP, risk $, breakeven win rate', kw:'kalkulator risiko lot sl tp stop loss take profit breakeven kalkulator lot'},
-  {id:'secKalkulatorFlat2', icon:'🧮', label:'Kalkulator Flat 2% (Real-time)', desc:'Hitung lot ulang tiap saat dari saldo, risk dikunci 2%', kw:'kalkulator flat 2% real time saldo lot risiko dua persen'},
-  {id:'secSewaBeli', icon:'🏠', label:'What-If: Sewa vs Beli Properti', desc:'Simulasi mana lebih untung, sewa atau KPR', kw:'sewa beli properti kpr rumah what if simulasi'},
-  {id:'secInvestorDashboard', icon:'👥', label:'Investor Dashboard', desc:'Login investor lihat porsi modal, profit, ROI', kw:'investor dashboard login kode akses modal roi'},
-  {id:'secInvestorCalc', icon:'🧮', label:'Investor Calculator', desc:'Simulasi potensi return investasi berdasarkan histori', kw:'investor calculator simulasi return investasi'},
-  {id:'secPortofolioSaham', icon:'📈', label:'Dashboard Portofolio Saham', desc:'Ringkasan saham yang dipegang, gain/loss', kw:'portofolio saham dashboard gain loss lot lembar'},
-  {id:'secPortofolioInvestasi', icon:'📊', label:'Investment Portfolio Dashboard', desc:'Breakdown investasi di luar MT4 dari Neraca', kw:'investment portfolio dashboard neraca aset reksadana deposito obligasi'},
-  {id:'secGrafikBulanan', icon:'📈', label:'Grafik Kinerja Bulanan & Target', desc:'Grafik profit bulanan dan progress target', kw:'grafik kinerja bulanan target bulan ini progress'},
-  {id:'secPerbandingan', icon:'📊', label:'Perbandingan Bulanan', desc:'Bandingkan performa antar bulan', kw:'perbandingan bulanan monthly comparison'},
-  {id:'secKalender', icon:'📅', label:'Kalender Trading', desc:'Kalender harian profit/loss', kw:'kalender trading calendar harian'},
-  {id:'secKalenderDD', icon:'🗓️', label:'Kalender Drawdown', desc:'Kalender level drawdown harian', kw:'kalender drawdown dd'},
-  {id:'secAliranUang', icon:'💸', label:'Aliran Uang Masuk & Keluar', desc:'Catatan investasi, profit MT4, dan pengeluaran', kw:'aliran uang masuk keluar investasi profit mt4 kas pribadi belanja'},
-  {id:'secAlokasiDana', icon:'🥧', label:'Alokasi Dana (Allocation & Goals)', desc:'Bagi dana hasil WD ke kebutuhan harian, investasi, tabungan, hiburan', kw:'alokasi dana allocation goals budgeting pie chart kebutuhan harian investasi tabungan darurat hiburan'},
-  {id:'secDanaDarurat', icon:'🚨', label:'Dana Darurat & Skor Kesehatan Finansial', desc:'Runway dana darurat dan skor kesehatan finansial A-D', kw:'dana darurat emergency fund skor kesehatan finansial financial health score rasio'},
-  {id:'secFINumber', icon:'🎯', label:'Financial Independence (FI) Number', desc:'Modal yang dibutuhkan agar profit bulanan menutup biaya hidup', kw:'financial independence fi number kebebasan finansial simulasi proyeksi target modal pensiun dini'},
-  {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow'},
-  {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio riwayat transaksi aset beli jual saham properti tracker'},
-  {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf'},
-  {id:'secKeuanganSaya', icon:'🧾', label:'Laporan Bulanan Keuangan Saya', desc:'Ringkasan modal pribadi + profit MT4 dikurangi pengeluaran = tabungan', kw:'laporan bulanan keuangan saya gaji profit pengeluaran cicilan tabungan periodic financial report'},
-  {id:'secProfitBulanan', icon:'📊', label:'Profit Per Bulan', desc:'Daftar total profit tiap bulan', kw:'profit per bulan bulanan'},
-  {id:'secEksporBulanan', icon:'📁', label:'Ekspor Laporan Bulanan', desc:'Download catatan harian per bulan', kw:'ekspor export laporan bulanan csv pdf'},
-  {id:'secJournal', icon:'🎨', label:'Trading Journal Visual', desc:'Visualisasi titik profit/loss harian', kw:'trading journal visual jurnal'},
-  {id:'secRiwayat', icon:'📋', label:'Riwayat Harian', desc:'Daftar semua catatan trading harian', kw:'riwayat harian history log catatan'},
-  {id:'secDiskusi', icon:'💬', label:'Diskusi & Komentar', desc:'Diskusi bebas antar trader', kw:'diskusi komentar komunitas chat forum'},
-  {id:'secAdmin', icon:'⚙️', label:'Panel Admin & Import CSV', desc:'Input catatan harian & import data dari MT4', kw:'admin panel import csv input catatan simpan'},
-  {id:'secTentang', icon:'📝', label:'Tentang Saya', desc:'Profil & tujuan situs ini', kw:'tentang saya about profil'},
-  {id:'secKontak', icon:'📞', label:'Kontak / Kirim Pesan', desc:'Form kontak & kerja sama', kw:'kontak pesan email hubungi'},
-  {id:'secPrivasi', icon:'📜', label:'Kebijakan Privasi & Disclaimer', desc:'Disclaimer & kebijakan privasi', kw:'privasi disclaimer kebijakan legal'}
+  {id:'secSaldo', icon:'💰', label:'Saldo MT4 & Equity Curve', desc:'Saldo saat ini, win rate, total profit, grafik equity', kw:'saldo mt4 equity curve balance modal akun win rate', cat:'performa'},
+  {id:'secScore', icon:'🏆', label:'Score Dashboard', desc:'Skor keseluruhan performa trading kamu', kw:'score dashboard skor nilai rating', cat:'performa'},
+  {id:'secStatPair', icon:'📊', label:'Statistik Per Pair', desc:'Performa per XAUUSD, BTCUSD, Forex', kw:'statistik pair xauusd btcusd forex per pasangan', cat:'performa'},
+  {id:'secRR', icon:'⚖️', label:'Risk Reward Analysis (RR Analisa)', desc:'Analisa rasio risk/reward dari profit-loss harian', kw:'rr analisa risk reward ratio rasio', cat:'performa'},
+  {id:'secConsistency', icon:'📐', label:'Consistency Score & Sharpe Ratio', desc:'Konsistensi profit & rasio sharpe', kw:'consistency score sharpe ratio konsistensi konsultasi risk stabilitas', cat:'performa'},
+  {id:'secRiskRuin', icon:'🚨', label:'Risk of Ruin (Peluang Bangkrut)', desc:'Estimasi peluang akun kena margin call', kw:'risk of ruin peluang bangkrut margin call resiko rugi total', cat:'performa'},
+  {id:'secMood', icon:'🧠', label:'Psikologi Trading (Mood vs Profit)', desc:'Hubungan mood harian dengan hasil trading', kw:'psikologi mood tracker mental emosi', cat:'performa'},
+  {id:'secBenchmark', icon:'📈', label:'Performance vs Benchmark', desc:'Perbandingan performa vs XAUUSD/BTCUSD pasar', kw:'benchmark perbandingan pasar market vs', cat:'performa'},
+  {id:'secModalMinimal', icon:'💵', label:'Rekomendasi Modal Minimal', desc:'Saran modal minimal berdasarkan gaya trading', kw:'modal minimal rekomendasi saran capital', cat:'performa'},
+  {id:'secKalkulator', icon:'🧮', label:'Kalkulator Risiko per Pair', desc:'Hitung lot, SL/TP, risk $, breakeven win rate', kw:'kalkulator risiko lot sl tp stop loss take profit breakeven kalkulator lot', cat:'kalkulator'},
+  {id:'secKalkulatorFlat2', icon:'🧮', label:'Kalkulator Flat 2% (Real-time)', desc:'Hitung lot ulang tiap saat dari saldo, risk dikunci 2%', kw:'kalkulator flat 2% real time saldo lot risiko dua persen', cat:'kalkulator'},
+  {id:'secSewaBeli', icon:'🏠', label:'What-If: Sewa vs Beli Properti', desc:'Simulasi mana lebih untung, sewa atau KPR', kw:'sewa beli properti kpr rumah what if simulasi', cat:'kalkulator'},
+  {id:'secInvestorDashboard', icon:'👥', label:'Investor Dashboard', desc:'Login investor lihat porsi modal, profit, ROI', kw:'investor dashboard login kode akses modal roi', cat:'investor'},
+  {id:'secInvestorCalc', icon:'🧮', label:'Investor Calculator', desc:'Simulasi potensi return investasi berdasarkan histori', kw:'investor calculator simulasi return investasi', cat:'investor'},
+  {id:'secPortofolioSaham', icon:'📈', label:'Dashboard Portofolio Saham', desc:'Ringkasan saham yang dipegang, gain/loss', kw:'portofolio saham dashboard gain loss lot lembar', cat:'keuangan'},
+  {id:'secPortofolioInvestasi', icon:'📊', label:'Investment Portfolio Dashboard', desc:'Breakdown investasi di luar MT4 dari Neraca', kw:'investment portfolio dashboard neraca aset reksadana deposito obligasi', cat:'keuangan'},
+  {id:'secGrafikBulanan', icon:'📈', label:'Grafik Kinerja Bulanan & Target', desc:'Grafik profit bulanan dan progress target', kw:'grafik kinerja bulanan target bulan ini progress', cat:'grafik'},
+  {id:'secPerbandingan', icon:'📊', label:'Perbandingan Bulanan', desc:'Bandingkan performa antar bulan', kw:'perbandingan bulanan monthly comparison', cat:'grafik'},
+  {id:'secKalender', icon:'📅', label:'Kalender Trading', desc:'Kalender harian profit/loss', kw:'kalender trading calendar harian', cat:'grafik'},
+  {id:'secKalenderDD', icon:'🗓️', label:'Kalender Drawdown', desc:'Kalender level drawdown harian', kw:'kalender drawdown dd', cat:'grafik'},
+  {id:'secAliranUang', icon:'💸', label:'Aliran Uang Masuk & Keluar', desc:'Catatan investasi, profit MT4, dan pengeluaran', kw:'aliran uang masuk keluar investasi profit mt4 kas pribadi belanja', cat:'keuangan'},
+  {id:'secAlokasiDana', icon:'🥧', label:'Alokasi Dana (Allocation & Goals)', desc:'Bagi dana hasil WD ke kebutuhan harian, investasi, tabungan, hiburan', kw:'alokasi dana allocation goals budgeting pie chart kebutuhan harian investasi tabungan darurat hiburan', cat:'keuangan'},
+  {id:'secDanaDarurat', icon:'🚨', label:'Dana Darurat & Skor Kesehatan Finansial', desc:'Runway dana darurat dan skor kesehatan finansial A-D', kw:'dana darurat emergency fund skor kesehatan finansial financial health score rasio', cat:'keuangan'},
+  {id:'secFINumber', icon:'🎯', label:'Financial Independence (FI) Number', desc:'Modal yang dibutuhkan agar profit bulanan menutup biaya hidup', kw:'financial independence fi number kebebasan finansial simulasi proyeksi target modal pensiun dini', cat:'keuangan'},
+  {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow', cat:'keuangan'},
+  {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio riwayat transaksi aset beli jual saham properti tracker', cat:'keuangan'},
+  {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf', cat:'keuangan'},
+  {id:'secKeuanganSaya', icon:'🧾', label:'Laporan Bulanan Keuangan Saya', desc:'Ringkasan modal pribadi + profit MT4 dikurangi pengeluaran = tabungan', kw:'laporan bulanan keuangan saya gaji profit pengeluaran cicilan tabungan periodic financial report', cat:'keuangan'},
+  {id:'secProfitBulanan', icon:'📊', label:'Profit Per Bulan', desc:'Daftar total profit tiap bulan', kw:'profit per bulan bulanan', cat:'grafik'},
+  {id:'secEksporBulanan', icon:'📁', label:'Ekspor Laporan Bulanan', desc:'Download catatan harian per bulan', kw:'ekspor export laporan bulanan csv pdf', cat:'grafik'},
+  {id:'secJournal', icon:'🎨', label:'Trading Journal Visual', desc:'Visualisasi titik profit/loss harian', kw:'trading journal visual jurnal', cat:'grafik'},
+  {id:'secRiwayat', icon:'📋', label:'Riwayat Harian', desc:'Daftar semua catatan trading harian', kw:'riwayat harian history log catatan', cat:'grafik'},
+  {id:'secDiskusi', icon:'💬', label:'Diskusi & Komentar', desc:'Diskusi bebas antar trader', kw:'diskusi komentar komunitas chat forum', cat:'lain'},
+  {id:'secAdmin', icon:'⚙️', label:'Panel Admin & Import CSV', desc:'Input catatan harian & import data dari MT4', kw:'admin panel import csv input catatan simpan', cat:'lain'},
+  {id:'secTentang', icon:'📝', label:'Tentang Saya', desc:'Profil & tujuan situs ini', kw:'tentang saya about profil', cat:'lain'},
+  {id:'secKontak', icon:'📞', label:'Kontak / Kirim Pesan', desc:'Form kontak & kerja sama', kw:'kontak pesan email hubungi', cat:'lain'},
+  {id:'secPrivasi', icon:'📜', label:'Kebijakan Privasi & Disclaimer', desc:'Disclaimer & kebijakan privasi', kw:'privasi disclaimer kebijakan legal', cat:'lain'}
+];
+// Urutan & label kategori buat tampilan "Semua Menu" (browse tanpa ngetik) —
+// biar pengunjung bisa langsung nemu tools berdasarkan fungsinya, gak perlu tau nama fitur persis.
+const SEARCH_CATEGORIES=[
+  {cat:'performa', label:'📈 Performa Trading & Analisa Risiko'},
+  {cat:'kalkulator', label:'🧮 Kalkulator & Simulasi'},
+  {cat:'investor', label:'👥 Investor'},
+  {cat:'grafik', label:'📅 Grafik, Kalender & Riwayat'},
+  {cat:'keuangan', label:'💰 Keuangan Pribadi & Portofolio'},
+  {cat:'lain', label:'⚙️ Admin, Komunitas & Info'}
 ];
 let searchActiveIdx=-1, searchCurrentResults=[];
 function normalizeSearchText(s){
@@ -2270,15 +2302,24 @@ function onSearchInput(){
   const resultsEl=document.getElementById('searchResults');
   searchActiveIdx=-1;
 
-  // Kalau belum ketik apa-apa (baru tap kotaknya), langsung tampilkan SEMUA menu
-  // biar pengunjung tinggal scroll & klik langsung — tidak wajib mengetik dulu.
+  // Kalau belum ketik apa-apa (baru tap kotaknya), tampilkan SEMUA menu dikelompokkan per kategori/fungsi
+  // biar pengunjung tinggal scroll ke grup yang relevan & klik langsung — tidak wajib mengetik dulu.
   if(!q){
-    searchCurrentResults=SEARCH_MENU;
-    resultsEl.innerHTML='<div class="search-hint">📋 Semua Menu — Tap untuk Langsung ke Bagian</div>'+
-      SEARCH_MENU.map((item,i)=>`<div class="search-result-item" data-idx="${i}" onclick="goToSearchResult('${item.id}')">
-        <div class="search-result-icon">${item.icon}</div>
-        <div><div class="search-result-label">${item.label}</div><div class="search-result-desc">${item.desc}</div></div>
-      </div>`).join('');
+    // Susun ulang sesuai urutan kategori biar cocok persis sama urutan tampilan DOM
+    // (penting supaya navigasi keyboard ArrowUp/ArrowDown/Enter nunjuk ke item yang benar).
+    const grouped=[];
+    SEARCH_CATEGORIES.forEach(c=>{ SEARCH_MENU.filter(item=>item.cat===c.cat).forEach(item=>grouped.push(item)); });
+    searchCurrentResults=grouped;
+    resultsEl.innerHTML='<div class="search-hint">📋 Semua Menu — Dikelompokkan per Fungsi, Tap untuk Langsung ke Bagian</div>'+
+      SEARCH_CATEGORIES.map(c=>{
+        const items=SEARCH_MENU.filter(item=>item.cat===c.cat);
+        if(!items.length) return '';
+        return `<div class="search-cat-label" style="font-size:10px;font-weight:800;color:#B8860B;text-transform:uppercase;letter-spacing:.6px;padding:10px 14px 4px">${c.label}</div>`+
+          items.map((item)=>`<div class="search-result-item" data-idx="${grouped.indexOf(item)}" onclick="goToSearchResult('${item.id}')">
+              <div class="search-result-icon">${item.icon}</div>
+              <div><div class="search-result-label">${item.label}</div><div class="search-result-desc">${item.desc}</div></div>
+            </div>`).join('');
+      }).join('');
     resultsEl.classList.add('show');
     return;
   }
@@ -2553,9 +2594,6 @@ async function loadBalance(){
 
     const totalProfit = allSh.reduce((s,r)=>s+parseFloat(r.profit||0),0);
     lastTotalProfitAll=totalProfit;
-
-    const maskBtn=document.getElementById('btnMaskBalance');
-    if(maskBtn) maskBtn.textContent=balanceMasked?'🙈':'👁';
 
     renderBalanceHero();
   }catch(e){console.error(e);}
@@ -5212,15 +5250,19 @@ async function renderInvestorDashboard(){
     const totalProfitAllTime=rows2.reduce((s,r)=>s+parseFloat(r.profit||0),0);
     const modalOwner=getModalOwner();
     const totalPoolCapital=modalOwner+parseFloat(found.total_pool||0);
+    // Investor cuma boleh lihat performa gabungan dalam % — total dana gabungan (milik fund manager +
+    // investor lain) TIDAK ditampilkan sebagai nominal $ di sini, biar privasi total dana tetap terjaga.
+    const poolRoiPct = totalPoolCapital>0 ? (totalProfitAllTime/totalPoolCapital*100) : 0;
+    const poolRoiSign = poolRoiPct>=0?'+':'';
 
     let html=`
     <div style="border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;background:var(--bg1)">
       <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Investor Portfolio Overview</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(found.total_pool)}</div><div class="bal-box-lbl">Total Dana Investor</div></div>
-        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${totalProfitAllTime>=0?'cg':'cr'}" style="font-size:14px">${totalProfitAllTime>=0?'+':''}${mfc(totalProfitAllTime)}</div><div class="bal-box-lbl">Total Profit Trading</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${found.total_investors}</div><div class="bal-box-lbl">Total Investor</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${poolRoiPct>=0?'cg':'cr'}" style="font-size:14px">${poolRoiSign}${poolRoiPct.toFixed(1)}%</div><div class="bal-box-lbl">ROI Pool Gabungan</div></div>
       </div>
-      <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">${found.total_investors} investor tercatat</div>
+      <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">Total dana gabungan bersifat privat — hanya persentase performa yang ditampilkan</div>
     </div>`;
     html+=investorCardHtml(found, totalProfitAllTime, totalPoolCapital, false, {rank:found.rank_int, total:found.total_investors});
     html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal terhadap total dana yang ditradingkan — bukan kalkulasi bagi hasil resmi/legal.</div>';
@@ -6585,6 +6627,7 @@ async function doLogin(){
     hide('btnAdmin');show('btnLogout');document.getElementById('btnLogout').style.display='inline-block';
     show('adminPanel');
     resetAdminIdleTimer();
+    renderBalanceHero();
     toast('✅ Masuk sebagai Admin');
   }catch(e){
     toast('❌ '+(e.message||'Login gagal').slice(0,100));
@@ -6596,6 +6639,7 @@ async function logout(){
   stopAdminIdleTimer();
   show('btnAdmin');hide('btnLogout');
   hide('adminPanel');
+  renderBalanceHero();
   toast('↩ Keluar dari mode Admin');
 }
 
