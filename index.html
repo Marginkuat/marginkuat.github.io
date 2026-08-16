@@ -4965,11 +4965,15 @@ async function editModalOwner(){
   }
 }
 let loggedInInvestorId=null;
-function getInvestorList(){
-  try{ return JSON.parse(localStorage.getItem('mk_investors')||'[]'); }catch(e){ return []; }
+// ── Daftar investor sekarang di Supabase (tabel `investors`), bukan localStorage lagi ──
+// Kenapa: localStorage cuma ada di device ini, jadi investor yang login dari HP mereka
+// sendiri gak bakal pernah nemu data mereka. Login investor sekarang lewat RPC
+// `investor_login` di server — cuma balikin data milik kode yang dia masukin sendiri,
+// gak pernah expose kode/data investor lain.
+async function fetchInvestorsAdmin(){
+  try{ return await api('investors?select=*&order=created_at.asc'); }catch(e){ console.error(e); return []; }
 }
-function saveInvestorList(list){ localStorage.setItem('mk_investors', JSON.stringify(list)); }
-function tambahInvestor(){
+async function tambahInvestor(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk tambah investor');return;}
   const nama=prompt('Nama investor:');
   if(!nama)return;
@@ -4982,51 +4986,64 @@ function tambahInvestor(){
   if(!kode){toast('❌ Kode akses wajib diisi');return;}
   kode=kode.trim();
   if(!kode){toast('❌ Kode akses wajib diisi');return;}
-  const list=getInvestorList();
-  if(list.some(v=>v.kode===kode)){toast('❌ Kode akses sudah dipakai investor lain, pakai kode lain');return;}
-  list.push({id:Date.now().toString(36), nama, modal, tanggal:tglStr, kode});
-  saveInvestorList(list);
-  toast('✅ Investor ditambahkan — kode akses: '+kode);
-  renderInvestorDashboard();
+  try{
+    const dup=await api('investors?select=id&kode=eq.'+encodeURIComponent(kode));
+    if(dup.length){toast('❌ Kode akses sudah dipakai investor lain, pakai kode lain');return;}
+    await api('investors','POST',{id:Date.now().toString(36), nama, modal, tanggal:tglStr, kode});
+    toast('✅ Investor ditambahkan — kode akses: '+kode);
+    renderInvestorDashboard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan investor: '+(e.message||'').slice(0,120));
+  }
 }
-function hapusInvestor(id){
+async function hapusInvestor(id){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   if(!confirm('Hapus investor ini dari dashboard?'))return;
-  saveInvestorList(getInvestorList().filter(v=>v.id!==id));
-  toast('✅ Investor dihapus');
-  renderInvestorDashboard();
+  try{
+    await api('investors?id=eq.'+encodeURIComponent(id),'DELETE');
+    toast('✅ Investor dihapus');
+    renderInvestorDashboard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal hapus investor: '+(e.message||'').slice(0,120));
+  }
 }
-function doInvestorLogin(){
+async function doInvestorLogin(){
   const codeInput=document.getElementById('investorLoginCode');
   const code=(codeInput?codeInput.value:'').trim();
   if(!code){toast('❌ Masukkan kode akses dulu');return;}
-  const found=getInvestorList().find(v=>v.kode && v.kode===code);
-  if(!found){toast('❌ Kode akses tidak ditemukan');return;}
-  loggedInInvestorId=found.id;
-  sessionStorage.setItem('mk_investor_session', found.id);
-  if(codeInput) codeInput.value='';
-  toast('✅ Selamat datang, '+found.nama);
-  renderInvestorDashboard();
+  try{
+    const rows=await api('rpc/investor_login','POST',{p_kode:code});
+    if(!rows || !rows.length){toast('❌ Kode akses tidak ditemukan');return;}
+    const found=rows[0];
+    loggedInInvestorId=found.id;
+    sessionStorage.setItem('mk_investor_code', code); // simpan kode (bukan id) — dipakai buat re-fetch data pas refresh
+    if(codeInput) codeInput.value='';
+    toast('✅ Selamat datang, '+found.nama);
+    renderInvestorDashboard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal login: '+(e.message||'').slice(0,120));
+  }
 }
 function doInvestorLogout(){
   loggedInInvestorId=null;
-  sessionStorage.removeItem('mk_investor_session');
+  sessionStorage.removeItem('mk_investor_code');
   toast('↩ Keluar dari tampilan Investor');
   renderInvestorDashboard();
 }
-function investorCardHtml(inv, totalProfitAllTime, totalModalInvestorPool, showHapus, allInvestors){
+function investorCardHtml(inv, totalProfitAllTime, totalModalInvestorPool, showHapus, rankInfo){
   const sharePct = totalModalInvestorPool>0 ? (inv.modal/totalModalInvestorPool*100) : 0;
   const profitShare = totalProfitAllTime * (sharePct/100);
   const currentVal = parseFloat(inv.modal||0) + profitShare;
   const roi = inv.modal>0 ? (profitShare/inv.modal*100) : 0;
   const joinDate=new Date(inv.tanggal);
   const days=Math.max(0, Math.floor((Date.now()-joinDate.getTime())/86400000));
-  // Peringkat porsi modal di antara semua investor, tanpa membocorkan nama/nominal investor lain
+  // rankInfo: {rank, total} — dihitung di pemanggil (admin: dari list lokal; investor: dari hasil RPC investor_login)
   let rankHtml='';
-  if(allInvestors && allInvestors.length>1){
-    const sorted=allInvestors.slice().sort((a,b)=>parseFloat(b.modal||0)-parseFloat(a.modal||0));
-    const rank=sorted.findIndex(v=>v.id===inv.id)+1;
-    rankHtml=`<span>Peringkat porsi modal: <b style="color:#C8A84B">#${rank} dari ${allInvestors.length} investor</b></span>`;
+  if(rankInfo && rankInfo.total>1){
+    rankHtml=`<span>Peringkat porsi modal: <b style="color:#C8A84B">#${rankInfo.rank} dari ${rankInfo.total} investor</b></span>`;
   }
   return `
     <div style="border:1.5px solid #B8860B;border-radius:14px;padding:16px;margin-bottom:12px;background:linear-gradient(160deg,var(--bg2),var(--bg1));position:relative;text-align:left">
@@ -5047,54 +5064,37 @@ function investorCardHtml(inv, totalProfitAllTime, totalModalInvestorPool, showH
       ${showHapus?`<div style="text-align:right;margin-top:6px"><span onclick="hapusInvestor('${inv.id}')" style="font-size:9px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Hapus</span></div>`:''}
     </div>`;
 }
-function renderInvestorDashboard(){
+async function renderInvestorDashboard(){
   const loginBox=document.getElementById('investorLoginBox');
   const dashBox=document.getElementById('investorDashboard');
   const logoutBox=document.getElementById('investorLogoutBox');
   const tambahBtn=document.getElementById('btnTambahInvestor');
   if(!dashBox)return;
 
-  const investors=getInvestorList();
-  const sessionId=sessionStorage.getItem('mk_investor_session');
-  if(sessionId) loggedInInvestorId=sessionId;
+  const savedCode=sessionStorage.getItem('mk_investor_code');
 
-  let visibleInvestors=[], showHapus=false;
+  // ── MODE ADMIN: fetch semua investor langsung dari tabel (RLS izinin karena authenticated) ──
   if(isAdmin){
-    visibleInvestors=investors;
-    showHapus=true;
     if(loginBox)loginBox.style.display='none';
     if(logoutBox)logoutBox.style.display='none';
     if(tambahBtn)tambahBtn.style.display='block';
-  }else if(loggedInInvestorId && investors.some(v=>v.id===loggedInInvestorId)){
-    visibleInvestors=investors.filter(v=>v.id===loggedInInvestorId);
-    if(loginBox)loginBox.style.display='none';
-    if(logoutBox)logoutBox.style.display='block';
-    if(tambahBtn)tambahBtn.style.display='none';
-  }else{
-    dashBox.style.display='none';
-    if(loginBox)loginBox.style.display='block';
-    if(logoutBox)logoutBox.style.display='none';
-    if(tambahBtn)tambahBtn.style.display='none';
-    return;
-  }
-  dashBox.style.display='block';
+    dashBox.style.display='block';
+    dashBox.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>';
 
-  if(!visibleInvestors.length){
-    dashBox.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada investor ditambahkan. Tekan tombol di bawah untuk mulai.</div>';
-    return;
-  }
-  const rows=allSaldoData||[];
-  const totalProfitAllTime=rows.reduce((s,r)=>s+parseFloat(r.profit||0),0);
-  const totalModalInvestorPool=investors.reduce((s,v)=>s+parseFloat(v.modal||0),0);
-  const modalOwner=getModalOwner();
-  const totalPoolCapital=modalOwner+totalModalInvestorPool; // ← dasar pembagian profit yang adil, bukan cuma modal investor
+    const investors=await fetchInvestorsAdmin();
+    if(!investors.length){
+      dashBox.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada investor ditambahkan. Tekan tombol di bawah untuk mulai.</div>';
+      return;
+    }
+    const rows=allSaldoData||[];
+    const totalProfitAllTime=rows.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+    const totalModalInvestorPool=investors.reduce((s,v)=>s+parseFloat(v.modal||0),0);
+    const modalOwner=getModalOwner();
+    const totalPoolCapital=modalOwner+totalModalInvestorPool;
 
-  // ── PORTFOLIO OVERVIEW: ringkasan total dana kelola, tanpa membocorkan data investor lain ──
-  let ownerCardHtml='';
-  if(isAdmin){
     const ownerSharePct = totalPoolCapital>0 ? (modalOwner/totalPoolCapital*100) : 0;
     const ownerProfitShare = totalProfitAllTime * (ownerSharePct/100);
-    ownerCardHtml=`
+    const ownerCardHtml=`
     <div style="border:1.5px solid #4ADE80;border-radius:14px;padding:14px 16px;margin-bottom:14px;background:var(--bg1)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px">💼 Modal Kamu (Arif) — Terpisah dari Investor</span>
@@ -5106,19 +5106,79 @@ function renderInvestorDashboard(){
       </div>
       <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:6px">Porsi kamu: <b style="color:#C8A84B">${ownerSharePct.toFixed(1)}%</b> dari total dana yang ditradingkan</div>
     </div>`;
-  }
-  let html=ownerCardHtml+`
+
+    let html=ownerCardHtml+`
     <div style="border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;background:var(--bg1)">
       <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Investor Portfolio Overview</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(totalModalInvestorPool)}</div><div class="bal-box-lbl">Total Dana Investor</div></div>
         <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${totalProfitAllTime>=0?'cg':'cr'}" style="font-size:14px">${totalProfitAllTime>=0?'+':''}${fc(totalProfitAllTime)}</div><div class="bal-box-lbl">Total Profit Trading</div></div>
       </div>
-      <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">${investors.length} investor tercatat${isAdmin?' · Total dana ditradingkan (kamu + investor): '+fc(totalPoolCapital):''}</div>
+      <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">${investors.length} investor tercatat · Total dana ditradingkan (kamu + investor): ${fc(totalPoolCapital)}</div>
     </div>`;
-  visibleInvestors.forEach(inv=>{ html+=investorCardHtml(inv, totalProfitAllTime, totalPoolCapital, showHapus, investors); });
-  html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal (kamu + investor) terhadap total dana yang ditradingkan — bukan kalkulasi bagi hasil resmi/legal.</div>';
-  dashBox.innerHTML=html;
+
+    const sorted=investors.slice().sort((a,b)=>parseFloat(b.modal||0)-parseFloat(a.modal||0));
+    investors.forEach(inv=>{
+      const rank=sorted.findIndex(v=>v.id===inv.id)+1;
+      html+=investorCardHtml(inv, totalProfitAllTime, totalPoolCapital, true, {rank, total:investors.length});
+    });
+    html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal (kamu + investor) terhadap total dana yang ditradingkan — bukan kalkulasi bagi hasil resmi/legal.</div>';
+    dashBox.innerHTML=html;
+    return;
+  }
+
+  // ── MODE INVESTOR: cuma py sesi (kode) yang tersimpan, re-fetch data terbaru lewat RPC ──
+  if(savedCode){
+    if(loginBox)loginBox.style.display='none';
+    if(logoutBox)logoutBox.style.display='block';
+    if(tambahBtn)tambahBtn.style.display='none';
+    dashBox.style.display='block';
+    dashBox.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>';
+
+    let rows;
+    try{
+      rows=await api('rpc/investor_login','POST',{p_kode:savedCode});
+    }catch(e){
+      console.error(e);
+      dashBox.innerHTML='<div style="text-align:center;padding:20px;color:#F87171;font-size:12px">Gagal memuat data. Coba refresh halaman.</div>';
+      return;
+    }
+    if(!rows || !rows.length){
+      // Kode tersimpan udah gak valid lagi (misal investor dihapus admin) — paksa logout
+      sessionStorage.removeItem('mk_investor_code');
+      loggedInInvestorId=null;
+      if(loginBox)loginBox.style.display='block';
+      if(logoutBox)logoutBox.style.display='none';
+      dashBox.style.display='none';
+      return;
+    }
+    const found=rows[0];
+    loggedInInvestorId=found.id;
+    const rows2=allSaldoData||[];
+    const totalProfitAllTime=rows2.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+    const modalOwner=getModalOwner();
+    const totalPoolCapital=modalOwner+parseFloat(found.total_pool||0);
+
+    let html=`
+    <div style="border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;background:var(--bg1)">
+      <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Investor Portfolio Overview</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${fc(found.total_pool)}</div><div class="bal-box-lbl">Total Dana Investor</div></div>
+        <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${totalProfitAllTime>=0?'cg':'cr'}" style="font-size:14px">${totalProfitAllTime>=0?'+':''}${fc(totalProfitAllTime)}</div><div class="bal-box-lbl">Total Profit Trading</div></div>
+      </div>
+      <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">${found.total_investors} investor tercatat</div>
+    </div>`;
+    html+=investorCardHtml(found, totalProfitAllTime, totalPoolCapital, false, {rank:found.rank_int, total:found.total_investors});
+    html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal terhadap total dana yang ditradingkan — bukan kalkulasi bagi hasil resmi/legal.</div>';
+    dashBox.innerHTML=html;
+    return;
+  }
+
+  // ── BELUM LOGIN SAMA SEKALI ──
+  dashBox.style.display='none';
+  if(loginBox)loginBox.style.display='block';
+  if(logoutBox)logoutBox.style.display='none';
+  if(tambahBtn)tambahBtn.style.display='none';
 }
 
 // ══ NOTIFICATION CENTER ══
@@ -5498,7 +5558,9 @@ function saveBackupInterval(){
   renderAutoBackupInfo();
 }
 function buildBackupPayload(){
-  const localKeys=['mk_investors','mk_goals','mk_aset_lain','mk_kewajiban','mk_target_rr','mk_sertifikat_nama','mk_kas_threshold','mk_backup_settings'];
+  // Catatan: 'mk_investors' TIDAK ada di sini lagi — daftar investor sekarang tersimpan
+  // di Supabase (tabel investors), bukan localStorage, jadi otomatis ikut backup Supabase kamu sendiri.
+  const localKeys=['mk_goals','mk_aset_lain','mk_kewajiban','mk_target_rr','mk_sertifikat_nama','mk_kas_threshold','mk_backup_settings'];
   const localData={};
   localKeys.forEach(k=>{
     const v=localStorage.getItem(k);
