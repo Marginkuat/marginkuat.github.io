@@ -1204,6 +1204,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 
     <button class="btn btn-ghost" onclick="generateBukuDraft()">🪄 Buat Draft Otomatis dari Data (Admin)</button>
     <div style="font-size:9px;color:#5C4818;margin:-2px 0 10px;line-height:1.5">Draft otomatis cuma rangkuman angka (profit, win rate, hari terbaik/terberat) — tetap kamu yang nulis ceritanya jadi personal.</div>
+
+    <div style="border-top:1px solid var(--border);margin:4px 0 12px;padding-top:12px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">📤 Export Data Mentah Bulan Ini</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Isinya: catatan profit/loss harian + DP (modal masuk) + WD & pos alokasinya. Download, bawa ke AI (Claude, dll) buat diminta jadi cerita, terus tempel hasilnya ke kolom Cerita di atas.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn btn-ghost" style="margin-bottom:0" onclick="exportDataBulanan('csv')">⬇️ CSV</button>
+        <button class="btn btn-ghost" style="margin-bottom:0" onclick="exportDataBulanan('pdf')">⬇️ PDF</button>
+      </div>
+    </div>
+
     <button class="btn btn-p" onclick="simpanBukuBulanan()">💾 Simpan Cerita Bulan Ini</button>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
@@ -6945,6 +6955,99 @@ async function generateBukuDraft(){
   ta.value=draft;
   toast('✅ Draft dibuat — edit jadi cerita personal kamu ya');
 }
+
+// ── EXPORT DATA MENTAH BULANAN (CSV & PDF) — buat dibawa ke AI luar jadi bahan cerita ──
+async function fetchDataBulananBuku(bulan, tahun){
+  const mm=String(bulan).padStart(2,'0');
+  const start=`${tahun}-${mm}-01`;
+  const lastDay=new Date(tahun,bulan,0).getDate();
+  const end=`${tahun}-${mm}-${String(lastDay).padStart(2,'0')}`;
+  let saldoRows=[];
+  try{ saldoRows=await api(`saldo_harian?select=tanggal,profit,catatan,mood,jumlah_signal&tanggal=gte.${start}&tanggal=lte.${end}&order=tanggal.asc`); }
+  catch(e){ try{ saldoRows=await api(`saldo_harian?select=tanggal,profit,catatan,jumlah_signal&tanggal=gte.${start}&tanggal=lte.${end}&order=tanggal.asc`); }catch(e2){ saldoRows=[]; } }
+  let kasRows=[];
+  try{ kasRows=await api(`kas_pribadi?select=tanggal,dari,ke,jumlah,kategori,keterangan&tanggal=gte.${start}&tanggal=lte.${end}&order=tanggal.asc`); }catch(e){ kasRows=[]; }
+  // Buang entri auto-sync profit/loss trading di kas biar gak dobel sama saldoRows (sudah ada di sana)
+  kasRows=kasRows.filter(r=>(r.keterangan||'')!==AUTOSYNC_TAG);
+  return {saldoRows,kasRows};
+}
+function ringkasDataBulanan(saldoRows, kasRows){
+  const totalProfit=saldoRows.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+  const hariTrading=saldoRows.length;
+  const hariProfit=saldoRows.filter(r=>parseFloat(r.profit||0)>0).length;
+  const winRate=hariTrading?(hariProfit/hariTrading*100):0;
+  const totalDP=kasRows.filter(r=>['gaji','modal_investor','modal_mt4'].includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const totalWD=kasRows.filter(r=>r.kategori==='wd_trading').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const alokasiRows=kasRows.filter(r=>!['gaji','modal_investor','modal_mt4','wd_trading'].includes(r.kategori));
+  const alokasiByKat={};
+  alokasiRows.forEach(r=>{ const k=r.kategori||'lainnya'; alokasiByKat[k]=(alokasiByKat[k]||0)+parseFloat(r.jumlah||0); });
+  return {totalProfit,hariTrading,hariProfit,winRate,totalDP,totalWD,alokasiByKat};
+}
+async function exportDataBulanan(format){
+  const bulan=parseInt(document.getElementById('bukuBulan').value);
+  const tahun=parseInt(document.getElementById('bukuTahun').value);
+  if(!bulan||!tahun){toast('❌ Pilih bulan & tahun dulu');return;}
+  toast('⏳ Menyiapkan data bulan ini...');
+  const {saldoRows,kasRows}=await fetchDataBulananBuku(bulan,tahun);
+  if(!saldoRows.length && !kasRows.length){ toast('⚠️ Gak ada data di bulan ini'); return; }
+  const namaBulan=BUKU_BULAN[bulan-1];
+  const ringkas=ringkasDataBulanan(saldoRows,kasRows);
+  if(format==='csv') downloadCsvBulanan(namaBulan,tahun,saldoRows,kasRows,ringkas);
+  else printPdfBulanan(namaBulan,tahun,saldoRows,kasRows,ringkas);
+}
+function downloadCsvBulanan(namaBulan,tahun,saldoRows,kasRows,r){
+  const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  let csv=`RINGKASAN ${namaBulan.toUpperCase()} ${tahun}\n`;
+  csv+=`Hari Trading,${r.hariTrading}\nWin Rate,${r.winRate.toFixed(1)}%\nTotal Profit/Loss,${r.totalProfit.toFixed(2)}\nTotal DP (Modal Masuk),${r.totalDP.toFixed(2)}\nTotal WD (Profit Ditarik),${r.totalWD.toFixed(2)}\n\n`;
+  csv+=`CATATAN HARIAN TRADING\nTanggal,Profit/Loss,Jumlah Signal,Mood,Catatan\n`;
+  saldoRows.forEach(x=>{ csv+=`${x.tanggal},${parseFloat(x.profit||0).toFixed(2)},${x.jumlah_signal||0},${esc(x.mood||'')},${esc(x.catatan||'')}\n`; });
+  csv+=`\nARUS KAS (WD / DP / ALOKASI)\nTanggal,Dari,Ke,Kategori,Jumlah,Keterangan\n`;
+  kasRows.forEach(x=>{ csv+=`${x.tanggal},${esc(x.dari||'')},${esc(x.ke||'')},${esc((kategoriMeta[x.kategori]&&kategoriMeta[x.kategori].label)||x.kategori||'')},${parseFloat(x.jumlah||0).toFixed(2)},${esc(x.keterangan||'')}\n`; });
+  const blob=new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`Data_Trading_${namaBulan}_${tahun}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('⬇️ CSV berhasil didownload');
+}
+function printPdfBulanan(namaBulan,tahun,saldoRows,kasRows,r){
+  const alokasiHtml=Object.keys(r.alokasiByKat).map(k=>`<tr><td>${escapeHtml((kategoriMeta[k]&&kategoriMeta[k].label)||k)}</td><td style="text-align:right">${fc(r.alokasiByKat[k])}</td></tr>`).join('');
+  const saldoHtml=saldoRows.map(x=>`<tr><td>${fd(x.tanggal)}</td><td style="text-align:right;color:${parseFloat(x.profit||0)>=0?'#0a7a3d':'#c0392b'}">${fc(x.profit||0)}</td><td>${x.jumlah_signal||0}</td><td>${escapeHtml(x.mood||'')}</td><td>${escapeHtml(x.catatan||'')}</td></tr>`).join('');
+  const kasHtml=kasRows.map(x=>`<tr><td>${fd(x.tanggal)}</td><td>${escapeHtml(x.dari||'')}</td><td>${escapeHtml(x.ke||'')}</td><td>${escapeHtml((kategoriMeta[x.kategori]&&kategoriMeta[x.kategori].label)||x.kategori||'')}</td><td style="text-align:right">${fc(x.jumlah||0)}</td><td>${escapeHtml(x.keterangan||'')}</td></tr>`).join('');
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Data Trading ${namaBulan} ${tahun}</title>
+<style>
+body{font-family:Arial,sans-serif;padding:24px;color:#222}
+h1{font-size:18px;margin-bottom:2px} h2{font-size:13px;margin-top:24px;border-bottom:1px solid #ccc;padding-bottom:4px}
+table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+th,td{border:1px solid #ddd;padding:5px 7px;text-align:left}
+th{background:#f2f2f2}
+.ringkas td{border:none;padding:3px 6px}
+@media print{ body{padding:0} }
+</style></head><body>
+<h1>📖 Data Trading — ${namaBulan} ${tahun}</h1>
+<div style="font-size:11px;color:#666;margin-bottom:10px">Diexport dari MarginKuat pada ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+<h2>Ringkasan</h2>
+<table class="ringkas">
+  <tr><td>Hari Trading</td><td><b>${r.hariTrading} hari</b></td></tr>
+  <tr><td>Win Rate</td><td><b>${r.winRate.toFixed(1)}%</b></td></tr>
+  <tr><td>Total Profit/Loss</td><td><b>${fc(r.totalProfit)}</b></td></tr>
+  <tr><td>Total DP (Modal Masuk)</td><td><b>${fc(r.totalDP)}</b></td></tr>
+  <tr><td>Total WD (Profit Ditarik)</td><td><b>${fc(r.totalWD)}</b></td></tr>
+</table>
+${alokasiHtml?`<h2>Alokasi Dana WD</h2><table><tr><th>Pos</th><th>Jumlah</th></tr>${alokasiHtml}</table>`:''}
+<h2>Catatan Harian Trading</h2>
+<table><tr><th>Tanggal</th><th>Profit/Loss</th><th>Signal</th><th>Mood</th><th>Catatan</th></tr>${saldoHtml||'<tr><td colspan="5">Tidak ada data</td></tr>'}</table>
+<h2>Arus Kas (WD / DP / Alokasi)</h2>
+<table><tr><th>Tanggal</th><th>Dari</th><th>Ke</th><th>Kategori</th><th>Jumlah</th><th>Keterangan</th></tr>${kasHtml||'<tr><td colspan="6">Tidak ada data</td></tr>'}</table>
+</body></html>`;
+  const w=window.open('','_blank');
+  if(!w){ toast('❌ Popup diblokir — izinkan popup buat situs ini dulu, lalu coba lagi'); return; }
+  w.document.write(html);
+  w.document.close();
+  const doPrint=()=>{ try{ w.focus(); w.print(); }catch(e){} };
+  w.onload=doPrint;
+  setTimeout(doPrint, 600); // fallback kalau onload gak ke-trigger di sebagian browser mobile
+}
+
 async function simpanBukuBulanan(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const bulan=parseInt(document.getElementById('bukuBulan').value);
