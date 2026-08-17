@@ -2319,6 +2319,33 @@ async function resetRemCycle(){
       <input type="file" id="csvFile" accept=".csv" class="inp" style="padding:8px;font-size:11px">
       <button class="btn btn-p" onclick="importCSV()" style="margin-top:10px">📥 Import &amp; Simpan Semua</button>
       <div id="csvStatus" style="font-size:10px;color:#7A5D1F;margin-top:8px;white-space:pre-line"></div>
+
+      <div style="height:1px;background:var(--border);margin:14px 0"></div>
+
+      <div style="font-size:11px;font-weight:700;color:#D4AF37;margin-bottom:6px">📖 Panduan Ekspor Statement (IC Markets / Exness / XM)</div>
+      <div style="font-size:9px;color:#7A5D1F;margin-bottom:8px;line-height:1.6">Ketiga broker ini sama-sama pakai platform MT4/MT5, jadi langkah ekspornya identik. <b style="color:#C8A84B">Disarankan:</b> pakai file HTML (bukan CSV) lalu upload ke "Ekstrak &amp; Kelompokkan Transaksi per Hari" di atas — datanya otomatis kebaca lengkap tanpa perlu isi manual. Format CSV di bawah ini cuma buat kamu yang mau isi manual / gak ada file HTML-nya.</div>
+      <details style="margin-bottom:6px">
+        <summary style="font-size:10px;color:#C8A84B;cursor:pointer;font-weight:700">MetaTrader 4 (MT4) — cara ambil statement</summary>
+        <div style="font-size:9px;color:#8A6B26;line-height:1.7;padding:8px 0 4px 10px">
+          1. Buka MT4 → tekan <b>Ctrl+T</b> buat buka jendela Terminal.<br>
+          2. Klik tab <b>Account History</b> di bagian bawah.<br>
+          3. Klik kanan di area tabelnya → pilih periode (<b>All History</b> biar lengkap, atau <b>Custom Period</b>).<br>
+          4. Klik kanan lagi → pilih <b>Save as Report</b> (atau <b>Save as Detailed Report</b>).<br>
+          5. Simpan sebagai file <b>HTML</b> → upload file ini ke "Ekstrak &amp; Kelompokkan" di atas.
+        </div>
+      </details>
+      <details style="margin-bottom:10px">
+        <summary style="font-size:10px;color:#C8A84B;cursor:pointer;font-weight:700">MetaTrader 5 (MT5) — cara ambil statement</summary>
+        <div style="font-size:9px;color:#8A6B26;line-height:1.7;padding:8px 0 4px 10px">
+          1. Buka MT5 → tekan <b>Ctrl+T</b> buat buka jendela Toolbox.<br>
+          2. Klik tab <b>History</b> di bagian bawah.<br>
+          3. Klik kanan → pilih periode (<b>All History</b> atau <b>Custom Period</b>).<br>
+          4. Klik kanan lagi → pilih <b>Report</b> → pilih format <b>HTML</b> (bukan Excel/XLSX, biar bisa dibaca otomatis situs ini).<br>
+          5. Simpan filenya → upload ke "Ekstrak &amp; Kelompokkan" di atas.<br>
+          <span style="color:#7A5D1F">Catatan Exness: bisa juga download statement langsung dari Personal Area (PA) → pilih rentang tanggal custom.</span>
+        </div>
+      </details>
+      <button class="btn btn-ghost" onclick="downloadTemplateCSV()" style="margin-top:2px">⬇️ Download Template CSV (buat isi manual)</button>
     </div>
 
     <div style="background:var(--bg2);border:1px dashed #B8860B;border-radius:10px;padding:14px;margin-bottom:18px">
@@ -8689,11 +8716,86 @@ async function loadSkorDisiplinStats(){
       html+=`<div style="font-size:10px;color:#7A5D1F;margin-top:12px;text-align:center;line-height:1.6">Hari dengan disiplin tinggi rata-rata profitnya <b style="color:${selisih>=0?'#4ADE80':'#F87171'}">${selisih>=0?'lebih baik':'lebih buruk'} ${fc(Math.abs(selisih))}</b> dibanding hari disiplin rendah.</div>`;
     }
     html+=warnHtml;
+    html+=`<div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;text-align:center">Skor Disiplin per Periode</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button id="btnSkorMingguan" class="pair-tab active" onclick="switchSkorDisiplinPeriodik('mingguan')" style="flex:1;text-align:center">Mingguan</button>
+        <button id="btnSkorBulanan" class="pair-tab" onclick="switchSkorDisiplinPeriodik('bulanan')" style="flex:1;text-align:center">Bulanan</button>
+      </div>
+      <div id="skorDisiplinPeriodikList"></div>
+    </div>`;
     el.innerHTML=html;
+    __skorDisiplinCache=withSkor;
+    __skorDisiplinPeriodikMode='mingguan';
+    renderSkorDisiplinPeriodik();
   }catch(e){
     console.error(e);
     el.innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat data skor disiplin.</div>';
   }
+}
+
+let __skorDisiplinCache=null;
+let __skorDisiplinPeriodikMode='mingguan';
+
+function getMondayOfWeek(tanggalStr){
+  const d=new Date(tanggalStr+'T00:00:00');
+  const day=d.getDay();
+  const diff=(day===0?-6:1-day);
+  d.setDate(d.getDate()+diff);
+  return d.toISOString().slice(0,10);
+}
+
+function switchSkorDisiplinPeriodik(mode){
+  __skorDisiplinPeriodikMode=mode;
+  const btnM=document.getElementById('btnSkorMingguan'), btnB=document.getElementById('btnSkorBulanan');
+  if(btnM) btnM.classList.toggle('active', mode==='mingguan');
+  if(btnB) btnB.classList.toggle('active', mode==='bulanan');
+  renderSkorDisiplinPeriodik();
+}
+
+function renderSkorDisiplinPeriodik(){
+  const wrap=document.getElementById('skorDisiplinPeriodikList');
+  if(!wrap || !__skorDisiplinCache) return;
+  const bulanSingkat=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const groups={};
+  __skorDisiplinCache.forEach(r=>{
+    let key,label;
+    if(__skorDisiplinPeriodikMode==='mingguan'){
+      key=getMondayOfWeek(r.tanggal);
+      const mon=new Date(key+'T00:00:00');
+      const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+      label=`${mon.getDate()} ${bulanSingkat[mon.getMonth()]} - ${sun.getDate()} ${bulanSingkat[sun.getMonth()]} ${sun.getFullYear()}`;
+    }else{
+      key=r.tanggal.slice(0,7);
+      const [y,m]=key.split('-');
+      label=`${bulanNamaFull[parseInt(m,10)-1]} ${y}`;
+    }
+    if(!groups[key]) groups[key]={label,skorTotal:0,profitTotal:0,count:0};
+    groups[key].skorTotal+=parseFloat(r.skor_disiplin);
+    groups[key].profitTotal+=parseFloat(r.profit||0);
+    groups[key].count++;
+  });
+  const limit=__skorDisiplinPeriodikMode==='mingguan'?8:6;
+  const keys=Object.keys(groups).sort().reverse().slice(0,limit);
+  if(!keys.length){ wrap.innerHTML='<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:10px">Belum cukup data.</div>'; return; }
+  let html='';
+  keys.forEach(k=>{
+    const g=groups[k];
+    const avgSkor=g.skorTotal/g.count;
+    const skorColor=avgSkor>=70?'#4ADE80':avgSkor>=40?'#C8A84B':'#F87171';
+    const profitColor=g.profitTotal>=0?'#4ADE80':'#F87171';
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="text-align:left">
+        <div style="font-size:11px;color:#D4AF37;font-weight:600">${g.label}</div>
+        <div style="font-size:9px;color:#7A5D1F">${g.count} hari tercatat</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:14px;font-weight:700;color:${skorColor}">${avgSkor.toFixed(0)}</div>
+        <div style="font-size:9px;color:${profitColor}">${g.profitTotal>=0?'+':''}${fc(g.profitTotal)}</div>
+      </div>
+    </div>`;
+  });
+  wrap.innerHTML=html;
 }
 
 // ══ STATISTIK PER PAIR ══
@@ -8898,6 +9000,20 @@ function setupEquityInteraction(points, dailyInfo, xFor, yFor, W){
   svg.addEventListener('pointermove',e=>{if(dragging)showAt(e.clientX);});
   window.addEventListener('pointerup',()=>{dragging=false;});
   svg.addEventListener('pointerleave',()=>{if(!dragging)hideTooltip();});
+}
+
+// ══ TEMPLATE CSV (buat isi manual dari statement IC Markets/Exness/XM/broker MT4/MT5 lain) ══
+function downloadTemplateCSV(){
+  const header='tanggal,saldo_mt4,profit,gross_profit,gross_loss,jumlah_signal,pair,catatan\n';
+  const contoh='2026-08-01,655.20,12.50,15.00,2.50,3,XAUUSD,Contoh baris — hapus &amp; isi data asli\n'.replace('&amp;','&');
+  const isi=header+contoh;
+  const blob=new Blob(['\uFEFF'+isi],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='template_import_marginkuat.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('⬇️ Template CSV berhasil didownload');
 }
 
 // ══ AUTO-COPY DATA DARI MT4 (IMPORT CSV) ══
