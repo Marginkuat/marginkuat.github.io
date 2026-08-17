@@ -1723,6 +1723,15 @@ async function resetRemCycle(){
   </div>
 </div>
 
+<!-- ANALISIS SESI WAKTU -->
+<div class="section" id="secSesiAnalysis">
+  <div class="sec-title">🕐 Analisis Sesi Waktu</div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#8A6B26;line-height:1.6;margin-bottom:14px">Profit/loss dikelompokkan per sesi trading (Asia, London, New York), otomatis dari jam transaksi tiap statement yang diimport lewat "Ekstrak per Hari".</div>
+    <div id="sesiAnalysisWrap"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:11px">Memuat...</div></div>
+  </div>
+</div>
+
 <!-- MONTHLY COMPARISON -->
 <div class="section" id="secPerbandingan">
   <div class="sec-title">📊 Perbandingan Bulanan</div>
@@ -3164,6 +3173,7 @@ async function loadAll(){
   await loadTargetBulanan();
   loadStatementList();
   renderGraph();
+  renderSesiAnalysis();
   renderEquity();
   loadJournalVisual();
   loadBenchmark();
@@ -9676,6 +9686,22 @@ async function verifikasiData(){
 // laporan bulanan (10 kolom, tanpa S/L T/P) — asal masih ada
 // header: Ticket/Tiket, Type/Jenis, Close Time, Profit.
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// DETEKSI SESI WAKTU (Asia / London / New York)
+// Batas jam berikut dalam WIB (GMT+7), sesuai zona waktu statement broker milik user.
+// Asia: 05:00–13:59 · London: 14:00–18:59 · New York: 19:00–04:59 (lewat tengah malam)
+// Ini pembagian umum/aproksimasi — bisa disesuaikan kalau broker lain pakai jam server beda.
+// ══════════════════════════════════════════
+function detectSesiWaktu(dateTimeStr){
+  if(!dateTimeStr) return null;
+  const m=String(dateTimeStr).trim().match(/(\d{2}):(\d{2})/);
+  if(!m) return null;
+  const h=parseInt(m[1],10);
+  if(h>=5 && h<14) return 'Asia';
+  if(h>=14 && h<19) return 'London';
+  return 'New York';
+}
+
 function extractTransactionsFlexible(htmlString){
   const parser=new DOMParser();
   const doc=parser.parseFromString(htmlString,'text/html');
@@ -9732,7 +9758,8 @@ function extractTransactionsFlexible(htmlString){
       if(!/^\d{4}-\d{2}-\d{2}/.test(ct)) continue; // posisi masih terbuka (Close Time kosong) -> skip
       out.push({
         ticket:vals[colMap.ticket], type, item: colMap.item>-1?vals[colMap.item]:'',
-        closeTime:ct, swap: colMap.swap>-1?vals[colMap.swap]:'0', profit: vals[colMap.profit]
+        closeTime:ct, swap: colMap.swap>-1?vals[colMap.swap]:'0', profit: vals[colMap.profit],
+        sesi: detectSesiWaktu(ct)
       });
     }else if(type==='balance'){
       const ct=normalizeDate(vals[colMap.closeTime]||'');
@@ -9764,6 +9791,7 @@ function groupTransaksiPerHari(transaksi){
 let __ekstrakHasil=null;
 let __ekstrakRawHtml=null;
 let __ekstrakFileName=null;
+let __ekstrakTransaksi=null; // daftar transaksi mentah (dengan field 'sesi') dari ekstrak terakhir
 
 function ekstrakPerHari(){
   const statusEl=document.getElementById('ekstrakStatus');
@@ -9819,6 +9847,7 @@ function ekstrakPerHari(){
     __ekstrakHasil=days;
     __ekstrakRawHtml=htmlStr;
     __ekstrakFileName=fileName || ('laporan_'+dates[0]+'_sd_'+dates[dates.length-1]+'.html');
+    __ekstrakTransaksi=transaksi.filter(t=>t.type==='buy'||t.type==='sell');
 
     const totalNet=days.reduce((s,d)=>s+d.net,0);
     let saldoInfo='';
@@ -9977,6 +10006,11 @@ async function simpanSemuaKeDatabase(){
     : `⚠️ ${sukses} berhasil, ${gagal} gagal. Cek koneksi lalu coba lagi buat yang gagal.`;
   toast(gagal===0 ? '✅ Semua data tersimpan ke database' : '⚠️ Sebagian gagal tersimpan');
 
+  // Simpan tiap transaksi individual ke trade_log (buat Analisis Sesi Waktu Asia/London/New York)
+  if(__ekstrakTransaksi && __ekstrakTransaksi.length){
+    await simpanTradeLog(__ekstrakTransaksi);
+  }
+
   // Sekalian arsipkan file statement aslinya biar bisa didownload lagi nanti
   if(__ekstrakRawHtml){
     await simpanStatementAsli();
@@ -9989,9 +10023,99 @@ async function simpanSemuaKeDatabase(){
     if(typeof renderKalender==='function') renderKalender();
     if(typeof renderWdSection==='function') renderWdSection();
     if(typeof renderGraph==='function') renderGraph();
+    if(typeof renderSesiAnalysis==='function') renderSesiAnalysis();
     if(typeof renderEquity==='function') renderEquity();
     if(typeof loadJournalVisual==='function') loadJournalVisual();
   }catch(e){ console.error('Gagal refresh tampilan', e); }
+}
+
+// ══════════════════════════════════════════
+// ANALISIS SESI WAKTU (Asia / London / New York)
+// Simpan tiap transaksi individual ke tabel trade_log (bukan cuma agregat harian),
+// supaya profit/loss bisa dipecah per sesi trading. Dedup pakai nomor tiket biar
+// gak dobel kalau statement yang sama diimport ulang.
+// ══════════════════════════════════════════
+async function simpanTradeLog(transaksi){
+  const valid=transaksi.filter(t=>t.ticket && t.sesi && !isNaN(parseNumBroker(t.profit)));
+  if(!valid.length) return;
+  try{
+    // Cek tiket mana yang udah ada, biar gak insert dobel
+    const tickets=valid.map(t=>t.ticket);
+    const existingRows=await api(`trade_log?select=ticket&ticket=in.(${tickets.join(',')})`);
+    const existingSet=new Set(existingRows.map(r=>r.ticket));
+    const baru=valid.filter(t=>!existingSet.has(t.ticket));
+    if(!baru.length) return;
+    const payload=baru.map(t=>({
+      ticket:t.ticket,
+      tanggal:(t.closeTime||'').split(' ')[0],
+      waktu_tutup:t.closeTime,
+      sesi:t.sesi,
+      item:t.item||null,
+      jenis:t.type,
+      profit:parseFloat(parseNumBroker(t.profit).toFixed(2)),
+      swap:parseFloat((parseNumBroker(t.swap)||0).toFixed(2))
+    }));
+    // Insert per batch kecil biar gak kena limit URL/payload
+    const batchSize=200;
+    for(let i=0;i<payload.length;i+=batchSize){
+      await api('trade_log','POST',payload.slice(i,i+batchSize));
+    }
+    if(typeof renderSesiAnalysis==='function') renderSesiAnalysis();
+  }catch(e){
+    console.error('Gagal simpan trade_log (Analisis Sesi)', e);
+  }
+}
+
+async function renderSesiAnalysis(){
+  const wrap=document.getElementById('sesiAnalysisWrap');
+  if(!wrap) return;
+  wrap.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:11px">Memuat...</div>';
+  let rows;
+  try{
+    rows=await api('trade_log?select=sesi,profit&order=tanggal.desc&limit=5000');
+  }catch(e){
+    console.error(e);
+    wrap.innerHTML='<div style="text-align:center;padding:20px;color:#F87171;font-size:11px">Gagal memuat data sesi.</div>';
+    return;
+  }
+  if(!rows.length){
+    wrap.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:11px">Belum ada data. Import statement lewat "Ekstrak per Hari" dulu, lalu simpan ke database — tiap transaksi otomatis ditandai sesinya.</div>';
+    return;
+  }
+  const order=['Asia','London','New York'];
+  const stat={};
+  order.forEach(s=>stat[s]={profit:0,count:0,win:0});
+  rows.forEach(r=>{
+    if(!stat[r.sesi]) return;
+    const p=parseFloat(r.profit||0);
+    stat[r.sesi].profit+=p;
+    stat[r.sesi].count++;
+    if(p>=0) stat[r.sesi].win++;
+  });
+  const maxAbs=Math.max(1,...order.map(s=>Math.abs(stat[s].profit)));
+  let html='';
+  order.forEach(s=>{
+    const d=stat[s];
+    const isProfit=d.profit>=0;
+    const color=isProfit?'#4ADE80':'#F87171';
+    const widthPct=Math.round((Math.abs(d.profit)/maxAbs)*100);
+    const winRate=d.count?Math.round((d.win/d.count)*100):0;
+    html+=`<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <div style="font-size:12px;font-weight:700;color:#D4AF37">${s==='Asia'?'🌏':s==='London'?'🇬🇧':'🗽'} ${s}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:${color}">${isProfit?'+':''}${fc(d.profit)}</div>
+      </div>
+      <div style="height:8px;background:var(--bg2);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${widthPct}%;background:${color};border-radius:4px;transition:width .6s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:#8A6B26;margin-top:3px">
+        <span>${d.count} transaksi</span><span>Win rate ${winRate}%</span>
+      </div>
+    </div>`;
+  });
+  const totalTrx=order.reduce((s,k)=>s+stat[k].count,0);
+  html+=`<div style="font-size:9px;color:#5C4818;margin-top:6px;line-height:1.5;border-top:1px solid var(--border);padding-top:10px">Berdasarkan ${totalTrx} transaksi tercatat (WIB) · Asia 05:00–14:00 · London 14:00–19:00 · New York 19:00–05:00.</div>`;
+  wrap.innerHTML=html;
 }
 
 async function simpanStatementAsli(){
