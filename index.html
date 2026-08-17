@@ -360,6 +360,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
+<!-- SKOR DISIPLIN VS PROFIT -->
+<div class="section" id="secSkorDisiplin">
+  <div class="sec-title">📋 Jurnal Emosi & Skor Kepatuhan</div>
+  <div class="graph-card">
+    <div style="font-size:10px;color:#8A6B26;line-height:1.6;margin-bottom:12px">Skor disiplin (0-100) dihitung dari Keyakinan Entry, Kesesuaian Rencana, dan Kualitas Eksekusi yang diisi tiap catat saldo harian. Dikelompokkan biar ketahuan: disiplin tinggi beneran nunjukin profit lebih baik apa nggak.</div>
+    <div id="skorDisiplinStats" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
 <!-- PERFORMANCE VS BENCHMARK -->
 <div class="section" id="secBenchmark">
   <div class="sec-title">📈 Performance vs Benchmark</div>
@@ -2401,6 +2410,33 @@ async function resetRemCycle(){
       <option value="frustasi">😡 Frustasi</option>
     </select>
 
+    <div style="background:var(--bg2);border-radius:10px;padding:14px;margin:10px 0 4px">
+      <div style="font-size:11px;font-weight:700;color:#D4AF37;margin-bottom:2px">📋 Jurnal Emosi & Skor Kepatuhan</div>
+      <div style="font-size:9px;color:#7A5D1F;margin-bottom:10px;line-height:1.5">Isi jujur setiap habis trading — ini buat ukur disiplin kamu, bukan buat orang lain.</div>
+
+      <label class="lbl">Keyakinan Entry (1 = ragu banget, 10 = sangat yakin)</label>
+      <input type="range" min="1" max="10" value="5" id="inpKeyakinan" style="width:100%" oninput="updateSkorDisiplinPreview()">
+      <div style="text-align:center;font-size:12px;color:#C8A84B;font-weight:700;margin-bottom:8px" id="inpKeyakinanVal">5</div>
+
+      <label class="lbl">Apakah Sesuai Rencana Trading?</label>
+      <select class="inp" id="inpSesuaiRencana" onchange="updateSkorDisiplinPreview()">
+        <option value="ya">✅ Ya, sesuai rencana</option>
+        <option value="tidak">❌ Tidak, melenceng dari rencana</option>
+      </select>
+
+      <label class="lbl">Kualitas Eksekusi</label>
+      <select class="inp" id="inpKualitasEksekusi" onchange="updateSkorDisiplinPreview()">
+        <option value="buruk">😣 Buruk</option>
+        <option value="sedang" selected>😐 Sedang</option>
+        <option value="baik">😎 Baik</option>
+      </select>
+
+      <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">Skor Disiplin Hari Ini</div>
+        <div style="font-size:24px;font-weight:800;color:#C8A84B" id="inpSkorDisiplinVal">67</div>
+      </div>
+    </div>
+
     <label class="lbl">Saldo MT4 (tulis angka dari MT4)</label>
     <input class="inp" type="number" id="inpSaldo" placeholder="565.48" step="0.01" oninput="previewSaldo()">
     <div class="preview-box" id="pvBox">
@@ -3164,6 +3200,7 @@ async function loadAll(){
   loadStatPair();
   loadRRAnalysis();
   loadMoodStats();
+  loadSkorDisiplinStats();
   renderKalender();
   computeDrawdownMap();
   renderDDKalender();
@@ -3182,29 +3219,56 @@ async function loadAll(){
   await loadProfilRisiko();
   await loadRemProfitRugi();
 }
-let hasPairCol=true, hasMoodCol=true;
+// ══════════════════════════════════════════
+// JURNAL EMOSI DENGAN SKOR KEPATUHAN (Discipline Score)
+// Skor 0-100, rata-rata tertimbang dari 3 komponen:
+// Keyakinan Entry (1-10 -> x10), Sesuai Rencana (ya=100/tidak=0), Kualitas Eksekusi (buruk=0/sedang=50/baik=100)
+// ══════════════════════════════════════════
+const kualitasEksekusiVal={buruk:0, sedang:50, baik:100};
+function hitungSkorDisiplin(keyakinan, sesuaiRencana, kualitas){
+  const k=Math.max(1,Math.min(10,parseFloat(keyakinan)||5))*10;
+  const r=sesuaiRencana==='ya'?100:0;
+  const e=kualitasEksekusiVal[kualitas]!==undefined?kualitasEksekusiVal[kualitas]:50;
+  return Math.round((k+r+e)/3);
+}
+function updateSkorDisiplinPreview(){
+  const kEl=document.getElementById('inpKeyakinan');
+  const rEl=document.getElementById('inpSesuaiRencana');
+  const eEl=document.getElementById('inpKualitasEksekusi');
+  if(!kEl||!rEl||!eEl) return;
+  document.getElementById('inpKeyakinanVal').textContent=kEl.value;
+  const skor=hitungSkorDisiplin(kEl.value, rEl.value, eEl.value);
+  const skorEl=document.getElementById('inpSkorDisiplinVal');
+  skorEl.textContent=skor;
+  skorEl.style.color= skor>=70?'#4ADE80' : skor>=40?'#C8A84B' : '#F87171';
+}
+
+let hasPairCol=true, hasMoodCol=true, hasDisiplinCol=true;
 async function fetchSharedSaldoData(){
   const base='tanggal,profit,saldo_mt4,gross_profit,gross_loss,jumlah_signal';
-  try{
-    allSaldoData=await api(`saldo_harian?select=${base},pair,mood&order=tanggal.asc`);
-    hasPairCol=true; hasMoodCol=true;
-    return;
-  }catch(e1){}
-  try{
-    allSaldoData=await api(`saldo_harian?select=${base},pair&order=tanggal.asc`);
-    allSaldoData=allSaldoData.map(r=>({...r,mood:null}));
-    hasPairCol=true; hasMoodCol=false;
-    return;
-  }catch(e2){}
-  try{
-    allSaldoData=await api(`saldo_harian?select=${base},mood&order=tanggal.asc`);
-    allSaldoData=allSaldoData.map(r=>({...r,pair:'XAUUSD'}));
-    hasPairCol=false; hasMoodCol=true;
-    return;
-  }catch(e3){}
-  allSaldoData=await api(`saldo_harian?select=${base}&order=tanggal.asc`);
-  allSaldoData=allSaldoData.map(r=>({...r,pair:'XAUUSD',mood:null}));
-  hasPairCol=false; hasMoodCol=false;
+  const disCols='keyakinan_entry,sesuai_rencana,kualitas_eksekusi,skor_disiplin';
+  const combos=[
+    {sel:`pair,mood,${disCols}`, pair:true, mood:true, dis:true},
+    {sel:`pair,mood`, pair:true, mood:true, dis:false},
+    {sel:`pair,${disCols}`, pair:true, mood:false, dis:true},
+    {sel:`mood,${disCols}`, pair:false, mood:true, dis:true},
+    {sel:`pair`, pair:true, mood:false, dis:false},
+    {sel:`mood`, pair:false, mood:true, dis:false},
+    {sel:disCols, pair:false, mood:false, dis:true},
+    {sel:'', pair:false, mood:false, dis:false}
+  ];
+  for(const c of combos){
+    try{
+      const sel=c.sel?`${base},${c.sel}`:base;
+      let rows=await api(`saldo_harian?select=${sel}&order=tanggal.asc`);
+      if(!c.pair) rows=rows.map(r=>({...r,pair:'XAUUSD'}));
+      if(!c.mood) rows=rows.map(r=>({...r,mood:null}));
+      if(!c.dis) rows=rows.map(r=>({...r,keyakinan_entry:null,sesuai_rencana:null,kualitas_eksekusi:null,skor_disiplin:null}));
+      allSaldoData=rows;
+      hasPairCol=c.pair; hasMoodCol=c.mood; hasDisiplinCol=c.dis;
+      return;
+    }catch(e){}
+  }
 }
 
 // ══ BALANCE HERO ══
@@ -3729,6 +3793,13 @@ function editRiwayatHarian(tanggal){
   if(pairEl) pairEl.value=r.pair||'XAUUSD';
   const moodEl=document.getElementById('inpMood');
   if(moodEl && r.mood) moodEl.value=r.mood;
+  const keyakinanEl=document.getElementById('inpKeyakinan');
+  if(keyakinanEl) keyakinanEl.value=r.keyakinan_entry||5;
+  const sesuaiEl=document.getElementById('inpSesuaiRencana');
+  if(sesuaiEl && r.sesuai_rencana) sesuaiEl.value=r.sesuai_rencana;
+  const kualitasEl=document.getElementById('inpKualitasEksekusi');
+  if(kualitasEl && r.kualitas_eksekusi) kualitasEl.value=r.kualitas_eksekusi;
+  updateSkorDisiplinPreview();
 
   const p=parseFloat(r.profit||0);
   setPL(p<0?'loss':'profit');
@@ -7375,6 +7446,10 @@ async function simpanSaldo(){
   }
   const pair=document.getElementById('inpPair').value||'XAUUSD';
   const mood=document.getElementById('inpMood').value||'biasa';
+  const keyakinanEntry=parseInt(document.getElementById('inpKeyakinan').value)||5;
+  const sesuaiRencana=document.getElementById('inpSesuaiRencana').value||'ya';
+  const kualitasEksekusi=document.getElementById('inpKualitasEksekusi').value||'sedang';
+  const skorDisiplin=hitungSkorDisiplin(keyakinanEntry, sesuaiRencana, kualitasEksekusi);
   if(!saldo){toast('❌ Isi saldo MT4');return;}
   if(saldo<0){toast('❌ Saldo MT4 gak boleh negatif');return;}
   if(!isFinite(saldo)||!isFinite(profit)){toast('❌ Angka gak valid');return;}
@@ -7389,7 +7464,11 @@ async function simpanSaldo(){
       gross_loss: grossLoss||null,
       swap: document.getElementById('inpSwap').value.trim()!==''?swap:null,
       pair: pair,
-      mood: mood
+      mood: mood,
+      keyakinan_entry: keyakinanEntry,
+      sesuai_rencana: sesuaiRencana,
+      kualitas_eksekusi: kualitasEksekusi,
+      skor_disiplin: skorDisiplin
     };
     let savedOk=false, moodSaved=true, swapSaved=true;
     try{
@@ -7398,9 +7477,9 @@ async function simpanSaldo(){
       else await api('saldo_harian','POST',{tanggal:tgl,...bodyData});
       savedOk=true;
     }catch(errMood){
-      // Kemungkinan kolom 'mood' dan/atau 'swap' belum ada di Supabase — coba lagi tanpa keduanya
+      // Kemungkinan kolom 'mood'/'swap'/kolom skor disiplin belum ada di Supabase — coba lagi tanpa itu semua
       moodSaved=false; swapSaved=false;
-      const { mood:_drop, swap:_drop2, ...bodyNoMood } = bodyData;
+      const { mood:_drop, swap:_drop2, keyakinan_entry:_d3, sesuai_rencana:_d4, kualitas_eksekusi:_d5, skor_disiplin:_d6, ...bodyNoMood } = bodyData;
       try{
         const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
         if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyNoMood);
@@ -7416,7 +7495,7 @@ async function simpanSaldo(){
       await syncKasFromProfit(tgl, profit);
     }
 
-    toast(savedOk&&moodSaved&&swapSaved?'✅ Catatan tersimpan':(savedOk?'⚠️ Tersimpan, tapi kolom mood/swap belum ada di Supabase (data lain tetap tersimpan)':'❌ Gagal simpan'));
+    toast(savedOk&&moodSaved&&swapSaved?'✅ Catatan tersimpan':(savedOk?'⚠️ Tersimpan, tapi kolom mood/swap/skor disiplin belum ada di Supabase (data lain tetap tersimpan)':'❌ Gagal simpan'));
     document.getElementById('inpSaldo').value='';
     document.getElementById('inpProfit').value='';
     document.getElementById('inpSignal').value='';
@@ -8541,6 +8620,79 @@ async function loadMoodStats(){
   }catch(e){
     console.error(e);
     el.innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat data mood.</div>';
+  }
+}
+
+// ══ JURNAL EMOSI & SKOR DISIPLIN (Discipline Score vs Profit) ══
+async function loadSkorDisiplinStats(){
+  const el=document.getElementById('skorDisiplinStats');
+  if(!el) return;
+  try{
+    const rows=allSaldoData||[];
+    const warnHtml = !hasDisiplinCol
+      ? '<div style="font-size:9px;color:#F87171;margin-top:10px;line-height:1.6">⚠️ Kolom skor disiplin (keyakinan_entry, sesuai_rencana, kualitas_eksekusi, skor_disiplin) belum ada di tabel saldo_harian (Supabase). Tambahkan dulu supaya fitur ini bisa mencatat.</div>'
+      : '';
+    const withSkor=rows.filter(r=>r.skor_disiplin!=null);
+    if(!withSkor.length){
+      el.innerHTML='<div style="padding:14px">Belum ada data skor disiplin tercatat. Isi "Jurnal Emosi & Skor Kepatuhan" waktu input saldo harian di Admin Panel.</div>'+warnHtml;
+      return;
+    }
+    // Kelompokkan jadi 3 bucket: Rendah (0-39), Sedang (40-69), Tinggi (70-100)
+    const buckets=[
+      {key:'tinggi', label:'🏆 Disiplin Tinggi', range:'70-100', test:s=>s>=70},
+      {key:'sedang', label:'⚖️ Disiplin Sedang', range:'40-69', test:s=>s>=40&&s<70},
+      {key:'rendah', label:'⚠️ Disiplin Rendah', range:'0-39', test:s=>s<40}
+    ];
+    const groups={};
+    buckets.forEach(b=>groups[b.key]={total:0,count:0,win:0});
+    withSkor.forEach(r=>{
+      const s=parseFloat(r.skor_disiplin);
+      const p=parseFloat(r.profit||0);
+      const b=buckets.find(x=>x.test(s));
+      if(!b) return;
+      groups[b.key].total+=p;
+      groups[b.key].count++;
+      if(p>0) groups[b.key].win++;
+    });
+    const avgSkor=withSkor.reduce((s,r)=>s+parseFloat(r.skor_disiplin),0)/withSkor.length;
+    let html=`<div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">Rata-rata Skor Disiplin</div>
+      <div style="font-size:28px;font-weight:800;color:${avgSkor>=70?'#4ADE80':avgSkor>=40?'#C8A84B':'#F87171'}">${avgSkor.toFixed(0)}</div>
+      <div style="font-size:9px;color:#7A5D1F">${withSkor.length} hari tercatat</div>
+    </div>`;
+    html+='<div style="display:flex;flex-direction:column;gap:8px">';
+    buckets.forEach(b=>{
+      const g=groups[b.key];
+      if(!g.count){
+        html+=`<div style="background:var(--bg2);border-radius:10px;padding:12px 14px;opacity:.5">
+          <div style="font-size:12px;color:#8A6B26;font-weight:700">${b.label} (${b.range})</div>
+          <div style="font-size:9px;color:#7A5D1F;margin-top:2px">Belum ada data di rentang ini</div>
+        </div>`;
+        return;
+      }
+      const avg=g.total/g.count;
+      const winRate=(g.win/g.count*100).toFixed(0);
+      const color=avg>=0?'#4ADE80':'#F87171';
+      html+=`<div style="background:var(--bg2);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+        <div style="text-align:left">
+          <div style="font-size:13px;color:#D4AF37;font-weight:700">${b.label}</div>
+          <div style="font-size:9px;color:#7A5D1F;margin-top:2px">${g.count} hari (${b.range}) · Win Rate ${winRate}%</div>
+        </div>
+        <div style="font-size:15px;font-weight:700;color:${color}">${avg>=0?'+':''}${fc(avg)}</div>
+      </div>`;
+    });
+    html+='</div>';
+    if(groups.tinggi.count && groups.rendah.count){
+      const avgTinggi=groups.tinggi.total/groups.tinggi.count;
+      const avgRendah=groups.rendah.total/groups.rendah.count;
+      const selisih=avgTinggi-avgRendah;
+      html+=`<div style="font-size:10px;color:#7A5D1F;margin-top:12px;text-align:center;line-height:1.6">Hari dengan disiplin tinggi rata-rata profitnya <b style="color:${selisih>=0?'#4ADE80':'#F87171'}">${selisih>=0?'lebih baik':'lebih buruk'} ${fc(Math.abs(selisih))}</b> dibanding hari disiplin rendah.</div>`;
+    }
+    html+=warnHtml;
+    el.innerHTML=html;
+  }catch(e){
+    console.error(e);
+    el.innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat data skor disiplin.</div>';
   }
 }
 
