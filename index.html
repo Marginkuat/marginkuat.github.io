@@ -1324,6 +1324,7 @@ async function loadProfilRisiko(){
     if(rows && rows.length && PROFIL_RISIKO_META[rows[0].value]) profilRisikoAktif=rows[0].value;
   }catch(e){ /* pakai default kalau gagal load */ }
   renderLabelProfilRisiko();
+  renderInvCalcDisclaimer();
 }
 function renderLabelProfilRisiko(){
   const el=document.getElementById('labelProfilRisiko');
@@ -1348,11 +1349,28 @@ async function setProfilRisiko(kode){
     else await api('app_settings','POST',{key:'profil_risiko_aktif',value:kode});
     profilRisikoAktif=kode;
     renderLabelProfilRisiko();
+    renderInvCalcDisclaimer();
+    if(typeof renderInvestorCalc==='function') renderInvestorCalc();
     toast(`✅ Label diganti ke "${PROFIL_RISIKO_META[kode].judul}" — langsung tampil ke semua pengunjung`);
   }catch(e){
     console.error(e);
     toast('❌ Gagal simpan profil risiko');
   }
+}
+// Teks disclaimer investor: OTOMATIS ikut profil risiko MT4 yang lagi aktif (bukan hardcode lagi).
+// "akun ini" = profil aktif; investor selalu ditaruh di akun standard 2%, jadi kalau MT4 lagi
+// pakai profil di atas 2%, disclaimer harus jelas beda risknya sama tempat modal investor.
+function invCalcRiskDisclaimerHtml(varian){
+  const p=PROFIL_RISIKO_META[profilRisikoAktif] || PROFIL_RISIKO_META.bahaya;
+  const labelSingkat=p.sub.toLowerCase(); // mis. "risk 10-13% per trade"
+  if(varian==='ringkas'){
+    return `Data historis di atas berasal dari <b>akun sen (${labelSingkat})</b>, bukan dari <b>akun standard (risk 2%)</b> tempat modal investor akan ditempatkan. Belum bisa dijadikan acuan sampai ada cukup data dari akun standard.`;
+  }
+  return `Data historis di kalkulator ini berasal dari <b>akun sen (${labelSingkat})</b>, bukan dari <b>akun standard (risk 2%)</b> tempat modal investor akan ditempatkan. Angka di bawah <b>belum bisa dijadikan acuan</b> sampai ada cukup data historis dari akun standard.`;
+}
+function renderInvCalcDisclaimer(){
+  const el=document.getElementById('invCalcDisclaimerRisk');
+  if(el) el.innerHTML=invCalcRiskDisclaimerHtml();
 }
 
 let modeBahayaAktif=false;
@@ -2051,7 +2069,7 @@ async function resetRemCycle(){
   <div class="sec-title">🧮 Investor Calculator</div>
   <div class="graph-card" style="border:1.5px solid #F87171;background:rgba(248,113,113,0.08);margin-bottom:12px">
     <div style="font-size:10px;color:#F87171;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚠️ Disclaimer Penting</div>
-    <div style="font-size:11px;color:#FCA5A5;line-height:1.6">Data historis di kalkulator ini berasal dari <b>akun sen (risk 5%)</b>, bukan dari <b>akun standard (risk 2%)</b> tempat modal investor akan ditempatkan. Angka di bawah <b>belum bisa dijadikan acuan</b> sampai ada cukup data historis dari akun standard.</div>
+    <div style="font-size:11px;color:#FCA5A5;line-height:1.6" id="invCalcDisclaimerRisk">Memuat...</div>
   </div>
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Simulasi potensi return berdasarkan performa historis — investor bisa coba sendiri skenario investasinya.</div>
@@ -6044,7 +6062,7 @@ function renderInvestorCalc(){
     ${row('🚀 Skenario Optimis', stats.best, bestVal, '#4ADE80')}
     ${row('📊 Skenario Rata-rata', stats.avg, avgVal, '#D4AF37')}
     ${row('⚠️ Skenario Konservatif', stats.worst, worstVal, '#F87171')}
-    <div style="font-size:9px;color:#F87171;text-align:center;margin-top:10px;line-height:1.6;font-weight:700">⚠️ Data historis di atas berasal dari akun sen (risk 5%), bukan dari akun standard (risk 2%) tempat modal investor akan ditempatkan. Belum bisa dijadikan acuan sampai ada cukup data dari akun standard.</div>
+    <div style="font-size:9px;color:#F87171;text-align:center;margin-top:10px;line-height:1.6;font-weight:700">⚠️ ${invCalcRiskDisclaimerHtml('ringkas')}</div>
     <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:6px;line-height:1.6">Ini simulasi berdasarkan performa historis, BUKAN jaminan atau janji return di masa depan. Trading forex/emas/kripto memiliki risiko, termasuk risiko kerugian modal.</div>`;
 }
 
