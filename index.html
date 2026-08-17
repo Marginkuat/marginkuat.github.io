@@ -5747,9 +5747,9 @@ function doInvestorLogout(){
   toast('↩ Keluar dari tampilan Investor');
   renderInvestorDashboard();
 }
-function investorCardHtml(inv, totalProfitAllTime, totalModalInvestorPool, showHapus, rankInfo){
+function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHapus, rankInfo){
   const sharePct = totalModalInvestorPool>0 ? (inv.modal/totalModalInvestorPool*100) : 0;
-  const profitShare = totalProfitAllTime * (sharePct/100);
+  const profitShare = profitSejakGabung * (sharePct/100);
   const currentVal = parseFloat(inv.modal||0) + profitShare;
   const roi = inv.modal>0 ? (profitShare/inv.modal*100) : 0;
   const joinDate=new Date(inv.tanggal);
@@ -5777,6 +5777,13 @@ function investorCardHtml(inv, totalProfitAllTime, totalModalInvestorPool, showH
       ${rankHtml?`<div style="font-size:9px;color:#7A5D1F;margin-top:4px">${rankHtml}</div>`:''}
       ${showHapus?`<div style="text-align:right;margin-top:6px"><span onclick="hapusInvestor('${inv.id}')" style="font-size:9px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Hapus</span></div>`:''}
     </div>`;
+}
+// Hitung profit trading HANYA sejak tanggal investor gabung (bukan all-time) — biar investor baru
+// nggak ikut kebagian profit dari sebelum dia nyetor modal.
+function profitSejakTanggal(rows, tanggalGabung){
+  if(!tanggalGabung) return 0;
+  const mulai=new Date(tanggalGabung);
+  return (rows||[]).filter(r=>new Date(r.tanggal) >= mulai).reduce((s,r)=>s+parseFloat(r.profit||0),0);
 }
 async function renderInvestorDashboard(){
   const loginBox=document.getElementById('investorLoginBox');
@@ -5834,9 +5841,10 @@ async function renderInvestorDashboard(){
     const sorted=investors.slice().sort((a,b)=>parseFloat(b.modal||0)-parseFloat(a.modal||0));
     investors.forEach(inv=>{
       const rank=sorted.findIndex(v=>v.id===inv.id)+1;
-      html+=investorCardHtml(inv, totalProfitAllTime, totalPoolCapital, true, {rank, total:investors.length});
+      const profitSejakGabung=profitSejakTanggal(rows, inv.tanggal);
+      html+=investorCardHtml(inv, profitSejakGabung, totalPoolCapital, true, {rank, total:investors.length});
     });
-    html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal (kamu + investor) terhadap total dana yang ditradingkan — bukan kalkulasi bagi hasil resmi/legal.</div>';
+    html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal (kamu + investor) terhadap total profit SEJAK investor bergabung — bukan kalkulasi bagi hasil resmi/legal.</div>';
     dashBox.innerHTML=html;
     return;
   }
@@ -5886,8 +5894,8 @@ async function renderInvestorDashboard(){
       </div>
       <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">Total dana gabungan bersifat privat — hanya persentase performa yang ditampilkan</div>
     </div>`;
-    html+=investorCardHtml(found, totalProfitAllTime, totalPoolCapital, false, {rank:found.rank_int, total:found.total_investors});
-    html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal terhadap total dana yang ditradingkan — bukan kalkulasi bagi hasil resmi/legal.</div>';
+    html+=investorCardHtml(found, profitSejakTanggal(rows2, found.tanggal), totalPoolCapital, false, {rank:found.rank_int, total:found.total_investors});
+    html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal terhadap total profit SEJAK kamu bergabung — bukan kalkulasi bagi hasil resmi/legal.</div>';
     dashBox.innerHTML=html;
     return;
   }
