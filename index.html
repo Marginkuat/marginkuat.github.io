@@ -1422,6 +1422,262 @@ async function toggleModeBahaya(){
 }
 </script>
 
+<!-- REM PROFIT & RUGI — ANALIS TRADING FAMILY (target tetap ±1000 pips, dipatenkan) -->
+<div class="section" id="secRemProfitRugi">
+  <div class="sec-title">🛑 Rem Profit & Rugi — Analis Trading Family</div>
+  <div class="graph-card">
+    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.6">Rem otomatis khusus Analis Trading Family — berlaku juga kalau MT4 pribadi mau ikut aturan yang sama. Satuan di sini "VP" (pips yang sudah dinormalisasi): Gold & Forex disamakan nilainya, pakai konversi yang sama dengan Kalkulator Risiko di atas.</div>
+
+    <div style="background:#1E1B0F;border:2px solid #D4AF37;border-radius:12px;padding:12px;text-align:center;margin-bottom:14px">
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">🔒 Target Tetap (Dipatenkan)</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:800;color:#D4AF37;margin-top:4px">+1000 / −1000 PIPS</div>
+      <div style="font-size:9px;color:#5C4818;margin-top:2px">Profit ATAU Rugi tembus 1000 pips (VP) → WAJIB berhenti. Angka ini gak akan diubah-ubah.</div>
+    </div>
+
+    <div id="remStatusOut"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+
+    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">➕ Catat Hasil (Admin)</div>
+      <div class="calc-row">
+        <div>
+          <label class="lbl">Tanggal</label>
+          <input class="inp" type="date" id="remTgl">
+        </div>
+        <div>
+          <label class="lbl">Pair</label>
+          <select class="inp" id="remPair">
+            <option value="XAUUSD">XAUUSD (Gold)</option>
+            <option value="AUDUSD">AUDUSD</option>
+            <option value="EURGBP">EURGBP</option>
+            <option value="NZDUSD">NZDUSD</option>
+            <option value="USDCHF">USDCHF</option>
+            <option value="AUDJPY">AUDJPY</option>
+            <option value="CADJPY">CADJPY</option>
+            <option value="EURUSD">EURUSD</option>
+            <option value="GBPUSD">GBPUSD</option>
+            <option value="NZDJPY">NZDJPY</option>
+            <option value="USDCAD">USDCAD</option>
+            <option value="CHFJPY">CHFJPY</option>
+            <option value="EURJPY">EURJPY</option>
+            <option value="GBPJPY">GBPJPY</option>
+            <option value="EURNZD">EURNZD</option>
+            <option value="USDJPY">USDJPY</option>
+            <option value="BTCUSD">BTCUSD</option>
+          </select>
+        </div>
+      </div>
+      <div class="calc-row">
+        <div>
+          <label class="lbl">Hasil</label>
+          <div class="calc-seg" id="remArahSeg">
+            <button data-arah="profit" class="active">📈 Profit</button>
+            <button data-arah="rugi">📉 Rugi</button>
+          </div>
+        </div>
+        <div>
+          <label class="lbl">Pips (mentah, pair di atas)</label>
+          <input class="inp" type="number" id="remPips" placeholder="cth: 150" step="0.1" min="0">
+        </div>
+      </div>
+      <input class="inp" id="remKet" placeholder="Keterangan (opsional) — cth: sinyal pagi, MT4 pribadi, dll">
+      <div id="remPreview" style="font-size:10px;color:#5C4818;margin:-4px 0 10px;min-height:14px"></div>
+      <button class="btn btn-p" onclick="simpanRemEntry()">💾 Catat</button>
+      <button class="btn btn-ghost" onclick="resetRemCycle()">🔄 Reset Siklus (mulai hitung ulang dari 0)</button>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📜 Riwayat Siklus Ini</div>
+      <div id="remListWrap"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const remArahBtns=document.querySelectorAll('#remArahSeg button');
+  remArahBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      remArahBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      remArahDipilih=btn.dataset.arah;
+    });
+  });
+  const remPairEl=document.getElementById('remPair'), remPipsEl=document.getElementById('remPips');
+  if(remPairEl) remPairEl.addEventListener('change', updateRemPreview);
+  if(remPipsEl) remPipsEl.addEventListener('input', updateRemPreview);
+})();
+</script>
+
+<script>
+// ══ REM PROFIT & RUGI — ANALIS TRADING FAMILY ══
+// Target DIPATENKAN, gak boleh diubah dari UI mana pun: ±1000 VP (pips yang sudah dinormalisasi).
+// VP_MULTIPLIER di sini SENGAJA duplikat dari yang di Kalkulator Risiko (nilainya sama persis) —
+// soalnya yang di sana ke-lock di dalam closure kalkulator itu, gak bisa dipakai bareng dari sini.
+const REM_TARGET_VP=1000;
+const REM_VP_MULTIPLIER={
+  XAUUSD:0.2,
+  AUDUSD:2, EURGBP:2, NZDUSD:2, USDCHF:2,
+  AUDJPY:1.5, CADJPY:1.5, EURUSD:1.5, GBPUSD:1.5, NZDJPY:1.5, USDCAD:1.5,
+  CHFJPY:1, EURJPY:1, GBPJPY:1, EURNZD:1, USDJPY:1,
+  BTCUSD:1
+};
+let remArahDipilih='profit';
+let remEntries=[], remSiklusAfterId=0, remTableMissing=false;
+
+function updateRemPreview(){
+  const el=document.getElementById('remPreview');
+  if(!el)return;
+  const pairEl=document.getElementById('remPair'), pipsEl=document.getElementById('remPips');
+  if(!pairEl||!pipsEl)return;
+  const pips=parseFloat(pipsEl.value);
+  if(!pips || pips<=0){ el.textContent=''; return; }
+  const mult=REM_VP_MULTIPLIER[pairEl.value]||1;
+  const vp=Math.round(pips*mult*100)/100;
+  el.textContent=`= ${pips} pips ${pairEl.value} × ${mult} = ${vp} VP`;
+}
+
+async function loadRemProfitRugi(){
+  try{
+    remEntries=await api('rem_entries?select=*&order=id.asc');
+    remTableMissing=false;
+  }catch(e){
+    remEntries=[]; remTableMissing=true;
+  }
+  try{
+    const rows=await api('app_settings?select=value&key=eq.rem_siklus_after_id');
+    remSiklusAfterId = rows && rows.length ? (parseInt(rows[0].value)||0) : 0;
+  }catch(e){
+    remSiklusAfterId=0;
+  }
+  renderRemStatus();
+  renderRemList();
+}
+
+function currentRemCycle(){
+  return remEntries.filter(e=>e.id>remSiklusAfterId);
+}
+
+function renderRemStatus(){
+  const el=document.getElementById('remStatusOut');
+  if(!el)return;
+  if(remTableMissing){
+    el.innerHTML=`<div style="font-size:10px;color:#F87171;line-height:1.6;text-align:center">⚠️ Tabel <code>rem_entries</code> belum ada di Supabase. Minta yang bikin situs ini tambahkan tabelnya dulu biar Rem ini bisa mulai mencatat.</div>`;
+    return;
+  }
+  const cycle=currentRemCycle();
+  const totalProfitVP=cycle.filter(e=>e.arah==='profit').reduce((s,e)=>s+parseFloat(e.vp||0),0);
+  const totalRugiVP=cycle.filter(e=>e.arah==='rugi').reduce((s,e)=>s+parseFloat(e.vp||0),0);
+  const net=totalProfitVP-totalRugiVP;
+
+  let statusHtml;
+  if(net>=REM_TARGET_VP){
+    statusHtml=`<div style="text-align:center;padding:6px 0">
+      <div style="font-size:14px;font-weight:900;color:#4ADE80">🛑 STOP — TARGET PROFIT TERCAPAI</div>
+      <div style="font-size:9px;color:#8A6B26;margin-top:4px">Net siklus ini: <b style="color:#4ADE80">+${net.toFixed(1)} VP</b>. Sesuai aturan tetap, WAJIB berhenti trading sampai siklus di-reset.</div>
+    </div>`;
+  }else if(net<=-REM_TARGET_VP){
+    statusHtml=`<div style="text-align:center;padding:6px 0">
+      <div style="font-size:14px;font-weight:900;color:#F87171">🛑 STOP — RUGI MAKSIMAL TERCAPAI</div>
+      <div style="font-size:9px;color:#8A6B26;margin-top:4px">Net siklus ini: <b style="color:#F87171">${net.toFixed(1)} VP</b>. Sesuai aturan tetap, WAJIB berhenti trading sampai siklus di-reset.</div>
+    </div>`;
+  }else{
+    const pctProfit=Math.min(100, Math.max(0, net/REM_TARGET_VP*100));
+    const pctRugi=Math.min(100, Math.max(0, -net/REM_TARGET_VP*100));
+    statusHtml=`<div style="text-align:center;padding:6px 0 10px">
+      <div style="font-size:14px;font-weight:900;color:#D4AF37">✅ MASIH BOLEH LANJUT</div>
+      <div style="font-size:9px;color:#8A6B26;margin-top:2px">Net siklus ini: <b style="color:${net>=0?'#4ADE80':'#F87171'}">${net>=0?'+':''}${net.toFixed(1)} VP</b> dari target ±${REM_TARGET_VP} VP</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <div style="flex:1">
+        <div style="font-size:8px;color:#5C4818;margin-bottom:3px">Menuju Profit +${REM_TARGET_VP}</div>
+        <div class="progress-bar"><div style="height:100%;width:${pctProfit}%;background:linear-gradient(135deg,#16A34A,#4ADE80);border-radius:3px"></div></div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:8px;color:#5C4818;margin-bottom:3px">Menuju Rugi -${REM_TARGET_VP}</div>
+        <div class="progress-bar"><div style="height:100%;width:${pctRugi}%;background:linear-gradient(135deg,#DC2626,#F87171);border-radius:3px"></div></div>
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML=`${statusHtml}
+    <div class="bal-grid" style="margin-top:14px">
+      <div class="bal-box"><div class="bal-box-val cg">${totalProfitVP.toFixed(1)}</div><div class="bal-box-lbl">Total Profit VP</div></div>
+      <div class="bal-box"><div class="bal-box-val cr">${totalRugiVP.toFixed(1)}</div><div class="bal-box-lbl">Total Rugi VP</div></div>
+      <div class="bal-box"><div class="bal-box-val" style="color:${net>=0?'#4ADE80':'#F87171'}">${net>=0?'+':''}${net.toFixed(1)}</div><div class="bal-box-lbl">Net VP</div></div>
+    </div>
+    <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">${cycle.length} entri dicatat di siklus ini</div>`;
+}
+
+function renderRemList(){
+  const wrap=document.getElementById('remListWrap');
+  if(!wrap)return;
+  if(remTableMissing){ wrap.innerHTML=''; return; }
+  const cycle=[...currentRemCycle()].sort((a,b)=>b.id-a.id);
+  if(!cycle.length){ wrap.innerHTML=`<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Belum ada entri di siklus ini.</div>`; return; }
+  wrap.innerHTML=cycle.map(e=>{
+    const warna=e.arah==='profit'?'#4ADE80':'#F87171';
+    const tanda=e.arah==='profit'?'+':'-';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:6px 0;border-bottom:1px solid var(--border);gap:8px">
+      <span style="color:#8A6B26">${fd(e.tanggal)} · ${escapeHtml(e.pair||'')}${e.keterangan?' · '+escapeHtml(e.keterangan):''}</span>
+      <span style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <b style="color:${warna}">${tanda}${parseFloat(e.vp||0).toFixed(1)} VP</b>
+        ${isAdmin?`<span onclick="hapusRemEntry(${e.id})" style="cursor:pointer;font-size:11px">🗑️</span>`:''}
+      </span>
+    </div>`;
+  }).join('');
+}
+
+async function simpanRemEntry(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const tgl=document.getElementById('remTgl').value;
+  const pair=document.getElementById('remPair').value;
+  const pips=parseFloat(document.getElementById('remPips').value);
+  const ket=document.getElementById('remKet').value.trim();
+  if(!tgl){toast('❌ Isi tanggal dulu');return;}
+  if(!pips || pips<=0){toast('❌ Isi pips (angka positif)');return;}
+  const vp=Math.round(pips*(REM_VP_MULTIPLIER[pair]||1)*100)/100;
+  try{
+    await api('rem_entries','POST',{tanggal:tgl, pair, arah:remArahDipilih, pips_mentah:pips, vp, keterangan:ket||null});
+    toast(`✅ Tercatat: ${remArahDipilih==='profit'?'+':'-'}${vp} VP`);
+    document.getElementById('remPips').value='';
+    document.getElementById('remKet').value='';
+    document.getElementById('remPreview').textContent='';
+    await loadRemProfitRugi();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan — pastikan tabel "rem_entries" sudah dibuat di Supabase');
+  }
+}
+
+async function hapusRemEntry(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!confirm('Hapus entri ini?'))return;
+  try{
+    await api(`rem_entries?id=eq.${id}`,'DELETE');
+    toast('🗑️ Entri dihapus');
+    await loadRemProfitRugi();
+  }catch(e){ toast('❌ Gagal hapus'); }
+}
+
+async function resetRemCycle(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!confirm('Reset siklus? Entri lama TETAP tersimpan di database (buat riwayat/audit), tapi hitungan Net VP mulai dari 0 lagi.'))return;
+  const maxId = remEntries.length ? Math.max(...remEntries.map(e=>e.id)) : 0;
+  try{
+    const existing=await api('app_settings?select=key&key=eq.rem_siklus_after_id');
+    if(existing.length) await api('app_settings?key=eq.rem_siklus_after_id','PATCH',{value:String(maxId)});
+    else await api('app_settings','POST',{key:'rem_siklus_after_id',value:String(maxId)});
+    remSiklusAfterId=maxId;
+    renderRemStatus();
+    renderRemList();
+    toast('🔄 Siklus direset — mulai hitung ulang dari 0');
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal reset siklus');
+  }
+}
+</script>
+
 <!-- GRAFIK BULANAN -->
 <div class="section" id="secGrafikBulanan">
   <div class="sec-title">📈 Grafik Kinerja Bulanan</div>
@@ -2594,6 +2850,7 @@ const SEARCH_MENU=[
   {id:'secKalkulator', icon:'🧮', label:'Kalkulator Agresif — Level 3%', desc:'Risk dikunci flat 3% per level, hitung lot, SL/TP, risk $, breakeven win rate', kw:'kalkulator agresif 3% risiko lot sl tp stop loss take profit breakeven level', cat:'kalkulator'},
   {id:'secKalkulatorFlat2', icon:'🧮', label:'Kalkulator Umum — Flat 2%', desc:'Hitung lot ulang tiap saat dari saldo, risk dikunci 2% (paling aman)', kw:'kalkulator umum flat 2% real time saldo lot risiko dua persen normal standar', cat:'kalkulator'},
   {id:'secKalkulatorBahaya', icon:'🔥', label:'Kalkulator Bahaya — Level 10-13%', desc:'Risk 10-13% per trade, level naik/turun rekursif, kalah 3x turun level', kw:'kalkulator bahaya 10% 13% level agresif risiko tinggi turun level kalah 3x', cat:'kalkulator'},
+  {id:'secRemProfitRugi', icon:'🛑', label:'Rem Profit & Rugi — Analis Trading Family', desc:'Target tetap ±1000 VP (pips dinormalisasi) — wajib berhenti kalau tercapai', kw:'rem profit rugi analis trading family stop 1000 pips vp target tetap berhenti sinyal', cat:'kalkulator'},
   {id:'secSewaBeli', icon:'🏠', label:'What-If: Sewa vs Beli Properti', desc:'Simulasi mana lebih untung, sewa atau KPR', kw:'sewa beli properti kpr rumah what if simulasi', cat:'kalkulator'},
   {id:'secInvestorDashboard', icon:'👥', label:'Investor Dashboard', desc:'Login investor lihat porsi modal, profit, ROI', kw:'investor dashboard login kode akses modal roi', cat:'investor'},
   {id:'secInvestorCalc', icon:'🧮', label:'Investor Calculator', desc:'Simulasi potensi return investasi berdasarkan histori', kw:'investor calculator simulasi return investasi', cat:'investor'},
@@ -2848,6 +3105,7 @@ window.onload=async()=>{
     document.getElementById('kasTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     document.getElementById('bukuBulan').value=String(d.getMonth()+1);
     document.getElementById('bukuTahun').value=String(d.getFullYear());
+    document.getElementById('remTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     await loadAll();
     loadDisqus();
   }catch(e){
@@ -2896,6 +3154,7 @@ async function loadAll(){
   await loadBukuTrading();
   await loadModeBahaya();
   await loadProfilRisiko();
+  await loadRemProfitRugi();
 }
 let hasPairCol=true, hasMoodCol=true;
 async function fetchSharedSaldoData(){
