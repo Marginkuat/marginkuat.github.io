@@ -236,11 +236,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="search-results" id="searchResults"></div>
 </div>
 
-<!-- LABEL PERMANEN: profil risiko akun ini (SELALU tampil, bukan toggle harian) -->
-<div style="background:linear-gradient(135deg,#7F1D1D,#450A0A);border:2px solid #F87171;border-radius:12px;padding:14px;margin:0 0 14px;text-align:center">
-  <div style="font-size:16px;font-weight:900;color:#FCA5A5;letter-spacing:.3px;line-height:1.4">⚠️ AKUN INI PAKAI KALKULATOR BAHAYA<br>RISK 10-13% PER TRADE</div>
-  <div style="font-size:10px;color:#FECACA;margin-top:6px;line-height:1.5">Bukan kalkulator Umum 2% atau Agresif 3% — akun ini secara default trading pakai risk tinggi. Pahami risikonya sebelum menilai performa saldo di bawah ini.</div>
-</div>
+<!-- LABEL PERMANEN: profil risiko akun ini (SELALU tampil, otomatis ikut profil yang aktif di server) -->
+<div id="labelProfilRisiko" style="margin:0 0 14px"></div>
 
 <!-- BANNER MODE BAHAYA (penanda tambahan HARI INI, tampil kalau diaktifkan Admin) -->
 <div id="bannerModeBahaya" style="display:none"></div>
@@ -1316,6 +1313,50 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 })();
 
 // ══ TOGGLE BANNER "MODE BAHAYA" — disimpan di app_settings (Supabase), tampil ke SEMUA pengunjung ══
+// ══ PROFIL RISIKO AKTIF (label permanen di atas Saldo MT4) — disimpan di app_settings, ganti sendiri kapan aja ══
+const PROFIL_RISIKO_META={
+  umum:    {judul:'AKUN INI PAKAI KALKULATOR UMUM', sub:'RISK 2% PER TRADE', warna1:'#14532D', warna2:'#052E16', border:'#4ADE80', teks:'#86EFAC', subteks:'#DCFCE7', ket:'Kalkulator paling aman di situs ini — risk dikunci flat 2%, lot dihitung ulang tiap saat dari saldo.'},
+  agresif: {judul:'AKUN INI PAKAI KALKULATOR AGRESIF', sub:'RISK 3% PER TRADE', warna1:'#7C4A03', warna2:'#451A03', border:'#FBBF24', teks:'#FDE68A', subteks:'#FEF3C7', ket:'Level menengah — risk dikunci flat 3% di semua level, lebih tinggi dari Umum 2%, di bawah Bahaya 10-13%.'},
+  bahaya:  {judul:'AKUN INI PAKAI KALKULATOR BAHAYA', sub:'RISK 10-13% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FCA5A5', subteks:'#FECACA', ket:'Bukan kalkulator Umum 2% atau Agresif 3% — akun ini secara default trading pakai risk tinggi. Pahami risikonya sebelum menilai performa saldo di bawah ini.'}
+};
+let profilRisikoAktif='bahaya'; // default sebelum data server kebaca
+async function loadProfilRisiko(){
+  try{
+    const rows=await api('app_settings?select=value&key=eq.profil_risiko_aktif');
+    if(rows && rows.length && PROFIL_RISIKO_META[rows[0].value]) profilRisikoAktif=rows[0].value;
+  }catch(e){ /* pakai default kalau gagal load */ }
+  renderLabelProfilRisiko();
+}
+function renderLabelProfilRisiko(){
+  const el=document.getElementById('labelProfilRisiko');
+  if(!el)return;
+  const p=PROFIL_RISIKO_META[profilRisikoAktif] || PROFIL_RISIKO_META.bahaya;
+  const opsiAdmin=isAdmin ? `
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:10px">
+      ${Object.keys(PROFIL_RISIKO_META).map(k=>`<span onclick="setProfilRisiko('${k}')" style="font-size:9px;padding:4px 10px;border-radius:8px;cursor:pointer;font-weight:700;${k===profilRisikoAktif?`background:${p.border};color:#1a1a1a`:`background:rgba(255,255,255,.08);color:${p.subteks}`}">${PROFIL_RISIKO_META[k].judul.replace('AKUN INI PAKAI KALKULATOR ','')}</span>`).join('')}
+    </div>` : '';
+  el.innerHTML=`<div style="background:linear-gradient(135deg,${p.warna1},${p.warna2});border:2px solid ${p.border};border-radius:12px;padding:14px;text-align:center">
+    <div style="font-size:16px;font-weight:900;color:${p.teks};letter-spacing:.3px;line-height:1.4">⚠️ ${p.judul}<br>${p.sub}</div>
+    <div style="font-size:10px;color:${p.subteks};margin-top:6px;line-height:1.5">${p.ket}</div>
+    ${opsiAdmin}
+  </div>`;
+}
+async function setProfilRisiko(kode){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!PROFIL_RISIKO_META[kode])return;
+  try{
+    const existing=await api('app_settings?select=key&key=eq.profil_risiko_aktif');
+    if(existing.length) await api('app_settings?key=eq.profil_risiko_aktif','PATCH',{value:kode});
+    else await api('app_settings','POST',{key:'profil_risiko_aktif',value:kode});
+    profilRisikoAktif=kode;
+    renderLabelProfilRisiko();
+    toast(`✅ Label diganti ke "${PROFIL_RISIKO_META[kode].judul}" — langsung tampil ke semua pengunjung`);
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan profil risiko');
+  }
+}
+
 let modeBahayaAktif=false;
 async function loadModeBahaya(){
   try{
@@ -2854,6 +2895,7 @@ async function loadAll(){
   loadBenchmark();
   await loadBukuTrading();
   await loadModeBahaya();
+  await loadProfilRisiko();
 }
 let hasPairCol=true, hasMoodCol=true;
 async function fetchSharedSaldoData(){
@@ -6934,6 +6976,7 @@ async function doLogin(){
     resetAdminIdleTimer();
     renderBalanceHero();
     if(typeof renderTombolModeBahaya==='function') renderTombolModeBahaya();
+    if(typeof renderLabelProfilRisiko==='function') renderLabelProfilRisiko();
     toast('✅ Masuk sebagai Admin');
   }catch(e){
     toast('❌ '+(e.message||'Login gagal').slice(0,100));
@@ -6947,6 +6990,7 @@ async function logout(){
   hide('adminPanel');
   renderBalanceHero();
   if(typeof renderTombolModeBahaya==='function') renderTombolModeBahaya();
+    if(typeof renderLabelProfilRisiko==='function') renderLabelProfilRisiko();
   toast('↩ Keluar dari mode Admin');
 }
 
