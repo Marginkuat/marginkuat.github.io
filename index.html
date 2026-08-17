@@ -9211,22 +9211,22 @@ function buildColumnMap(headerRow){
   const cells=Array.from(headerRow.querySelectorAll('th,td'));
   const map={};
   cells.forEach((c,i)=>{
-    const tl=c.textContent.trim().toLowerCase();
+    const tl=c.textContent.trim().toLowerCase().replace(/\s+/g,' ');
     if(/^(ticket|tiket)$/.test(tl)) map.ticket=i;
-    else if(/open time|waktu.*dibuka/.test(tl)) map.openTime=i;
+    else if(/open time|waktu.*dibuka|jam buka/.test(tl)) map.openTime=i;
     else if(/^(type|jenis)$/.test(tl)) map.type=i;
-    else if(/^(size|volume)$/.test(tl)) map.size=i;
-    else if(/^(item|instrumen)$/.test(tl)) map.item=i;
-    else if(/^s\/l$/.test(tl)) map.sl=i;
-    else if(/^t\/p$/.test(tl)) map.tp=i;
-    else if(/close time|waktu.*ditutup/.test(tl)) map.closeTime=i;
+    else if(/^(size|volume|ukuran)$/.test(tl)) map.size=i;
+    else if(/^(item|instrumen|barang|simbol)$/.test(tl)) map.item=i;
+    else if(/^s\s*\/\s*l$/.test(tl)) map.sl=i;
+    else if(/^t\s*\/\s*p$/.test(tl)) map.tp=i;
+    else if(/close time|waktu.*ditutup|waktu tutup|jam tutup/.test(tl)) map.closeTime=i;
     else if(/^(open price|close price|price|harga)$/.test(tl)){
       if(map.closeTime!==undefined && map.closePrice===undefined) map.closePrice=i;
       else if(map.openPrice===undefined) map.openPrice=i;
       else if(map.closePrice===undefined) map.closePrice=i;
     }
-    else if(/^swap$/.test(tl)) map.swap=i;
-    else if(/^profit$/.test(tl)) map.profit=i;
+    else if(/^swap$|pertukaran/.test(tl)) map.swap=i;
+    else if(/^profit$|laba.*rugi/.test(tl)) map.profit=i;
   });
   return map;
 }
