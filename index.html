@@ -25,7 +25,7 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Marginkuat — Catatan & Kalkulator Trading">
 <meta name="twitter:description" content="Kalkulator risk/reward trading pribadi untuk XAUUSD, BTCUSD, dan forex.">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://*.disqus.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://tnucvqhlyngjxzpxpnsv.supabase.co https://api.coingecko.com https://disqus.com https://*.disqus.com; frame-src https://disqus.com https://*.disqus.com; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://*.disqus.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://tnucvqhlyngjxzpxpnsv.supabase.co https://api.coingecko.com https://disqus.com https://*.disqus.com https://api.telegram.org; frame-src https://disqus.com https://*.disqus.com; object-src 'none'; base-uri 'self'; form-action 'self';">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -296,6 +296,41 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Visualisasi risiko akun secara real-time — Current Drawdown, Risk of Ruin, dan Risk per Trade dalam satu tampilan.</div>
     <div id="riskMeter" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+  </div>
+</div>
+
+<!-- NOTIFIKASI REAL-TIME -->
+<div class="section" id="secNotifikasi">
+  <div class="sec-title">🔔 Notifikasi Real-time</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Dapat peringatan instan kalau: target profit bulanan tercapai, batas rugi bulanan (rem) kena, atau Risk Meter menyala 🔴 merah. Dicek otomatis tiap kali kamu buka situs ini atau habis simpan catatan harian.</div>
+
+    <div style="background:var(--bg2);border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:#D4AF37;margin-bottom:4px">🔔 Notifikasi Browser (saat tab ini terbuka)</div>
+      <div style="font-size:9px;color:#7A5D1F;margin-bottom:8px;line-height:1.5">Paling gampang, gak perlu setup apa-apa — tapi cuma bunyi kalau tab/browser situs ini masih kebuka (gak jalan kalau HP dikunci/aplikasi ditutup total).</div>
+      <button class="btn btn-ghost" onclick="mintaIzinNotifBrowser()" id="btnIzinNotifBrowser" style="margin-bottom:0">🔔 Aktifkan Notifikasi Browser</button>
+      <div id="notifBrowserStatus" style="font-size:9px;color:#7A5D1F;margin-top:6px;text-align:center"></div>
+    </div>
+
+    <div style="background:var(--bg2);border-radius:10px;padding:12px 14px">
+      <div style="font-size:11px;font-weight:700;color:#D4AF37;margin-bottom:4px">📲 Notifikasi Telegram (ke HP, walau situs gak dibuka pas kejadian)</div>
+      <div style="font-size:9px;color:#7A5D1F;margin-bottom:8px;line-height:1.6">
+        1. Chat <b style="color:#C8A84B">@BotFather</b> di Telegram → ketik <code>/newbot</code> → ikuti instruksinya → salin <b>Bot Token</b> yang dikasih.<br>
+        2. Chat bot barumu (apa aja, misal "halo") sekali biar bot bisa balas ke kamu.<br>
+        3. Buka <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code> di browser (ganti &lt;TOKEN&gt; dengan token tadi) → cari angka <code>"id"</code> di dalam <code>"chat"</code> → itu <b>Chat ID</b> kamu.<br>
+        4. Isi dua kolom di bawah, simpan, lalu tes.
+      </div>
+      <label class="lbl">Bot Token</label>
+      <input class="inp" type="text" id="inpTelegramToken" placeholder="123456789:AAExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+      <label class="lbl">Chat ID</label>
+      <input class="inp" type="text" id="inpTelegramChatId" placeholder="987654321">
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-p" onclick="simpanNotifTelegram()" style="margin-bottom:0;flex:1">💾 Simpan</button>
+        <button class="btn btn-ghost" onclick="testKirimTelegram()" style="margin-bottom:0;flex:1">📤 Tes Kirim</button>
+      </div>
+      <div id="notifTelegramStatus" style="font-size:9px;color:#7A5D1F;margin-top:8px;text-align:center"></div>
+      <div style="font-size:8px;color:#5C4818;margin-top:8px;line-height:1.5">⚠️ Token disimpan cuma di HP/browser ini (localStorage), gak dikirim ke server situs. Tapi tetap jangan share token ke orang lain — siapapun yang punya token bisa kirim pesan via bot itu.</div>
+    </div>
   </div>
 </div>
 
@@ -1323,7 +1358,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 // ══ PROFIL RISIKO AKTIF (label permanen di atas Saldo MT4) — disimpan di app_settings, ganti sendiri kapan aja ══
 const PROFIL_RISIKO_META={
   umum:    {judul:'AKUN INI PAKAI KALKULATOR UMUM', sub:'RISK 2% PER TRADE', warna1:'#14532D', warna2:'#052E16', border:'#4ADE80', teks:'#86EFAC', subteks:'#DCFCE7', ket:'Kalkulator paling aman di situs ini — risk dikunci flat 2%, lot dihitung ulang tiap saat dari saldo.'},
-  agresif: {judul:'AKUN INI PAKAI KALKULATOR AGRESIF', sub:'RISK 3% PER TRADE', warna1:'#7C4A03', warna2:'#451A03', border:'#FBBF24', teks:'#FDE68A', subteks:'#FEF3C7', ket:'Level menengah — risk dikunci flat 3% di semua level, lebih tinggi dari Umum 2%, di bawah Bahaya 10-13%.'},
+  agresif: {judul:'AKUN INI PAKAI KALKULATOR AGRESIF', sub:'RISK 5% PER TRADE', warna1:'#7C4A03', warna2:'#451A03', border:'#FBBF24', teks:'#FDE68A', subteks:'#FEF3C7', ket:'Level menengah — risk dikunci flat 5% di semua level, lebih tinggi dari Umum 2%, di bawah Bahaya 10-13%.'},
   bahaya:  {judul:'AKUN INI PAKAI KALKULATOR BAHAYA', sub:'RISK 10-13% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FCA5A5', subteks:'#FECACA', ket:'Bukan kalkulator Umum 2% atau Agresif 5% — akun ini secara default trading pakai risk tinggi. Pahami risikonya sebelum menilai performa saldo di bawah ini.'}
 };
 let profilRisikoAktif='bahaya'; // default sebelum data server kebaca
@@ -2933,6 +2968,9 @@ const SEARCH_MENU=[
   {id:'secConsistency', icon:'📐', label:'Consistency Score & Sharpe Ratio', desc:'Konsistensi profit & rasio sharpe', kw:'consistency score sharpe ratio konsistensi konsultasi risk stabilitas', cat:'performa'},
   {id:'secRiskRuin', icon:'🚨', label:'Risk of Ruin (Peluang Bangkrut)', desc:'Estimasi peluang akun kena margin call', kw:'risk of ruin peluang bangkrut margin call resiko rugi total', cat:'performa'},
   {id:'secMood', icon:'🧠', label:'Psikologi Trading (Mood vs Profit)', desc:'Hubungan mood harian dengan hasil trading', kw:'psikologi mood tracker mental emosi', cat:'performa'},
+  {id:'secSkorDisiplin', icon:'📋', label:'Jurnal Emosi & Skor Kepatuhan', desc:'Skor disiplin dari keyakinan entry, kesesuaian rencana, kualitas eksekusi', kw:'jurnal emosi skor disiplin kepatuhan discipline score keyakinan entry rencana eksekusi mingguan bulanan', cat:'performa'},
+  {id:'secSesiAnalysis', icon:'🕐', label:'Analisis Sesi Waktu', desc:'Profit/loss per sesi trading Asia, London, New York', kw:'analisis sesi waktu session asia london new york jam trading', cat:'performa'},
+  {id:'secNotifikasi', icon:'🔔', label:'Notifikasi Real-time', desc:'Peringatan instan target/batas bulanan & Risk Meter merah, via browser atau Telegram', kw:'notifikasi real-time push telegram alert peringatan target batas risk meter', cat:'performa'},
   {id:'secBenchmark', icon:'📈', label:'Performance vs Benchmark', desc:'Perbandingan performa vs XAUUSD/BTCUSD pasar', kw:'benchmark perbandingan pasar market vs', cat:'performa'},
   {id:'secModalMinimal', icon:'💵', label:'Rekomendasi Modal Minimal', desc:'Saran modal minimal berdasarkan gaya trading', kw:'modal minimal rekomendasi saran capital', cat:'performa'},
   {id:'secKalkulator', icon:'🧮', label:'Kalkulator Agresif — Level 5%', desc:'Risk dikunci flat 5% per level, hitung lot, SL/TP, risk $, breakeven win rate', kw:'kalkulator agresif 5% risiko lot sl tp stop loss take profit breakeven level', cat:'kalkulator'},
@@ -3245,6 +3283,7 @@ async function loadAll(){
   await loadModeBahaya();
   await loadProfilRisiko();
   await loadRemProfitRugi();
+  checkAndKirimNotifikasi();
 }
 // ══════════════════════════════════════════
 // JURNAL EMOSI DENGAN SKOR KEPATUHAN (Discipline Score)
@@ -5634,6 +5673,142 @@ function renderRiskMeter(){
     <div style="font-size:9px;color:#5C4818;margin-top:10px;text-align:center">🟢 Aman · 🟡 Waspada · 🔴 Bahaya — estimasi otomatis dari data historis, bukan jaminan hasil trading ke depan.</div>`;
   el.innerHTML=html;
 }
+// ══════════════════════════════════════════
+// NOTIFIKASI REAL-TIME (Browser Notification API + Telegram Bot API)
+// Kondisi yang dipantau: target profit bulanan tercapai, batas rugi bulanan (rem) kena,
+// dan Risk Meter menyala merah. Dicek tiap kali situs dibuka & tiap habis simpan data harian.
+// Token Telegram cuma disimpan di localStorage device ini (gak pernah dikirim ke server situs),
+// karena kalau ditaruh di Supabase (public anon key) bisa kebaca siapa aja.
+// ══════════════════════════════════════════
+function mintaIzinNotifBrowser(){
+  if(!('Notification' in window)){
+    document.getElementById('notifBrowserStatus').textContent='❌ Browser ini gak mendukung notifikasi.';
+    return;
+  }
+  Notification.requestPermission().then(perm=>{
+    updateNotifBrowserStatus();
+    if(perm==='granted') new Notification('🔔 Notifikasi Aktif', {body:'Kamu bakal dikasih tau kalau target/batas kena atau Risk Meter merah.'});
+  });
+}
+function updateNotifBrowserStatus(){
+  const el=document.getElementById('notifBrowserStatus');
+  const btn=document.getElementById('btnIzinNotifBrowser');
+  if(!el || !('Notification' in window)) return;
+  if(Notification.permission==='granted'){ el.textContent='✅ Notifikasi browser aktif di device ini.'; if(btn) btn.style.display='none'; }
+  else if(Notification.permission==='denied'){ el.textContent='❌ Izin ditolak — aktifkan manual lewat pengaturan notifikasi browser kamu.'; }
+  else { el.textContent=''; }
+}
+function localNotify(title, body){
+  if('Notification' in window && Notification.permission==='granted'){
+    try{ new Notification(title, {body}); }catch(e){}
+  }
+}
+
+function getTelegramConfig(){
+  return {
+    token: localStorage.getItem('mk_telegram_token')||'',
+    chatId: localStorage.getItem('mk_telegram_chatid')||''
+  };
+}
+function simpanNotifTelegram(){
+  const token=document.getElementById('inpTelegramToken').value.trim();
+  const chatId=document.getElementById('inpTelegramChatId').value.trim();
+  if(!token || !chatId){ document.getElementById('notifTelegramStatus').textContent='❌ Isi Bot Token dan Chat ID dulu.'; return; }
+  localStorage.setItem('mk_telegram_token', token);
+  localStorage.setItem('mk_telegram_chatid', chatId);
+  document.getElementById('notifTelegramStatus').textContent='✅ Tersimpan di device ini.';
+  toast('✅ Setelan Telegram tersimpan');
+}
+async function kirimTelegram(text){
+  const cfg=getTelegramConfig();
+  if(!cfg.token || !cfg.chatId) return {ok:false, error:'belum diatur'};
+  try{
+    const r=await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chat_id:cfg.chatId, text})
+    });
+    const d=await r.json();
+    return {ok: r.ok && d.ok, error: d.description||null};
+  }catch(e){
+    return {ok:false, error:e.message};
+  }
+}
+async function testKirimTelegram(){
+  const statusEl=document.getElementById('notifTelegramStatus');
+  const cfg=getTelegramConfig();
+  if(!cfg.token || !cfg.chatId){
+    // Kalau belum disimpan, coba ambil langsung dari input (jaga-jaga user belum klik Simpan)
+    const token=document.getElementById('inpTelegramToken').value.trim();
+    const chatId=document.getElementById('inpTelegramChatId').value.trim();
+    if(!token||!chatId){ statusEl.textContent='❌ Isi Bot Token dan Chat ID dulu.'; return; }
+    localStorage.setItem('mk_telegram_token', token);
+    localStorage.setItem('mk_telegram_chatid', chatId);
+  }
+  statusEl.textContent='⏳ Mengirim pesan tes...';
+  const res=await kirimTelegram('✅ Tes notifikasi dari Marginkuat berhasil! Kamu bakal dikirimin pesan kalau target/batas bulanan kena atau Risk Meter merah.');
+  statusEl.textContent = res.ok ? '✅ Berhasil! Cek chat Telegram kamu.' : '❌ Gagal kirim: '+(res.error||'cek Bot Token & Chat ID lagi');
+}
+
+// Dedup: simpan status kondisi terakhir di localStorage biar gak spam notifikasi berkali-kali
+// buat kondisi yang sama. Notifikasi ulang cuma dikirim kalau kondisinya berubah (mis. dari aman jadi merah).
+function getNotifLastState(){
+  try{ return JSON.parse(localStorage.getItem('mk_notif_last_state')||'{}'); }catch(e){ return {}; }
+}
+function setNotifLastState(s){
+  localStorage.setItem('mk_notif_last_state', JSON.stringify(s));
+}
+async function checkAndKirimNotifikasi(){
+  try{
+    const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+    if(!rows.length) return;
+
+    // ── Target/Batas Bulanan ──
+    const now=new Date();
+    const rowsBulanIni=rows.filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); });
+    let targetAtas=false, targetBawah=false;
+    if(rowsBulanIni.length){
+      const totalBulanIni=rowsBulanIni.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+      const saldoAwalBulan=parseFloat(rowsBulanIni[0].saldo_mt4||0)-parseFloat(rowsBulanIni[0].profit||0);
+      const {atas, bawah}=hitungBatasBulanan(saldoAwalBulan);
+      targetAtas = totalBulanIni>=atas;
+      targetBawah = totalBulanIni<=bawah;
+    }
+
+    // ── Risk Meter ──
+    const rm=getRiskMeterData();
+    let riskMerah=false;
+    if(rm){
+      const ddZone=riskZone(rm.ddPct, 15, 35);
+      const rorZone=rm.hasEnoughData ? riskZone(rm.ror, 10, 40) : null;
+      const riskZoneVal=rm.hasRiskInput ? riskZone(rm.riskPct, 2, 5) : null;
+      riskMerah = ddZone.code==='red' || (rorZone&&rorZone.code==='red') || (riskZoneVal&&riskZoneVal.code==='red');
+    }
+
+    const prev=getNotifLastState();
+    const cur={targetAtas, targetBawah, riskMerah};
+    const pesanList=[];
+    if(targetAtas && !prev.targetAtas) pesanList.push('🎉 Target profit bulanan TERCAPAI! Pertimbangkan berhenti trading bulan ini.');
+    if(targetBawah && !prev.targetBawah) pesanList.push('🔴 KENA REM — batas rugi bulanan tercapai! Disiplin berhenti trading sekarang.');
+    if(riskMerah && !prev.riskMerah) pesanList.push('🚨 Risk Meter menyala MERAH — cek Current Drawdown / Risk of Ruin / Risk per Trade di situs.');
+
+    if(pesanList.length){
+      const fullMsg='⚠️ Marginkuat Alert\n\n'+pesanList.join('\n');
+      localNotify('⚠️ Marginkuat Alert', pesanList.join(' · '));
+      if(getTelegramConfig().token) await kirimTelegram(fullMsg);
+    }
+    setNotifLastState(cur);
+  }catch(e){
+    console.error('Gagal cek notifikasi', e);
+  }
+}
+updateNotifBrowserStatus();
+(function initTelegramInputs(){
+  const cfg=getTelegramConfig();
+  const tEl=document.getElementById('inpTelegramToken'), cEl=document.getElementById('inpTelegramChatId');
+  if(tEl && cfg.token) tEl.value=cfg.token;
+  if(cEl && cfg.chatId) cEl.value=cfg.chatId;
+})();
+
 // Update Risk per Trade secara real-time saat kalkulator diubah (dengar event SETELAH kalkulator update nilainya sendiri)
 (function initRiskMeterListeners(){
   ['calcSL','calcTP','calcPipValue','calcLotTest'].forEach(id=>{
@@ -5855,7 +6030,11 @@ function doInvestorLogout(){
   toast('↩ Keluar dari tampilan Investor');
   renderInvestorDashboard();
 }
-function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHapus, rankInfo){
+function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHapus, rankInfo, opts){
+  opts=opts||{};
+  const transaksiList=opts.transaksiList||[];
+  const isAdminMode=!!opts.isAdminMode;
+  const isSelfMode=!!opts.isSelfMode;
   const sharePct = totalModalInvestorPool>0 ? (inv.modal/totalModalInvestorPool*100) : 0;
   const profitShare = profitSejakGabung * (sharePct/100);
   const currentVal = parseFloat(inv.modal||0) + profitShare;
@@ -5867,6 +6046,22 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
   if(rankInfo && rankInfo.total>1){
     rankHtml=`<span>Peringkat porsi modal: <b style="color:#C8A84B">#${rankInfo.rank} dari ${rankInfo.total} investor</b></span>`;
   }
+  const rekening=inv.rekening||'';
+  const rekeningHtml = (isAdminMode||isSelfMode)
+    ? `<div style="font-size:9px;color:#7A5D1F;margin-top:6px;border-top:1px solid var(--border);padding-top:6px">🏦 No. Rekening: <b style="color:#C8A84B">${rekening?escapeHtml(rekening):'(belum diisi)'}</b> <span onclick="editRekeningInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}','${escapeHtml(rekening).replace(/'/g,"\\'")}')" style="color:#7A5D1F;text-decoration:underline;cursor:pointer;margin-left:4px">Ubah</span></div>`
+    : (rekening ? `<div style="font-size:9px;color:#7A5D1F;margin-top:6px;border-top:1px solid var(--border);padding-top:6px">🏦 No. Rekening: <b style="color:#C8A84B">${escapeHtml(rekening)}</b></div>` : '');
+  const aksiAdminHtml = isAdminMode ? `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+      <button onclick="tambahDanaInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}',${parseFloat(inv.modal||0)})" style="flex:1;min-width:90px;padding:7px;border-radius:8px;border:1px solid #4ADE80;background:transparent;color:#4ADE80;font-size:9px;font-weight:700;cursor:pointer">➕ Tambah Dana</button>
+      <button onclick="tarikDanaInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}',${parseFloat(inv.modal||0)})" style="flex:1;min-width:90px;padding:7px;border-radius:8px;border:1px solid #F87171;background:transparent;color:#F87171;font-size:9px;font-weight:700;cursor:pointer">➖ Tarik Dana</button>
+      <button onclick="catatDistribusiProfit('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}')" style="flex:1;min-width:90px;padding:7px;border-radius:8px;border:1px solid #FFD700;background:transparent;color:#FFD700;font-size:9px;font-weight:700;cursor:pointer">💰 Distribusi Profit</button>
+    </div>` : '';
+  const riwayatOpen = __riwayatTransaksiOpenId===inv.id;
+  const riwayatHtml = (isAdminMode||isSelfMode) ? `
+    <div style="margin-top:8px">
+      <span onclick="toggleRiwayatInvestor('${inv.id}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">${riwayatOpen?'▲ Sembunyikan':'▼ Lihat'} Riwayat Transaksi (${transaksiList.length})</span>
+      ${riwayatOpen?`<div style="margin-top:6px;background:var(--bg0);border-radius:8px;padding:8px 10px">${renderRiwayatTransaksiHtml(transaksiList)}</div>`:''}
+    </div>` : '';
   return `
     <div style="border:1.5px solid #B8860B;border-radius:14px;padding:16px;margin-bottom:12px;background:linear-gradient(160deg,var(--bg2),var(--bg1));position:relative;text-align:left">
       <div style="position:absolute;top:12px;right:14px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;border:1px solid #5C4818;border-radius:10px;padding:2px 8px">VIP</div>
@@ -5883,10 +6078,113 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
         <span>Bergabung ${days} hari lalu (${inv.tanggal})</span>
       </div>
       ${rankHtml?`<div style="font-size:9px;color:#7A5D1F;margin-top:4px">${rankHtml}</div>`:''}
+      ${rekeningHtml}
+      ${aksiAdminHtml}
+      ${riwayatHtml}
       ${showHapus?`<div style="text-align:right;margin-top:6px"><span onclick="hapusInvestor('${inv.id}')" style="font-size:9px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Hapus</span></div>`:''}
     </div>`;
 }
-// Hitung profit trading HANYA sejak tanggal investor gabung (bukan all-time) — biar investor baru
+// ══ AKSI INVESTOR: Tambah Dana / Tarik Dana / Distribusi Profit / Nomor Rekening / Riwayat ══
+let __riwayatTransaksiOpenId=null;
+function toggleRiwayatInvestor(id){
+  __riwayatTransaksiOpenId = __riwayatTransaksiOpenId===id ? null : id;
+  renderInvestorDashboard();
+}
+function renderRiwayatTransaksiHtml(list){
+  if(!list || !list.length) return '<div style="font-size:9px;color:#7A5D1F;text-align:center;padding:8px">Belum ada transaksi tercatat.</div>';
+  const jenisMeta={
+    tambah_dana:{label:'➕ Tambah Dana', color:'#4ADE80'},
+    tarik_dana:{label:'➖ Tarik Dana', color:'#F87171'},
+    distribusi_profit:{label:'💰 Distribusi Profit', color:'#FFD700'}
+  };
+  return list.slice().sort((a,b)=>new Date(b.tanggal+' '+(b.waktu||'00:00'))-new Date(a.tanggal+' '+(a.waktu||'00:00'))).map(t=>{
+    const m=jenisMeta[t.jenis]||{label:t.jenis, color:'#C8A84B'};
+    return `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:9px">
+      <div style="text-align:left">
+        <div style="color:${m.color};font-weight:700">${m.label}</div>
+        <div style="color:#7A5D1F">${t.tanggal}${t.waktu?' · '+t.waktu:''}${t.keterangan?' · '+escapeHtml(t.keterangan):''}</div>
+      </div>
+      <div style="color:${m.color};font-weight:700;white-space:nowrap">${fc(t.jumlah)}</div>
+    </div>`;
+  }).join('');
+}
+async function fetchAllInvestorTransaksiAdmin(){
+  try{ return await api('investor_transaksi?select=*&order=tanggal.desc'); }catch(e){ console.error(e); return []; }
+}
+async function fetchTransaksiInvestorSelf(kode){
+  try{ return await api('rpc/investor_transaksi_by_kode','POST',{p_kode:kode}); }catch(e){ console.error(e); return []; }
+}
+async function tambahDanaInvestor(id, nama, modalSaatIni){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const jumlahStr=prompt(`Tambah dana untuk ${nama} (¢/sen):`);
+  const jumlah=parseFloat(jumlahStr);
+  if(isNaN(jumlah)||jumlah<=0){toast('❌ Nilai tidak valid');return;}
+  const tglStr=prompt('Tanggal (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+  if(!tglStr || !/^\d{4}-\d{2}-\d{2}$/.test(tglStr)){toast('❌ Format tanggal tidak valid');return;}
+  const waktu=prompt('Jam (HH:MM, 24 jam):', new Date().toTimeString().slice(0,5))||'';
+  const ket=prompt('Keterangan (opsional):','')||'';
+  try{
+    await api('investors?id=eq.'+encodeURIComponent(id),'PATCH',{modal:modalSaatIni+jumlah});
+    await api('investor_transaksi','POST',{investor_id:id, jenis:'tambah_dana', jumlah, tanggal:tglStr, waktu, keterangan:ket||null});
+    toast(`✅ Dana ${nama} bertambah ${fc(jumlah)}`);
+    renderInvestorDashboard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan (cek apakah tabel investor_transaksi & kolom rekening sudah dibuat di Supabase): '+(e.message||'').slice(0,150));
+  }
+}
+async function tarikDanaInvestor(id, nama, modalSaatIni){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const jumlahStr=prompt(`Tarik dana untuk ${nama} (¢/sen, modal saat ini ${fc(modalSaatIni)}):`);
+  const jumlah=parseFloat(jumlahStr);
+  if(isNaN(jumlah)||jumlah<=0){toast('❌ Nilai tidak valid');return;}
+  if(jumlah>modalSaatIni && !confirm('Jumlah tarik lebih besar dari modal tercatat investor ini. Tetap lanjut?')) return;
+  const tglStr=prompt('Tanggal (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+  if(!tglStr || !/^\d{4}-\d{2}-\d{2}$/.test(tglStr)){toast('❌ Format tanggal tidak valid');return;}
+  const waktu=prompt('Jam (HH:MM, 24 jam):', new Date().toTimeString().slice(0,5))||'';
+  const ket=prompt('Keterangan (opsional):','')||'';
+  try{
+    await api('investors?id=eq.'+encodeURIComponent(id),'PATCH',{modal:Math.max(0,modalSaatIni-jumlah)});
+    await api('investor_transaksi','POST',{investor_id:id, jenis:'tarik_dana', jumlah, tanggal:tglStr, waktu, keterangan:ket||null});
+    toast(`✅ Penarikan ${nama} sebesar ${fc(jumlah)} dicatat`);
+    renderInvestorDashboard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan (cek apakah tabel investor_transaksi sudah dibuat di Supabase): '+(e.message||'').slice(0,150));
+  }
+}
+async function catatDistribusiProfit(id, nama){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const jumlahStr=prompt(`Catat distribusi profit untuk ${nama} (¢/sen) — ini cuma pencatatan, TIDAK mengubah Modal Disetor:`);
+  const jumlah=parseFloat(jumlahStr);
+  if(isNaN(jumlah)||jumlah<=0){toast('❌ Nilai tidak valid');return;}
+  const tglStr=prompt('Tanggal distribusi (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+  if(!tglStr || !/^\d{4}-\d{2}-\d{2}$/.test(tglStr)){toast('❌ Format tanggal tidak valid');return;}
+  const waktu=prompt('Jam distribusi (HH:MM, 24 jam):', new Date().toTimeString().slice(0,5))||'';
+  const ket=prompt('Keterangan (opsional):','')||'';
+  try{
+    await api('investor_transaksi','POST',{investor_id:id, jenis:'distribusi_profit', jumlah, tanggal:tglStr, waktu, keterangan:ket||null});
+    toast(`✅ Distribusi profit ${nama} sebesar ${fc(jumlah)} dicatat`);
+    renderInvestorDashboard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan (cek apakah tabel investor_transaksi sudah dibuat di Supabase): '+(e.message||'').slice(0,150));
+  }
+}
+async function editRekeningInvestor(id, nama, rekeningSaatIni){
+  if(!isAdmin && loggedInInvestorId!==id){toast('❌ Tidak diizinkan');return;}
+  const rek=prompt(`Nomor rekening ${nama} (bank + nomor, contoh: BCA 1234567890 a.n. Nama):`, rekeningSaatIni||'');
+  if(rek===null)return;
+  try{
+    await api('investors?id=eq.'+encodeURIComponent(id),'PATCH',{rekening:rek.trim()});
+    toast('✅ Nomor rekening tersimpan');
+    renderInvestorDashboard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan (cek apakah kolom "rekening" sudah ditambahkan ke tabel investors): '+(e.message||'').slice(0,150));
+  }
+}
+
 // nggak ikut kebagian profit dari sebelum dia nyetor modal.
 function profitSejakTanggal(rows, tanggalGabung){
   if(!tanggalGabung) return 0;
@@ -5915,6 +6213,9 @@ async function renderInvestorDashboard(){
       dashBox.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada investor ditambahkan. Tekan tombol di bawah untuk mulai.</div>';
       return;
     }
+    const semuaTransaksi=await fetchAllInvestorTransaksiAdmin();
+    const transaksiByInvestor={};
+    semuaTransaksi.forEach(t=>{ (transaksiByInvestor[t.investor_id]=transaksiByInvestor[t.investor_id]||[]).push(t); });
     const rows=allSaldoData||[];
     const totalProfitAllTime=rows.reduce((s,r)=>s+parseFloat(r.profit||0),0);
     const totalModalInvestorPool=investors.reduce((s,v)=>s+parseFloat(v.modal||0),0);
@@ -5950,7 +6251,7 @@ async function renderInvestorDashboard(){
     investors.forEach(inv=>{
       const rank=sorted.findIndex(v=>v.id===inv.id)+1;
       const profitSejakGabung=profitSejakTanggal(rows, inv.tanggal);
-      html+=investorCardHtml(inv, profitSejakGabung, totalPoolCapital, true, {rank, total:investors.length});
+      html+=investorCardHtml(inv, profitSejakGabung, totalPoolCapital, true, {rank, total:investors.length}, {transaksiList: transaksiByInvestor[inv.id]||[], isAdminMode:true});
     });
     html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal (kamu + investor) terhadap total profit SEJAK investor bergabung — bukan kalkulasi bagi hasil resmi/legal.</div>';
     dashBox.innerHTML=html;
@@ -6002,7 +6303,7 @@ async function renderInvestorDashboard(){
       </div>
       <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:8px">Total dana gabungan bersifat privat — hanya persentase performa yang ditampilkan</div>
     </div>`;
-    html+=investorCardHtml(found, profitSejakTanggal(rows2, found.tanggal), totalPoolCapital, false, {rank:found.rank_int, total:found.total_investors});
+    html+=investorCardHtml(found, profitSejakTanggal(rows2, found.tanggal), totalPoolCapital, false, {rank:found.rank_int, total:found.total_investors}, {transaksiList: await fetchTransaksiInvestorSelf(savedCode), isSelfMode:true});
     html+='<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:4px">Estimasi profit share dihitung proporsional dari porsi modal terhadap total profit SEJAK kamu bergabung — bukan kalkulasi bagi hasil resmi/legal.</div>';
     dashBox.innerHTML=html;
     return;
