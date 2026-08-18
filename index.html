@@ -1203,6 +1203,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <!-- KALKULATOR BAHAYA — LEVEL 10% (LOSS 3X = TURUN LEVEL) -->
 <div class="section" id="secKalkulatorBahaya">
@@ -2456,6 +2458,53 @@ async function resetRemCycle(){
   </div>
 </div>
 
+<!-- LAPORAN TAHUNAN -->
+<div class="section" id="secLaporanTahunan">
+  <div class="sec-title">🗂️ Laporan Tahunan</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Satu laporan lengkap 1 tahun penuh: ringkasan eksekutif, performa per bulan, grafik equity curve, total deposit &amp; WD, analisis sesi trading (Asia/London/New York), metrik rasio risiko, profil pengelola dana, dan verifikasi anti-edit — cocok buat arsip pribadi atau dikirim ke investor.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <button class="cal-nav-btn" onclick="tahunanPrev()">‹</button>
+      <div id="tahunanYearLabel" style="font-size:16px;font-weight:700;color:#D4AF37">-</div>
+      <button class="cal-nav-btn" onclick="tahunanNext()">›</button>
+    </div>
+
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;border-top:1px solid var(--border);padding-top:12px">👤 Profil Pengelola Dana</div>
+    <label class="lbl">Nama / Inisial Pengelola</label>
+    <input class="inp" id="tahunanPengelolaNama" placeholder="Contoh: A.R." oninput="saveTahunanPengelolaProfil()" style="margin-bottom:10px">
+    <label class="lbl">Tipe Akun</label>
+    <select class="inp" id="tahunanPengelolaTipe" onchange="saveTahunanPengelolaProfil()" style="margin-bottom:10px">
+      <option value="Akun Pribadi">Akun Pribadi</option>
+      <option value="Akun Dikelola (Managed)">Akun Dikelola (Managed)</option>
+      <option value="Akun Demo">Akun Demo</option>
+      <option value="Akun Real">Akun Real</option>
+    </select>
+    <label class="lbl">Gaya Trading</label>
+    <select class="inp" id="tahunanPengelolaGaya" onchange="saveTahunanPengelolaProfil()" style="margin-bottom:10px">
+      <option value="Scalping">Scalping</option>
+      <option value="Day Trading">Day Trading</option>
+      <option value="Swing Trading">Swing Trading</option>
+      <option value="Position Trading">Position Trading</option>
+      <option value="Campuran">Campuran</option>
+    </select>
+    <label class="lbl">Risk per Trade (% modal, opsional)</label>
+    <input class="inp" id="tahunanPengelolaRisk" type="number" step="0.1" min="0" placeholder="Contoh: 1" oninput="saveTahunanPengelolaProfil()" style="margin-bottom:14px">
+
+    <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;border-top:1px solid var(--border);padding-top:12px">🔐 Verifikasi Dokumen (Anti-Edit)</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Tiap laporan digenerate dengan kode verifikasi unik (hash dari data laporan) + QR code, supaya investor bisa cek angka di PDF cocok dengan angka aslinya. Kalau kamu sudah punya halaman verifikasi sendiri (misalnya di-hosting lewat GitHub Pages), isi URL-nya di bawah — QR akan mengarah ke situ. Kalau dikosongkan, QR cuma berisi kode verifikasinya saja.</div>
+    <label class="lbl">URL Halaman Verifikasi (opsional)</label>
+    <input class="inp" id="tahunanVerifUrl" placeholder="Contoh: https://namamu.github.io/verify.html" oninput="saveTahunanPengelolaProfil()" style="margin-bottom:14px">
+
+    <label class="lbl">Estimasi Pajak (opsional — % dari net profit tahun ini)</label>
+    <input class="inp" id="tahunanPajakPersen" type="number" step="0.1" min="0" placeholder="Kosongkan kalau tidak perlu" style="margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-p" onclick="exportLaporanTahunanPDF()" style="margin-bottom:0">⬇️ PDF</button>
+      <button class="btn btn-p" onclick="exportLaporanTahunanExcel()" style="margin-bottom:0">⬇️ Excel</button>
+    </div>
+    <div id="tahunanExportStatus" style="font-size:10px;color:#7A5D1F;margin-top:10px;text-align:center"></div>
+  </div>
+</div>
+
 <!-- WEEKLY RECAP -->
 <div class="section" id="secWeeklyRecap">
   <div class="sec-title">📊 Weekly Recap / Laporan Mingguan</div>
@@ -3246,6 +3295,7 @@ const SEARCH_MENU=[
   {id:'secRekapArusKas', icon:'📊', label:'Rekap & Grafik Arus Kas', desc:'Rekap bulanan uang masuk vs keluar', kw:'rekap grafik arus kas cash flow', cat:'keuangan'},
   {id:'secLaporanKeuangan', icon:'📑', label:'Laporan Keuangan (Neraca, Laba Rugi, Arus Kas)', desc:'Neraca, laba rugi, dan arus kas gaya perusahaan', kw:'laporan keuangan neraca laba rugi arus kas aset lancar tidak lancar utang liabilitas kewajiban pendapatan harta ekuitas rasio riwayat transaksi aset beli jual saham properti tracker', cat:'keuangan'},
   {id:'secEksporKeuangan', icon:'📁', label:'Ekspor Laporan Keuangan', desc:'Download CSV/PDF aliran uang', kw:'ekspor export laporan keuangan csv pdf', cat:'keuangan'},
+  {id:'secLaporanTahunan', icon:'🗂️', label:'Laporan Tahunan', desc:'Ekspor laporan tahunan lengkap (PDF/Excel)', kw:'laporan tahunan annual report pdf excel xlsx ekspor export tahun ringkasan eksekutif performa bulanan sesi trading pajak', cat:'keuangan'},
   {id:'secKeuanganSaya', icon:'🧾', label:'Laporan Bulanan Keuangan Saya', desc:'Ringkasan modal pribadi + profit MT4 dikurangi pengeluaran = tabungan', kw:'laporan bulanan keuangan saya gaji profit pengeluaran cicilan tabungan periodic financial report', cat:'keuangan'},
   {id:'secProfitBulanan', icon:'📊', label:'Profit Per Bulan', desc:'Daftar total profit tiap bulan', kw:'profit per bulan bulanan', cat:'grafik'},
   {id:'secEksporBulanan', icon:'📁', label:'Ekspor Laporan Bulanan', desc:'Download catatan harian per bulan', kw:'ekspor export laporan bulanan csv pdf', cat:'grafik'},
@@ -11068,7 +11118,495 @@ async function downloadStatementAsli(key){
   }
 }
 
+// ══════════════════════════════════════════
+// LAPORAN TAHUNAN (PDF & Excel)
+// Menggabungkan data yang sudah ada: histori saldo harian (allSaldoData),
+// analisis sesi trading (trade_log), deposit/WD implisit, dan estimasi
+// pajak opsional — jadi satu laporan tahunan lengkap.
+// ══════════════════════════════════════════
+let tahunanYear=new Date().getFullYear();
+function renderTahunanLabel(){
+  const el=document.getElementById('tahunanYearLabel');
+  if(el) el.textContent=tahunanYear;
+}
+function tahunanPrev(){ tahunanYear--; renderTahunanLabel(); }
+function tahunanNext(){ tahunanYear++; renderTahunanLabel(); }
+
+// Hitung deposit/WD implisit dari SELURUH histori (bukan cuma 1 tahun), sama seperti
+// exportLaporanPDF, biar akurat walau tahun yang dipilih bukan tahun pertama trading.
+function hitungWdDepositMapFull(){
+  const allSorted=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const map={};
+  let prevSaldo=null;
+  allSorted.forEach(r=>{
+    const saldo=parseFloat(r.saldo_mt4||0);
+    const profit=parseFloat(r.profit||0);
+    let wd=0, deposit=0;
+    if(prevSaldo===null){
+      const modalAwal=saldo-profit;
+      if(modalAwal>0.01) deposit=modalAwal;
+    }else{
+      const selisih=saldo-prevSaldo;
+      const implisit=selisih-profit;
+      if(implisit<-0.01) wd=Math.abs(implisit);
+      else if(implisit>0.01) deposit=implisit;
+    }
+    map[r.tanggal]={wd,deposit};
+    prevSaldo=saldo;
+  });
+  return map;
+}
+
+function getTahunanData(year){
+  const rows=(allSaldoData||[]).filter(r=>new Date(r.tanggal).getFullYear()===year)
+    .slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  if(!rows.length) return null;
+  const wdDepositMap=hitungWdDepositMapFull();
+
+  const bulanStat=Array.from({length:12},()=>({profit:0,hari:0,hariProfit:0,hariLoss:0,deposit:0,wd:0,saldoAwal:null,saldoAkhir:null}));
+  rows.forEach(r=>{
+    const m=new Date(r.tanggal).getMonth();
+    const p=parseFloat(r.profit||0);
+    const s=parseFloat(r.saldo_mt4||0);
+    const b=bulanStat[m];
+    b.profit+=p; b.hari++;
+    if(p>0)b.hariProfit++; else if(p<0)b.hariLoss++;
+    b.deposit+=(wdDepositMap[r.tanggal]?.deposit||0);
+    b.wd+=(wdDepositMap[r.tanggal]?.wd||0);
+    if(b.saldoAwal===null) b.saldoAwal=s-p;
+    b.saldoAkhir=s;
+  });
+
+  let totalProfit=0, hariProfit=0, hariLoss=0, totalDeposit=0, totalWd=0;
+  let best=rows[0], worst=rows[0];
+  let peak=-Infinity, maxDD=0, maxDDPct=0;
+  rows.forEach(r=>{
+    const p=parseFloat(r.profit||0);
+    const s=parseFloat(r.saldo_mt4||0);
+    totalProfit+=p;
+    if(p>0)hariProfit++; else if(p<0)hariLoss++;
+    if(p>parseFloat(best.profit||0)) best=r;
+    if(p<parseFloat(worst.profit||0)) worst=r;
+    totalDeposit+=(wdDepositMap[r.tanggal]?.deposit||0);
+    totalWd+=(wdDepositMap[r.tanggal]?.wd||0);
+    if(s>peak) peak=s;
+    const dd=peak-s;
+    if(dd>maxDD){ maxDD=dd; maxDDPct=peak>0?(dd/peak*100):0; }
+  });
+  const winRate=rows.length?(hariProfit/rows.length*100):0;
+  const saldoAwalTahun=parseFloat(rows[0].saldo_mt4||0)-parseFloat(rows[0].profit||0);
+  const saldoAkhirTahun=parseFloat(rows[rows.length-1].saldo_mt4||0);
+  const pertumbuhan=saldoAwalTahun!==0?((saldoAkhirTahun-saldoAwalTahun)/Math.abs(saldoAwalTahun)*100):0;
+
+  // ── METRIK RASIO RISIKO ──
+  // Profit Factor = total profit hari untung / total loss hari rugi (absolut)
+  // RR Ratio = rata-rata profit hari untung / rata-rata loss hari rugi (absolut)
+  // Sharpe-like = rata-rata return harian / std dev return harian, disetahunkan (√252)
+  let grossProfit=0, grossLoss=0;
+  const returns=[];
+  let prevSaldoRet=null;
+  rows.forEach(r=>{
+    const p=parseFloat(r.profit||0);
+    if(p>0) grossProfit+=p; else if(p<0) grossLoss+=Math.abs(p);
+    const s=parseFloat(r.saldo_mt4||0);
+    const basis=prevSaldoRet!==null?prevSaldoRet:(s-p);
+    if(basis>0.01) returns.push(p/basis);
+    prevSaldoRet=s;
+  });
+  const profitFactor=grossLoss>0?(grossProfit/grossLoss):(grossProfit>0?Infinity:0);
+  const avgWin=hariProfit>0?(grossProfit/hariProfit):0;
+  const avgLoss=hariLoss>0?(grossLoss/hariLoss):0;
+  const rrRatio=avgLoss>0?(avgWin/avgLoss):(avgWin>0?Infinity:0);
+  const meanRet=returns.length?returns.reduce((s,v)=>s+v,0)/returns.length:0;
+  const stdRet=returns.length>1?Math.sqrt(returns.reduce((s,v)=>s+Math.pow(v-meanRet,2),0)/(returns.length-1)):0;
+  const sharpeLike=stdRet>0?(meanRet/stdRet*Math.sqrt(252)):0;
+
+  return {rows, wdDepositMap, bulanStat, totalProfit, hariProfit, hariLoss, winRate,
+    totalDeposit, totalWd, best, worst, saldoAwalTahun, saldoAkhirTahun, pertumbuhan, maxDD, maxDDPct,
+    grossProfit, grossLoss, profitFactor, avgWin, avgLoss, rrRatio, sharpeLike};
+}
+
+// ── PROFIL PENGELOLA DANA (disimpan di localStorage, ikut ditampilkan di laporan) ──
+function saveTahunanPengelolaProfil(){
+  const get=id=>{ const el=document.getElementById(id); return el?el.value.trim():''; };
+  const profil={
+    nama:get('tahunanPengelolaNama'),
+    tipe:get('tahunanPengelolaTipe'),
+    gaya:get('tahunanPengelolaGaya'),
+    risk:get('tahunanPengelolaRisk'),
+    verifUrl:get('tahunanVerifUrl')
+  };
+  try{ localStorage.setItem('mk_tahunan_pengelola', JSON.stringify(profil)); }catch(e){}
+}
+function loadTahunanPengelolaProfil(){
+  let profil={};
+  try{ profil=JSON.parse(localStorage.getItem('mk_tahunan_pengelola')||'{}'); }catch(e){}
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el && v) el.value=v; };
+  set('tahunanPengelolaNama',profil.nama);
+  set('tahunanPengelolaTipe',profil.tipe);
+  set('tahunanPengelolaGaya',profil.gaya);
+  set('tahunanPengelolaRisk',profil.risk);
+  set('tahunanVerifUrl',profil.verifUrl);
+  return profil;
+}
+function getTahunanPengelolaProfil(){
+  const get=id=>{ const el=document.getElementById(id); return el?el.value.trim():''; };
+  return { nama:get('tahunanPengelolaNama'), tipe:get('tahunanPengelolaTipe')||'Akun Pribadi',
+    gaya:get('tahunanPengelolaGaya')||'Campuran', risk:get('tahunanPengelolaRisk'), verifUrl:get('tahunanVerifUrl') };
+}
+
+// ── KODE VERIFIKASI (hash SHA-256 dari data inti laporan, biar ketauan kalau angka diubah manual) ──
+async function hitungKodeVerifikasi(year, d){
+  const payload=[
+    'MARGINKUAT', year, d.rows.length,
+    Math.round(d.totalProfit*100), Math.round(d.saldoAwalTahun*100), Math.round(d.saldoAkhirTahun*100),
+    Math.round(d.maxDD*100), d.hariProfit, d.hariLoss
+  ].join('|');
+  const enc=new TextEncoder().encode(payload);
+  const hashBuf=await crypto.subtle.digest('SHA-256', enc);
+  const hex=[...new Uint8Array(hashBuf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  const kode=hex.slice(0,16).toUpperCase().match(/.{1,4}/g).join('-');
+  return kode;
+}
+// Buat gambar QR (PNG dataURL) dari sebuah string, pakai qrcodejs (render ke div sementara lalu diambil canvas-nya)
+function buatQrImage(text){
+  return new Promise((resolve)=>{
+    if(typeof QRCode==='undefined'){ resolve(null); return; }
+    const tmp=document.createElement('div');
+    tmp.style.position='fixed'; tmp.style.left='-9999px';
+    document.body.appendChild(tmp);
+    try{
+      new QRCode(tmp, {text, width:256, height:256, correctLevel:QRCode.CorrectLevel.M});
+      setTimeout(()=>{
+        const canvas=tmp.querySelector('canvas');
+        const url=canvas?canvas.toDataURL('image/png'):null;
+        document.body.removeChild(tmp);
+        resolve(url);
+      },80);
+    }catch(e){ console.error('Gagal buat QR',e); document.body.removeChild(tmp); resolve(null); }
+  });
+}
+
+
+async function getTahunanSesiData(year){
+  const order=['Asia','London','New York'];
+  const stat={}; order.forEach(s=>stat[s]={profit:0,count:0,win:0});
+  try{
+    const start=year+'-01-01', end=year+'-12-31';
+    const rows=await api(`trade_log?select=sesi,profit&tanggal=gte.${start}&tanggal=lte.${end}&limit=20000`);
+    rows.forEach(r=>{
+      if(!stat[r.sesi]) return;
+      const p=parseFloat(r.profit||0);
+      stat[r.sesi].profit+=p; stat[r.sesi].count++;
+      if(p>=0) stat[r.sesi].win++;
+    });
+  }catch(e){ console.error('Gagal ambil data sesi tahunan', e); }
+  return stat;
+}
+
+function getTahunanPajakPersen(){
+  const inp=document.getElementById('tahunanPajakPersen');
+  const v=inp?parseFloat(inp.value):NaN;
+  return (!isNaN(v) && v>0) ? v : null;
+}
+
+async function exportLaporanTahunanPDF(){
+  const statusEl=document.getElementById('tahunanExportStatus');
+  if(statusEl) statusEl.textContent='⏳ Menyiapkan laporan tahunan...';
+  try{
+    if(typeof window.jspdf==='undefined'){ if(statusEl) statusEl.textContent='❌ Library PDF gagal dimuat, cek koneksi internet.'; return; }
+    const d=getTahunanData(tahunanYear);
+    if(!d){ if(statusEl) statusEl.textContent='❌ Tidak ada data tercatat di tahun ini.'; return; }
+    const sesi=await getTahunanSesiData(tahunanYear);
+    const pajakPersen=getTahunanPajakPersen();
+
+    const { jsPDF }=window.jspdf;
+    const doc=new jsPDF();
+    const judul=`Laporan Tahunan — ${tahunanYear}`;
+    const profil=getTahunanPengelolaProfil();
+    const kodeVerif=await hitungKodeVerifikasi(tahunanYear, d);
+
+    doc.setFontSize(16); doc.setFont(undefined,'bold');
+    doc.text(judul,14,16);
+    doc.setFont(undefined,'normal'); doc.setFontSize(9); doc.setTextColor(120);
+    doc.text('MARGINKUAT — Trading Emas di MT4  |  Digenerate otomatis: '+new Date().toLocaleString('id-ID'),14,22);
+    doc.setTextColor(0);
+
+    // ── PROFIL PENGELOLA DANA ──
+    doc.setFontSize(8); doc.setTextColor(90);
+    const profilLine=`Pengelola: ${profil.nama||'-'}  |  Tipe Akun: ${profil.tipe}  |  Gaya Trading: ${profil.gaya}${profil.risk?`  |  Risk/Trade: ${profil.risk}%`:''}`;
+    doc.text(profilLine,14,27);
+    doc.setTextColor(0);
+
+    const chartImg=drawEquityChartImg(d.rows);
+    doc.setFontSize(11); doc.setFont(undefined,'bold');
+    doc.text('Grafik Equity Curve — 1 Tahun',14,32);
+    doc.setFont(undefined,'normal');
+    doc.addImage(chartImg,'PNG',14,36,182,62);
+
+    let y=108;
+    doc.setFontSize(11); doc.setFont(undefined,'bold');
+    doc.text('Ringkasan Eksekutif',14,y);
+    doc.setFont(undefined,'normal'); doc.setFontSize(9);
+    y+=7;
+    const statLeft=[
+      `Total hari trading: ${d.rows.length}`,
+      `Win rate: ${d.winRate.toFixed(1)}% (${d.hariProfit} profit / ${d.hariLoss} loss)`,
+      `Total profit tahun ini: ${d.totalProfit>=0?'+':''}${fc(d.totalProfit)}`,
+      `Max drawdown: -${fc(d.maxDD)} (${d.maxDDPct.toFixed(1)}%)`
+    ];
+    const statRight=[
+      `Saldo awal tahun: ${fc(d.saldoAwalTahun)}`,
+      `Saldo akhir tahun: ${fc(d.saldoAkhirTahun)}`,
+      `Total Deposit: +${fc(d.totalDeposit)}`,
+      `Total WD: -${fc(d.totalWd)}`,
+      `Pertumbuhan saldo: ${d.pertumbuhan.toFixed(1)}%`
+    ];
+    statLeft.forEach((t,i)=>doc.text(t,14,y+i*6));
+    statRight.forEach((t,i)=>doc.text(t,105,y+i*6));
+    y+=Math.max(statLeft.length,statRight.length)*6+4;
+    if(pajakPersen!==null){
+      const estimasiPajak=d.totalProfit>0 ? d.totalProfit*pajakPersen/100 : 0;
+      doc.setFont(undefined,'bold');
+      doc.text(`Estimasi Pajak (${pajakPersen}% dari net profit): ${fc(estimasiPajak)}`,14,y+6);
+      doc.setFont(undefined,'normal');
+      doc.setFontSize(7); doc.setTextColor(150);
+      doc.text('*Estimasi kasar, bukan perhitungan pajak resmi. Konsultasikan ke konsultan pajak untuk kewajiban sebenarnya.',14,y+11);
+      doc.setTextColor(0); doc.setFontSize(9);
+      y+=18;
+    } else { y+=8; }
+
+    const arah=d.totalProfit>0?'profit positif':(d.totalProfit<0?'kerugian':'hasil impas');
+    const tren=d.saldoAkhirTahun>=d.saldoAwalTahun?'meningkat':'menurun';
+    doc.setFontSize(11); doc.setFont(undefined,'bold');
+    doc.text('Ringkasan',14,y);
+    doc.setFont(undefined,'normal'); doc.setFontSize(9);
+    y+=7;
+    const ringkasan=`Sepanjang tahun ${tahunanYear}, tercatat ${d.rows.length} hari trading dengan win rate ${d.winRate.toFixed(1)}%. Hasil keseluruhan menunjukkan ${arah} sebesar ${fc(Math.abs(d.totalProfit))}, dan saldo akun ${tren} dari ${fc(d.saldoAwalTahun)} menjadi ${fc(d.saldoAkhirTahun)} (${d.pertumbuhan.toFixed(1)}%). Drawdown terbesar sepanjang tahun mencapai ${fc(d.maxDD)} (${d.maxDDPct.toFixed(1)}%) dari puncak saldo. Hari terbaik: ${d.best.tanggal}, hari terlemah: ${d.worst.tanggal}.`;
+    const ringkasanLines=doc.splitTextToSize(ringkasan,182);
+    doc.text(ringkasanLines,14,y);
+    y+=ringkasanLines.length*5+10;
+
+    if(y>240){ doc.addPage(); y=20; }
+    doc.setFontSize(11); doc.setFont(undefined,'bold');
+    doc.text('Performa Per Bulan',14,y);
+    y+=8;
+    doc.setFontSize(8.5); doc.setFont(undefined,'bold');
+    doc.text('Bulan',14,y); doc.text('Hari',48,y); doc.text('Win%',64,y);
+    doc.text('Profit',82,y); doc.text('Deposit',115,y); doc.text('WD',145,y); doc.text('Saldo Akhir',165,y);
+    y+=2; doc.setDrawColor(200); doc.line(14,y,196,y); y+=5;
+    doc.setFont(undefined,'normal');
+    d.bulanStat.forEach((b,i)=>{
+      if(!b.hari) return;
+      if(y>280){ doc.addPage(); y=20; }
+      const wr=b.hari?(b.hariProfit/b.hari*100).toFixed(0):'0';
+      doc.text(bulanNamaFull[i].slice(0,3),14,y);
+      doc.text(String(b.hari),48,y);
+      doc.text(wr+'%',64,y);
+      doc.text((b.profit>=0?'+':'')+fc(b.profit),82,y);
+      doc.text('+'+fc(b.deposit),115,y);
+      doc.text('-'+fc(b.wd),145,y);
+      doc.text(fc(b.saldoAkhir),165,y);
+      y+=6;
+    });
+    y+=6;
+
+    if(y>240){ doc.addPage(); y=20; }
+    doc.setFontSize(11); doc.setFont(undefined,'bold');
+    doc.text('Analisis Sesi Trading (Asia / London / New York)',14,y);
+    y+=8;
+    doc.setFontSize(8.5); doc.setFont(undefined,'bold');
+    doc.text('Sesi',14,y); doc.text('Transaksi',60,y); doc.text('Win Rate',100,y); doc.text('Total P/L',140,y);
+    y+=2; doc.setDrawColor(200); doc.line(14,y,196,y); y+=5;
+    doc.setFont(undefined,'normal');
+    ['Asia','London','New York'].forEach(s=>{
+      const st=sesi[s];
+      const wr=st.count?(st.win/st.count*100).toFixed(0):'0';
+      doc.text(s,14,y);
+      doc.text(String(st.count),60,y);
+      doc.text(wr+'%',100,y);
+      doc.text((st.profit>=0?'+':'')+fc(st.profit),140,y);
+      y+=6;
+    });
+    const totalTrx=['Asia','London','New York'].reduce((s,k)=>s+sesi[k].count,0);
+    if(!totalTrx){ doc.setFontSize(8); doc.setTextColor(150); doc.text('Belum ada data transaksi individual (import statement lewat "Ekstrak per Hari" untuk mengaktifkan).',14,y+2); doc.setTextColor(0); y+=6; }
+    y+=8;
+
+    // ── METRIK RASIO RISIKO ──
+    if(y>250){ doc.addPage(); y=20; }
+    doc.setFontSize(11); doc.setFont(undefined,'bold');
+    doc.text('Metrik Rasio Risiko',14,y);
+    y+=8;
+    doc.setFontSize(9); doc.setFont(undefined,'normal');
+    const pfText=isFinite(d.profitFactor)?d.profitFactor.toFixed(2):'∞';
+    const rrText=isFinite(d.rrRatio)?d.rrRatio.toFixed(2):'∞';
+    const riskLeft=[
+      `Profit Factor: ${pfText}`,
+      `Risk-to-Reward Ratio: 1 : ${rrText}`,
+      `Rata-rata Profit (hari untung): ${fc(d.avgWin)}`
+    ];
+    const riskRight=[
+      `Sharpe Ratio (disetahunkan): ${d.sharpeLike.toFixed(2)}`,
+      `Rata-rata Loss (hari rugi): -${fc(d.avgLoss)}`,
+      `Gross Profit / Gross Loss: ${fc(d.grossProfit)} / -${fc(d.grossLoss)}`
+    ];
+    riskLeft.forEach((t,i)=>doc.text(t,14,y+i*6));
+    riskRight.forEach((t,i)=>doc.text(t,105,y+i*6));
+    y+=Math.max(riskLeft.length,riskRight.length)*6+4;
+    doc.setFontSize(7); doc.setTextColor(150);
+    doc.text('*Profit Factor = total profit / total loss. RR Ratio = rata-rata profit / rata-rata loss. Sharpe dihitung dari return harian, disetahunkan (√252) — indikatif, bukan standar industri baku.',14,y,{maxWidth:182});
+    doc.setTextColor(0);
+
+    doc.setFontSize(7); doc.setTextColor(180);
+    doc.text('Laporan ini digenerate otomatis dari catatan trading pribadi dan bukan dokumen resmi lembaga keuangan.',14,290);
+
+    // ── HALAMAN VERIFIKASI ──
+    doc.addPage();
+    doc.setFontSize(14); doc.setFont(undefined,'bold'); doc.setTextColor(0);
+    doc.text('Verifikasi Dokumen',14,20);
+    doc.setFont(undefined,'normal'); doc.setFontSize(9); doc.setTextColor(90);
+    const verifTxt=`Kode verifikasi di bawah dihitung otomatis dari angka-angka inti laporan ini (jumlah hari, total profit, saldo awal/akhir, max drawdown). Kalau ada pihak yang mengedit manual angka di PDF ini, kode verifikasinya tidak akan cocok lagi kalau dihitung ulang dari data aslinya di sistem Marginkuat. Ini alat bantu anti-edit sederhana, bukan sistem verifikasi pihak ketiga.`;
+    const verifLines=doc.splitTextToSize(verifTxt,182);
+    doc.text(verifLines,14,28);
+    let vy=28+verifLines.length*5+10;
+    doc.setFontSize(10); doc.setFont(undefined,'bold'); doc.setTextColor(0);
+    doc.text('Kode Verifikasi:',14,vy);
+    doc.setFont('courier','bold'); doc.setFontSize(13);
+    doc.text(kodeVerif,14,vy+8);
+    doc.setFont(undefined,'normal'); doc.setFontSize(9); doc.setTextColor(90);
+    vy+=16;
+    doc.text(`Tahun: ${tahunanYear}  |  Total hari: ${d.rows.length}  |  Total profit: ${fc(d.totalProfit)}`,14,vy);
+    vy+=10;
+    const qrTarget = profil.verifUrl ? `${profil.verifUrl}${profil.verifUrl.includes('?')?'&':'?'}code=${encodeURIComponent(kodeVerif)}&year=${tahunanYear}` : `MARGINKUAT-VERIF|${kodeVerif}|${tahunanYear}`;
+    const qrImg=await buatQrImage(qrTarget);
+    if(qrImg){
+      doc.addImage(qrImg,'PNG',14,vy,45,45);
+      doc.setFontSize(7); doc.setTextColor(150);
+      if(profil.verifUrl){ doc.text('Scan untuk membuka halaman verifikasi.',64,vy+15,{maxWidth:120}); }
+      else{ doc.text('QR ini berisi kode verifikasi saja (belum ada halaman verifikasi online — isi "URL Halaman Verifikasi" di menu Laporan Tahunan kalau sudah punya).',64,vy+15,{maxWidth:120}); }
+      doc.setTextColor(0);
+    } else {
+      doc.setFontSize(8); doc.setTextColor(150);
+      doc.text('(QR code gagal dibuat — cek koneksi internet lalu generate ulang laporan.)',14,vy);
+      doc.setTextColor(0);
+    }
+    doc.setFontSize(7); doc.setTextColor(180);
+    doc.text('Laporan ini digenerate otomatis dari catatan trading pribadi dan bukan dokumen resmi lembaga keuangan.',14,290);
+
+    const filename=`Laporan_Tahunan_${tahunanYear}.pdf`;
+    doc.save(filename);
+    if(statusEl) statusEl.textContent='✅ Laporan berhasil diunduh: '+filename;
+  }catch(e){
+    console.error(e);
+    if(statusEl) statusEl.textContent='❌ Gagal membuat laporan: '+(e.message||'').slice(0,150);
+  }
+}
+
+async function exportLaporanTahunanExcel(){
+  const statusEl=document.getElementById('tahunanExportStatus');
+  if(statusEl) statusEl.textContent='⏳ Menyiapkan file Excel...';
+  try{
+    if(typeof window.XLSX==='undefined'){ if(statusEl) statusEl.textContent='❌ Library Excel gagal dimuat, cek koneksi internet.'; return; }
+    const d=getTahunanData(tahunanYear);
+    if(!d){ if(statusEl) statusEl.textContent='❌ Tidak ada data tercatat di tahun ini.'; return; }
+    const sesi=await getTahunanSesiData(tahunanYear);
+    const pajakPersen=getTahunanPajakPersen();
+    const profil=getTahunanPengelolaProfil();
+    const kodeVerif=await hitungKodeVerifikasi(tahunanYear, d);
+
+    const wb=XLSX.utils.book_new();
+
+    // Sheet 1: Ringkasan Eksekutif
+    const ringkasanAoa=[
+      ['Laporan Tahunan', tahunanYear],
+      ['Digenerate', new Date().toLocaleString('id-ID')],
+      [],
+      ['Profil Pengelola Dana'],
+      ['Nama/Inisial', profil.nama||'-'],
+      ['Tipe Akun', profil.tipe],
+      ['Gaya Trading', profil.gaya],
+      ['Risk per Trade (%)', profil.risk||'-'],
+      [],
+      ['Metrik','Nilai'],
+      ['Total hari trading', d.rows.length],
+      ['Win rate (%)', +d.winRate.toFixed(1)],
+      ['Hari profit', d.hariProfit],
+      ['Hari loss', d.hariLoss],
+      ['Total profit', d.totalProfit],
+      ['Saldo awal tahun', d.saldoAwalTahun],
+      ['Saldo akhir tahun', d.saldoAkhirTahun],
+      ['Pertumbuhan saldo (%)', +d.pertumbuhan.toFixed(1)],
+      ['Total Deposit', d.totalDeposit],
+      ['Total WD', d.totalWd],
+      ['Max Drawdown', d.maxDD],
+      ['Max Drawdown (%)', +d.maxDDPct.toFixed(1)],
+      ['Hari terbaik', d.best.tanggal, parseFloat(d.best.profit||0)],
+      ['Hari terlemah', d.worst.tanggal, parseFloat(d.worst.profit||0)],
+      [],
+      ['Metrik Rasio Risiko'],
+      ['Profit Factor', isFinite(d.profitFactor)?+d.profitFactor.toFixed(2):'∞'],
+      ['Risk-to-Reward Ratio', isFinite(d.rrRatio)?+d.rrRatio.toFixed(2):'∞'],
+      ['Sharpe Ratio (disetahunkan)', +d.sharpeLike.toFixed(2)],
+      ['Rata-rata Profit (hari untung)', +d.avgWin.toFixed(2)],
+      ['Rata-rata Loss (hari rugi)', +d.avgLoss.toFixed(2)],
+      [],
+      ['Verifikasi Dokumen'],
+      ['Kode Verifikasi', kodeVerif],
+      ['Catatan', 'Dihitung dari data inti laporan ini. Cocokkan ulang kalau ragu keasliannya.']
+    ];
+    if(pajakPersen!==null){
+      const estimasiPajak=d.totalProfit>0 ? d.totalProfit*pajakPersen/100 : 0;
+      ringkasanAoa.push([]);
+      ringkasanAoa.push(['Estimasi Pajak (%)', pajakPersen]);
+      ringkasanAoa.push(['Estimasi Pajak (nominal)', estimasiPajak]);
+      ringkasanAoa.push(['Catatan Pajak','Estimasi kasar, bukan perhitungan resmi. Konsultasikan ke konsultan pajak.']);
+    }
+    const wsRingkasan=XLSX.utils.aoa_to_sheet(ringkasanAoa);
+    XLSX.utils.book_append_sheet(wb,wsRingkasan,'Ringkasan');
+
+    // Sheet 2: Performa Bulanan
+    const bulanAoa=[['Bulan','Hari Trading','Hari Profit','Hari Loss','Win Rate (%)','Profit','Deposit','WD','Saldo Akhir']];
+    d.bulanStat.forEach((b,i)=>{
+      if(!b.hari) return;
+      bulanAoa.push([
+        bulanNamaFull[i], b.hari, b.hariProfit, b.hariLoss,
+        +(b.hari?(b.hariProfit/b.hari*100):0).toFixed(1),
+        b.profit, b.deposit, b.wd, b.saldoAkhir
+      ]);
+    });
+    const wsBulanan=XLSX.utils.aoa_to_sheet(bulanAoa);
+    XLSX.utils.book_append_sheet(wb,wsBulanan,'Performa Bulanan');
+
+    // Sheet 3: Rincian Harian
+    const harianAoa=[['Tanggal','Saldo','Profit/Loss','Deposit','WD','Profil Risiko']];
+    d.rows.forEach(r=>{
+      const wdep=d.wdDepositMap[r.tanggal]||{wd:0,deposit:0};
+      harianAoa.push([r.tanggal, parseFloat(r.saldo_mt4||0), parseFloat(r.profit||0), wdep.deposit, wdep.wd, r.profil_risiko||'']);
+    });
+    const wsHarian=XLSX.utils.aoa_to_sheet(harianAoa);
+    XLSX.utils.book_append_sheet(wb,wsHarian,'Rincian Harian');
+
+    // Sheet 4: Analisis Sesi
+    const sesiAoa=[['Sesi','Jumlah Transaksi','Win Rate (%)','Total P/L']];
+    ['Asia','London','New York'].forEach(s=>{
+      const st=sesi[s];
+      sesiAoa.push([s, st.count, +(st.count?(st.win/st.count*100):0).toFixed(1), st.profit]);
+    });
+    const wsSesi=XLSX.utils.aoa_to_sheet(sesiAoa);
+    XLSX.utils.book_append_sheet(wb,wsSesi,'Analisis Sesi');
+
+    const filename=`Laporan_Tahunan_${tahunanYear}.xlsx`;
+    XLSX.writeFile(wb,filename);
+    if(statusEl) statusEl.textContent='✅ File Excel berhasil diunduh: '+filename;
+  }catch(e){
+    console.error(e);
+    if(statusEl) statusEl.textContent='❌ Gagal membuat file Excel: '+(e.message||'').slice(0,150);
+  }
+}
+
 renderExportLabel();
+renderTahunanLabel();
+loadTahunanPengelolaProfil();
 </script>
 </body>
 </html>
