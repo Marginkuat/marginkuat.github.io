@@ -2105,6 +2105,11 @@ async function resetRemCycle(){
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#2D0E0E"></div>Loss</div>
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--bg1)"></div>Tidak Trading</div>
     </div>
+    <div class="cal-legend" style="margin-top:6px">
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#4ADE80;width:7px;height:7px;border-radius:50%"></div>🧮 Umum 2%</div>
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#FBBF24;width:7px;height:7px;border-radius:50%"></div>🧮 Agresif 5%</div>
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#F87171;width:7px;height:7px;border-radius:50%"></div>🧮 Bahaya 10-13%</div>
+    </div>
   </div>
 </div>
 
@@ -3556,7 +3561,7 @@ function updateSkorDisiplinPreview(){
   skorEl.style.color= skor>=70?'#4ADE80' : skor>=40?'#C8A84B' : '#F87171';
 }
 
-let hasPairCol=true, hasMoodCol=true, hasDisiplinCol=true;
+let hasPairCol=true, hasMoodCol=true, hasDisiplinCol=true, hasProfilRisikoCol=true;
 async function fetchSharedSaldoData(){
   const base='tanggal,profit,saldo_mt4,gross_profit,gross_loss,jumlah_signal';
   const disCols='keyakinan_entry,sesuai_rencana,kualitas_eksekusi,skor_disiplin';
@@ -3579,8 +3584,21 @@ async function fetchSharedSaldoData(){
       if(!c.dis) rows=rows.map(r=>({...r,keyakinan_entry:null,sesuai_rencana:null,kualitas_eksekusi:null,skor_disiplin:null}));
       allSaldoData=rows;
       hasPairCol=c.pair; hasMoodCol=c.mood; hasDisiplinCol=c.dis;
-      return;
+      break;
     }catch(e){}
+  }
+  // Kolom profil_risiko dicoba terpisah (opsional) biar gak nambah kombinasi di atas jadi berlipat-lipat
+  hasProfilRisikoCol=false;
+  if(allSaldoData){
+    try{
+      const profilRows=await api('saldo_harian?select=tanggal,profil_risiko&order=tanggal.asc');
+      const profilByTgl={};
+      profilRows.forEach(r=>{ profilByTgl[r.tanggal]=r.profil_risiko; });
+      allSaldoData=allSaldoData.map(r=>({...r, profil_risiko: profilByTgl[r.tanggal]||null}));
+      hasProfilRisikoCol=true;
+    }catch(e){
+      allSaldoData=allSaldoData.map(r=>({...r, profil_risiko:null}));
+    }
   }
 }
 
@@ -3638,7 +3656,13 @@ function renderKalender(){
       c.className+=p>0?' profit':(p<0?' loss':'');
       if(p!==0) amtHtml=`<div class="cal-amt" style="color:${p>0?'#4ADE80':'#F87171'}">${p>0?'+':''}${fc(p)}</div>`;
     }
-    c.innerHTML=`<div class="cal-num">${d}</div>${amtHtml}`;
+    let profilDotHtml='';
+    if(row && row.profil_risiko && PROFIL_RISIKO_META[row.profil_risiko]){
+      const pm=PROFIL_RISIKO_META[row.profil_risiko];
+      c.style.position='relative';
+      profilDotHtml=`<div style="position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:${pm.border}" title="${pm.judul.replace('AKUN INI PAKAI ','')}"></div>`;
+    }
+    c.innerHTML=`${profilDotHtml}<div class="cal-num">${d}</div>${amtHtml}`;
     grid.appendChild(c);
   }
 }
@@ -4035,6 +4059,21 @@ function graphNext(){graphMonth++;if(graphMonth>11){graphMonth=0;graphYear++;}re
 let riwayatCache=[];
 const RIWAYAT_PAGE_SIZE=30;
 let riwayatOffset=0, riwayatHasMore=true;
+// Badge kecil "🧮 Umum 2%" / "🧮 Agresif 5%" / "🧮 Bahaya 10-13%" — dipakai di Riwayat Harian,
+// Buku Trading, dan Export Laporan, biar pengunjung tau kalkulator apa yang dipakai hari itu.
+function profilBadgeHtml(kode){
+  if(!kode || !PROFIL_RISIKO_META[kode]) return '';
+  const p=PROFIL_RISIKO_META[kode];
+  const singkat=p.judul.replace('AKUN INI PAKAI KALKULATOR ','').trim();
+  const riskLabel=p.sub.replace('RISK ','').replace(' PER TRADE','');
+  return `<span style="display:inline-block;font-size:8px;font-weight:700;padding:2px 7px;border-radius:6px;background:${p.warna2};color:${p.teks};border:1px solid ${p.border};white-space:nowrap;margin-top:3px">🧮 ${singkat} ${riskLabel}</span>`;
+}
+function profilLabelSingkat(kode){
+  if(!kode || !PROFIL_RISIKO_META[kode]) return '-';
+  const p=PROFIL_RISIKO_META[kode];
+  return p.judul.replace('AKUN INI PAKAI KALKULATOR ','').trim()+' '+p.sub.replace('RISK ','').replace(' PER TRADE','');
+}
+
 function renderRiwayatRows(rows, append){
   const el=document.getElementById('riwayatList');
   if(!append && !rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada catatan</div>';return;}
@@ -4046,6 +4085,7 @@ function renderRiwayatRows(rows, append){
         <div class="ri-date">${fd(r.tanggal)} <span style="font-size:9px;color:#5C4818">✏️ tap buat edit</span></div>
         <div class="ri-saldo">${fc(r.saldo_mt4)}</div>
         ${r.catatan?`<div class="ri-cat">${escapeHtml(r.catatan)}</div>`:''}
+        <div>${profilBadgeHtml(r.profil_risiko)}</div>
       </div>
       <div class="ri-profit" style="color:${pColor}">${p>=0?'+':''}${fc(p)}</div>
     </div>`;
@@ -8049,21 +8089,29 @@ async function simpanSaldo(){
     try{
       const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
       if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyData);
-      else await api('saldo_harian','POST',{tanggal:tgl,...bodyData});
+      else await api('saldo_harian','POST',{tanggal:tgl, profil_risiko:profilRisikoAktif, ...bodyData});
       savedOk=true;
     }catch(errMood){
-      // Kemungkinan kolom 'mood'/'swap'/kolom skor disiplin belum ada di Supabase — coba lagi tanpa itu semua
+      // Kemungkinan kolom 'mood'/'swap'/kolom skor disiplin/'profil_risiko' belum ada di Supabase — coba lagi tanpa itu semua
       moodSaved=false; swapSaved=false;
       const { mood:_drop, swap:_drop2, keyakinan_entry:_d3, sesuai_rencana:_d4, kualitas_eksekusi:_d5, skor_disiplin:_d6, ...bodyNoMood } = bodyData;
       try{
         const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
         if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyNoMood);
-        else await api('saldo_harian','POST',{tanggal:tgl,...bodyNoMood});
+        else await api('saldo_harian','POST',{tanggal:tgl, profil_risiko:profilRisikoAktif, ...bodyNoMood});
         savedOk=true;
       }catch(errSwap){
-        console.error(errSwap);
-        toast('❌ Gagal simpan: '+(errSwap.message||'').slice(0,150));
-        return;
+        // Mungkin khusus 'profil_risiko' yang belum ada — coba sekali lagi tanpa itu
+        try{
+          const ex2=await api(`saldo_harian?tanggal=eq.${tgl}`);
+          if(ex2.length) await api(`saldo_harian?id=eq.${ex2[0].id}`,'PATCH',bodyNoMood);
+          else await api('saldo_harian','POST',{tanggal:tgl, ...bodyNoMood});
+          savedOk=true;
+        }catch(errProfil){
+          console.error(errProfil);
+          toast('❌ Gagal simpan: '+(errProfil.message||'').slice(0,150));
+          return;
+        }
       }
     }
     if(document.getElementById('inpAutoSyncKas').checked){
@@ -8149,6 +8197,11 @@ function renderBukuList(){
     const panjang=isi.length>140;
     const expanded=bukuExpanded.has(r.id);
     const teks=(expanded||!panjang) ? isi : isi.slice(0,140)+'…';
+    // Profil risiko yang dipakai bulan ini (bisa lebih dari 1 kalau ganti di tengah bulan)
+    const rowsBulanIni=(allSaldoData||[]).filter(x=>{ const d=new Date(x.tanggal); return d.getFullYear()===r.tahun && (d.getMonth()+1)===r.bulan; });
+    const profilCountBuku={};
+    rowsBulanIni.forEach(x=>{ if(x.profil_risiko) profilCountBuku[x.profil_risiko]=(profilCountBuku[x.profil_risiko]||0)+1; });
+    const profilBadgesBuku=Object.keys(profilCountBuku).sort((a,b)=>profilCountBuku[b]-profilCountBuku[a]).map(k=>profilBadgeHtml(k)).join(' ');
     return `<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px">
         <span style="font-size:12px;font-weight:700;color:#D4AF37">${BUKU_BULAN[r.bulan-1]} ${r.tahun}${r.judul?' — '+escapeHtml(r.judul):''}</span>
@@ -8157,6 +8210,7 @@ function renderBukuList(){
           <span onclick="hapusBukuEntry(${r.id})" style="cursor:pointer;font-size:12px">🗑️</span>
         </span>`:''}
       </div>
+      ${profilBadgesBuku?`<div style="margin-bottom:8px">${profilBadgesBuku}</div>`:''}
       <div style="font-size:11px;color:#8A6B26;line-height:1.6;white-space:pre-wrap">${escapeHtml(teks)}</div>
       ${panjang?`<div onclick="toggleBukuExpand(${r.id})" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin-top:6px">${expanded?'Tutup':'📖 Baca Selengkapnya'}</div>`:''}
     </div>`;
@@ -8176,7 +8230,7 @@ async function generateBukuDraft(){
   const end=`${tahun}-${mm}-${String(lastDay).padStart(2,'0')}`;
   let rows=[];
   try{
-    rows=await api(`saldo_harian?select=tanggal,profit,catatan,mood,jumlah_signal&tanggal=gte.${start}&tanggal=lte.${end}&order=tanggal.asc`);
+    rows=await api(`saldo_harian?select=tanggal,profit,catatan,mood,jumlah_signal,profil_risiko&tanggal=gte.${start}&tanggal=lte.${end}&order=tanggal.asc`);
   }catch(e1){
     try{ rows=await api(`saldo_harian?select=tanggal,profit,catatan,jumlah_signal&tanggal=gte.${start}&tanggal=lte.${end}&order=tanggal.asc`); }
     catch(e2){ toast('❌ Gagal ambil data bulan ini'); return; }
@@ -8192,10 +8246,17 @@ async function generateBukuDraft(){
   rows.forEach(r=>{ if(r.mood){ moodCount[r.mood]=(moodCount[r.mood]||0)+1; } });
   const moodTop=Object.keys(moodCount).sort((a,b)=>moodCount[b]-moodCount[a])[0];
   const catatanList=rows.filter(r=>r.catatan && r.catatan.trim()).map(r=>`- ${fd(r.tanggal)}: ${r.catatan.trim()}`);
+  const profilCount={};
+  rows.forEach(r=>{ if(r.profil_risiko){ profilCount[r.profil_risiko]=(profilCount[r.profil_risiko]||0)+1; } });
+  const profilKeys=Object.keys(profilCount).sort((a,b)=>profilCount[b]-profilCount[a]);
 
   let draft=`Bulan ini saya trading selama ${hariTrading} hari, dengan ${hariProfit} hari profit dan ${hariTrading-hariProfit} hari loss (win rate ${winRate.toFixed(0)}%). `;
   draft+=totalProfit>=0 ? `Total hasil bulan ini profit ${fc(totalProfit)}.` : `Total hasil bulan ini rugi ${fc(Math.abs(totalProfit))}.`;
   draft+=`\n\nHari terbaik ada di ${fd(best.tanggal)} dengan ${parseFloat(best.profit)>=0?'profit':'loss'} ${fc(Math.abs(best.profit))}, sedangkan hari paling berat di ${fd(worst.tanggal)} dengan ${parseFloat(worst.profit)>=0?'profit':'loss'} ${fc(Math.abs(worst.profit))}.`;
+  if(profilKeys.length){
+    const profilText=profilKeys.map(k=>`${profilLabelSingkat(k)} (${profilCount[k]} hari)`).join(', ');
+    draft+=`\n\nKalkulator risiko yang dipakai bulan ini: ${profilText}.`;
+  }
   if(moodTop) draft+=`\n\nMood yang paling sering saya rasakan bulan ini: ${moodTop}.`;
   if(catatanList.length) draft+=`\n\nCatatan-catatan penting bulan ini:\n${catatanList.join('\n')}`;
   draft+=`\n\n[Lanjutkan di sini — ceritain lebih personal: apa yang bikin susah, apa yang dipelajari, apa targetnya bulan depan...]`;
@@ -9697,11 +9758,11 @@ async function exportLaporanCSV(){
       prevSaldo=saldo;
     });
 
-    const header=['tanggal','saldo_mt4','profit','gross_profit','gross_loss','wd','deposit','jumlah_signal','pair','catatan'];
+    const header=['tanggal','saldo_mt4','profit','gross_profit','gross_loss','wd','deposit','jumlah_signal','pair','profil_risiko','catatan'];
     let csv=header.join(',')+'\n';
     rows.forEach(r=>{
       const wdDep=wdDepositMap[r.tanggal]||{wd:0,deposit:0};
-      const rowWithWdDep={...r, wd:wdDep.wd||'', deposit:wdDep.deposit||''};
+      const rowWithWdDep={...r, wd:wdDep.wd||'', deposit:wdDep.deposit||'', profil_risiko: r.profil_risiko?profilLabelSingkat(r.profil_risiko):''};
       const line=header.map(h=>{
         let v=rowWithWdDep[h]==null?'':rowWithWdDep[h];
         v=String(v).replace(/"/g,'""');
@@ -9818,6 +9879,10 @@ async function exportLaporanPDF(){
     const saldoAwal=parseFloat(rows[0].saldo_mt4||0);
     const saldoAkhir=parseFloat(rows[rows.length-1].saldo_mt4||0);
     const pertumbuhan=saldoAwal!==0 ? (((saldoAkhir-saldoAwal)/Math.abs(saldoAwal))*100).toFixed(1) : '0.0';
+    const profilCountPdf={};
+    rows.forEach(r=>{ if(r.profil_risiko) profilCountPdf[r.profil_risiko]=(profilCountPdf[r.profil_risiko]||0)+1; });
+    const profilKeysPdf=Object.keys(profilCountPdf).sort((a,b)=>profilCountPdf[b]-profilCountPdf[a]);
+    const profilRingkasPdf=profilKeysPdf.length ? profilKeysPdf.map(k=>`${profilLabelSingkat(k)} (${profilCountPdf[k]} hari)`).join(', ') : 'tidak tercatat';
 
     // ── HEADER ──
     doc.setFontSize(15);
@@ -9854,7 +9919,8 @@ async function exportLaporanPDF(){
       `Total Deposit bulan ini: +${fc(totalDepositBulanIni)}`,
       `Total WD bulan ini: -${fc(totalWdBulanIni)}`,
       `Pertumbuhan saldo: ${pertumbuhan}%`,
-      `Hari terbaik: ${best.tanggal} (${parseFloat(best.profit||0)>=0?'+':''}${fc(best.profit)})`
+      `Hari terbaik: ${best.tanggal} (${parseFloat(best.profit||0)>=0?'+':''}${fc(best.profit)})`,
+      `Kalkulator dipakai: ${profilRingkasPdf}`
     ];
     statLeft.forEach((t,i)=>doc.text(t,14,y+i*6));
     statRight.forEach((t,i)=>doc.text(t,105,y+i*6));
@@ -9867,7 +9933,7 @@ async function exportLaporanPDF(){
     y+=7;
     const arah = totalProfit>0 ? 'profit positif' : (totalProfit<0 ? 'kerugian' : 'hasil impas');
     const trenSaldo = saldoAkhir>=saldoAwal ? 'meningkat' : 'menurun';
-    const ringkasan=`Sepanjang ${bulanNamaFull[exportMonth]} ${exportYear}, tercatat ${rows.length} hari trading dengan win rate ${winRate}%. Hasil keseluruhan menunjukkan ${arah} sebesar ${fc(Math.abs(totalProfit))}, dan saldo akun ${trenSaldo} dari ${fc(saldoAwal)} menjadi ${fc(saldoAkhir)} (${pertumbuhan}%). Hari dengan performa terbaik adalah ${best.tanggal}, sedangkan hari terlemah adalah ${worst.tanggal}.`;
+    const ringkasan=`Sepanjang ${bulanNamaFull[exportMonth]} ${exportYear}, tercatat ${rows.length} hari trading dengan win rate ${winRate}%. Hasil keseluruhan menunjukkan ${arah} sebesar ${fc(Math.abs(totalProfit))}, dan saldo akun ${trenSaldo} dari ${fc(saldoAwal)} menjadi ${fc(saldoAkhir)} (${pertumbuhan}%). Hari dengan performa terbaik adalah ${best.tanggal}, sedangkan hari terlemah adalah ${worst.tanggal}. Kalkulator risiko yang dipakai bulan ini: ${profilRingkasPdf}.`;
     const ringkasanLines=doc.splitTextToSize(ringkasan,182);
     doc.text(ringkasanLines,14,y);
     y+=ringkasanLines.length*5+10;
@@ -9880,11 +9946,12 @@ async function exportLaporanPDF(){
     doc.setFontSize(9);
     doc.setFont(undefined,'bold');
     doc.text('Tanggal',14,y);
-    doc.text('Saldo',44,y);
-    doc.text('P/L',68,y);
-    doc.text('WD/Deposit',90,y);
-    doc.text('Pair',125,y);
-    doc.text('Catatan',148,y);
+    doc.text('Saldo',38,y);
+    doc.text('P/L',60,y);
+    doc.text('WD/Dep',80,y);
+    doc.text('Pair',102,y);
+    doc.text('Profil',124,y);
+    doc.text('Catatan',150,y);
     doc.setFont(undefined,'normal');
     y+=4;
     doc.setDrawColor(200);
@@ -9898,12 +9965,16 @@ async function exportLaporanPDF(){
       let wdDepText='-';
       if(wdDep.deposit>0.01) wdDepText='+'+fc(wdDep.deposit)+' dep';
       else if(wdDep.wd>0.01) wdDepText='-'+fc(wdDep.wd)+' WD';
+      const profilSingkatPdf = r.profil_risiko && PROFIL_RISIKO_META[r.profil_risiko]
+        ? PROFIL_RISIKO_META[r.profil_risiko].judul.replace('AKUN INI PAKAI KALKULATOR ','').trim()
+        : '-';
       doc.text(String(r.tanggal),14,y);
-      doc.text(fc(r.saldo_mt4),44,y);
-      doc.text((p>=0?'+':'')+fc(p),68,y);
-      doc.text(wdDepText,90,y);
-      doc.text(r.pair||'-',125,y);
-      doc.text(String(r.catatan||'-').slice(0,16),148,y);
+      doc.text(fc(r.saldo_mt4),38,y);
+      doc.text((p>=0?'+':'')+fc(p),60,y);
+      doc.text(wdDepText,80,y);
+      doc.text(r.pair||'-',102,y);
+      doc.text(profilSingkatPdf,124,y);
+      doc.text(String(r.catatan||'-').slice(0,13),150,y);
       y+=6;
     });
 
