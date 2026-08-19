@@ -1262,9 +1262,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <label class="lbl">Nilai/Pip ($)</label>
     <input type="number" class="inp" id="calcPipValueB" value="0.1" step="0.01">
 
-    <label class="lbl">Modal Kamu</label>
-    <input type="number" class="inp" id="calcModalB" value="100" step="1" min="0" style="margin-bottom:0">
-
+    <label class="lbl">Modal Kamu <span id="calcModalBSumber" style="color:#7A5D1F;font-weight:400;text-transform:none;letter-spacing:0"></span></label>
+    <input type="number" class="inp" id="calcModalB" value="100" step="1" min="0" style="margin-bottom:0" readonly>
+    <div style="font-size:8px;color:#5C4818;margin-top:4px">🔒 Otomatis dari Saldo MT4 terakhir yang kamu input (bukan ketik manual) — biar gak ketinggalan zaman & sinkron sama cek REM di bawah.</div>
     <div style="height:1px;background:var(--border);margin:18px 0"></div>
     <div style="font-size:11px;color:#8A6B26;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1, 1:2, dan 1:3 sekaligus (pakai SL pips di atas sebagai basis).</div>
     <div class="calc-row">
@@ -1282,6 +1282,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     </div>
 
     <div id="calcRekomOutB"></div>
+    <div id="remCekOutB" style="margin-top:12px"></div>
     <div id="selisihOutB" style="margin-top:12px"></div>
     <div id="rrLevelsOutB" style="margin-top:16px"></div>
     <div id="pendingOutB" style="margin-top:16px"></div>
@@ -1306,7 +1307,58 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   const slElB=document.getElementById('calcSLB'), tpElB=document.getElementById('calcTPB'),
         pipvalueElB=document.getElementById('calcPipValueB'), pairSelectElB=document.getElementById('calcPairSelectB'),
         modalElB=document.getElementById('calcModalB'), rekomOutElB=document.getElementById('calcRekomOutB'),
+        remOutElB=document.getElementById('remCekOutB'), modalSumberElB=document.getElementById('calcModalBSumber'),
         beHeroElB=document.getElementById('calcOutBEHeroB'), beNoteElB=document.getElementById('calcOutBENoteB');
+
+  // ── LANGKAH 1-2: Modal Kamu otomatis dari Saldo MT4 terakhir (bukan ketik manual) ──
+  // Dipanggil dari loadAll() setelah allSaldoData ke-fetch dari Supabase.
+  window.syncModalKalkulatorBahaya=function(){
+    const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+    if(!rows.length){ modalSumberElB.textContent='(belum ada data saldo)'; return; }
+    const terakhir=rows[rows.length-1];
+    modalElB.value=parseFloat(terakhir.saldo_mt4||0).toFixed(2);
+    modalSumberElB.textContent=`(update: ${fd(terakhir.tanggal)})`;
+    computeAllB();
+  };
+
+  // ── LANGKAH 3-6: Cek REM — pakai SUMBER DATA & RUMUS YANG SAMA dengan dashboard REM ──
+  // (getStatusRemBulanIni + hitungBatasBulanan, sama persis dipakai notifikasi Telegram &
+  // banner REM di beranda) — sengaja TIDAK bikin rumus batas baru yang terpisah, biar gak ada
+  // 2 sumber kebenaran REM yang bisa beda angka satu sama lain.
+  function buildRemCekHtmlB(levelIdx, plan){
+    if(typeof getStatusRemBulanIni!=='function') return '';
+    const status=getStatusRemBulanIni();
+    if(!status || !status.saldoAwalBulan){
+      return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">ℹ️ Cek REM: belum ada data saldo bulan ini buat dihitung.</div>`;
+    }
+    const batasRemBulanIni = -status.bawah; // hitungBatasBulanan() balikin 'bawah' negatif, ini jadikan positif (nominal batas rugi)
+    const totalLossBulanIni = status.totalBulanIni<0 ? -status.totalBulanIni : 0; // cuma bagian rugi, kalau lagi profit = 0
+    const sisaJatahRem = batasRemBulanIni - totalLossBulanIni;
+
+    // REM SUDAH AKTIF (sesuai definisi dashboard: totalBulanIni <= bawah)
+    if(status.aktif || sisaJatahRem<=0){
+      return `<div style="background:#3A0F0F;border:2px solid #7F1D1D;border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:13px;font-weight:800;color:#F87171">🚫 REM SUDAH AKTIF — JANGAN OPEN POSISI</div>
+        <div style="font-size:9px;color:#FCA5A5;margin-top:6px;line-height:1.6">P/L bulan ini: ${fc(status.totalBulanIni)} — sudah melewati batas rugi bulanan ${fc(batasRemBulanIni)}. Disiplin: stop trading sampai bulan berikutnya.</div>
+      </div>`;
+    }
+
+    const levelAktif = (levelIdx>=0 && plan[levelIdx]) ? plan[levelIdx] : null;
+    if(!levelAktif){
+      return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">ℹ️ Sisa jatah REM bulan ini: <b style="color:#D4AF37">${fc(sisaJatahRem)}</b> — belum masuk Level 1 (modal di bawah minimum), belum bisa dihitung risk per trade-nya.</div>`;
+    }
+    const risk=levelAktif.risk;
+    const persenDariSisa = sisaJatahRem>0 ? (risk/sisaJatahRem*100) : 999;
+    const sisaKaliBolehSalah = risk>0 ? Math.floor(sisaJatahRem/risk) : 0;
+    const waspada = sisaKaliBolehSalah<=2;
+    const warna = waspada ? '#F87171' : '#4ADE80';
+    const bg = waspada ? '#3A0F0F' : 'var(--bg2)';
+    const border = waspada ? '1px solid #7F1D1D' : '1px solid var(--border)';
+    return `<div style="background:${bg};border:${border};border-radius:10px;padding:12px 14px">
+      <div style="font-size:10px;color:${warna};font-weight:700">${waspada?'⚠️':'✅'} Cek REM: Risk trade ini (${fc(risk)}) = ${persenDariSisa.toFixed(0)}% dari sisa jatah REM bulan ini (${fc(sisaJatahRem)}).</div>
+      <div style="font-size:9px;color:${waspada?'#FCA5A5':'#7A5D1F'};margin-top:4px">Sisa ruang buat salah: <b>${sisaKaliBolehSalah}x lagi</b> di lot ${levelAktif.lot.toFixed(2)} sebelum kena REM.</div>
+    </div>`;
+  }
 
   pairSelectElB.addEventListener('change', ()=>{
     const [sl, tp] = pairSelectElB.value.split('|');
@@ -1389,7 +1441,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     const pipvalue=parseFloat(pipvalueElB.value)||0;
     const modal=parseFloat(modalElB.value)||0;
     computeBEB(sl, tp);
-    rekomOutElB.innerHTML = (modal>0 && sl>0 && pipvalue>0) ? buildLevelTableHtmlB(modal, sl, pipvalue) : '';
+    if(modal>0 && sl>0 && pipvalue>0){
+      rekomOutElB.innerHTML = buildLevelTableHtmlB(modal, sl, pipvalue);
+      const plan=buildLevelPlanB(sl, pipvalue);
+      let levelIdx=-1;
+      plan.forEach((lv,i)=>{ if(modal>=lv.modal) levelIdx=i; });
+      remOutElB.innerHTML = buildRemCekHtmlB(levelIdx, plan);
+    }else{
+      rekomOutElB.innerHTML='';
+      remOutElB.innerHTML='';
+    }
   }
 
   [slElB,tpElB,pipvalueElB,modalElB].forEach(el=>el.addEventListener('input', computeAllB));
@@ -3622,6 +3683,7 @@ async function loadAll(){
   loadSkorDisiplinStats();
   renderKalender();
   computeDrawdownMap();
+  if(typeof syncModalKalkulatorBahaya==='function') syncModalKalkulatorBahaya();
   renderDDKalender();
   loadConsistencySharpe();
   loadRiskOfRuin();
