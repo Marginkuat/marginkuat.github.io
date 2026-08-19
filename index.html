@@ -11207,9 +11207,17 @@ function getTahunanData(year){
     if(dd>maxDD){ maxDD=dd; maxDDPct=peak>0?(dd/peak*100):0; }
   });
   const winRate=rows.length?(hariProfit/rows.length*100):0;
-  const saldoAwalTahun=parseFloat(rows[0].saldo_mt4||0)-parseFloat(rows[0].profit||0);
+  // FIX BUG: sebelumnya "Saldo Awal Tahun" dihitung dari saldo_mt4 - profit hari pertama SAJA.
+  // Itu salah kalau hari pertama tahun ini juga ada deposit — deposit hari itu ikut kehitung
+  // dua kali (masuk "saldo awal" DAN masuk "Total Deposit"), bikin bridge saldo awal + deposit -
+  // WD + profit != saldo akhir. Fix: saldo awal tahun = saldo carry-over dari record TERAKHIR
+  // sebelum tahun ini (histori penuh). Kalau gak ada record sebelumnya (akun baru mulai di tahun
+  // ini), saldo awal = 0, dan setoran hari pertama tetap murni masuk Total Deposit seperti biasa.
+  const allSortedFull=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const rowSebelumTahun=allSortedFull.filter(r=>new Date(r.tanggal)<new Date(rows[0].tanggal));
+  const saldoAwalTahun=rowSebelumTahun.length ? parseFloat(rowSebelumTahun[rowSebelumTahun.length-1].saldo_mt4||0) : 0;
   const saldoAkhirTahun=parseFloat(rows[rows.length-1].saldo_mt4||0);
-  const pertumbuhan=saldoAwalTahun!==0?((saldoAkhirTahun-saldoAwalTahun)/Math.abs(saldoAwalTahun)*100):0;
+  const pertumbuhan=saldoAwalTahun>0.01?((saldoAkhirTahun-saldoAwalTahun)/saldoAwalTahun*100):null;
 
   // Jujur soal keterbatasan metode WD/Deposit: hitung berapa entri di tahun ini yang "kecil"
   // (kemungkinan besar bukan WD/deposit asli, cuma swap/komisi/salah ketik saldo).
@@ -11382,11 +11390,21 @@ async function exportLaporanTahunanPDF(){
       `Saldo akhir tahun: ${fc(d.saldoAkhirTahun)}`,
       `Total Deposit: +${fc(d.totalDeposit)}`,
       `Total WD: -${fc(d.totalWd)}`,
-      `Pertumbuhan saldo: ${d.pertumbuhan.toFixed(1)}%`
+      `Pertumbuhan saldo: ${d.pertumbuhan!==null?d.pertumbuhan.toFixed(1)+'%':'N/A (tahun pertama akun)'}`
     ];
     statLeft.forEach((t,i)=>doc.text(t,14,y+i*6));
     statRight.forEach((t,i)=>doc.text(t,105,y+i*6));
     y+=Math.max(statLeft.length,statRight.length)*6+4;
+
+    // Bridge check: Saldo Awal + Deposit - WD + Profit harus = Saldo Akhir. Ditampilkan eksplisit
+    // biar investor bisa verifikasi manual sendiri (bukan cuma percaya angka final).
+    const bridgeHasil=d.saldoAwalTahun+d.totalDeposit-d.totalWd+d.totalProfit;
+    const bridgeCocok=Math.abs(bridgeHasil-d.saldoAkhirTahun)<0.5;
+    doc.setFontSize(7.5); doc.setFont('courier','normal'); doc.setTextColor(bridgeCocok?90:200);
+    doc.text(`Cek saldo: ${fc(d.saldoAwalTahun)} + ${fc(d.totalDeposit)} − ${fc(d.totalWd)} + ${fc(d.totalProfit)} = ${fc(bridgeHasil)} ${bridgeCocok?'✓ cocok dengan Saldo Akhir':'⚠ TIDAK cocok dengan Saldo Akhir '+fc(d.saldoAkhirTahun)}`,14,y,{maxWidth:182});
+    doc.setFont(undefined,'normal'); doc.setTextColor(0); doc.setFontSize(9);
+    y+=9;
+
     if(d.jumlahDepositWdKecil>0){
       doc.setFontSize(7); doc.setTextColor(180,140,30);
       doc.text(`⚠️ Catatan jujur: ${d.jumlahDepositWdKecil} dari transaksi Deposit/WD di atas (total ${fc(d.totalNominalKecil)}) tergolong "penyesuaian kecil" (di bawah ${fc(SELISIH_KECIL_THRESHOLD)}) — kemungkinan besar bukan deposit/WD asli, melainkan swap, komisi broker, atau selisih input saldo. Lihat detail di sheet/riwayat harian.`,14,y,{maxWidth:182});
@@ -11410,7 +11428,12 @@ async function exportLaporanTahunanPDF(){
     doc.text('Ringkasan',14,y);
     doc.setFont(undefined,'normal'); doc.setFontSize(9);
     y+=7;
-    const ringkasan=`Sepanjang tahun ${tahunanYear}, tercatat ${d.rows.length} hari trading dengan win rate ${d.winRate.toFixed(1)}%. Hasil keseluruhan menunjukkan ${arah} sebesar ${fc(Math.abs(d.totalProfit))}, dan saldo akun ${tren} dari ${fc(d.saldoAwalTahun)} menjadi ${fc(d.saldoAkhirTahun)} (${d.pertumbuhan.toFixed(1)}%). Drawdown terbesar sepanjang tahun mencapai ${fc(d.maxDD)} (${d.maxDDPct.toFixed(1)}%) dari puncak saldo. Hari terbaik: ${d.best.tanggal}, hari terlemah: ${d.worst.tanggal}.`;
+    const isAkunBaru=d.saldoAwalTahun<=0.01;
+    const pertumbuhanTxt=d.pertumbuhan!==null?` (${d.pertumbuhan.toFixed(1)}%)`:' (tahun pertama akun, saldo awal ¢0 — persentase pertumbuhan tidak relevan)';
+    const kalimatSaldo=isAkunBaru
+      ? `Akun ini mulai tercatat di tahun ${tahunanYear} (saldo awal ¢0), dengan total setoran ${fc(d.totalDeposit)} sepanjang tahun, dan saldo akun ${tren} menjadi ${fc(d.saldoAkhirTahun)} di akhir tahun.`
+      : `saldo akun ${tren} dari ${fc(d.saldoAwalTahun)} menjadi ${fc(d.saldoAkhirTahun)}${pertumbuhanTxt}.`;
+    const ringkasan=`Sepanjang tahun ${tahunanYear}, tercatat ${d.rows.length} hari trading dengan win rate ${d.winRate.toFixed(1)}%. Hasil keseluruhan menunjukkan ${arah} sebesar ${fc(Math.abs(d.totalProfit))}, dan ${kalimatSaldo} Drawdown terbesar sepanjang tahun mencapai ${fc(d.maxDD)} (${d.maxDDPct.toFixed(1)}%) dari puncak saldo. Hari terbaik: ${d.best.tanggal}, hari terlemah: ${d.worst.tanggal}.`;
     const ringkasanLines=doc.splitTextToSize(ringkasan,182);
     doc.text(ringkasanLines,14,y);
     y+=ringkasanLines.length*5+10;
@@ -11563,9 +11586,11 @@ async function exportLaporanTahunanExcel(){
       ['Total profit', d.totalProfit],
       ['Saldo awal tahun', d.saldoAwalTahun],
       ['Saldo akhir tahun', d.saldoAkhirTahun],
-      ['Pertumbuhan saldo (%)', +d.pertumbuhan.toFixed(1)],
+      ['Pertumbuhan saldo (%)', d.pertumbuhan!==null?+d.pertumbuhan.toFixed(1):'N/A (tahun pertama akun)'],
       ['Total Deposit', d.totalDeposit],
       ['Total WD', d.totalWd],
+      ['Cek Bridge Saldo', `${(d.saldoAwalTahun).toFixed(2)} + ${(d.totalDeposit).toFixed(2)} − ${(d.totalWd).toFixed(2)} + ${(d.totalProfit).toFixed(2)} = ${(d.saldoAwalTahun+d.totalDeposit-d.totalWd+d.totalProfit).toFixed(2)}`],
+      ['Cek Bridge Saldo — Cocok dengan Saldo Akhir?', Math.abs((d.saldoAwalTahun+d.totalDeposit-d.totalWd+d.totalProfit)-d.saldoAkhirTahun)<0.5 ? 'YA ✓' : 'TIDAK ⚠ — cek ulang data'],
       ['Jumlah Entri "Penyesuaian Kecil" (Deposit/WD)', d.jumlahDepositWdKecil],
       ['Nominal Penyesuaian Kecil (kemungkinan bukan WD/deposit asli)', d.totalNominalKecil],
       ['Catatan Kejujuran Data', `Deposit/WD dihitung dari selisih saldo harian, bukan bukti mutasi asli. Entri di bawah ${SELISIH_KECIL_THRESHOLD} ditandai "penyesuaian kecil" — bisa dari swap, komisi broker, atau salah ketik saldo. Lihat kolom "Status Deposit/WD" di sheet Rincian Harian.`],
