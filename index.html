@@ -447,7 +447,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <select class="inp" id="calcPairSelect2" style="margin-bottom:0">
       <optgroup label="XAUUSD">
         <option value="100|300">XAUUSD Kerdil (100 pips)</option>
-        <option value="200|500" selected>XAUUSD Standar (200 pips)</option>
+        <option value="200|400" selected>XAUUSD Standar (200 pips)</option>
         <option value="250|500">XAUUSD Medium (250 pips)</option>
         <option value="500|500">XAUUSD Hard (500 pips)</option>
       </optgroup>
@@ -526,7 +526,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       </div>
       <div>
         <label class="lbl">Pips Target (TP)</label>
-        <input type="number" class="inp" id="calcTP2" value="500" step="0.01">
+        <input type="number" class="inp" id="calcTP2" value="400" step="0.01">
       </div>
     </div>
 
@@ -537,7 +537,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <input type="number" class="inp" id="calcModal2" value="500" step="1" min="0" style="margin-bottom:0">
     <div style="font-size:8px;color:#5C4818;margin-top:4px">🔄 Otomatis keisi dari Saldo MT4 terakhir yang kamu input — tapi bebas diketik ulang manual (misal update saldo real-time pas lagi trading).</div>
     <div style="height:1px;background:var(--border);margin:18px 0"></div>
-    <div style="font-size:11px;color:#8A6B26;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1, 1:2, dan 1:3 sekaligus (pakai SL pips di atas sebagai basis).</div>
+    <div style="font-size:11px;color:#8A6B26;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1 dan 1:2 sekaligus (pakai SL pips di atas sebagai basis).</div>
     <div class="calc-row">
       <div>
         <label class="lbl">Entry Price</label>
@@ -684,11 +684,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <div class="calc-row">
       <div>
         <label class="lbl">Pips Dipertaruhkan (SL)</label>
-        <input type="number" class="inp" id="calcSL" value="166.66" step="0.01">
+        <input type="number" class="inp" id="calcSL" value="200" step="0.01">
       </div>
       <div>
         <label class="lbl">Pips Target (TP)</label>
-        <input type="number" class="inp" id="calcTP" value="500" step="0.01">
+        <input type="number" class="inp" id="calcTP" value="400" step="0.01">
       </div>
     </div>
 
@@ -704,7 +704,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     </div>
 
     <div style="height:1px;background:var(--border);margin:18px 0"></div>
-    <div style="font-size:11px;color:#8A6B26;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1, 1:2, dan 1:3 sekaligus (pakai SL pips di atas sebagai basis).</div>
+    <div style="font-size:11px;color:#8A6B26;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1 dan 1:2 sekaligus (pakai SL pips di atas sebagai basis).</div>
 
     <div class="calc-row">
       <div>
@@ -726,7 +726,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <select class="inp" id="calcPairSelect" style="margin-bottom:0">
       <optgroup label="XAUUSD">
         <option value="100|300">XAUUSD Kerdil (100 pips)</option>
-        <option value="166.66|500" selected>XAUUSD Standar (166,66 pips)</option>
+        <option value="200|400" selected>XAUUSD Standar (200 pips)</option>
         <option value="250|500">XAUUSD Medium (250 pips)</option>
         <option value="500|500">XAUUSD Hard (500 pips)</option>
       </optgroup>
@@ -965,17 +965,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#FF8080;margin-top:2px">≈ -$${slUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
     </div>`;
 
-    // Set TP custom per SL tertentu (XAUUSD). Kalau SL tidak ada di daftar, pakai default x1/x2/x3.
+    // Set TP custom per SL tertentu (XAUUSD). Kalau SL tidak ada di daftar, pakai default x1/x2.
     const CUSTOM_TP_SETS = {
-      166.66: [166.66, 332, 500],
-      200: [200, 400, 500],
+      200: [200, 400],
       250: [250, 500],
       500: [500]
     };
-    // Forex: semua level (Standar/Medium/Hard) selalu tampil RR 1:1, 1:2, 1:3.
+    // Forex: semua level (Standar/Medium/Hard) selalu tampil RR 1:1, 1:2.
     const tpList = pairName==='XAUUSD'
-      ? (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2, slPips*3])
-      : [slPips*1, slPips*2, slPips*3];
+      ? (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2])
+      : [slPips*1, slPips*2];
 
     tpList.forEach(tpPips=>{
       const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
@@ -1241,7 +1240,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <select class="inp" id="calcPairSelectB" style="margin-bottom:0">
       <optgroup label="XAUUSD">
         <option value="100|300" selected>XAUUSD Kerdil (100 pips)</option>
-        <option value="166.66|500">XAUUSD Standar (166,66 pips)</option>
+        <option value="200|400">XAUUSD Standar (200 pips)</option>
         <option value="250|500">XAUUSD Medium (250 pips)</option>
         <option value="500|500">XAUUSD Hard (500 pips)</option>
       </optgroup>
@@ -1289,7 +1288,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <input type="number" class="inp" id="calcModalB" value="100" step="1" min="0" style="margin-bottom:0">
     <div style="font-size:8px;color:#5C4818;margin-top:4px">🔄 Otomatis keisi dari Saldo MT4 terakhir yang kamu input — tapi bebas diketik ulang manual (misal update saldo real-time pas lagi trading, biar langsung tau REM & level-nya di mana).</div>
     <div style="height:1px;background:var(--border);margin:18px 0"></div>
-    <div style="font-size:11px;color:#8A6B26;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1, 1:2, dan 1:3 sekaligus (pakai SL pips di atas sebagai basis).</div>
+    <div style="font-size:11px;color:#8A6B26;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1 dan 1:2 sekaligus (pakai SL pips di atas sebagai basis).</div>
     <div class="calc-row">
       <div>
         <label class="lbl">Entry Price</label>
@@ -1459,7 +1458,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 })();
 
 // ══════════════════════════════════════════
-// ENTRY PRICE + LEVEL SL/TP (RR 1:1, 1:2, 1:3) — GENERIK, dipakai ulang
+// ENTRY PRICE + LEVEL SL/TP (RR 1:1, 1:2) — GENERIK, dipakai ulang
 // buat Kalkulator Umum (suffix '2') & Kalkulator Bahaya (suffix 'B'),
 // niru fitur yang tadinya cuma ada di Kalkulator Agresif (tanpa suffix).
 // ══════════════════════════════════════════
@@ -1561,10 +1560,10 @@ function initEntryPriceCalcGeneric(suffix){
       <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#FF8080;margin-top:2px">≈ -$${slUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
     </div>`;
 
-    const CUSTOM_TP_SETS = { 166.66: [166.66, 332, 500], 200: [200, 400, 500], 250: [250, 500], 500: [500] };
+    const CUSTOM_TP_SETS = { 200: [200, 400], 250: [250, 500], 500: [500] };
     const tpList = pairName==='XAUUSD'
-      ? (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2, slPips*3])
-      : [slPips*1, slPips*2, slPips*3];
+      ? (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2])
+      : [slPips*1, slPips*2];
 
     tpList.forEach(tpPips=>{
       const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
