@@ -11401,15 +11401,19 @@ async function exportLaporanTahunanPDF(){
     const bridgeHasil=d.saldoAwalTahun+d.totalDeposit-d.totalWd+d.totalProfit;
     const bridgeCocok=Math.abs(bridgeHasil-d.saldoAkhirTahun)<0.5;
     doc.setFontSize(7.5); doc.setFont('courier','normal'); doc.setTextColor(bridgeCocok?90:200);
-    doc.text(`Cek saldo: ${fc(d.saldoAwalTahun)} + ${fc(d.totalDeposit)} − ${fc(d.totalWd)} + ${fc(d.totalProfit)} = ${fc(bridgeHasil)} ${bridgeCocok?'✓ cocok dengan Saldo Akhir':'⚠ TIDAK cocok dengan Saldo Akhir '+fc(d.saldoAkhirTahun)}`,14,y,{maxWidth:182});
+    const bridgeTxt=`Cek saldo: ${fc(d.saldoAwalTahun)} + ${fc(d.totalDeposit)} - ${fc(d.totalWd)} + ${fc(d.totalProfit)} = ${fc(bridgeHasil)}  ${bridgeCocok?'[OK] cocok dengan Saldo Akhir':'[!] TIDAK cocok dengan Saldo Akhir '+fc(d.saldoAkhirTahun)}`;
+    const bridgeLines=doc.splitTextToSize(bridgeTxt,182);
+    doc.text(bridgeLines,14,y);
     doc.setFont(undefined,'normal'); doc.setTextColor(0); doc.setFontSize(9);
-    y+=9;
+    y+=bridgeLines.length*4.5+5;
 
     if(d.jumlahDepositWdKecil>0){
       doc.setFontSize(7); doc.setTextColor(180,140,30);
-      doc.text(`⚠️ Catatan jujur: ${d.jumlahDepositWdKecil} dari transaksi Deposit/WD di atas (total ${fc(d.totalNominalKecil)}) tergolong "penyesuaian kecil" (di bawah ${fc(SELISIH_KECIL_THRESHOLD)}) — kemungkinan besar bukan deposit/WD asli, melainkan swap, komisi broker, atau selisih input saldo. Lihat detail di sheet/riwayat harian.`,14,y,{maxWidth:182});
+      const catatanTxt=`[!] Catatan jujur: ${d.jumlahDepositWdKecil} dari transaksi Deposit/WD di atas (total ${fc(d.totalNominalKecil)}) tergolong "penyesuaian kecil" (di bawah ${fc(SELISIH_KECIL_THRESHOLD)}) - kemungkinan besar bukan deposit/WD asli, melainkan swap, komisi broker, atau selisih input saldo. Lihat detail di sheet/riwayat harian.`;
+      const catatanLines=doc.splitTextToSize(catatanTxt,182);
+      doc.text(catatanLines,14,y);
       doc.setTextColor(0); doc.setFontSize(9);
-      y+=11;
+      y+=catatanLines.length*4.5+5;
     }
     if(pajakPersen!==null){
       const estimasiPajak=d.totalProfit>0 ? d.totalProfit*pajakPersen/100 : 0;
@@ -11421,6 +11425,7 @@ async function exportLaporanTahunanPDF(){
       doc.setTextColor(0); doc.setFontSize(9);
       y+=18;
     } else { y+=8; }
+    if(y>250){ doc.addPage(); y=20; }
 
     const arah=d.totalProfit>0?'profit positif':(d.totalProfit<0?'kerugian':'hasil impas');
     const tren=d.saldoAkhirTahun>=d.saldoAwalTahun?'meningkat':'menurun';
@@ -11489,8 +11494,8 @@ async function exportLaporanTahunanPDF(){
     doc.text('Metrik Rasio Risiko',14,y);
     y+=8;
     doc.setFontSize(9); doc.setFont(undefined,'normal');
-    const pfText=isFinite(d.profitFactor)?d.profitFactor.toFixed(2):'∞';
-    const rrText=isFinite(d.rrRatio)?d.rrRatio.toFixed(2):'∞';
+    const pfText=isFinite(d.profitFactor)?d.profitFactor.toFixed(2):'tak terhingga';
+    const rrText=isFinite(d.rrRatio)?d.rrRatio.toFixed(2):'tak terhingga';
     const riskLeft=[
       `Profit Factor: ${pfText}`,
       `Risk-to-Reward Ratio: 1 : ${rrText}`,
@@ -11505,7 +11510,7 @@ async function exportLaporanTahunanPDF(){
     riskRight.forEach((t,i)=>doc.text(t,105,y+i*6));
     y+=Math.max(riskLeft.length,riskRight.length)*6+4;
     doc.setFontSize(7); doc.setTextColor(150);
-    doc.text('*Profit Factor = total profit / total loss. RR Ratio = rata-rata profit / rata-rata loss. Sharpe dihitung dari return harian, disetahunkan (√252) — indikatif, bukan standar industri baku.',14,y,{maxWidth:182});
+    doc.text('*Profit Factor = total profit / total loss. RR Ratio = rata-rata profit / rata-rata loss. Sharpe dihitung dari return harian, disetahunkan (dikali akar dari 252 hari trading) - indikatif, bukan standar industri baku.',14,y,{maxWidth:182});
     doc.setTextColor(0);
 
     doc.setFontSize(7); doc.setTextColor(180);
