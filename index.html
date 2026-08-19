@@ -447,7 +447,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <select class="inp" id="calcPairSelect2" style="margin-bottom:0">
       <optgroup label="XAUUSD">
         <option value="100|300">XAUUSD Kerdil (100 pips)</option>
-        <option value="166.66|500" selected>XAUUSD Standar (166,66 pips)</option>
+        <option value="200|500" selected>XAUUSD Standar (200 pips)</option>
         <option value="250|500">XAUUSD Medium (250 pips)</option>
         <option value="500|500">XAUUSD Hard (500 pips)</option>
       </optgroup>
@@ -522,7 +522,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <div class="calc-row" style="margin-top:12px">
       <div>
         <label class="lbl">Pips Dipertaruhkan (SL)</label>
-        <input type="number" class="inp" id="calcSL2" value="166.66" step="0.01">
+        <input type="number" class="inp" id="calcSL2" value="200" step="0.01">
       </div>
       <div>
         <label class="lbl">Pips Target (TP)</label>
@@ -1188,6 +1188,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
           ${levelSekarang<=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Modal di bawah $${plan[0].modal.toLocaleString('en-US',{maximumFractionDigits:2})} (lot minimum ${plan[0].lot.toFixed(2)}) — belum cukup buat masuk Level 1 sama sekali.</div>` : ''}
           ${next ? `<div style="font-size:9px;color:#7A5D1F;margin-top:2px">Butuh saldo <b style="color:#D4AF37">$${next.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</b> (lot ${next.lot.toFixed(2)}) buat naik ke Level ${levelIdx+2}</div>` : `<div style="font-size:9px;color:#4ADE80;margin-top:2px">🏆 Sudah di level tertinggi tabel ini!</div>`}
           ${levelIdx>=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Kalau ${LOSS_COUNT}x kalah beruntun di lot ${plan[levelIdx].lot.toFixed(2)}, turun ke Level ${levelIdx} (saldo $${(levelIdx>0?plan[levelIdx-1].modal:0).toLocaleString('en-US',{maximumFractionDigits:2})})</div>` : ''}
+          ${levelSekarang>0 ? `<div style="font-size:9px;color:#F87171;margin-top:6px;padding-top:6px;border-top:1px dashed #4A1414">⚠️ Potensi bangkrut total dari Level ${levelSekarang}: butuh <b>${levelSekarang}× beruntun</b> kejadian "${LOSS_COUNT}x kalah beruntun" (total ${levelSekarang*LOSS_COUNT} loss berturut-turut tanpa menang sekali pun) buat modal habis dari saldo sekarang.</div>` : ''}
         </div>
         <div style="font-size:8px;color:#8A6B26;text-align:center;margin-bottom:8px">👇 Lot naik terus per level — tidak pernah turun lagi walau saldo makin besar. Target saldo & risk dihitung dari SL/nilai-pip yang aktif sekarang:</div>
         ${rows}
@@ -1423,6 +1424,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
           ${levelSekarang<=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Modal di bawah $${plan[0].modal.toLocaleString('en-US',{maximumFractionDigits:2})} (lot minimum ${plan[0].lot.toFixed(2)}) — belum cukup buat masuk Level 1.</div>` : ''}
           ${next ? `<div style="font-size:9px;color:#7A5D1F;margin-top:2px">Butuh saldo <b style="color:#D4AF37">$${next.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</b> (lot ${next.lot.toFixed(2)}) buat naik ke Level ${levelIdx+2}</div>` : `<div style="font-size:9px;color:#4ADE80;margin-top:2px">🏆 Sudah di level tertinggi tabel ini!</div>`}
           ${levelIdx>=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Kalau ${LOSS_COUNT_B}x kalah beruntun di lot ${plan[levelIdx].lot.toFixed(2)}, saldo balik ke $${(levelIdx>0?plan[levelIdx-1].modal:0).toLocaleString('en-US',{maximumFractionDigits:2})} → turun ke Level ${levelIdx}</div>` : ''}
+          ${levelSekarang>0 ? `<div style="font-size:9px;color:#F87171;margin-top:6px;padding-top:6px;border-top:1px dashed #4A1414">⚠️ Potensi bangkrut total dari Level ${levelSekarang}: butuh <b>${levelSekarang}× beruntun</b> kejadian "${LOSS_COUNT_B}x kalah beruntun" (total ${levelSekarang*LOSS_COUNT_B} loss berturut-turut tanpa menang sekali pun) buat modal habis dari saldo sekarang.</div>` : ''}
         </div>
         <div style="font-size:8px;color:#8A6B26;text-align:center;margin-bottom:8px">👇 Level 1 dikunci risk pas 10%. Level 2+ = target level sebelumnya + (3× risk level ini) — jadi kalau kalah 3x beruntun, saldo balik PAS ke level sebelumnya:</div>
         ${rows}
