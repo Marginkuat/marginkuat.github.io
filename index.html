@@ -6372,6 +6372,18 @@ let loggedInInvestorId=null;
 async function fetchInvestorsAdmin(){
   try{ return await api('investors?select=*&order=created_at.asc'); }catch(e){ console.error(e); return []; }
 }
+// Cek status REM (batas rugi bulanan) bulan berjalan — dipakai buat notifikasi DAN
+// buat cegah investor baru masuk diam-diam pas akun lagi kena REM (transparansi).
+function getStatusRemBulanIni(){
+  const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const now=new Date();
+  const rowsBulanIni=rows.filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); });
+  if(!rowsBulanIni.length) return {aktif:false, totalBulanIni:0, bawah:0, saldoAwalBulan:0};
+  const totalBulanIni=rowsBulanIni.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+  const saldoAwalBulan=parseFloat(rowsBulanIni[0].saldo_mt4||0)-parseFloat(rowsBulanIni[0].profit||0);
+  const {bawah}=hitungBatasBulanan(saldoAwalBulan);
+  return {aktif: totalBulanIni<=bawah, totalBulanIni, bawah, saldoAwalBulan};
+}
 async function tambahInvestor(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk tambah investor');return;}
   const nama=prompt('Nama investor:');
@@ -6381,6 +6393,27 @@ async function tambahInvestor(){
   if(isNaN(modal)||modal<=0){toast('❌ Nilai modal tidak valid');return;}
   const tglStr=prompt('Tanggal bergabung (format YYYY-MM-DD):', new Date().toISOString().slice(0,10));
   if(!tglStr || !/^\d{4}-\d{2}-\d{2}$/.test(tglStr)){toast('❌ Format tanggal tidak valid');return;}
+
+  // ── CEK STATUS REM SEBELUM LANJUT ──
+  // Kalau akun lagi kena REM bulan ini, wajib ada peringatan eksplisit ke admin dulu
+  // sebelum setoran investor baru diterima — biar gak ada dana masuk diam-diam pas kondisi
+  // lagi bermasalah, dan biar tercatat jelas kalau nanti ditanya investor.
+  let catatanRem=null;
+  const statusRem=getStatusRemBulanIni();
+  if(statusRem.aktif){
+    const konfirmasi=confirm(
+      `⚠️ PERINGATAN: Akun ini SEDANG KENA REM bulan ini!\n\n`+
+      `Total P/L bulan berjalan: ${fc(statusRem.totalBulanIni)}\n`+
+      `Batas rugi bulanan: ${fc(statusRem.bawah)}\n\n`+
+      `Menambahkan investor baru sekarang berarti dananya masuk saat kondisi akun lagi rugi ` +
+      `melewati batas yang kamu tetapkan sendiri. Ini akan dicatat jelas di record investor ` +
+      `(transparan kalau ditanya nanti).\n\n`+
+      `Tetap lanjut tambahkan investor ini?`
+    );
+    if(!konfirmasi){ toast('❌ Dibatalkan — investor tidak ditambahkan karena akun sedang kena REM'); return; }
+    catatanRem=`⚠️ Bergabung saat akun KENA REM (${tglStr}) — P/L bulan berjalan saat itu: ${fc(statusRem.totalBulanIni)}, batas: ${fc(statusRem.bawah)}.`;
+  }
+
   let kode=prompt(`Buat kode akses login untuk ${nama} (WAJIB minimal 6 karakter, disarankan 8+ campuran huruf & angka biar gak gampang ditebak/brute-force):`);
   if(!kode){toast('❌ Kode akses wajib diisi');return;}
   kode=kode.trim();
@@ -6392,12 +6425,48 @@ async function tambahInvestor(){
   try{
     const dup=await api('investors?select=id&kode=eq.'+encodeURIComponent(kode));
     if(dup.length){toast('❌ Kode akses sudah dipakai investor lain, pakai kode lain');return;}
-    await api('investors','POST',{id:Date.now().toString(36), nama, modal, tanggal:tglStr, kode});
-    toast('✅ Investor ditambahkan — kode akses: '+kode);
+    const payload={id:Date.now().toString(36), nama, modal, tanggal:tglStr, kode};
+    if(catatanRem) payload.catatan_rem=catatanRem;
+    try{
+      await api('investors','POST',payload);
+    }catch(e2){
+      // Kalau kolom catatan_rem belum ada di tabel (SQL setup belum dijalankan), coba lagi
+      // tanpa kolom itu supaya investor tetap kesimpan — tapi tetap kasih tau admin.
+      if(catatanRem && /catatan_rem/i.test(e2.message||'')){
+        delete payload.catatan_rem;
+        await api('investors','POST',payload);
+        toast('⚠️ Investor disimpan, TAPI catatan REM gagal (jalankan setup_investor_rem_note.sql dulu di Supabase biar catatan REM ikut kesimpan)');
+        renderInvestorDashboard();
+        return;
+      }
+      throw e2;
+    }
+    toast('✅ Investor ditambahkan — kode akses: '+kode+(catatanRem?' (dicatat: bergabung saat REM aktif)':''));
     renderInvestorDashboard();
   }catch(e){
     console.error(e);
     toast('❌ Gagal simpan investor: '+(e.message||'').slice(0,120));
+  }
+}
+async function editCatatanRemInvestor(id, namaSaatIni, catatanSaatIni){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const catatan=prompt(
+    `Catatan REM untuk ${namaSaatIni} (kosongkan lalu OK buat hapus catatan):\n\n`+
+    `Contoh: "Bergabung saat akun KENA REM (2026-08-18) — P/L bulan berjalan saat itu: -¢85.77, batas: -¢50."`,
+    catatanSaatIni||''
+  );
+  if(catatan===null) return; // batal
+  try{
+    await api('investors?id=eq.'+encodeURIComponent(id),'PATCH',{catatan_rem: catatan.trim()||null});
+    toast('✅ Catatan REM investor diperbarui');
+    renderInvestorDashboard();
+  }catch(e){
+    console.error(e);
+    if(/catatan_rem/i.test(e.message||'')){
+      toast('❌ Kolom catatan_rem belum ada di database — jalankan setup_investor_rem_note.sql dulu di Supabase SQL Editor');
+    }else{
+      toast('❌ Gagal simpan catatan: '+(e.message||'').slice(0,120));
+    }
   }
 }
 async function hapusInvestor(id){
@@ -6514,6 +6583,7 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
         <span>Bergabung ${days} hari lalu (${inv.tanggal})</span>
       </div>
       ${rankHtml?`<div style="font-size:9px;color:#7A5D1F;margin-top:4px">${rankHtml}</div>`:''}
+      ${inv.catatan_rem?`<div style="font-size:9px;color:#FCA5A5;background:#3F1414;border:1px solid #7F1D1D;border-radius:8px;padding:8px 10px;margin-top:8px;line-height:1.5">${escapeHtml(inv.catatan_rem)}${isAdminMode?`<span onclick="editCatatanRemInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}','${escapeHtml(inv.catatan_rem).replace(/'/g,"\\'")}')" style="display:block;margin-top:4px;color:#F87171;text-decoration:underline;cursor:pointer;font-size:8px">Ubah catatan</span>`:''}</div>`:(isAdminMode?`<div style="text-align:right;margin-top:6px"><span onclick="editCatatanRemInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}','')" style="font-size:8px;color:#7A5D1F;cursor:pointer;text-decoration:underline">+ Tambah catatan REM</span></div>`:'')}
       ${rekeningHtml}
       ${aksiAdminHtml}
       ${riwayatHtml}
