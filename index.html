@@ -3063,6 +3063,58 @@ async function api(p,m='GET',b=null){
   const t=await r.text();return t?JSON.parse(t):[];
 }
 
+// ══ RATE LIMIT / LOCKOUT LOGIN (Admin & Investor) ══
+// Dicek/dicatat lewat RPC `check_login_lockout` & `record_login_attempt` di Supabase — BUKAN
+// localStorage, karena localStorage gampang di-reset (clear data) dan gak melindungi level API.
+// Kalau RPC-nya belum ada (SQL setup belum dijalankan di Supabase), fail-open dengan diam-diam
+// supaya login tetap bisa dipakai seperti biasa (bukan nge-block situs kalau setup belum lengkap) —
+// tapi ada peringatan di console developer biar ketahuan.
+let _loginLockoutRpcMissingWarned=false;
+async function cekLockoutLogin(identifier, scope, maxAttempts, windowMinutes){
+  try{
+    const rows=await api('rpc/check_login_lockout','POST',{
+      p_identifier:identifier, p_scope:scope,
+      p_max_attempts:maxAttempts||5, p_window_minutes:windowMinutes||15
+    });
+    return (rows && rows[0]) ? rows[0] : {locked:false, attempts_left:maxAttempts||5, retry_after_seconds:0};
+  }catch(e){
+    if(!_loginLockoutRpcMissingWarned){
+      console.warn('⚠️ Rate limit login belum aktif — jalankan setup_login_lockout.sql di Supabase SQL Editor. Detail:', e.message);
+      _loginLockoutRpcMissingWarned=true;
+    }
+    return {locked:false, attempts_left:maxAttempts||5, retry_after_seconds:0}; // fail-open
+  }
+}
+async function catatPercobaanLogin(identifier, scope, success){
+  try{ await api('rpc/record_login_attempt','POST',{p_identifier:identifier, p_scope:scope, p_success:success}); }
+  catch(e){ /* diam-diam gagal kalau RPC belum di-setup — jangan ganggu alur login */ }
+}
+function formatDetikJadiWaktu(detik){
+  if(detik<60) return detik+' detik';
+  const menit=Math.ceil(detik/60);
+  return menit+' menit';
+}
+// Friksi tambahan sisi klien: setelah beberapa kali gagal (per tab/sesi), minta jawab
+// soal matematika simpel dulu sebelum boleh coba lagi. Bukan CAPTCHA beneran, tapi cukup
+// buat nahan script brute-force naif yang asal submit berkali-kali tanpa logic tambahan.
+function cekCaptchaSederhana(scope){
+  const key='mk_fail_count_'+scope;
+  const gagal=parseInt(sessionStorage.getItem(key)||'0',10);
+  if(gagal<2) return true; // belum perlu captcha di 2x pertama
+  const a=Math.floor(Math.random()*9)+1, b=Math.floor(Math.random()*9)+1;
+  const jawab=prompt(`Verifikasi dulu ya (biar bukan bot): berapa ${a} + ${b}?`);
+  return jawab!==null && parseInt(jawab,10)===(a+b);
+}
+function catatGagalCaptchaSesi(scope){
+  const key='mk_fail_count_'+scope;
+  const gagal=parseInt(sessionStorage.getItem(key)||'0',10);
+  sessionStorage.setItem(key, String(gagal+1));
+}
+function resetGagalCaptchaSesi(scope){
+  sessionStorage.removeItem('mk_fail_count_'+scope);
+}
+
+
 // ══ SESI ADMIN (Supabase Auth — menggantikan sistem PIN lama) ══
 // Kenapa diganti: PIN lama cuma ngunci tampilan UI di browser, TIDAK ngunci database-nya —
 // siapapun yang tau anon key bisa langsung tulis/hapus data lewat API tanpa PIN sama sekali.
@@ -6329,10 +6381,14 @@ async function tambahInvestor(){
   if(isNaN(modal)||modal<=0){toast('❌ Nilai modal tidak valid');return;}
   const tglStr=prompt('Tanggal bergabung (format YYYY-MM-DD):', new Date().toISOString().slice(0,10));
   if(!tglStr || !/^\d{4}-\d{2}-\d{2}$/.test(tglStr)){toast('❌ Format tanggal tidak valid');return;}
-  let kode=prompt(`Buat kode akses login untuk ${nama} (contoh: 4-6 digit angka/huruf, ini yang dipakai investor buat login):`);
+  let kode=prompt(`Buat kode akses login untuk ${nama} (WAJIB minimal 6 karakter, disarankan 8+ campuran huruf & angka biar gak gampang ditebak/brute-force):`);
   if(!kode){toast('❌ Kode akses wajib diisi');return;}
   kode=kode.trim();
   if(!kode){toast('❌ Kode akses wajib diisi');return;}
+  if(kode.length<6){toast('❌ Kode akses terlalu pendek (min. 6 karakter) — gampang ditebak kalau kependekan');return;}
+  if(kode.length<8 || !/[a-zA-Z]/.test(kode) || !/[0-9]/.test(kode)){
+    if(!confirm(`⚠️ Kode "${kode}" agak lemah (idealnya 8+ karakter, campuran huruf & angka). Ada proteksi lockout otomatis kalau ada yang coba tebak berkali-kali, tapi kode yang lebih kuat tetap lebih aman.\n\nLanjut pakai kode ini?`)) return;
+  }
   try{
     const dup=await api('investors?select=id&kode=eq.'+encodeURIComponent(kode));
     if(dup.length){toast('❌ Kode akses sudah dipakai investor lain, pakai kode lain');return;}
@@ -6360,10 +6416,37 @@ async function doInvestorLogin(){
   const codeInput=document.getElementById('investorLoginCode');
   const code=(codeInput?codeInput.value:'').trim();
   if(!code){toast('❌ Masukkan kode akses dulu');return;}
+
+  // Lockout per-kode (nahan brute-force nebak 1 kode spesifik) + lockout global
+  // (nahan brute-force yang nyoba banyak kode berbeda satu-satu).
+  const lockKode=await cekLockoutLogin(code,'investor',5,15);
+  if(lockKode.locked){
+    toast(`🔒 Kode ini terlalu banyak dicoba salah. Coba lagi dalam ${formatDetikJadiWaktu(lockKode.retry_after_seconds)}.`);
+    return;
+  }
+  const lockGlobal=await cekLockoutLogin('__global__','investor_global',20,15);
+  if(lockGlobal.locked){
+    toast(`🔒 Login investor sementara dikunci karena terlalu banyak percobaan gagal (semua kode). Coba lagi dalam ${formatDetikJadiWaktu(lockGlobal.retry_after_seconds)}.`);
+    return;
+  }
+  if(!cekCaptchaSederhana('investor')){
+    toast('❌ Verifikasi gagal/dibatalkan.');
+    return;
+  }
+
   try{
     const rows=await api('rpc/investor_login','POST',{p_kode:code});
-    if(!rows || !rows.length){toast('❌ Kode akses tidak ditemukan');return;}
+    if(!rows || !rows.length){
+      await catatPercobaanLogin(code,'investor',false);
+      await catatPercobaanLogin('__global__','investor_global',false);
+      catatGagalCaptchaSesi('investor');
+      toast('❌ Kode akses tidak ditemukan');
+      return;
+    }
     const found=rows[0];
+    await catatPercobaanLogin(code,'investor',true);
+    await catatPercobaanLogin('__global__','investor_global',true);
+    resetGagalCaptchaSesi('investor');
     loggedInInvestorId=found.id;
     sessionStorage.setItem('mk_investor_code', code); // simpan kode (bukan id) — dipakai buat re-fetch data pas refresh
     if(codeInput) codeInput.value='';
@@ -6371,6 +6454,9 @@ async function doInvestorLogin(){
     renderInvestorDashboard();
   }catch(e){
     console.error(e);
+    await catatPercobaanLogin(code,'investor',false);
+    await catatPercobaanLogin('__global__','investor_global',false);
+    catatGagalCaptchaSesi('investor');
     toast('❌ Gagal login: '+(e.message||'').slice(0,120));
   }
 }
@@ -8007,9 +8093,23 @@ async function doLogin(){
   const email=document.getElementById('loginEmail').value.trim();
   const pass=document.getElementById('loginPin').value;
   if(!email||!pass){toast('❌ Isi email & password');return;}
+
+  const emailKey=email.toLowerCase();
+  const lockStatus=await cekLockoutLogin(emailKey,'admin');
+  if(lockStatus.locked){
+    toast(`🔒 Terlalu banyak percobaan gagal. Coba lagi dalam ${formatDetikJadiWaktu(lockStatus.retry_after_seconds)}.`);
+    return;
+  }
+  if(!cekCaptchaSederhana('admin')){
+    toast('❌ Verifikasi gagal/dibatalkan.');
+    return;
+  }
+
   try{
     await supabaseSignIn(email,pass);
     isAdmin=true;
+    await catatPercobaanLogin(emailKey,'admin',true);
+    resetGagalCaptchaSesi('admin');
     closeModal('mLogin');
     document.getElementById('loginEmail').value='';
     document.getElementById('loginPin').value='';
@@ -8021,7 +8121,11 @@ async function doLogin(){
     if(typeof renderLabelProfilRisiko==='function') renderLabelProfilRisiko();
     toast('✅ Masuk sebagai Admin');
   }catch(e){
-    toast('❌ '+(e.message||'Login gagal').slice(0,100));
+    await catatPercobaanLogin(emailKey,'admin',false);
+    catatGagalCaptchaSesi('admin');
+    const sisaLagi=await cekLockoutLogin(emailKey,'admin');
+    const pesanSisa=sisaLagi.locked ? ` Akun ini sekarang dikunci sementara ${formatDetikJadiWaktu(sisaLagi.retry_after_seconds)}.` : (sisaLagi.attempts_left<=2 ? ` Sisa ${sisaLagi.attempts_left}x percobaan sebelum dikunci sementara.` : '');
+    toast('❌ '+(e.message||'Login gagal').slice(0,100)+pesanSisa);
   }
 }
 async function logout(){
