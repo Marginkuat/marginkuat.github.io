@@ -1667,9 +1667,9 @@ initEntryPriceCalcGeneric('B'); // Kalkulator Bahaya — Level 10-13%
 // ══ TOGGLE BANNER "MODE BAHAYA" — disimpan di app_settings (Supabase), tampil ke SEMUA pengunjung ══
 // ══ PROFIL RISIKO AKTIF (label permanen di atas Saldo MT4) — disimpan di app_settings, ganti sendiri kapan aja ══
 const PROFIL_RISIKO_META={
-  umum:    {judul:'AKUN INI PAKAI KALKULATOR UMUM', sub:'RISK 2% PER TRADE', warna1:'#14532D', warna2:'#052E16', border:'#4ADE80', teks:'#86EFAC', subteks:'#DCFCE7', ket:'Kalkulator paling aman di situs ini — risk dikunci flat 2%, lot dihitung ulang tiap saat dari saldo.'},
-  agresif: {judul:'AKUN INI PAKAI KALKULATOR AGRESIF', sub:'RISK 5% PER TRADE', warna1:'#7C4A03', warna2:'#451A03', border:'#FBBF24', teks:'#FDE68A', subteks:'#FEF3C7', ket:'Level menengah — risk dikunci flat 5% di semua level, lebih tinggi dari Umum 2%, di bawah Bahaya 10-13%.'},
-  bahaya:  {judul:'AKUN INI PAKAI KALKULATOR BAHAYA', sub:'RISK 10-13% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FCA5A5', subteks:'#FECACA', ket:'Bukan kalkulator Umum 2% atau Agresif 5% — akun ini secara default trading pakai risk tinggi. Pahami risikonya sebelum menilai performa saldo di bawah ini.'}
+  umum:    {judul:'AKUN INI PAKAI KALKULATOR UMUM', sub:'RISK 2% PER TRADE', warna1:'#14532D', warna2:'#052E16', border:'#4ADE80', teks:'#86EFAC', subteks:'#DCFCE7', ket:'Kalkulator paling aman di situs ini — risk dikunci flat 2%, lot dihitung ulang tiap saat dari saldo. REM (batas rugi bulanan) otomatis dikunci ke $100 tetap selama profil ini aktif.'},
+  agresif: {judul:'AKUN INI PAKAI KALKULATOR AGRESIF', sub:'RISK 5% PER TRADE', warna1:'#7C4A03', warna2:'#451A03', border:'#FBBF24', teks:'#FDE68A', subteks:'#FEF3C7', ket:'Level menengah — risk dikunci flat 5% di semua level, lebih tinggi dari Umum 2%, di bawah Bahaya 10-13%. REM (batas rugi bulanan) TIDAK otomatis di sini — atur manual lewat "Ubah Target" di bawah.'},
+  bahaya:  {judul:'AKUN INI PAKAI KALKULATOR BAHAYA', sub:'RISK 10-13% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FCA5A5', subteks:'#FECACA', ket:'Bukan kalkulator Umum 2% atau Agresif 5% — akun ini secara default trading pakai risk tinggi. Pahami risikonya sebelum menilai performa saldo di bawah ini. REM (batas rugi bulanan) TIDAK otomatis di sini — atur manual lewat "Ubah Target" di bawah.'}
 };
 let profilRisikoAktif='bahaya'; // default sebelum data server kebaca
 async function loadProfilRisiko(){
@@ -1705,7 +1705,17 @@ async function setProfilRisiko(kode){
     renderLabelProfilRisiko();
     renderInvCalcDisclaimer();
     if(typeof renderInvestorCalc==='function') renderInvestorCalc();
-    toast(`✅ Label diganti ke "${PROFIL_RISIKO_META[kode].judul}" — langsung tampil ke semua pengunjung`);
+    // ── REM otomatis: cuma dikunci $100 tetap kalau profil = Umum 2%. ──
+    // Pindah ke Agresif 5% / Bahaya 10-13% TIDAK mengubah REM otomatis — dibiarkan
+    // apa adanya (nilai terakhir), admin atur sendiri manual lewat "Ubah Target".
+    let remNote='';
+    if(kode==='umum' && typeof setRemFixedOtomatis==='function'){
+      try{
+        await setRemFixedOtomatis(100);
+        remNote=' · REM dikunci ke $100 tetap';
+      }catch(e){ console.error('Gagal auto-set REM ke $100', e); remNote=' · ⚠️ gagal auto-set REM, cek manual'; }
+    }
+    toast(`✅ Label diganti ke "${PROFIL_RISIKO_META[kode].judul}" — langsung tampil ke semua pengunjung${remNote}`);
   }catch(e){
     console.error(e);
     toast('❌ Gagal simpan profil risiko');
@@ -4046,6 +4056,21 @@ async function editTargetBulanan(){
     console.error(e);
     toast('❌ Gagal simpan target ke server: '+(e.message||'').slice(0,120));
   }
+}
+// ── Dipanggil OTOMATIS oleh setProfilRisiko() pas pindah ke profil "Umum 2%" ──
+// (bukan lewat prompt manual seperti editTargetBulanan). Cuma dipakai buat profil Umum;
+// pindah ke Agresif/Bahaya TIDAK memanggil ini — REM dibiarkan apa adanya, atur manual.
+async function setRemFixedOtomatis(value){
+  const newCfg={mode:'fixed', value};
+  const payload=JSON.stringify(newCfg);
+  const existing=await api('app_settings?select=key&key=eq.target_bulanan');
+  if(existing.length){
+    await api('app_settings?key=eq.target_bulanan','PATCH',{value:payload});
+  }else{
+    await api('app_settings','POST',{key:'target_bulanan',value:payload});
+  }
+  cachedTargetBulanan=newCfg;
+  if(typeof renderGraph==='function') renderGraph();
 }
 function renderTargetProgress(totalBulanIni, saldoAwalBulan){
   const wrap=document.getElementById('targetProgressWrap');
