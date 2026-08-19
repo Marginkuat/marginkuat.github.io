@@ -6667,6 +6667,18 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
   const roi = inv.modal>0 ? (profitShare/inv.modal*100) : 0;
   const joinDate=new Date(inv.tanggal);
   const days=Math.max(0, Math.floor((Date.now()-joinDate.getTime())/86400000));
+  // ── Untung yang HARUS DIBAGI = profit share terhitung (live) DIKURANGI yang udah pernah
+  // dicatat lewat "Distribusi Profit" sebelumnya. Ini angka yang investor bisa minta cairkan. ──
+  const totalSudahDidistribusi = transaksiList.filter(t=>t.jenis==='distribusi_profit').reduce((s,t)=>s+parseFloat(t.jumlah||0),0);
+  const untungBelumDibagi = profitShare - totalSudahDidistribusi;
+  const waktuHitungStr = new Date().toLocaleString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const untungDibagiHtml = `
+    <div style="background:${untungBelumDibagi>0.005?'linear-gradient(135deg,#3D2E00,#1A1400)':'var(--bg0)'};border:1.5px solid ${untungBelumDibagi>0.005?'#FFD700':'var(--border)'};border-radius:10px;padding:10px 12px;margin-bottom:8px;text-align:center">
+      <div style="font-size:9px;color:#C8A84B;text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">💰 Untung yang Harus Dibagi</div>
+      <div style="font-size:20px;font-weight:900;color:${untungBelumDibagi>0.005?'#FFD700':'#7A5D1F'}">${mfc(untungBelumDibagi)}</div>
+      <div style="font-size:8px;color:#7A5D1F;margin-top:4px;line-height:1.5">${untungBelumDibagi>0.005 ? 'Belum dicairkan — bisa ditarik kapan saja kalau diminta.' : (totalSudahDidistribusi>0.005 ? 'Semua profit sejauh ini sudah dibagikan penuh.' : 'Belum ada profit yang perlu dibagi.')}</div>
+      <div style="font-size:7px;color:#5C4818;margin-top:6px">🕐 Dihitung otomatis per ${waktuHitungStr} (waktu perangkat)${totalSudahDidistribusi>0.005?` · Sudah dibagikan sejauh ini: ${mfc(totalSudahDidistribusi)}`:''}</div>
+    </div>`;
   // rankInfo: {rank, total} — dihitung di pemanggil (admin: dari list lokal; investor: dari hasil RPC investor_login)
   let rankHtml='';
   if(rankInfo && rankInfo.total>1){
@@ -6699,6 +6711,7 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
         <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${profitShare>=0?'cg':'cr'}" style="font-size:14px">${profitShare>=0?'+':''}${mfc(profitShare)}</div><div class="bal-box-lbl">Estimasi Profit Share</div></div>
         <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:${roi>=0?'#4ADE80':'#F87171'}">${roi>=0?'+':''}${roi.toFixed(1)}%</div><div class="bal-box-lbl">ROI</div></div>
       </div>
+      ${untungDibagiHtml}
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:9px;color:#7A5D1F;border-top:1px solid var(--border);padding-top:8px">
         <span>Porsi Modal: <b style="color:#C8A84B">${sharePct.toFixed(1)}%</b></span>
         <span>Bergabung ${days} hari lalu (${inv.tanggal})</span>
