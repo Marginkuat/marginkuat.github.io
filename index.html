@@ -2185,7 +2185,7 @@ async function resetRemCycle(){
   <div class="sec-title">📥📤 Ringkasan Deposit &amp; Penarikan (WD)</div>
 
   <div class="graph-card" style="margin-bottom:12px">
-    <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Dihitung 100% otomatis dari selisih Saldo Harian yang sudah kamu input — bukan input manual terpisah, jadi dijamin selalu sinkron sama data Saldo MT4 kamu (gak akan pernah beda angka).</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Dihitung 100% otomatis dari selisih Saldo Harian yang sudah kamu input — bukan input manual terpisah, jadi dijamin selalu sinkron sama data Saldo MT4 kamu (gak akan pernah beda angka). <b style="color:#C89B3C">Catatan jujur:</b> ini menghitung dari SELISIH saldo, bukan dari bukti mutasi transaksi asli. Selisih kecil (di bawah ~₡20) bisa jadi bukan WD/deposit beneran — kadang itu cuma swap, komisi broker, atau saldo yang salah ketik. Entri seperti itu ditandai terpisah di daftar riwayat.</div>
     <div id="depositWdRingkasan">
       <div style="text-align:center;padding:10px;color:#7A5D1F;font-size:12px">Memuat...</div>
     </div>
@@ -4951,6 +4951,13 @@ function setupKasChartInteraction(data){
 // ══ RIWAYAT PENARIKAN (WD) — VISUAL ══
 // Dihitung dari selisih Saldo Harian (sama seperti model WD di renderKasRingkasan), BUKAN dari
 // label kategori manual di Aliran Uang — jadi selalu akurat & konsisten dengan Saldo MT4 riil.
+//
+// CATATAN KEJUJURAN DATA: metode ini menghitung WD/Deposit dari SELISIH saldo harian, bukan dari
+// bukti transaksi (mutasi bank/broker) yang sebenarnya. Untuk selisih yang kecil (di bawah
+// SELISIH_KECIL_THRESHOLD), kemungkinan besar itu BUKAN WD/deposit asli — bisa jadi dari swap,
+// komisi broker, atau salah ketik saldo. Entri seperti ini ditandai "kecil:true" dan ditampilkan
+// dengan label berbeda ("Penyesuaian") supaya tidak diklaim sebagai penarikan/setoran dana nyata.
+const SELISIH_KECIL_THRESHOLD = 20; // ₡ — di bawah nominal ini, dianggap "penyesuaian kecil" bukan WD/deposit pasti
 function getWdProfitPerHari(){
   const dataUrut=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
   const out=[];
@@ -4958,7 +4965,7 @@ function getWdProfitPerHari(){
   dataUrut.forEach(r=>{
     const saldo=parseFloat(r.saldo_mt4||0);
     const profit=parseFloat(r.profit||0);
-    let wd=0, deposit=0;
+    let wd=0, deposit=0, kecil=false;
     if(prevSaldo===null){
       // Hari pertama tercatat: saldo sebelum profit hari itu dianggap modal awal/setoran pertama
       const modalAwal=saldo-profit;
@@ -4966,10 +4973,10 @@ function getWdProfitPerHari(){
     }else{
       const selisih=saldo-prevSaldo;
       const implisit=selisih-profit; // bagian selisih saldo yang BUKAN dari hasil trading hari itu
-      if(implisit<-0.01) wd=Math.abs(implisit);
-      else if(implisit>0.01) deposit=implisit;
+      if(implisit<-0.01){ wd=Math.abs(implisit); kecil=wd<SELISIH_KECIL_THRESHOLD; }
+      else if(implisit>0.01){ deposit=implisit; kecil=deposit<SELISIH_KECIL_THRESHOLD; }
     }
-    out.push({tanggal:r.tanggal, wd, deposit, profit});
+    out.push({tanggal:r.tanggal, wd, deposit, profit, kecil});
     prevSaldo=saldo;
   });
   return out;
@@ -5057,23 +5064,29 @@ function renderDepositWdRiwayat(){
   const data=getWdProfitPerHari();
   const events=[];
   data.forEach(d=>{
-    if(d.deposit>0.01) events.push({tanggal:d.tanggal, tipe:'deposit', jumlah:d.deposit});
-    if(d.wd>0.01) events.push({tanggal:d.tanggal, tipe:'wd', jumlah:d.wd});
+    if(d.deposit>0.01) events.push({tanggal:d.tanggal, tipe:'deposit', jumlah:d.deposit, kecil:d.kecil});
+    if(d.wd>0.01) events.push({tanggal:d.tanggal, tipe:'wd', jumlah:d.wd, kecil:d.kecil});
   });
   events.sort((a,b)=>new Date(b.tanggal)-new Date(a.tanggal));
   if(!events.length){
     el.innerHTML='<div style="text-align:center;padding:14px;color:#7A5D1F;font-size:11px">Belum ada deposit/WD yang terdeteksi.</div>';
     return;
   }
-  el.innerHTML = events.slice(0,20).map(e=>`
+  const jumlahKecil=events.filter(e=>e.kecil).length;
+  el.innerHTML = events.slice(0,20).map(e=>{
+    const warna=e.kecil?'#C89B3C':(e.tipe==='deposit'?'#4ADE80':'#F87171');
+    const label=e.kecil ? `⚠️ Penyesuaian kecil (bukan pasti ${e.tipe==='deposit'?'deposit':'WD'} asli)` : (e.tipe==='deposit'?'📥 Deposit':'📤 WD');
+    return `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
       <div>
         <div style="font-size:11px;color:#C8A84B">${fd(e.tanggal)}</div>
-        <div style="font-size:9px;color:${e.tipe==='deposit'?'#4ADE80':'#F87171'}">${e.tipe==='deposit'?'📥 Deposit':'📤 WD'}</div>
+        <div style="font-size:9px;color:${warna}">${label}</div>
       </div>
-      <span style="font-size:13px;font-weight:700;color:${e.tipe==='deposit'?'#4ADE80':'#F87171'}">${e.tipe==='deposit'?'+':'-'}${fc(e.jumlah)}</span>
-    </div>`).join('') + (events.length>20?`<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">...dan ${events.length-20} transaksi lainnya (dihitung dari total di atas, cuma yang ditampilkan dibatasi 20 terbaru)</div>`:'')
-    + `<div style="font-size:8px;color:#5C4818;text-align:center;margin-top:10px">Sumber: dihitung dari Saldo Harian, bukan input manual — mau tambah/ubah, edit lewat "Input Saldo Harian".</div>`;
+      <span style="font-size:13px;font-weight:700;color:${warna}">${e.tipe==='deposit'?'+':'-'}${fc(e.jumlah)}</span>
+    </div>`;
+  }).join('') + (events.length>20?`<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">...dan ${events.length-20} transaksi lainnya (dihitung dari total di atas, cuma yang ditampilkan dibatasi 20 terbaru)</div>`:'')
+    + (jumlahKecil>0?`<div style="font-size:9px;color:#C89B3C;text-align:center;margin-top:10px;line-height:1.6">⚠️ Ada ${jumlahKecil} entri "penyesuaian kecil" (di bawah ${fc(SELISIH_KECIL_THRESHOLD)}) — kemungkinan besar dari swap, komisi broker, atau saldo yang salah ketik, BUKAN pasti WD/deposit asli. Jujur aja: cek ulang input Saldo Harian di tanggal terkait kalau mau memastikan.</div>`:'')
+    + `<div style="font-size:8px;color:#5C4818;text-align:center;margin-top:10px">Sumber: dihitung dari selisih Saldo Harian, bukan bukti mutasi transaksi asli — mau tambah/ubah, edit lewat "Input Saldo Harian".</div>`;
 }
 function renderWdRingkasan(){
   const el=document.getElementById('wdRingkasan');
@@ -11141,17 +11154,17 @@ function hitungWdDepositMapFull(){
   allSorted.forEach(r=>{
     const saldo=parseFloat(r.saldo_mt4||0);
     const profit=parseFloat(r.profit||0);
-    let wd=0, deposit=0;
+    let wd=0, deposit=0, kecil=false;
     if(prevSaldo===null){
       const modalAwal=saldo-profit;
       if(modalAwal>0.01) deposit=modalAwal;
     }else{
       const selisih=saldo-prevSaldo;
       const implisit=selisih-profit;
-      if(implisit<-0.01) wd=Math.abs(implisit);
-      else if(implisit>0.01) deposit=implisit;
+      if(implisit<-0.01){ wd=Math.abs(implisit); kecil=wd<SELISIH_KECIL_THRESHOLD; }
+      else if(implisit>0.01){ deposit=implisit; kecil=deposit<SELISIH_KECIL_THRESHOLD; }
     }
-    map[r.tanggal]={wd,deposit};
+    map[r.tanggal]={wd,deposit,kecil};
     prevSaldo=saldo;
   });
   return map;
@@ -11198,6 +11211,14 @@ function getTahunanData(year){
   const saldoAkhirTahun=parseFloat(rows[rows.length-1].saldo_mt4||0);
   const pertumbuhan=saldoAwalTahun!==0?((saldoAkhirTahun-saldoAwalTahun)/Math.abs(saldoAwalTahun)*100):0;
 
+  // Jujur soal keterbatasan metode WD/Deposit: hitung berapa entri di tahun ini yang "kecil"
+  // (kemungkinan besar bukan WD/deposit asli, cuma swap/komisi/salah ketik saldo).
+  let jumlahDepositWdKecil=0, totalNominalKecil=0;
+  rows.forEach(r=>{
+    const e=wdDepositMap[r.tanggal];
+    if(e && e.kecil){ jumlahDepositWdKecil++; totalNominalKecil+=(e.wd+e.deposit); }
+  });
+
   // ── METRIK RASIO RISIKO ──
   // Profit Factor = total profit hari untung / total loss hari rugi (absolut)
   // RR Ratio = rata-rata profit hari untung / rata-rata loss hari rugi (absolut)
@@ -11223,7 +11244,8 @@ function getTahunanData(year){
 
   return {rows, wdDepositMap, bulanStat, totalProfit, hariProfit, hariLoss, winRate,
     totalDeposit, totalWd, best, worst, saldoAwalTahun, saldoAkhirTahun, pertumbuhan, maxDD, maxDDPct,
-    grossProfit, grossLoss, profitFactor, avgWin, avgLoss, rrRatio, sharpeLike};
+    grossProfit, grossLoss, profitFactor, avgWin, avgLoss, rrRatio, sharpeLike,
+    jumlahDepositWdKecil, totalNominalKecil};
 }
 
 // ── PROFIL PENGELOLA DANA (disimpan di localStorage, ikut ditampilkan di laporan) ──
@@ -11365,6 +11387,12 @@ async function exportLaporanTahunanPDF(){
     statLeft.forEach((t,i)=>doc.text(t,14,y+i*6));
     statRight.forEach((t,i)=>doc.text(t,105,y+i*6));
     y+=Math.max(statLeft.length,statRight.length)*6+4;
+    if(d.jumlahDepositWdKecil>0){
+      doc.setFontSize(7); doc.setTextColor(180,140,30);
+      doc.text(`⚠️ Catatan jujur: ${d.jumlahDepositWdKecil} dari transaksi Deposit/WD di atas (total ${fc(d.totalNominalKecil)}) tergolong "penyesuaian kecil" (di bawah ${fc(SELISIH_KECIL_THRESHOLD)}) — kemungkinan besar bukan deposit/WD asli, melainkan swap, komisi broker, atau selisih input saldo. Lihat detail di sheet/riwayat harian.`,14,y,{maxWidth:182});
+      doc.setTextColor(0); doc.setFontSize(9);
+      y+=11;
+    }
     if(pajakPersen!==null){
       const estimasiPajak=d.totalProfit>0 ? d.totalProfit*pajakPersen/100 : 0;
       doc.setFont(undefined,'bold');
@@ -11538,6 +11566,9 @@ async function exportLaporanTahunanExcel(){
       ['Pertumbuhan saldo (%)', +d.pertumbuhan.toFixed(1)],
       ['Total Deposit', d.totalDeposit],
       ['Total WD', d.totalWd],
+      ['Jumlah Entri "Penyesuaian Kecil" (Deposit/WD)', d.jumlahDepositWdKecil],
+      ['Nominal Penyesuaian Kecil (kemungkinan bukan WD/deposit asli)', d.totalNominalKecil],
+      ['Catatan Kejujuran Data', `Deposit/WD dihitung dari selisih saldo harian, bukan bukti mutasi asli. Entri di bawah ${SELISIH_KECIL_THRESHOLD} ditandai "penyesuaian kecil" — bisa dari swap, komisi broker, atau salah ketik saldo. Lihat kolom "Status Deposit/WD" di sheet Rincian Harian.`],
       ['Max Drawdown', d.maxDD],
       ['Max Drawdown (%)', +d.maxDDPct.toFixed(1)],
       ['Hari terbaik', d.best.tanggal, parseFloat(d.best.profit||0)],
@@ -11578,10 +11609,11 @@ async function exportLaporanTahunanExcel(){
     XLSX.utils.book_append_sheet(wb,wsBulanan,'Performa Bulanan');
 
     // Sheet 3: Rincian Harian
-    const harianAoa=[['Tanggal','Saldo','Profit/Loss','Deposit','WD','Profil Risiko']];
+    const harianAoa=[['Tanggal','Saldo','Profit/Loss','Deposit','WD','Status Deposit/WD','Profil Risiko']];
     d.rows.forEach(r=>{
-      const wdep=d.wdDepositMap[r.tanggal]||{wd:0,deposit:0};
-      harianAoa.push([r.tanggal, parseFloat(r.saldo_mt4||0), parseFloat(r.profit||0), wdep.deposit, wdep.wd, r.profil_risiko||'']);
+      const wdep=d.wdDepositMap[r.tanggal]||{wd:0,deposit:0,kecil:false};
+      const status = wdep.kecil ? `Penyesuaian kecil (bukan pasti asli, <${SELISIH_KECIL_THRESHOLD})` : ((wdep.wd>0||wdep.deposit>0) ? 'Terdeteksi normal' : '-');
+      harianAoa.push([r.tanggal, parseFloat(r.saldo_mt4||0), parseFloat(r.profit||0), wdep.deposit, wdep.wd, status, r.profil_risiko||'']);
     });
     const wsHarian=XLSX.utils.aoa_to_sheet(harianAoa);
     XLSX.utils.book_append_sheet(wb,wsHarian,'Rincian Harian');
