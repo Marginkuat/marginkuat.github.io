@@ -3714,6 +3714,12 @@ async function loadAll(){
   await loadBukuTrading();
   await loadModeBahaya();
   await loadProfilRisiko();
+  // ── FIX #2: renderInvestorDashboard() di atas (baris paling awal fungsi ini) sempat jalan
+  // SEBELUM loadTargetBulanan()/loadRemBasisMode()/loadProfilRisiko() selesai — jadi kartu
+  // investor (REM & tier risk di kotak "Keamanan Dana") kepakai nilai default/lama sesaat.
+  // Render ulang di sini, setelah SEMUA data itu beneran kelar dimuat, biar kartu investor
+  // ikut variabel yang sama persis dengan dashboard/kalkulator — bukan dihitung terpisah. ──
+  renderInvestorDashboard();
   await loadRemProfitRugi();
   checkAndKirimNotifikasi();
 }
