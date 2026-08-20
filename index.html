@@ -1667,9 +1667,9 @@ initEntryPriceCalcGeneric('B'); // Kalkulator Bahaya — Level 10-13%
 // ══ TOGGLE BANNER "MODE BAHAYA" — disimpan di app_settings (Supabase), tampil ke SEMUA pengunjung ══
 // ══ PROFIL RISIKO AKTIF (label permanen di atas Saldo MT4) — disimpan di app_settings, ganti sendiri kapan aja ══
 const PROFIL_RISIKO_META={
-  umum:    {judul:'AKUN INI PAKAI KALKULATOR UMUM', sub:'RISK 2% PER TRADE', warna1:'#14532D', warna2:'#052E16', border:'#4ADE80', teks:'#86EFAC', subteks:'#DCFCE7', ket:'Kalkulator paling aman di situs ini — risk dikunci flat 2%, lot dihitung ulang tiap saat dari saldo. REM (batas rugi bulanan) otomatis dikunci ke $100 tetap selama profil ini aktif.'},
-  agresif: {judul:'AKUN INI PAKAI KALKULATOR AGRESIF', sub:'RISK 5% PER TRADE', warna1:'#7C4A03', warna2:'#451A03', border:'#FBBF24', teks:'#FDE68A', subteks:'#FEF3C7', ket:'Level menengah — risk dikunci flat 5% di semua level, lebih tinggi dari Umum 2%, di bawah Bahaya 10-13%. REM (batas rugi bulanan) ikut dicek otomatis di sini juga — tapi nilai targetnya diatur manual lewat "Ubah Target" (nggak auto-$100 kayak di Umum 2%).'},
-  bahaya:  {judul:'AKUN INI PAKAI KALKULATOR BAHAYA', sub:'RISK 10-13% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FCA5A5', subteks:'#FECACA', ket:'Bukan kalkulator Umum 2% atau Agresif 5% — akun ini secara default trading pakai risk tinggi. Pahami risikonya sebelum menilai performa saldo di bawah ini. REM (batas rugi bulanan) TIDAK berlaku sama sekali di sini — full disiplin manual.'}
+  umum:    {judul:'AKUN INI PAKAI KALKULATOR UMUM', sub:'RISK 2% PER TRADE', warna1:'#14532D', warna2:'#052E16', border:'#4ADE80', teks:'#86EFAC', subteks:'#DCFCE7', ket:'Kalkulator paling aman di situs ini — risk dikunci flat 2%, lot dihitung ulang tiap saat dari saldo. Kotak Cek REM otomatis tampil di kalkulator ini, dan REM dikunci ke $100 tetap selama profil ini aktif.'},
+  agresif: {judul:'AKUN INI PAKAI KALKULATOR AGRESIF', sub:'RISK 5% PER TRADE', warna1:'#7C4A03', warna2:'#451A03', border:'#FBBF24', teks:'#FDE68A', subteks:'#FEF3C7', ket:'Level menengah — risk dikunci flat 5% di semua level, lebih tinggi dari Umum 2%, di bawah Bahaya 10-13%. Kotak Cek REM otomatis juga tampil di kalkulator ini — nilai targetnya diatur manual lewat "Ubah Target" (nggak auto-$100 kayak di Umum 2%).'},
+  bahaya:  {judul:'AKUN INI PAKAI KALKULATOR BAHAYA', sub:'RISK 10-13% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FCA5A5', subteks:'#FECACA', ket:'Bukan kalkulator Umum 2% atau Agresif 5% — akun ini secara default trading pakai risk tinggi. Pahami risikonya sebelum menilai performa saldo di bawah ini. REM (batas rugi bulanan akun) tetap AKTIF dan berlaku penuh — cuma kotak Cek REM otomatis di kalkulator ini sengaja tidak ditampilkan, karena di level risk setinggi ini disiplin harus dipegang manual, bukan mengandalkan indikator otomatis.'}
 };
 let profilRisikoAktif='bahaya'; // default sebelum data server kebaca
 async function loadProfilRisiko(){
@@ -6793,16 +6793,38 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
     </div>`;
   // ── Papan Edukasi/Disclaimer Otomatis: nerjemahin sistem manajemen risiko yang lagi aktif
   // (profilRisikoAktif — 'umum'/'agresif'/'bahaya') ke bahasa awam buat investor, biar mereka
-  // paham dana mereka ditradingkan dengan buffer & risk terukur, bukan asal-asalan. ──
-  const EDUKASI_RISIKO_META={
-    umum:    {riskPct:'2', ketahanan:'50', remTeks:'batas rugi bulanan (REM) sebesar $100 — begitu tersentuh, trading otomatis wajib berhenti sampai bulan berikutnya'},
-    agresif: {riskPct:'5', ketahanan:'20', remTeks:'batas rugi bulanan (REM) yang diatur admin — begitu tersentuh, trading otomatis wajib berhenti sampai bulan berikutnya'},
-    bahaya:  {riskPct:'10-13', ketahanan:'7-10', remTeks:'TIDAK ada batas rugi bulanan otomatis di skema ini — full disiplin manual dari pengelola'}
+  // paham dana mereka ditradingkan dengan buffer & risk terukur, bukan asal-asalan.
+  // PENTING: REM (circuit breaker) itu proteksi akun-wide yang SELALU aktif apapun profilnya —
+  // yang beda cuma apakah kotak "Cek REM" muncul di kalkulatornya (khusus Bahaya sengaja
+  // disembunyikan). Makanya nilai REM di bawah diambil LIVE dari getStatusRemBulanIni()/
+  // getTargetBulanan() — SATU sumber kebenaran yang sama dipakai banner & kalkulator — bukan
+  // kalimat generik yang bisa keliru bilang "tidak ada proteksi". ──
+  const RISIKO_TIER_META={
+    umum:    {riskPct:'2', ketahanan:'50'},
+    agresif: {riskPct:'5', ketahanan:'20'},
+    bahaya:  {riskPct:'10-13', ketahanan:'7-10'}
   };
-  const edukasiMeta = EDUKASI_RISIKO_META[profilRisikoAktif] || EDUKASI_RISIKO_META.umum;
+  const tierMeta = RISIKO_TIER_META[profilRisikoAktif] || RISIKO_TIER_META.umum;
+  let remStatusTeks;
+  if(typeof getStatusRemBulanIni==='function' && typeof getTargetBulanan==='function'){
+    const statusRem=getStatusRemBulanIni();
+    const cfgRem=getTargetBulanan();
+    if(statusRem && statusRem.saldoAwalBulan){
+      const nilaiTarget=Math.abs(statusRem.bawah);
+      const batasTeks = cfgRem.mode==='persen'
+        ? `±${cfgRem.value}% (${fc(nilaiTarget)} dua arah, dari saldo awal ${fc(statusRem.saldoAwalBulan)})`
+        : `${fc(nilaiTarget)} dua arah (nominal tetap tiap bulan)`;
+      remStatusTeks = `batas rugi bulanan (REM) yang aktif sekarang: <b>${batasTeks}</b>`;
+    }else{
+      remStatusTeks = 'batas rugi bulanan (REM) — aktif, tapi belum ada catatan trading bulan ini buat dihitung nominalnya';
+    }
+  }else{
+    remStatusTeks = 'batas rugi bulanan (REM) yang berlaku buat seluruh akun';
+  }
+  const catatanBahaya = profilRisikoAktif==='bahaya' ? ' (kotak Cek REM otomatis sengaja tidak ditampilkan di kalkulator Bahaya, tapi REM di atas tetap berlaku penuh buat seluruh akun)' : '';
   const edukasiRisikoHtml = `
     <div style="background:var(--bg0);border:1px solid #3B82F6;border-radius:10px;padding:10px 12px;margin-bottom:8px">
-      <div style="font-size:10px;color:#93C5FD;font-weight:700;line-height:1.7">🛡️ <b>Keamanan Dana:</b> Dana ini dikelola dengan batas risiko maksimal <b>${edukasiMeta.riskPct}% per transaksi</b>. Sistem punya ketahanan sampai kira-kira <b>${edukasiMeta.ketahanan}x kekalahan berturut-turut</b> sebelum modal pokok benar-benar habis, dan otomatis wajib berhenti kalau ${edukasiMeta.remTeks}. Modal pokok dilindungi ketat lewat aturan ini — bukan ditradingkan asal-asalan.</div>
+      <div style="font-size:10px;color:#93C5FD;font-weight:700;line-height:1.7">🛡️ <b>Keamanan Dana:</b> Dana ini dikelola dengan batas risiko maksimal <b>${tierMeta.riskPct}% per transaksi</b>. Sistem punya ketahanan sampai kira-kira <b>${tierMeta.ketahanan}x kekalahan berturut-turut</b> sebelum modal pokok benar-benar habis, dan otomatis wajib berhenti kalau ${remStatusTeks} tersentuh${catatanBahaya}. Modal pokok dilindungi ketat lewat aturan ini — bukan ditradingkan asal-asalan.</div>
     </div>`;
   // rankInfo: {rank, total} — dihitung di pemanggil (admin: dari list lokal; investor: dari hasil RPC investor_login)
   let rankHtml='';
