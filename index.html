@@ -2079,7 +2079,7 @@ async function resetRemCycle(){
         <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">🚦 Batas Bulanan (Circuit Breaker)</div>
         <span onclick="editTargetBulanan()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Target</span>
       </div>
-      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Batas dua arah: kena +target = berhenti karena udah cuan, kena -target = REM wajib stop loss trading bulan ini. Bisa diatur pakai % dari saldo awal bulan atau nominal $ tetap.</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Batas dua arah: kena +target = berhenti karena udah cuan, kena -target = REM wajib stop loss trading bulan ini. Bisa diatur pakai % dari saldo awal bulan atau nominal $ tetap. Khusus mode %, acuannya bisa dikunci ke saldo awal bulan ATAU ikut saldo real-time (link "🔄 Ganti" di bawah progress bar) — real-time cocok kalau sering ada deposit/WD investor di tengah bulan.</div>
       <div id="targetProgressWrap">
         <div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div>
       </div>
@@ -3700,6 +3700,7 @@ async function loadAll(){
   loadRiskOfRuin();
   loadMonthlyComparison();
   await loadTargetBulanan();
+  await loadRemBasisMode();
   loadStatementList();
   renderGraph();
   renderSesiAnalysis();
@@ -3985,7 +3986,13 @@ function renderGraph(){
     </div>`;
 
   setupGraphInteraction(points, dailyInfo, xFor, yFor, mainColor, W, pad);
-  renderTargetProgress(total, saldoAwalBulan);
+  // ── Basis buat Circuit Breaker: cuma pakai saldo real-time kalau BENERAN lagi liat bulan
+  // berjalan sekarang (bukan pas navigasi ke bulan lalu lewat ‹ › — histori tetap dikunci
+  // ke saldo awal bulan masing-masing, real-time cuma relevan buat bulan yang sedang jalan). ──
+  const nowForBasis=new Date();
+  const isBulanIniAktif = (graphYear===nowForBasis.getFullYear() && graphMonth===nowForBasis.getMonth());
+  const basisUntukTarget = (isBulanIniAktif && getRemBasisMode()==='real_time' && (lastSaldoTerakhir||0)>0) ? lastSaldoTerakhir : saldoAwalBulan;
+  renderTargetProgress(total, basisUntukTarget, isBulanIniAktif);
 }
 
 // ══ BATAS BULANAN (CIRCUIT BREAKER) — DUA ARAH, DUA MODE ══
@@ -3996,6 +4003,43 @@ function renderGraph(){
 //   - mode 'fixed': batas atas/bawah = ±(value dalam ¢/sen, tetap tiap bulan)
 // Kompatibel mundur: kalau isi lama cuma angka polos (bukan JSON), dianggap mode 'fixed'.
 let cachedTargetBulanan={mode:'persen', value:10}; // default sebelum data server kebaca
+// ── Acuan basis buat mode 'persen': 'awal_bulan' (dikunci ke saldo awal bulan, LAMA/default)
+// atau 'real_time' (ikut saldo berjalan sekarang — otomatis nyesuain kalau ada deposit/WD
+// investor di tengah bulan, biar % REM selalu proporsional ke modal SEKARANG, bukan modal
+// pas awal bulan yang mungkin udah beda jauh). Cuma pengaruh ke mode 'persen' — mode 'fixed'
+// (nominal $ tetap) gak kepengaruh sama sekali karena emang udah gak bergantung saldo. ──
+let cachedRemBasisMode='awal_bulan';
+async function loadRemBasisMode(){
+  try{
+    const rows=await api('app_settings?select=value&key=eq.rem_basis_mode');
+    if(rows && rows.length && (rows[0].value==='real_time'||rows[0].value==='awal_bulan')){
+      cachedRemBasisMode=rows[0].value;
+    }
+  }catch(e){ console.error('Gagal load rem_basis_mode', e); }
+}
+function getRemBasisMode(){ return cachedRemBasisMode; }
+async function toggleRemBasisMode(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const next = cachedRemBasisMode==='real_time' ? 'awal_bulan' : 'real_time';
+  const pesan = next==='real_time'
+    ? 'Ganti acuan % REM ke REAL-TIME?\n\nBatas REM (mode %) bakal ikut saldo BERJALAN sekarang, otomatis nyesuain tiap ada deposit/WD investor di tengah bulan. Cocok kalau modal sering berubah-ubah.'
+    : 'Ganti acuan % REM ke SALDO AWAL BULAN (kunci)?\n\nBatas REM (mode %) bakal dikunci ke saldo di awal bulan, gak ikut naik/turun walau ada deposit/WD di tengah bulan. Ini mode lama/default.';
+  if(!confirm(pesan))return;
+  try{
+    const existing=await api('app_settings?select=key&key=eq.rem_basis_mode');
+    if(existing.length){
+      await api('app_settings?key=eq.rem_basis_mode','PATCH',{value:next});
+    }else{
+      await api('app_settings','POST',{key:'rem_basis_mode',value:next});
+    }
+    cachedRemBasisMode=next;
+    toast(`✅ Acuan REM diganti ke ${next==='real_time'?'Real-Time (saldo berjalan)':'Saldo Awal Bulan (dikunci)'}`);
+    renderGraph();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan: '+(e.message||'').slice(0,120));
+  }
+}
 async function loadTargetBulanan(){
   try{
     const rows=await api('app_settings?select=value&key=eq.target_bulanan');
@@ -4073,14 +4117,14 @@ async function setRemFixedOtomatis(value){
   cachedTargetBulanan=newCfg;
   if(typeof renderGraph==='function') renderGraph();
 }
-function renderTargetProgress(totalBulanIni, saldoAwalBulan){
+function renderTargetProgress(totalBulanIni, basisSaldo, isBulanIniAktif){
   const wrap=document.getElementById('targetProgressWrap');
   if(!wrap)return;
   const cfg=getTargetBulanan();
-  const {atas, bawah} = hitungBatasBulanan(saldoAwalBulan||0);
+  const {atas, bawah} = hitungBatasBulanan(basisSaldo||0);
 
-  if(cfg.mode==='persen' && !(saldoAwalBulan>0)){
-    wrap.innerHTML=`<div style="text-align:center;font-size:10px;color:#7A5D1F;padding:6px">Mode % butuh data saldo awal bulan — belum ada catatan bulan ini.</div>`;
+  if(cfg.mode==='persen' && !(basisSaldo>0)){
+    wrap.innerHTML=`<div style="text-align:center;font-size:10px;color:#7A5D1F;padding:6px">Mode % butuh data saldo — belum ada catatan bulan ini.</div>`;
     return;
   }
 
@@ -4109,11 +4153,16 @@ function renderTargetProgress(totalBulanIni, saldoAwalBulan){
 
   const labelAtas = cfg.mode==='persen' ? `+${cfg.value}%` : `+${fc(atas)}`;
   const labelBawah = cfg.mode==='persen' ? `-${cfg.value}%` : `-${fc(atas)}`;
+  const modeAcuan = getRemBasisMode();
+  const pakaiRealTime = isBulanIniAktif && modeAcuan==='real_time';
+  const labelBasis = cfg.mode==='persen'
+    ? (pakaiRealTime ? `saldo real-time: ${fc(basisSaldo||0)}` : `saldo awal bulan: ${fc(basisSaldo||0)}`)
+    : '';
 
   wrap.innerHTML=`
     <div style="display:flex;justify-content:space-between;font-size:10px;color:#F87171;margin-bottom:6px">
       <span>${labelBawah}</span>
-      <span style="color:#8A6B26">saldo awal: ${fc(saldoAwalBulan||0)}</span>
+      <span style="color:#8A6B26">${labelBasis}</span>
       <span style="color:#4ADE80">${labelAtas}</span>
     </div>
     <div style="background:var(--bg2);border-radius:20px;height:14px;overflow:hidden;position:relative">
@@ -4125,7 +4174,11 @@ function renderTargetProgress(totalBulanIni, saldoAwalBulan){
       <span>${total>=0?'+':''}${fc(total)}</span>
       <span>${pctPos.toFixed(0)}% dari rentang</span>
     </div>
-    <div style="text-align:center;font-size:10px;color:${barColor};margin-top:8px;font-weight:700">${statusHtml}</div>`;
+    <div style="text-align:center;font-size:10px;color:${barColor};margin-top:8px;font-weight:700">${statusHtml}</div>
+    ${cfg.mode==='persen' ? `<div style="text-align:center;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
+      <span style="font-size:8px;color:#5C4818">Acuan % saat ini: <b style="color:#C8A84B">${modeAcuan==='real_time'?'Real-Time (saldo berjalan)':'Saldo Awal Bulan (dikunci)'}</b></span>
+      <span onclick="toggleRemBasisMode()" style="font-size:8px;color:#C8A84B;cursor:pointer;text-decoration:underline;margin-left:6px">🔄 Ganti</span>
+    </div>` : ''}`;
 }
 
 // ══ MONTHLY COMPARISON ══
@@ -6509,11 +6562,15 @@ function getStatusRemBulanIni(){
   const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
   const now=new Date();
   const rowsBulanIni=rows.filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); });
-  if(!rowsBulanIni.length) return {aktif:false, totalBulanIni:0, bawah:0, saldoAwalBulan:0};
+  if(!rowsBulanIni.length) return {aktif:false, totalBulanIni:0, bawah:0, saldoAwalBulan:0, basisSaldo:0};
   const totalBulanIni=rowsBulanIni.reduce((s,r)=>s+parseFloat(r.profit||0),0);
   const saldoAwalBulan=parseFloat(rowsBulanIni[0].saldo_mt4||0)-parseFloat(rowsBulanIni[0].profit||0);
-  const {bawah}=hitungBatasBulanan(saldoAwalBulan);
-  return {aktif: totalBulanIni<=bawah, totalBulanIni, bawah, saldoAwalBulan};
+  // ── Basis buat mode 'persen': kalau acuan = real_time, pakai saldo BERJALAN sekarang
+  // (lastSaldoTerakhir) — otomatis nyesuain kalau ada deposit/WD investor di tengah bulan.
+  // Kalau acuan = awal_bulan (default), tetap kunci ke saldoAwalBulan kayak sebelumnya. ──
+  const basisSaldo = (getRemBasisMode()==='real_time' && (lastSaldoTerakhir||0)>0) ? lastSaldoTerakhir : saldoAwalBulan;
+  const {bawah}=hitungBatasBulanan(basisSaldo);
+  return {aktif: totalBulanIni<=bawah, totalBulanIni, bawah, saldoAwalBulan, basisSaldo};
 }
 // ══ CEK REM GENERIK — dipakai bareng oleh SEMUA kalkulator (2%, 5%, 10-13%) ══
 // SATU fungsi, SATU sumber kebenaran (getStatusRemBulanIni/hitungBatasBulanan — sama persis
