@@ -662,7 +662,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       const lot = count*0.01;
       const riskDollar = count*riskPerLot;
       remOutEl2.innerHTML = typeof buildRemCekHtmlGeneric==='function'
-        ? buildRemCekHtmlGeneric(riskDollar, 'lot '+lot.toFixed(2))
+        ? buildRemCekHtmlGeneric(riskDollar, 'lot '+lot.toFixed(2), 'umum')
         : '';
     }
   }
@@ -1209,7 +1209,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       plan.forEach((lv,i)=>{ if(modal>=lv.modal) levelIdx=i; });
       const levelAktif=(levelIdx>=0 && plan[levelIdx]) ? plan[levelIdx] : null;
       remOutEl.innerHTML = typeof buildRemCekHtmlGeneric==='function'
-        ? buildRemCekHtmlGeneric(levelAktif?levelAktif.risk:0, levelAktif?('lot '+levelAktif.lot.toFixed(2)):'')
+        ? buildRemCekHtmlGeneric(levelAktif?levelAktif.risk:0, levelAktif?('lot '+levelAktif.lot.toFixed(2)):'', 'agresif')
         : '';
     }
   }
@@ -1444,7 +1444,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       plan.forEach((lv,i)=>{ if(modal>=lv.modal) levelIdx=i; });
       const levelAktif=(levelIdx>=0 && plan[levelIdx]) ? plan[levelIdx] : null;
       remOutElB.innerHTML = typeof buildRemCekHtmlGeneric==='function'
-        ? buildRemCekHtmlGeneric(levelAktif?levelAktif.risk:0, levelAktif?('lot '+levelAktif.lot.toFixed(2)):'')
+        ? buildRemCekHtmlGeneric(levelAktif?levelAktif.risk:0, levelAktif?('lot '+levelAktif.lot.toFixed(2)):'', 'bahaya')
         : '';
     }else{
       rekomOutElB.innerHTML='';
@@ -1668,8 +1668,8 @@ initEntryPriceCalcGeneric('B'); // Kalkulator Bahaya — Level 10-13%
 // ══ PROFIL RISIKO AKTIF (label permanen di atas Saldo MT4) — disimpan di app_settings, ganti sendiri kapan aja ══
 const PROFIL_RISIKO_META={
   umum:    {judul:'AKUN INI PAKAI KALKULATOR UMUM', sub:'RISK 2% PER TRADE', warna1:'#14532D', warna2:'#052E16', border:'#4ADE80', teks:'#86EFAC', subteks:'#DCFCE7', ket:'Kalkulator paling aman di situs ini — risk dikunci flat 2%, lot dihitung ulang tiap saat dari saldo. REM (batas rugi bulanan) otomatis dikunci ke $100 tetap selama profil ini aktif.'},
-  agresif: {judul:'AKUN INI PAKAI KALKULATOR AGRESIF', sub:'RISK 5% PER TRADE', warna1:'#7C4A03', warna2:'#451A03', border:'#FBBF24', teks:'#FDE68A', subteks:'#FEF3C7', ket:'Level menengah — risk dikunci flat 5% di semua level, lebih tinggi dari Umum 2%, di bawah Bahaya 10-13%. REM (batas rugi bulanan) TIDAK otomatis di sini — atur manual lewat "Ubah Target" di bawah.'},
-  bahaya:  {judul:'AKUN INI PAKAI KALKULATOR BAHAYA', sub:'RISK 10-13% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FCA5A5', subteks:'#FECACA', ket:'Bukan kalkulator Umum 2% atau Agresif 5% — akun ini secara default trading pakai risk tinggi. Pahami risikonya sebelum menilai performa saldo di bawah ini. REM (batas rugi bulanan) TIDAK otomatis di sini — atur manual lewat "Ubah Target" di bawah.'}
+  agresif: {judul:'AKUN INI PAKAI KALKULATOR AGRESIF', sub:'RISK 5% PER TRADE', warna1:'#7C4A03', warna2:'#451A03', border:'#FBBF24', teks:'#FDE68A', subteks:'#FEF3C7', ket:'Level menengah — risk dikunci flat 5% di semua level, lebih tinggi dari Umum 2%, di bawah Bahaya 10-13%. REM (batas rugi bulanan) ikut dicek otomatis di sini juga — tapi nilai targetnya diatur manual lewat "Ubah Target" (nggak auto-$100 kayak di Umum 2%).'},
+  bahaya:  {judul:'AKUN INI PAKAI KALKULATOR BAHAYA', sub:'RISK 10-13% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FCA5A5', subteks:'#FECACA', ket:'Bukan kalkulator Umum 2% atau Agresif 5% — akun ini secara default trading pakai risk tinggi. Pahami risikonya sebelum menilai performa saldo di bawah ini. REM (batas rugi bulanan) TIDAK berlaku sama sekali di sini — full disiplin manual.'}
 };
 let profilRisikoAktif='bahaya'; // default sebelum data server kebaca
 async function loadProfilRisiko(){
@@ -6519,7 +6519,18 @@ function getStatusRemBulanIni(){
 // SATU fungsi, SATU sumber kebenaran (getStatusRemBulanIni/hitungBatasBulanan — sama persis
 // yang dipakai notifikasi Telegram & banner REM beranda). Supaya ketiga kalkulator gak pernah
 // menampilkan angka REM yang beda-beda satu sama lain.
-function buildRemCekHtmlGeneric(riskTradeIni, labelLot){
+// ── ATURAN BARU: REM berlaku di Kalkulator Umum 2% & Agresif 5% (calcKode 'umum'/'agresif'),
+// TIDAK berlaku di Kalkulator Bahaya 10-13% — DAN cuma aktif kalau saldo MT4 terakhir sudah
+// minimal $1000 (¢100000) — di bawah itu dianggap belum mumpuni, jadi REM ditampilkan
+// "belum aktif" bukan dicek beneran. ──
+const REM_SALDO_MINIMAL_CEN = 100000; // ¢100000 = $1000
+function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode){
+  if(calcKode==='bahaya'){
+    return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">ℹ️ REM (batas rugi bulanan) TIDAK berlaku di <b style="color:#C8A84B">Kalkulator Bahaya 10-13%</b> — cuma dicek otomatis di Umum 2% & Agresif 5%.</div>`;
+  }
+  if((lastSaldoTerakhir||0) < REM_SALDO_MINIMAL_CEN){
+    return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">⏳ REM belum aktif — saldo saat ini <b style="color:#C8A84B">${fu(lastSaldoTerakhir)}</b> belum capai syarat minimal <b style="color:#C8A84B">$1,000</b>. REM baru mulai dicek otomatis begitu saldo tembus $1,000.</div>`;
+  }
   if(typeof getStatusRemBulanIni!=='function') return '';
   const status=getStatusRemBulanIni();
   if(!status || !status.saldoAwalBulan){
@@ -6723,6 +6734,19 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
       <div style="font-size:8px;color:#7A5D1F;margin-top:4px;line-height:1.5">${untungBelumDibagi>0.005 ? 'Belum dicairkan — bisa ditarik kapan saja kalau diminta.' : (totalSudahDidistribusi>0.005 ? 'Semua profit sejauh ini sudah dibagikan penuh.' : 'Belum ada profit yang perlu dibagi.')}</div>
       <div style="font-size:7px;color:#5C4818;margin-top:6px">🕐 Dihitung otomatis per ${waktuHitungStr} (waktu perangkat)${totalSudahDidistribusi>0.005?` · Sudah dibagikan sejauh ini: ${mfc(totalSudahDidistribusi)}`:''}</div>
     </div>`;
+  // ── Papan Edukasi/Disclaimer Otomatis: nerjemahin sistem manajemen risiko yang lagi aktif
+  // (profilRisikoAktif — 'umum'/'agresif'/'bahaya') ke bahasa awam buat investor, biar mereka
+  // paham dana mereka ditradingkan dengan buffer & risk terukur, bukan asal-asalan. ──
+  const EDUKASI_RISIKO_META={
+    umum:    {riskPct:'2', ketahanan:'50', remTeks:'batas rugi bulanan (REM) sebesar $100 — begitu tersentuh, trading otomatis wajib berhenti sampai bulan berikutnya'},
+    agresif: {riskPct:'5', ketahanan:'20', remTeks:'batas rugi bulanan (REM) yang diatur admin — begitu tersentuh, trading otomatis wajib berhenti sampai bulan berikutnya'},
+    bahaya:  {riskPct:'10-13', ketahanan:'7-10', remTeks:'TIDAK ada batas rugi bulanan otomatis di skema ini — full disiplin manual dari pengelola'}
+  };
+  const edukasiMeta = EDUKASI_RISIKO_META[profilRisikoAktif] || EDUKASI_RISIKO_META.umum;
+  const edukasiRisikoHtml = `
+    <div style="background:var(--bg0);border:1px solid #3B82F6;border-radius:10px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:10px;color:#93C5FD;font-weight:700;line-height:1.7">🛡️ <b>Keamanan Dana:</b> Dana ini dikelola dengan batas risiko maksimal <b>${edukasiMeta.riskPct}% per transaksi</b>. Sistem punya ketahanan sampai kira-kira <b>${edukasiMeta.ketahanan}x kekalahan berturut-turut</b> sebelum modal pokok benar-benar habis, dan otomatis wajib berhenti kalau ${edukasiMeta.remTeks}. Modal pokok dilindungi ketat lewat aturan ini — bukan ditradingkan asal-asalan.</div>
+    </div>`;
   // rankInfo: {rank, total} — dihitung di pemanggil (admin: dari list lokal; investor: dari hasil RPC investor_login)
   let rankHtml='';
   if(rankInfo && rankInfo.total>1){
@@ -6756,6 +6780,7 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
         <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:${roi>=0?'#4ADE80':'#F87171'}">${roi>=0?'+':''}${roi.toFixed(1)}%</div><div class="bal-box-lbl">ROI</div></div>
       </div>
       ${untungDibagiHtml}
+      ${edukasiRisikoHtml}
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:9px;color:#7A5D1F;border-top:1px solid var(--border);padding-top:8px">
         <span>Porsi Modal: <b style="color:#C8A84B">${sharePct.toFixed(1)}%</b></span>
         <span>Bergabung ${days} hari lalu (${inv.tanggal})</span>
