@@ -662,7 +662,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       const lot = count*0.01;
       const riskDollar = count*riskPerLot;
       remOutEl2.innerHTML = typeof buildRemCekHtmlGeneric==='function'
-        ? buildRemCekHtmlGeneric(riskDollar, 'lot '+lot.toFixed(2), 'umum', modal)
+        ? buildRemCekHtmlGeneric(riskDollar, 'lot '+lot.toFixed(2), 'umum', modal, modalEl2.dataset.resmi)
         : '';
     }
   }
@@ -1209,7 +1209,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       plan.forEach((lv,i)=>{ if(modal>=lv.modal) levelIdx=i; });
       const levelAktif=(levelIdx>=0 && plan[levelIdx]) ? plan[levelIdx] : null;
       remOutEl.innerHTML = typeof buildRemCekHtmlGeneric==='function'
-        ? buildRemCekHtmlGeneric(levelAktif?levelAktif.risk:0, levelAktif?('lot '+levelAktif.lot.toFixed(2)):'', 'agresif', modal)
+        ? buildRemCekHtmlGeneric(levelAktif?levelAktif.risk:0, levelAktif?('lot '+levelAktif.lot.toFixed(2)):'', 'agresif', modal, modalEl.dataset.resmi)
         : '';
     }
   }
@@ -1344,7 +1344,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     const labelSumber=`(update: ${fd(terakhir.tanggal)})`;
     [['calcModal2','calcModal2Sumber'], ['calcModal','calcModalSumber'], ['calcModalB','calcModalBSumber']].forEach(([idInput,idLabel])=>{
       const inp=document.getElementById(idInput), lbl=document.getElementById(idLabel);
-      if(inp) inp.value=nilai;
+      // simpan nilai resmi (saldo tersimpan) di dataset, TERPISAH dari inp.value — supaya
+      // begitu user ketik ulang manual "Modal Kamu", kita masih tahu berapa angka resmi
+      // aslinya buat dibandingkan (dipakai fitur Preview REM real-time di bawah).
+      if(inp){ inp.value=nilai; inp.dataset.resmi=nilai; }
       if(lbl) lbl.textContent=labelSumber;
     });
     document.dispatchEvent(new CustomEvent('datukCalcChanged'));
@@ -6602,7 +6605,34 @@ function getStatusRemBulanIni(){
 // ini malah salah baca vs modal yang beneran dipakai kalkulator (bug: pernah kejadian modal
 // kalkulator udah $1,251.52 tapi REM masih baca "$12.52 belum capai syarat"). ──
 const REM_SALDO_MINIMAL_USD = 1000;
-function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode, modalKalkulator){
+// ── PREVIEW REM REAL-TIME (fitur baru) ──
+// Kalau "Modal Kamu" diketik ULANG MANUAL beda dari saldo resmi tersimpan (dataset.resmi,
+// diisi oleh syncModalSemuaKalkulator), kita hitung selisihnya sebagai preview_loss_hari_ini
+// dan tambahkan ke P/L bulan ini yang RESMI (status.totalBulanIni) buat dapat
+// preview_sisa_REM. Ini SEMATA-MATA hitungan tampilan: TIDAK PERNAH ditulis ke Supabase,
+// TIDAK mengubah status/getStatusRemBulanIni() resmi, dan hilang begitu halaman di-refresh
+// (karena cuma bergantung ke inp.value yang balik ke nilai resmi tiap kali data resmi
+// ke-fetch ulang). Dipisah jadi fungsi sendiri supaya buildRemCekHtmlGeneric tetap rapi dan
+// SATU sumber kebenaran resmi (status) tidak ikut ketimpa oleh angka preview ini.
+function buildRemPreviewHtml(modalKalkulator, modalResmi, status, batasRemBulanIni){
+  const modalCek = parseFloat(modalKalkulator)||0;
+  const resmiVal = parseFloat(modalResmi);
+  if(!status || isNaN(resmiVal) || resmiVal<=0) return '';
+  if(Math.abs(modalCek-resmiVal) < 0.005) return ''; // dianggap sama, bukan diketik ulang beneran
+  const preview_loss_hari_ini = modalCek - resmiVal;
+  const previewTotalBulanIni = status.totalBulanIni + preview_loss_hari_ini;
+  const previewTotalLossBulanIni = previewTotalBulanIni<0 ? -previewTotalBulanIni : 0;
+  const preview_sisa_REM = batasRemBulanIni - previewTotalLossBulanIni;
+  const warnaDelta = preview_loss_hari_ini<0 ? '#F87171' : '#4ADE80';
+  const warnaSisa = preview_sisa_REM>0 ? '#4ADE80' : '#F87171';
+  return `<div style="background:#2A2410;border:1.5px dashed #B8860B;border-radius:10px;padding:10px 12px;margin-top:8px">
+    <div style="font-size:9px;color:#FBBF24;font-weight:800;letter-spacing:.3px">⚠️ PREVIEW (belum disimpan resmi)</div>
+    <div style="font-size:9px;color:#FDE68A;margin-top:5px;line-height:1.6">Modal Kamu diketik manual <b>$${modalCek.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</b> — beda dari saldo resmi tersimpan <b>$${resmiVal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>. Selisih dianggap sementara sebagai P/L hari ini: <b style="color:${warnaDelta}">${fc(preview_loss_hari_ini)}</b>.</div>
+    <div style="font-size:9px;color:#FDE68A;margin-top:4px">Preview sisa jatah REM kalau angka ini beneran: <b style="color:${warnaSisa}">${fc(preview_sisa_REM)}</b></div>
+    <div style="font-size:8px;color:#B8860B;margin-top:5px;line-height:1.5">Cuma perhitungan sementara di layar kamu — TIDAK ditulis ke database, hilang kalau halaman di-refresh.</div>
+  </div>`;
+}
+function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode, modalKalkulator, modalResmi){
   if(calcKode==='bahaya'){
     return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">ℹ️ REM (batas rugi bulanan) TIDAK berlaku di <b style="color:#C8A84B">Kalkulator Bahaya 10-13%</b> — cuma dicek otomatis di Umum 2% & Agresif 5%.</div>`;
   }
@@ -6618,15 +6648,16 @@ function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode, modalKalkulato
   const batasRemBulanIni = -status.bawah;
   const totalLossBulanIni = status.totalBulanIni<0 ? -status.totalBulanIni : 0;
   const sisaJatahRem = batasRemBulanIni - totalLossBulanIni;
+  const previewHtml = buildRemPreviewHtml(modalKalkulator, modalResmi, status, batasRemBulanIni);
 
   if(status.aktif || sisaJatahRem<=0){
     return `<div style="background:#3A0F0F;border:2px solid #7F1D1D;border-radius:10px;padding:14px;text-align:center">
       <div style="font-size:13px;font-weight:800;color:#F87171">🚫 REM SUDAH AKTIF — JANGAN OPEN POSISI</div>
       <div style="font-size:9px;color:#FCA5A5;margin-top:6px;line-height:1.6">P/L bulan ini: ${fc(status.totalBulanIni)} — sudah melewati batas rugi bulanan ${fc(batasRemBulanIni)}. Disiplin: stop trading sampai bulan berikutnya.</div>
-    </div>`;
+    </div>` + previewHtml;
   }
   if(!riskTradeIni || riskTradeIni<=0){
-    return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">ℹ️ Sisa jatah REM bulan ini: <b style="color:#D4AF37">${fc(sisaJatahRem)}</b></div>`;
+    return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">ℹ️ Sisa jatah REM bulan ini: <b style="color:#D4AF37">${fc(sisaJatahRem)}</b></div>` + previewHtml;
   }
   const persenDariSisa = sisaJatahRem>0 ? (riskTradeIni/sisaJatahRem*100) : 999;
   const sisaKaliBolehSalah = riskTradeIni>0 ? Math.floor(sisaJatahRem/riskTradeIni) : 0;
@@ -6637,7 +6668,7 @@ function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode, modalKalkulato
   return `<div style="background:${bg};border:${border};border-radius:10px;padding:12px 14px">
     <div style="font-size:10px;color:${warna};font-weight:700">${waspada?'⚠️':'✅'} Cek REM: Risk trade ini (${fc(riskTradeIni)}) = ${persenDariSisa.toFixed(0)}% dari sisa jatah REM bulan ini (${fc(sisaJatahRem)}).</div>
     <div style="font-size:9px;color:${waspada?'#FCA5A5':'#7A5D1F'};margin-top:4px">Sisa ruang buat salah: <b>${sisaKaliBolehSalah}x lagi</b>${labelLot?' di '+labelLot:''} sebelum kena REM.</div>
-  </div>`;
+  </div>` + previewHtml;
 }
 async function tambahInvestor(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk tambah investor');return;}
