@@ -419,14 +419,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
-<!-- REKOMENDASI MODAL MINIMAL -->
-<div class="section" id="secModalMinimal">
-  <div class="sec-title">💰 Rekomendasi Modal Minimal</div>
-  <div class="graph-card">
-    <div id="modalMinimal" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
-  </div>
-</div>
-
 <!-- MODAL INFO SKOR -->
 <div class="modal" id="mInfoSkor">
   <div class="modal-box">
@@ -1217,7 +1209,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   modalEl.addEventListener('input', computeRekom);
   akunTypeEl.addEventListener('change', computeRekom);
   document.addEventListener('datukCalcChanged', computeRekom);
-  document.addEventListener('datukCalcChanged', ()=>{ if(typeof loadModalMinimal==='function') loadModalMinimal(); });
   computeRekom();
 
   calcRun();
@@ -3410,7 +3401,6 @@ const SEARCH_MENU=[
   {id:'secSesiAnalysis', icon:'🕐', label:'Analisis Sesi Waktu', desc:'Profit/loss per sesi trading Asia, London, New York', kw:'analisis sesi waktu session asia london new york jam trading', cat:'performa'},
   {id:'secNotifikasi', icon:'🔔', label:'Notifikasi Real-time', desc:'Peringatan instan target/batas bulanan & Risk Meter merah, via browser atau Telegram', kw:'notifikasi real-time push telegram alert peringatan target batas risk meter', cat:'performa'},
   {id:'secBenchmark', icon:'📈', label:'Performance vs Benchmark', desc:'Perbandingan performa vs XAUUSD/BTCUSD pasar', kw:'benchmark perbandingan pasar market vs', cat:'performa'},
-  {id:'secModalMinimal', icon:'💵', label:'Rekomendasi Modal Minimal', desc:'Saran modal minimal berdasarkan gaya trading', kw:'modal minimal rekomendasi saran capital', cat:'performa'},
   {id:'secKalkulator', icon:'🧮', label:'Kalkulator Agresif — Level 5%', desc:'Risk dikunci flat 5% per level, hitung lot, SL/TP, risk $, breakeven win rate', kw:'kalkulator agresif 5% risiko lot sl tp stop loss take profit breakeven level', cat:'kalkulator'},
   {id:'secKalkulatorFlat2', icon:'🧮', label:'Kalkulator Umum — Flat 2%', desc:'Hitung lot ulang tiap saat dari saldo, risk dikunci 2% (paling aman)', kw:'kalkulator umum flat 2% real time saldo lot risiko dua persen normal standar', cat:'kalkulator'},
   {id:'secKalkulatorBahaya', icon:'🔥', label:'Kalkulator Bahaya — Level 10-13%', desc:'Risk 10-13% per trade, level naik/turun rekursif, kalah 3x turun level', kw:'kalkulator bahaya 10% 13% level agresif risiko tinggi turun level kalah 3x', cat:'kalkulator'},
@@ -3689,7 +3679,7 @@ window.onload=async()=>{
 async function loadAll(){
   // Ambil data utama SEKALI SAJA, dipakai bareng oleh beberapa section (hemat request, lebih cepat di koneksi lambat)
   await fetchSharedSaldoData();
-  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore(),loadModalMinimal()]);
+  await Promise.all([loadBalance(),loadRiwayat(),loadKas(),loadProfitBulanan(),loadScore()]);
   await fetchAllKasData();
   await loadAlokasiResetTanggal();
   renderKasRingkasan();
@@ -9264,126 +9254,6 @@ function scoreCard(title, val, skor, label, labelColor){
       <div style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:${labelColor}22;color:${labelColor}">${label}</div>
     </div>
   </div>`;
-}
-
-// ══ REKOMENDASI MODAL MINIMAL ══
-async function loadModalMinimal(){
-  try{
-    const el=document.getElementById('modalMinimal');
-
-    // Risk per trade (lot 0.01) DIAMBIL DARI SL & Nilai/Pip yang lagi aktif di "Kalkulator Risiko Per Pair"
-    // di bawah — jadi otomatis ikut berubah kalau kamu ganti pair/preset (Kerdil/Standar/Hard/Forex),
-    // bukan dipatok cuma buat XAUUSD Kerdil 100 pips lagi.
-    const slEl_=document.getElementById('calcSL'), pipvalueEl_=document.getElementById('calcPipValue');
-    const slNow = slEl_ ? (parseFloat(slEl_.value)||100) : 100;
-    const pipvalueNow = pipvalueEl_ ? (parseFloat(pipvalueEl_.value)||0.1) : 0.1;
-    const RISK_PER_TRADE = slNow*pipvalueNow; // cost per 0.01 lot, di pair/preset yang sedang aktif
-
-    const tiers=[
-      {label:'Konservatif',lossCount:100,color:'#4ADE80',desc:'tahan 100x loss beruntun'},
-      {label:'Moderat',lossCount:60,color:'#C8A84B',desc:'tahan 60x loss beruntun'},
-      {label:'Agresif',lossCount:30,color:'#F87171',desc:'tahan 30x loss beruntun'},
-      {label:'Teruji Real (kamu)',lossCount:20,color:'#4ADE80',desc:'tahan 20x loss beruntun — syarat: lot 0.01, cuma 1 order aktif, order ke-2 baru setelah order pertama kena SL/TP'}
-    ];
-
-    const utama=tiers[3]; // "Teruji Real" (buffer 20x) = patokan utama sekarang, bukan Agresif lagi
-    const UTAMA_CENT=RISK_PER_TRADE*utama.lossCount;
-    const UTAMA_STD=RISK_PER_TRADE*utama.lossCount;
-
-    // Ambil saldo saat ini + hitung DD Historis REAL (6 bulan terakhir) buat dibandingkan
-    let saldoRawSekarang=0, maxDdRaw=0, longestStreak=0;
-    try{
-      const now=new Date();
-      const cutoff=new Date(now.getFullYear(),now.getMonth()-5,1);
-      const rows=await api(`saldo_harian?select=tanggal,profit,saldo_mt4&order=tanggal.asc`);
-      const r6=rows.filter(r=>new Date(r.tanggal)>=cutoff);
-      if(r6.length) saldoRawSekarang=parseFloat(r6[r6.length-1].saldo_mt4||0);
-      let peak=0,cumPL=0,curStreak=0;
-      r6.forEach(r=>{
-        const p=parseFloat(r.profit||0);
-        cumPL+=p;
-        if(cumPL>peak)peak=cumPL;
-        const dd=peak-cumPL;
-        if(dd>maxDdRaw)maxDdRaw=dd;
-        // Longest Losing Streak (harian) — hari berturut-turut dengan hasil negatif
-        if(p<0){ curStreak++; if(curStreak>longestStreak)longestStreak=curStreak; }
-        else { curStreak=0; }
-      });
-    }catch(e){}
-
-    const cukupCent = saldoRawSekarang>=UTAMA_CENT;
-    const ddVsUtama = UTAMA_CENT>0 ? (maxDdRaw/UTAMA_CENT*100) : 0;
-    const ddAman = ddVsUtama<=30;
-    const streakAmanUtama = longestStreak<=utama.lossCount;
-
-    let detailHtml=tiers.map(t=>{
-      const centMin=RISK_PER_TRADE*t.lossCount;
-      const stdMin=RISK_PER_TRADE*t.lossCount;
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="text-align:left">
-          <div style="font-size:10px;font-weight:700;color:#D4AF37">${t.label}</div>
-          <div style="font-size:8px;color:#7A5D1F">${t.desc}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${t.color}">${centMin.toFixed(0)} Sen <span style="color:#5C4818">|</span> $${stdMin.toFixed(0)} Std</div>
-        </div>
-      </div>`;
-    }).join('');
-
-    el.innerHTML=`
-      <div style="text-align:center;margin-bottom:16px">
-        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Modal Minimal Untuk Trading Aman (Lot 0.01)</div>
-        <div style="display:flex;justify-content:center;gap:20px;margin-bottom:6px">
-          <div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:800;color:#D4AF37">${UTAMA_CENT.toFixed(0)} Sen</div>
-            <div style="font-size:10px;color:#9C7A2E;font-weight:700">Akun Cent</div>
-          </div>
-          <div style="width:1px;background:var(--border)"></div>
-          <div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:800;color:#D4AF37">$${UTAMA_STD.toFixed(0)}</div>
-            <div style="font-size:10px;color:#9C7A2E;font-weight:700">Akun Standard</div>
-          </div>
-        </div>
-        <div style="font-size:9px;color:#5C4818">Patokan level "Teruji Real" (buffer 20x) — dihitung dari SL & nilai/pip pair yang aktif sekarang</div>
-      </div>
-
-      <div style="background:var(--bg3);border:1px solid #2E5C2E;border-radius:10px;padding:12px;margin-bottom:12px;text-align:left">
-        <div style="font-size:10px;font-weight:700;color:#4ADE80;margin-bottom:6px">✓ Syarat metode "Teruji Real" (buffer 20x)</div>
-        <div style="font-size:9px;color:#8A6B26;line-height:1.8">
-          • Lot tetap 0.01<br>
-          • Cuma boleh 1 order aktif dalam satu waktu<br>
-          • Order ke-2 baru dibuka SETELAH order pertama kena SL atau TP (gak boleh nge-stack/nambah posisi bareng)<br>
-          • Sudah dites di akun rill, max loss beruntun cuma 8x — buffer 20x masih jauh lebih aman dari itu
-        </div>
-      </div>
-
-      <div style="background:var(--bg2);border-radius:10px;padding:10px 12px">
-        ${detailHtml}
-      </div>
-
-      ${maxDdRaw>0?`
-      <div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center;margin-top:10px">
-        <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">DD Terdalam Real (6 Bulan Terakhir)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:#F87171">${maxDdRaw.toFixed(2)} Sen</div>
-        <div style="font-size:9px;color:${ddAman?'#4ADE80':'#F87171'};margin-top:4px">= ${ddVsUtama.toFixed(1)}% dari modal minimal Teruji Real (${UTAMA_CENT.toFixed(0)} Sen)</div>
-      </div>
-
-      <div style="background:var(--bg2);border-radius:10px;padding:12px;text-align:center;margin-top:10px">
-        <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Longest Losing Streak Real (Harian)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:${streakAmanUtama?'#4ADE80':'#F87171'}">${longestStreak}x</div>
-        <div style="font-size:9px;color:${streakAmanUtama?'#4ADE80':'#F87171'};margin-top:4px">${streakAmanUtama?`✓ Masih jauh di bawah buffer Teruji Real (${utama.lossCount}x)`:`✗ Sudah melewati buffer Teruji Real (${utama.lossCount}x)`}</div>
-        <div style="font-size:8px;color:#5C4818;margin-top:4px">*Dihitung dari hari rugi berturut-turut, bukan per-trade — cuma pendekatan</div>
-      </div>`:''}
-
-      ${saldoRawSekarang>0?`
-      <div style="background:${cukupCent?'#152016':'#241414'};border:1px solid ${cukupCent?'#2E5C2E':'#5C2E2E'};border-radius:10px;padding:12px;text-align:center;margin-top:14px">
-        <div style="font-size:11px;font-weight:700;color:${cukupCent?'#4ADE80':'#F87171'}">${cukupCent?'✓ Modal Kamu Sudah Cukup (level Teruji Real)':'✗ Modal Kamu Belum Cukup (level Teruji Real)'}</div>
-        <div style="font-size:9px;color:#8A6B26;margin-top:2px">Saldo kamu sekarang: ${saldoRawSekarang.toFixed(2)} Sen</div>
-      </div>`:''}`;
-  }catch(e){
-    console.error(e);
-    document.getElementById('modalMinimal').innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat.</div>';
-  }
 }
 
 // ══ RISK REWARD ANALYSIS (PER TRADE, PROXY HARIAN) ══
