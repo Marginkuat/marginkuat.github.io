@@ -3701,6 +3701,10 @@ async function loadAll(){
   loadMonthlyComparison();
   await loadTargetBulanan();
   await loadRemBasisMode();
+  // ── FIX: begitu target REM & basis-nya kelar dimuat dari server, tembak event ini biar
+  // kotak Cek REM di 3 kalkulator (yang udah sempat render duluan pakai nilai default/lama
+  // sebelum data asli ini datang) langsung refresh — bukan nunggu user ngetik ulang input. ──
+  document.dispatchEvent(new Event('datukCalcChanged'));
   loadStatementList();
   renderGraph();
   renderSesiAnalysis();
@@ -4035,6 +4039,7 @@ async function toggleRemBasisMode(){
     cachedRemBasisMode=next;
     toast(`✅ Acuan REM diganti ke ${next==='real_time'?'Real-Time (saldo berjalan)':'Saldo Awal Bulan (dikunci)'}`);
     renderGraph();
+    document.dispatchEvent(new Event('datukCalcChanged'));
   }catch(e){
     console.error(e);
     toast('❌ Gagal simpan: '+(e.message||'').slice(0,120));
@@ -4097,6 +4102,11 @@ async function editTargetBulanan(){
     cachedTargetBulanan=newCfg;
     toast(`✅ Batas bulanan diperbarui: ±${isPersen?v+'%':fc(v)} untuk semua pengunjung`);
     renderGraph();
+    // ── FIX: sebelumnya cuma renderGraph() (update dashboard), TAPI kotak Cek REM di 3
+    // kalkulator (Umum/Agresif/Bahaya) gak ikut refresh karena mereka cuma recompute pas
+    // input/change di form-nya sendiri. Tembak event 'datukCalcChanged' yang emang udah
+    // didengerin ketiga kalkulator itu, biar langsung ikut update tanpa reload halaman. ──
+    document.dispatchEvent(new Event('datukCalcChanged'));
   }catch(e){
     console.error(e);
     toast('❌ Gagal simpan target ke server: '+(e.message||'').slice(0,120));
@@ -4116,6 +4126,7 @@ async function setRemFixedOtomatis(value){
   }
   cachedTargetBulanan=newCfg;
   if(typeof renderGraph==='function') renderGraph();
+  document.dispatchEvent(new Event('datukCalcChanged'));
 }
 function renderTargetProgress(totalBulanIni, basisSaldo, isBulanIniAktif){
   const wrap=document.getElementById('targetProgressWrap');
