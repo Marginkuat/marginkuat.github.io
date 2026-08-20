@@ -662,7 +662,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       const lot = count*0.01;
       const riskDollar = count*riskPerLot;
       remOutEl2.innerHTML = typeof buildRemCekHtmlGeneric==='function'
-        ? buildRemCekHtmlGeneric(riskDollar, 'lot '+lot.toFixed(2), 'umum')
+        ? buildRemCekHtmlGeneric(riskDollar, 'lot '+lot.toFixed(2), 'umum', modal)
         : '';
     }
   }
@@ -1209,7 +1209,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       plan.forEach((lv,i)=>{ if(modal>=lv.modal) levelIdx=i; });
       const levelAktif=(levelIdx>=0 && plan[levelIdx]) ? plan[levelIdx] : null;
       remOutEl.innerHTML = typeof buildRemCekHtmlGeneric==='function'
-        ? buildRemCekHtmlGeneric(levelAktif?levelAktif.risk:0, levelAktif?('lot '+levelAktif.lot.toFixed(2)):'', 'agresif')
+        ? buildRemCekHtmlGeneric(levelAktif?levelAktif.risk:0, levelAktif?('lot '+levelAktif.lot.toFixed(2)):'', 'agresif', modal)
         : '';
     }
   }
@@ -1444,7 +1444,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
       plan.forEach((lv,i)=>{ if(modal>=lv.modal) levelIdx=i; });
       const levelAktif=(levelIdx>=0 && plan[levelIdx]) ? plan[levelIdx] : null;
       remOutElB.innerHTML = typeof buildRemCekHtmlGeneric==='function'
-        ? buildRemCekHtmlGeneric(levelAktif?levelAktif.risk:0, levelAktif?('lot '+levelAktif.lot.toFixed(2)):'', 'bahaya')
+        ? buildRemCekHtmlGeneric(levelAktif?levelAktif.risk:0, levelAktif?('lot '+levelAktif.lot.toFixed(2)):'', 'bahaya', modal)
         : '';
     }else{
       rekomOutElB.innerHTML='';
@@ -6577,16 +6577,21 @@ function getStatusRemBulanIni(){
 // yang dipakai notifikasi Telegram & banner REM beranda). Supaya ketiga kalkulator gak pernah
 // menampilkan angka REM yang beda-beda satu sama lain.
 // ── ATURAN BARU: REM berlaku di Kalkulator Umum 2% & Agresif 5% (calcKode 'umum'/'agresif'),
-// TIDAK berlaku di Kalkulator Bahaya 10-13% — DAN cuma aktif kalau saldo MT4 terakhir sudah
-// minimal $1000 (¢100000) — di bawah itu dianggap belum mumpuni, jadi REM ditampilkan
-// "belum aktif" bukan dicek beneran. ──
-const REM_SALDO_MINIMAL_CEN = 100000; // ¢100000 = $1000
-function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode){
+// TIDAK berlaku di Kalkulator Bahaya 10-13% — DAN cuma aktif kalau MODAL yang lagi dipakai di
+// kalkulator itu sendiri (input "Modal Kamu" — SAMA PERSIS variabel yang dipakai buat hitung
+// Level & Lot di atasnya) sudah minimal $1000. Di bawah itu dianggap belum mumpuni.
+// PENTING: sengaja BUKAN pakai lastSaldoTerakhir (saldo MT4 real-time global) — itu variabel
+// beda dan unitnya beda (¢ butuh dibagi 100 buat jadi USD), jadi kalau dipakai buat threshold
+// ini malah salah baca vs modal yang beneran dipakai kalkulator (bug: pernah kejadian modal
+// kalkulator udah $1,251.52 tapi REM masih baca "$12.52 belum capai syarat"). ──
+const REM_SALDO_MINIMAL_USD = 1000;
+function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode, modalKalkulator){
   if(calcKode==='bahaya'){
     return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">ℹ️ REM (batas rugi bulanan) TIDAK berlaku di <b style="color:#C8A84B">Kalkulator Bahaya 10-13%</b> — cuma dicek otomatis di Umum 2% & Agresif 5%.</div>`;
   }
-  if((lastSaldoTerakhir||0) < REM_SALDO_MINIMAL_CEN){
-    return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">⏳ REM belum aktif — saldo saat ini <b style="color:#C8A84B">${fu(lastSaldoTerakhir)}</b> belum capai syarat minimal <b style="color:#C8A84B">$1,000</b>. REM baru mulai dicek otomatis begitu saldo tembus $1,000.</div>`;
+  const modalCek = parseFloat(modalKalkulator)||0;
+  if(modalCek < REM_SALDO_MINIMAL_USD){
+    return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">⏳ REM belum aktif — Modal Kamu saat ini <b style="color:#C8A84B">$${modalCek.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</b> belum capai syarat minimal <b style="color:#C8A84B">$1,000</b>. REM baru mulai dicek otomatis begitu Modal Kamu tembus $1,000.</div>`;
   }
   if(typeof getStatusRemBulanIni!=='function') return '';
   const status=getStatusRemBulanIni();
