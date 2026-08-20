@@ -3677,6 +3677,7 @@ async function loadAll(){
   renderRiskMeter();
   renderGoalTracker();
   await loadModalOwner();
+  await loadOwnerDistribusi();
   renderInvestorDashboard();
   renderNotifCenter();
   renderWeeklyRecap();
@@ -6428,6 +6429,49 @@ async function loadModalOwner(){
   }catch(e){ console.error('Gagal load modal owner', e); }
 }
 function getModalOwner(){ return cachedModalOwner; }
+// ── Riwayat "profit yang sudah kamu ambil/tarik sendiri" (Arif) — sama konsepnya kayak
+// Distribusi Profit investor, tapi punya owner. Disimpan sebagai JSON array di app_settings
+// (bukan tabel baru), tiap item: {jenis:'distribusi_profit', jumlah, tanggal, waktu, keterangan}. ──
+let cachedOwnerDistribusi=[];
+async function loadOwnerDistribusi(){
+  try{
+    const rows=await api('app_settings?select=value&key=eq.owner_distribusi_profit');
+    if(rows && rows.length){
+      const parsed=JSON.parse(rows[0].value);
+      if(Array.isArray(parsed)) cachedOwnerDistribusi=parsed;
+    }
+  }catch(e){ console.error('Gagal load riwayat penarikan profit owner', e); }
+}
+function getOwnerDistribusi(){ return cachedOwnerDistribusi; }
+async function catatDistribusiOwner(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const jumlahStr=prompt('Catat profit yang kamu ambil/tarik sendiri (¢/sen) — ini cuma pencatatan, TIDAK mengubah Modal Kamu:');
+  const jumlah=parseFloat(jumlahStr);
+  if(isNaN(jumlah)||jumlah<=0){toast('❌ Nilai tidak valid');return;}
+  const tglStr=prompt('Tanggal penarikan (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+  if(!tglStr || !/^\d{4}-\d{2}-\d{2}$/.test(tglStr)){toast('❌ Format tanggal tidak valid');return;}
+  const waktu=prompt('Jam penarikan (HH:MM, 24 jam):', new Date().toTimeString().slice(0,5))||'';
+  const ket=prompt('Keterangan (opsional):','')||'';
+  try{
+    const list=getOwnerDistribusi().slice();
+    list.push({jenis:'distribusi_profit', jumlah, tanggal:tglStr, waktu, keterangan:ket||null});
+    const payload=JSON.stringify(list);
+    const existing=await api('app_settings?select=key&key=eq.owner_distribusi_profit');
+    if(existing.length){
+      await api('app_settings?key=eq.owner_distribusi_profit','PATCH',{value:payload});
+    }else{
+      await api('app_settings','POST',{key:'owner_distribusi_profit',value:payload});
+    }
+    cachedOwnerDistribusi=list;
+    toast(`✅ Penarikan profit kamu sebesar ${fc(jumlah)} dicatat`);
+    renderInvestorDashboard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan: '+(e.message||'').slice(0,150));
+  }
+}
+let __riwayatOwnerOpen=false;
+function toggleRiwayatOwner(){ __riwayatOwnerOpen=!__riwayatOwnerOpen; renderInvestorDashboard(); }
 async function editModalOwner(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah ini');return;}
   const cur=getModalOwner();
@@ -6864,6 +6908,26 @@ async function renderInvestorDashboard(){
 
     const ownerSharePct = totalPoolCapital>0 ? (modalOwner/totalPoolCapital*100) : 0;
     const ownerProfitShare = totalProfitAllTime * (ownerSharePct/100);
+    // ── Sama kayak "Untung yang Harus Dibagi" di kartu investor: profit share (live) DIKURANGI
+    // yang udah pernah kamu catat lewat "Catat Penarikan Profit" sebelumnya. ──
+    const ownerDistribusiList=getOwnerDistribusi();
+    const totalSudahDiambilOwner=ownerDistribusiList.reduce((s,t)=>s+parseFloat(t.jumlah||0),0);
+    const untungBelumDiambilOwner=ownerProfitShare-totalSudahDiambilOwner;
+    const waktuHitungOwnerStr=new Date().toLocaleString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+    const untungDiambilOwnerHtml=`
+      <div style="background:${untungBelumDiambilOwner>0.005?'linear-gradient(135deg,#3D2E00,#1A1400)':'var(--bg0)'};border:1.5px solid ${untungBelumDiambilOwner>0.005?'#FFD700':'var(--border)'};border-radius:10px;padding:10px 12px;margin-top:8px;text-align:center">
+        <div style="font-size:9px;color:#C8A84B;text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">💰 Profit yang Bisa Kamu Ambil</div>
+        <div style="font-size:20px;font-weight:900;color:${untungBelumDiambilOwner>0.005?'#FFD700':'#7A5D1F'}">${mfc(untungBelumDiambilOwner)}</div>
+        <div style="font-size:8px;color:#7A5D1F;margin-top:4px;line-height:1.5">${untungBelumDiambilOwner>0.005 ? 'Belum ditarik — catat di sini pas kamu beneran WD & ambil sendiri.' : (totalSudahDiambilOwner>0.005 ? 'Semua profit kamu sejauh ini sudah tercatat diambil.' : 'Belum ada profit yang bisa diambil.')}</div>
+        <div style="font-size:7px;color:#5C4818;margin-top:6px">🕐 Dihitung otomatis per ${waktuHitungOwnerStr} (waktu perangkat)${totalSudahDiambilOwner>0.005?` · Sudah diambil sejauh ini: ${mfc(totalSudahDiambilOwner)}`:''}</div>
+        <div style="margin-top:8px">
+          <button onclick="catatDistribusiOwner()" style="width:100%;padding:7px;border-radius:8px;border:1px solid #FFD700;background:transparent;color:#FFD700;font-size:9px;font-weight:700;cursor:pointer">💰 Catat Penarikan Profit</button>
+        </div>
+        <div style="margin-top:8px">
+          <span onclick="toggleRiwayatOwner()" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">${__riwayatOwnerOpen?'▲ Sembunyikan':'▼ Lihat'} Riwayat Penarikan (${ownerDistribusiList.length})</span>
+          ${__riwayatOwnerOpen?`<div style="margin-top:6px;background:var(--bg0);border-radius:8px;padding:8px 10px;text-align:left">${renderRiwayatTransaksiHtml(ownerDistribusiList)}</div>`:''}
+        </div>
+      </div>`;
     const ownerCardHtml=`
     <div style="border:1.5px solid #4ADE80;border-radius:14px;padding:14px 16px;margin-bottom:14px;background:var(--bg1)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -6875,6 +6939,7 @@ async function renderInvestorDashboard(){
         <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val ${ownerProfitShare>=0?'cg':'cr'}" style="font-size:14px">${ownerProfitShare>=0?'+':''}${mfc(ownerProfitShare)}</div><div class="bal-box-lbl">Profit Share Kamu</div></div>
       </div>
       <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-top:6px">Porsi kamu: <b style="color:#C8A84B">${ownerSharePct.toFixed(1)}%</b> dari total dana yang ditradingkan</div>
+      ${untungDiambilOwnerHtml}
     </div>`;
 
     let html=ownerCardHtml+`
