@@ -2496,16 +2496,24 @@ async function resetRemCycle(){
   </div>
 </div>
 
-<!-- INVESTOR DASHBOARD ── PRIVAT: section ini SENGAJA display:none secara default (lihat CSS
-     #secInvestorDashboard{display:none} & renderInvestorDashboard()) supaya pengunjung publik
-     TIDAK melihat judul/kotak apapun di sini — termasuk nama & saldo investor. Cuma kebuka
-     kalau (a) login sebagai Admin, atau (b) investor berhasil login lewat modal "mInvestorLogin"
-     (dipicu dari link tersembunyi di footer, BUKAN dari tombol besar di tengah halaman).
-     Kode akses TIDAK PERNAH disimpan di sessionStorage lagi — investor WAJIB masukkan kode
-     ulang tiap buka/refresh halaman (lihat doInvestorLogin/loggedInInvestorCode). -->
-<div class="section" id="secInvestorDashboard" style="display:none">
+<!-- INVESTOR DASHBOARD — kotak login SELALU tampil (biar investor gampang akses langsung dari
+     halaman utama tanpa perlu tau ada link tersembunyi). Privasi tetap dijaga lewat 2 hal lain:
+     (1) kode akses TIDAK disimpan sessionStorage — wajib login ulang tiap buka/refresh halaman
+     (lihat doInvestorLogin/loggedInInvestorCode), dan (2) nama lengkap investor TIDAK
+     ditampilkan di kartu dashboard-nya sendiri (lihat investorCardHtml, param isSelfMode) —
+     cuma Admin yang lihat nama asli, buat keperluan kelola dana. -->
+<div class="section" id="secInvestorDashboard">
   <div class="sec-title">👥 Investor Dashboard</div>
   <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Login khusus investor — tiap investor punya kode akses sendiri buat lihat porsi modal, estimasi profit, dan ROI mereka. Demi privasi, kode ini wajib dimasukkan ulang tiap buka/refresh halaman.</div>
+
+    <div id="investorLoginBox">
+      <label class="lbl">Kode Akses Investor</label>
+      <input class="inp" id="investorLoginCode" type="text" placeholder="Masukkan kode akses kamu" style="margin-bottom:10px" autocomplete="off">
+      <button class="btn btn-p" onclick="doInvestorLogin()" style="margin-bottom:0">🔑 Masuk sebagai Investor</button>
+      <div style="font-size:9px;color:#5C4818;margin-top:8px;text-align:center">Kode akses diberikan oleh pengelola akun. Admin bisa lihat semua investor tanpa kode.</div>
+    </div>
+
     <div id="investorDashboard" style="display:none">
       <div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
     </div>
@@ -3143,8 +3151,6 @@ async function resetRemCycle(){
     <a href="#secKontak" style="color:#8A6B26">Kontak</a>
     <span style="color:#3A3620">·</span>
     <a href="#secPrivasi" style="color:#8A6B26">Privasi &amp; Disclaimer</a>
-    <span style="color:#3A3620">·</span>
-    <a href="javascript:void(0)" onclick="openModal('mInvestorLogin')" style="color:#8A6B26">Investor</a>
   </div>
 </div>
 
@@ -3159,21 +3165,6 @@ async function resetRemCycle(){
     <input class="inp" type="password" id="loginPin" placeholder="Masukkan password" autocomplete="current-password">
     <button class="btn btn-p" onclick="doLogin()">Masuk</button>
     <button class="btn btn-ghost" onclick="closeModal('mLogin')">Batal</button>
-  </div>
-</div>
-
-<!-- MODAL LOGIN INVESTOR — sengaja terpisah dari halaman utama (bukan kotak yang selalu
-     kelihatan), dipicu cuma dari link "Investor" di footer, biar pengunjung biasa gak
-     ketemu kotak isi-kode ini pas scroll biasa. -->
-<div class="modal" id="mInvestorLogin">
-  <div class="modal-box">
-    <div class="modal-bar"></div>
-    <div class="modal-title">🔑 Login Investor</div>
-    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Kode akses diberikan oleh pengelola akun. Demi privasi, kode ini WAJIB dimasukkan ulang tiap kali kamu buka/refresh halaman — tidak tersimpan otomatis di perangkat.</div>
-    <label class="lbl">Kode Akses Investor</label>
-    <input class="inp" id="investorLoginCode" type="text" placeholder="Masukkan kode akses kamu" autocomplete="off">
-    <button class="btn btn-p" onclick="doInvestorLogin()">🔑 Masuk sebagai Investor</button>
-    <button class="btn btn-ghost" onclick="closeModal('mInvestorLogin')">Batal</button>
   </div>
 </div>
 
@@ -3613,14 +3604,6 @@ function updateSearchActiveHighlight(){
   });
 }
 function goToSearchResult(id){
-  // ── Investor Dashboard sengaja disembunyikan (display:none) buat publik — kalau belum
-  // login (bukan Admin & belum masuk sebagai investor), arahkan ke modal login dulu alih-alih
-  // scroll ke section yang gak kelihatan apa-apa. ──
-  if(id==='secInvestorDashboard' && !isAdmin && !loggedInInvestorId){
-    clearSearch();
-    openModal('mInvestorLogin');
-    return;
-  }
   const el=document.getElementById(id);
   clearSearch();
   if(!el){ toast('⚠️ Bagian ini belum tersedia'); return; }
@@ -6934,11 +6917,8 @@ async function doInvestorLogin(){
     // localStorage, biar begitu halaman direfresh/ditutup investor wajib login ulang (lihat
     // catatan privasi di deklarasi loggedInInvestorCode di atas).
     if(codeInput) codeInput.value='';
-    closeModal('mInvestorLogin');
-    toast('✅ Selamat datang, '+found.nama);
-    document.getElementById('secInvestorDashboard').style.display='block';
+    toast('✅ Selamat datang, Investor'); // ⚠️ Sengaja gak nyebut nama lengkap di toast ini juga — lihat catatan privasi di investorCardHtml
     renderInvestorDashboard();
-    document.getElementById('secInvestorDashboard').scrollIntoView({behavior:'smooth', block:'start'});
   }catch(e){
     console.error(e);
     await catatPercobaanLogin(code,'investor',false);
@@ -7032,11 +7012,16 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
       <span onclick="toggleRiwayatInvestor('${inv.id}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">${riwayatOpen?'▲ Sembunyikan':'▼ Lihat'} Riwayat Transaksi (${transaksiList.length})</span>
       ${riwayatOpen?`<div style="margin-top:6px;background:var(--bg0);border-radius:8px;padding:8px 10px">${renderRiwayatTransaksiHtml(transaksiList)}</div>`:''}
     </div>` : '';
+  // ── PRIVASI: nama lengkap investor SENGAJA gak ditampilkan di kartu ini kalau lagi mode
+  // "lihat punya sendiri" (isSelfMode) — biar kalau layar HP investor keliatan orang lain,
+  // gak langsung ketauan identitasnya. Admin tetap lihat nama asli (perlu buat kelola dana per
+  // investor lewat tombol Tambah/Tarik Dana & Distribusi Profit di atas). ──
+  const namaTampil = isSelfMode ? 'Investor' : escapeHtml(inv.nama);
   return `
     <div style="border:1.5px solid #B8860B;border-radius:14px;padding:16px;margin-bottom:12px;background:linear-gradient(160deg,var(--bg2),var(--bg1));position:relative;text-align:left">
       <div style="position:absolute;top:12px;right:14px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;border:1px solid #5C4818;border-radius:10px;padding:2px 8px">VIP</div>
       <div style="font-size:9px;color:#7A5D1F;text-transform:uppercase;letter-spacing:1px">Selamat datang</div>
-      <div style="font-size:18px;font-weight:800;color:#FFD700;margin:2px 0 10px">${inv.nama} 👋</div>
+      <div style="font-size:18px;font-weight:800;color:#FFD700;margin:2px 0 10px">${namaTampil} 👋</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#D4AF37">${mfc(inv.modal)}</div><div class="bal-box-lbl">Modal Disetor</div></div>
         <div class="bal-box" style="background:var(--bg0)"><div class="bal-box-val" style="font-size:14px;color:#FFD700">${mfc(currentVal)}</div><div class="bal-box-lbl">Estimasi Nilai Sekarang</div></div>
@@ -7165,24 +7150,15 @@ function profitSejakTanggal(rows, tanggalGabung){
   return (rows||[]).filter(r=>new Date(r.tanggal) >= mulai).reduce((s,r)=>s+parseFloat(r.profit||0),0);
 }
 async function renderInvestorDashboard(){
-  const secBox=document.getElementById('secInvestorDashboard');
+  const loginBox=document.getElementById('investorLoginBox');
   const dashBox=document.getElementById('investorDashboard');
   const logoutBox=document.getElementById('investorLogoutBox');
   const tambahBtn=document.getElementById('btnTambahInvestor');
   if(!dashBox)return;
 
-  // ── PRIVASI: kalau bukan Admin DAN belum login investor (loggedInInvestorId kosong — ini
-  // in-memory, otomatis null lagi tiap halaman di-refresh), section-nya TETAP display:none
-  // total. Gak ada judul, gak ada kotak apapun yang kelihatan buat pengunjung publik — akses
-  // cuma lewat link "Investor" tersembunyi di footer, yang buka modal kode akses. ──
-  if(!isAdmin && !loggedInInvestorId){
-    if(secBox) secBox.style.display='none';
-    return;
-  }
-  if(secBox) secBox.style.display='block';
-
   // ── MODE ADMIN: fetch semua investor langsung dari tabel (RLS izinin karena authenticated) ──
   if(isAdmin){
+    if(loginBox)loginBox.style.display='none';
     if(logoutBox)logoutBox.style.display='none';
     if(tambahBtn)tambahBtn.style.display='block';
     dashBox.style.display='block';
@@ -7259,10 +7235,11 @@ async function renderInvestorDashboard(){
     return;
   }
 
-  // ── MODE INVESTOR: pakai kode yang lagi di memori (loggedInInvestorCode) buat re-fetch data
-  // terbaru lewat RPC. Kalau kode ini kosong (misal habis refresh halaman), fungsi ini gak akan
-  // sampai ke sini sama sekali karena sudah kena early-return "belum login" di atas. ──
+  // ── MODE INVESTOR: cuma kalau ada kode yang lagi di memori (loggedInInvestorCode) —
+  // in-memory doang, otomatis kosong lagi tiap halaman di-refresh (lihat catatan privasi di
+  // deklarasi loggedInInvestorCode) — dipakai buat re-fetch data terbaru lewat RPC. ──
   if(loggedInInvestorId && loggedInInvestorCode){
+    if(loginBox)loginBox.style.display='none';
     if(logoutBox)logoutBox.style.display='block';
     if(tambahBtn)tambahBtn.style.display='none';
     dashBox.style.display='block';
@@ -7277,10 +7254,12 @@ async function renderInvestorDashboard(){
       return;
     }
     if(!rows || !rows.length){
-      // Kode udah gak valid lagi (misal investor dihapus admin) — paksa logout & sembunyikan lagi
+      // Kode udah gak valid lagi (misal investor dihapus admin) — paksa logout
       loggedInInvestorId=null;
       loggedInInvestorCode=null;
-      if(secBox) secBox.style.display='none';
+      if(loginBox)loginBox.style.display='block';
+      if(logoutBox)logoutBox.style.display='none';
+      dashBox.style.display='none';
       return;
     }
     const found=rows[0];
@@ -7309,8 +7288,11 @@ async function renderInvestorDashboard(){
     return;
   }
 
-  // ── Tidak seharusnya sampai sini (sudah ditangani early-return di atas), tapi jaga-jaga ──
-  if(secBox) secBox.style.display='none';
+  // ── BELUM LOGIN SAMA SEKALI ──
+  dashBox.style.display='none';
+  if(loginBox)loginBox.style.display='block';
+  if(logoutBox)logoutBox.style.display='none';
+  if(tambahBtn)tambahBtn.style.display='none';
 }
 
 // ══ NOTIFICATION CENTER ══
