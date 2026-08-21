@@ -6917,7 +6917,7 @@ async function doInvestorLogin(){
     // localStorage, biar begitu halaman direfresh/ditutup investor wajib login ulang (lihat
     // catatan privasi di deklarasi loggedInInvestorCode di atas).
     if(codeInput) codeInput.value='';
-    toast('✅ Selamat datang, Investor'); // ⚠️ Sengaja gak nyebut nama lengkap di toast ini juga — lihat catatan privasi di investorCardHtml
+    toast('✅ Selamat datang, '+found.nama); // sudah login pakai kode sendiri = bukan publik, wajar lihat nama sendiri (lihat catatan privasi di investorCardHtml)
     renderInvestorDashboard();
   }catch(e){
     console.error(e);
@@ -7021,11 +7021,13 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
       <span onclick="toggleRiwayatInvestor('${inv.id}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">${riwayatOpen?'▲ Sembunyikan':'▼ Lihat'} Riwayat Transaksi (${transaksiList.length})</span>
       ${riwayatOpen?`<div style="margin-top:6px;background:var(--bg0);border-radius:8px;padding:8px 10px">${renderRiwayatTransaksiHtml(transaksiList)}</div>`:''}
     </div>` : '';
-  // ── PRIVASI: nama lengkap investor SENGAJA gak ditampilkan di kartu ini kalau lagi mode
-  // "lihat punya sendiri" (isSelfMode) — biar kalau layar HP investor keliatan orang lain,
-  // gak langsung ketauan identitasnya. Admin tetap lihat nama asli (perlu buat kelola dana per
-  // investor lewat tombol Tambah/Tarik Dana & Distribusi Profit di atas). ──
-  const namaTampil = isSelfMode ? 'Investor' : escapeHtml(inv.nama);
+  // ── PRIVASI: investor yang lihat kartu ini SUDAH login pakai kode aksesnya sendiri (bukan
+  // pengunjung publik yang belum login), jadi wajar dia lihat nama dia sendiri. Yang dijaga
+  // privat itu SUPAYA PENGUNJUNG PUBLIK (belum login) gak bisa lihat nama investor manapun —
+  // itu sudah ditangani lewat wajib-login-ulang tiap refresh (loggedInInvestorCode in-memory,
+  // gak tersimpan sessionStorage) & dashboard yang cuma tampil setelah kode valid dimasukkan.
+  // ──
+  const namaTampil = escapeHtml(inv.nama);
   return `
     <div style="border:1.5px solid #B8860B;border-radius:14px;padding:16px;margin-bottom:12px;background:linear-gradient(160deg,var(--bg2),var(--bg1));position:relative;text-align:left">
       <div style="position:absolute;top:12px;right:14px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:1px;border:1px solid #5C4818;border-radius:10px;padding:2px 8px">VIP</div>
