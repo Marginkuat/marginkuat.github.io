@@ -84,6 +84,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 
 /* GRAFIK BULANAN */
 .graph-card{background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:16px}
+.kamus-item{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.kamus-item summary{font-size:11px;font-weight:700;color:#D4AF37;cursor:pointer;list-style:none}
+.kamus-item summary::-webkit-details-marker{display:none}
+.kamus-item summary::before{content:'▸ ';color:#8A6B26}
+.kamus-item[open] summary::before{content:'▾ '}
+.kamus-item .kamus-body{font-size:10px;color:#8A6B26;line-height:1.7;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
 .graph-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .graph-month{font-size:15px;font-weight:700;color:#D4AF37}
 .graph-signal{font-size:10px;color:#8A6B26;margin-top:2px}
@@ -236,6 +242,81 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="search-results" id="searchResults"></div>
 </div>
 
+<!-- KAMUS ISTILAH — glosarium semua istilah trading/investasi yang dipakai di situs ini,
+     ditulis buat pemula/pengunjung yang belum tau artinya. Statis (gak butuh fetch data),
+     pakai <details> native biar ringan & gak perlu JS tambahan buat expand/collapse. -->
+<div class="section" id="secKamusIstilah" style="padding:20px 16px 0">
+  <div class="sec-title">📖 Kamus Istilah</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Situs ini dibuat sebagai <b>alat bantu gratis</b> buat catatan trading &amp; belajar keuangan. Kalau nemu istilah yang belum ngerti di mana pun di halaman ini (Win Rate, ROI, Avg Loss, dll), cek daftar di bawah — tap istilahnya buat lihat artinya.</div>
+    <input class="inp" id="kamusIstilahFilter" type="text" placeholder="Cari istilah... (misal: win rate)" oninput="filterKamusIstilah()" style="margin-bottom:12px">
+    <div id="kamusIstilahKosong" style="display:none;text-align:center;padding:14px;color:#7A5D1F;font-size:11px">Gak ketemu istilah yang cocok.</div>
+
+    <div class="kamus-grup">
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin:6px 0 8px">📈 Performa Trading</div>
+      <details class="kamus-item"><summary>Win Rate</summary><div class="kamus-body">Persentase hari/transaksi yang <b>profit</b> dari total hari/transaksi trading.<br><br>Rumus: (Jumlah hari profit ÷ Total hari trading) × 100%.<br><br>Makin tinggi makin sering menang — TAPI win rate tinggi doang belum tentu untung, kalau tiap kalah kerugiannya jauh lebih besar dari tiap menang. Makanya perlu dilihat bareng <b>Risk-Reward Ratio</b> &amp; <b>BE Win Rate</b> di bawah.</div></details>
+      <details class="kamus-item"><summary>ROI (Return on Investment)</summary><div class="kamus-body">Persentase keuntungan dibandingkan modal yang ditanam.<br><br>Rumus: (Profit ÷ Modal) × 100%.<br><br>Dipakai buat bandingin efisiensi: modal kecil untung besar (ROI tinggi) vs modal besar untung kecil (ROI rendah) — bukan cuma lihat untung nominalnya doang.</div></details>
+      <details class="kamus-item"><summary>Avg Reward/Hari &amp; Avg Risk/Hari</summary><div class="kamus-body"><b>Avg Reward/Hari</b> = rata-rata besar untung di hari-hari yang profit.<br><b>Avg Risk/Hari</b> = rata-rata besar rugi di hari-hari yang rugi.<br><br>Dua angka ini dipakai buat lihat RR harian (Avg Reward ÷ Avg Risk) — apakah rata-rata untungmu cukup besar buat nutup rata-rata rugimu.</div></details>
+      <details class="kamus-item"><summary>BE Win Rate (Breakeven Win Rate)</summary><div class="kamus-body">Win rate <b>minimal</b> yang kamu butuhin biar gak rugi, berdasarkan rasio SL:TP yang dipakai.<br><br>Rumus: SL ÷ (SL + TP) × 100%.<br><br>Kalau win rate ASLI kamu ada DI ATAS BE Win Rate ini, secara matematis kamu untung dalam jangka panjang — walau menangnya cuma sekali-sekali.</div></details>
+      <details class="kamus-item"><summary>RR / Risk-Reward Ratio</summary><div class="kamus-body">Perbandingan potensi untung (Reward/TP) dibanding potensi rugi (Risk/SL) di satu transaksi.<br><br>RR 1:2 artinya target untung 2x lebih besar dari batas rugi yang kamu pasang.</div></details>
+      <details class="kamus-item"><summary>Profit Factor</summary><div class="kamus-body">Perbandingan antara total keuntungan dari transaksi profit (Gross Profit) dengan total kerugian dari transaksi loss (Gross Loss).<br><br>Rumus: Gross Profit ÷ Gross Loss (6 bulan terakhir).<br><br>Semakin besar nilainya, semakin sehat performanya — di atas 1 artinya untung lebih besar dari rugi secara total.</div></details>
+      <details class="kamus-item"><summary>Recovery Factor</summary><div class="kamus-body">Tingkat kemampuan akun buat pulih (recovery) dari kerugian terdalam yang pernah dialami.<br><br>Rumus: Nett P/L ÷ Drawdown terbesar (6 bulan terakhir).<br><br>Makin besar, makin cepat/kuat akun ini "menyembuhkan diri" tiap kali kena rugi dalam.</div></details>
+      <details class="kamus-item"><summary>Max Drawdown (Max DD)</summary><div class="kamus-body">Penurunan TERBESAR dari titik puncak (peak) tertinggi saldo ke titik terendah setelahnya, dalam periode tertentu.<br><br>Ini mengukur "luka terdalam" yang pernah dialami akun — beda dari Current Drawdown yang lihat kondisi HARI INI.</div></details>
+      <details class="kamus-item"><summary>Current Drawdown</summary><div class="kamus-body">Seberapa jauh saldo SEKARANG dari puncak tertinggi yang pernah dicapai, dibanding modal yang lagi aktif ditradingkan.<br><br>Beda dengan Max DD (histori), ini nunjukin kondisi akun HARI INI — lagi floating minus dalam, atau udah recover.</div></details>
+      <details class="kamus-item"><summary>Monthly Loss Ratio</summary><div class="kamus-body">Perbandingan antara loss terbesar dalam sebulan dengan rata-rata profit bulanan (6 bulan terakhir).<br><br>Semakin kecil persentasenya, semakin sehat — artinya loss terburukmu gak terlalu jauh dari kondisi normal.</div></details>
+      <details class="kamus-item"><summary>Consistency Score</summary><div class="kamus-body">Skor seberapa STABIL profit bulanan kamu (gak naik-turun ekstrem tiap bulan).<br><br>Dihitung dari variasi/standar deviasi profit tiap bulan — makin kecil variasinya, makin konsisten &amp; makin tinggi skornya.</div></details>
+      <details class="kamus-item"><summary>Sharpe Ratio</summary><div class="kamus-body">Rasio yang mengukur seberapa besar return yang kamu dapat DIBANDING risiko/volatilitas yang diambil buat dapetin return itu.<br><br>Rumus umum: (Rata-rata return − return bebas risiko) ÷ Standar deviasi return.<br><br>Makin tinggi, makin "efisien" — untung yang didapat sepadan dengan risiko yang diambil, bukan untung yang kebetulan/spekulatif.</div></details>
+      <details class="kamus-item"><summary>Net Profit</summary><div class="kamus-body">Keuntungan BERSIH: total profit dikurangi total loss dalam satu periode.<br><br>Beda dari Gross Profit yang cuma jumlahin transaksi untung doang (belum dikurangi yang rugi).</div></details>
+      <details class="kamus-item"><summary>Gross Profit &amp; Gross Loss</summary><div class="kamus-body"><b>Gross Profit</b> = total nilai SEMUA transaksi yang profit (belum dikurangi yang rugi).<br><b>Gross Loss</b> = total nilai SEMUA transaksi yang rugi.<br><br>Profit Factor = Gross Profit ÷ Gross Loss.</div></details>
+      <details class="kamus-item"><summary>Growth</summary><div class="kamus-body">Persentase pertumbuhan saldo/modal dari satu titik waktu ke titik waktu lainnya (misal dari awal bulan ke sekarang).</div></details>
+      <details class="kamus-item"><summary>Equity Curve</summary><div class="kamus-body">Grafik garis yang nunjukin perubahan saldo/ekuitas dari waktu ke waktu.<br><br>Garis naik terus & halus = performa bagus &amp; konsisten. Naik-turun tajam (zig-zag) = performa fluktuatif/berisiko tinggi.</div></details>
+      <details class="kamus-item"><summary>Probabilitas Bangkrut (Risk of Ruin)</summary><div class="kamus-body">Estimasi peluang (dalam %) akun kena margin call/modal habis total, dihitung dari win rate, risk per transaksi, dan riwayat performa.<br><br>Makin kecil persentasenya, makin aman gaya trading yang lagi dipakai.</div></details>
+      <details class="kamus-item"><summary>Avg Win &amp; Avg Loss</summary><div class="kamus-body"><b>Avg Win</b> = rata-rata besar keuntungan dari SEMUA hari/transaksi yang profit (data historis).<br><b>Avg Loss</b> = rata-rata besar kerugian dari SEMUA hari/transaksi yang rugi (ditulis sebagai angka positif walau aslinya rugi).<br><br>Mirip <b>Avg Reward/Hari</b> &amp; <b>Avg Risk/Hari</b> di atas, tapi dipakai khusus buat hitung Risk of Ruin &amp; Simulasi Monte Carlo.</div></details>
+      <details class="kamus-item"><summary>Simulasi Monte Carlo</summary><div class="kamus-body">Cara mengetes ketahanan modal dengan "mengulang" pola Win Rate, Avg Win, dan Avg Loss kamu secara ACAK ribuan kali (di situs ini: 1.000 skenario × 100 transaksi berturutan), lalu dihitung berapa persen skenario yang modalnya BERTAHAN (gak habis) sampai akhir.<br><br>Beda dari rumus Risk of Ruin (perhitungan matematis langsung) — Monte Carlo ini simulasi acak, dua-duanya saling melengkapi buat ngecek seberapa aman gaya trading kamu.</div></details>
+      <details class="kamus-item"><summary>Risk Meter</summary><div class="kamus-body">Indikator lampu (🟢 Aman / 🟡 Waspada / 🔴 Bahaya) yang meringkas beberapa metrik risiko sekaligus — Current Drawdown, Risk of Ruin, dan Risk per Trade — jadi satu status yang gampang dibaca sekilas.<br><br>Merah = ada indikasi risiko yang perlu segera dicek/dikurangi.</div></details>
+    </div>
+
+    <div class="kamus-grup" style="margin-top:16px">
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin:6px 0 8px">🧠 Psikologi &amp; Kedisiplinan Trading</div>
+      <details class="kamus-item"><summary>Mood Trading</summary><div class="kamus-body">Suasana hati kamu SAAT trading hari itu (😊 Tenang / 😐 Biasa Saja / 😰 Cemas / 😡 Frustasi) — dicatat manual tiap hari buat lihat pola: mood tertentu cenderung menghasilkan profit lebih baik/buruk apa nggak.</div></details>
+      <details class="kamus-item"><summary>Skor Disiplin (Skor Kepatuhan)</summary><div class="kamus-body">Skor 0-100 yang menggambarkan seberapa disiplin kamu tiap entry — dihitung rata-rata dari 3 komponen: <b>Keyakinan Entry</b>, <b>Kesesuaian Rencana</b>, dan <b>Kualitas Eksekusi</b> (lihat masing-masing di bawah).<br><br>Dicatat tiap hari buat lihat: disiplin tinggi beneran menghasilkan profit lebih baik apa nggak.</div></details>
+      <details class="kamus-item"><summary>Keyakinan Entry</summary><div class="kamus-body">Seberapa yakin kamu SAAT membuka posisi, dalam skala 1-10 (1 = ragu banget, 10 = sangat yakin) — dicatat manual buat lihat hubungan antara "rasa yakin" dan hasil trading beneran.</div></details>
+      <details class="kamus-item"><summary>Kesesuaian Rencana</summary><div class="kamus-body">Apakah entry hari itu SESUAI rencana trading yang sudah disiapkan sebelumnya (Ya/Tidak) — dipakai buat ngecek apakah kamu suka melenceng dari rencana pas eksekusi beneran.</div></details>
+      <details class="kamus-item"><summary>Kualitas Eksekusi</summary><div class="kamus-body">Penilaian sendiri (Buruk/Sedang/Baik) tentang seberapa rapi kamu menjalankan entry &amp; exit hari itu — misalnya entry kepencet buru-buru vs sesuai rencana, exit panik vs exit sesuai SL/TP.</div></details>
+    </div>
+
+    <div class="kamus-grup" style="margin-top:16px">
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin:6px 0 8px">💰 Keuangan Pribadi</div>
+      <details class="kamus-item"><summary>FI Number (Financial Independence Number)</summary><div class="kamus-body">Perkiraan besar modal trading yang dibutuhkan supaya rata-rata PROFIT bulanan (dari histori) cukup buat menutup biaya hidup bulanan kamu — istilah dari konsep "Financial Independence" (kebebasan finansial: hidup dari hasil investasi, bukan dari gaji kerja).<br><br>⚠️ Ini simulasi/estimasi berdasarkan rata-rata return historis, BUKAN jaminan — hasil trading di masa depan bisa berbeda dari histori.</div></details>
+      <details class="kamus-item"><summary>Skor Kesehatan Finansial</summary><div class="kamus-body">Skor A sampai D yang meringkas kondisi keuangan pribadi kamu SECARA KESELURUHAN (di luar akun trading) — dihitung dari rasio-rasio umum seperti dana darurat, rasio utang, dan tabungan.<br><br>Beda dari Score Dashboard (yang menilai performa TRADING) — ini soal kesehatan keuangan sehari-hari kamu.</div></details>
+      <details class="kamus-item"><summary>Dana Darurat &amp; Runway</summary><div class="kamus-body"><b>Dana Darurat</b> = uang yang disisihkan khusus buat kondisi darurat/tak terduga (bukan buat ditradingkan/diinvestasikan).<br><b>Runway</b> = berapa lama (dalam bulan) dana darurat itu bisa menutup pengeluaran kamu kalau tiba-tiba gak ada pemasukan sama sekali.</div></details>
+      <details class="kamus-item"><summary>Ekuitas (Kekayaan Bersih / Net Worth)</summary><div class="kamus-body">Total ASET (harta yang kamu punya) dikurangi total LIABILITAS (utang/kewajiban) — angka ini nunjukin kekayaan bersih kamu yang sebenarnya, bukan cuma saldo kas doang.<br><br>Rumus: Ekuitas = Total Aset − Total Liabilitas.</div></details>
+      <details class="kamus-item"><summary>Laba/Rugi Bersih (Net Income)</summary><div class="kamus-body">Selisih antara total PENDAPATAN dan total BEBAN/pengeluaran dalam satu periode — gaya laporan keuangan perusahaan, diterapkan ke keuangan pribadi kamu.<br><br>Rumus: Laba/Rugi Bersih = Pendapatan − Beban.</div></details>
+    </div>
+
+    <div class="kamus-grup" style="margin-top:16px">
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin:6px 0 8px">🧮 Kalkulator &amp; Manajemen Risiko</div>
+      <details class="kamus-item"><summary>Lot</summary><div class="kamus-body">Satuan besar/volume transaksi di forex &amp; gold.<br><br>1 lot standar = 100.000 unit. <b>0.01 lot</b> (microlot) adalah satuan terkecil yang umum dipakai akun kecil/pemula — makin besar lot, makin besar untung/rugi per pergerakan harga yang sama.</div></details>
+      <details class="kamus-item"><summary>Pip</summary><div class="kamus-body">Satuan pergerakan harga TERKECIL di satu pasangan mata uang/gold.<br><br>Nilai uang per pip tergantung besar lot yang dipakai — makin besar lot, makin besar nilai uang tiap pip-nya.</div></details>
+      <details class="kamus-item"><summary>SL (Stop Loss)</summary><div class="kamus-body">Batas rugi OTOMATIS — level harga di mana order otomatis ditutup buat membatasi kerugian kalau harga bergerak melawan posisi kamu.</div></details>
+      <details class="kamus-item"><summary>TP (Take Profit)</summary><div class="kamus-body">Batas untung OTOMATIS — level harga di mana order otomatis ditutup buat mengunci keuntungan.</div></details>
+      <details class="kamus-item"><summary>REM (Batas Rugi Bulanan)</summary><div class="kamus-body">Istilah internal situs ini buat "batas rugi bulanan": kalau rugi kumulatif bulan berjalan udah nyentuh persentase/nominal tertentu yang ditetapkan, sistem otomatis nandain <b>wajib berhenti trading</b> sampai bulan berikutnya — biar modal gak abis kalau lagi apes.</div></details>
+      <details class="kamus-item"><summary>VP (Value Point)</summary><div class="kamus-body">Satuan pip yang sudah "dinormalisasi" (disamakan) lintas pair, dipakai khusus di fitur "Rem Profit &amp; Rugi" biar target ±1000 VP tetap konsisten walaupun pair-nya beda-beda (nilai uang per pip tiap pair itu beda-beda kalau dibiarkan pakai pip asli).</div></details>
+    </div>
+
+    <div class="kamus-grup" style="margin-top:16px">
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin:6px 0 8px">👥 Investasi (Investor Dashboard)</div>
+      <details class="kamus-item"><summary>Modal Disetor</summary><div class="kamus-body">Total uang yang sudah dimasukkan investor ke akun trading ini (dihitung all-time, dari awal gabung).</div></details>
+      <details class="kamus-item"><summary>Estimasi Nilai Sekarang</summary><div class="kamus-body">Modal Disetor investor ditambah/dikurangi estimasi profit share dia sampai saat ini — perkiraan berapa nilai "porsi" investor itu sekarang kalau ditarik.</div></details>
+      <details class="kamus-item"><summary>Estimasi Profit Share</summary><div class="kamus-body">Perkiraan bagian keuntungan investor, dihitung PROPORSIONAL dari porsi modal investor itu terhadap total profit trading sejak dia bergabung.<br><br>⚠️ Ini estimasi tampilan, bukan kalkulasi bagi hasil resmi/legal.</div></details>
+      <details class="kamus-item"><summary>ROI Pool Gabungan</summary><div class="kamus-body">ROI dari TOTAL dana gabungan (modal owner + semua investor) yang ditradingkan bareng dalam satu akun — bukan cuma modal investor itu sendiri.</div></details>
+      <details class="kamus-item"><summary>Porsi Modal</summary><div class="kamus-body">Persentase modal investor tertentu dibandingkan TOTAL dana yang ditradingkan (modal owner + semua investor lain).<br><br>Dipakai buat nentuin berapa bagian profit share yang adil buat investor itu.</div></details>
+    </div>
+
+    <div style="font-size:8px;color:#5C4818;margin-top:14px;line-height:1.6;text-align:center">Penjelasan di atas ditulis sesederhana mungkin buat pemula. Kalau ada istilah lain yang belum ada di sini, cek juga tombol "ⓘ" kecil yang ada di beberapa kotak statistik (misal di Score Dashboard) — itu penjelasan lebih detail lengkap dengan rumus & skornya.</div>
+  </div>
+</div>
+
 <!-- LABEL PERMANEN: profil risiko akun ini (SELALU tampil, otomatis ikut profil yang aktif di server) -->
 <div id="labelProfilRisiko" style="margin:0 0 14px"></div>
 
@@ -258,6 +339,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <div class="bal-box"><div class="bal-box-val cg" id="bProfit">¢0</div><div class="bal-box-lbl" id="bProfitLbl">Total Profit</div></div>
   </div>
   <div id="balDrawdownRow" style="margin-top:10px;text-align:center;font-size:10px;color:#8A6B26"></div>
+  <div style="text-align:center;margin-top:6px"><a href="#secKamusIstilah" style="font-size:9px;color:#7A5D1F;text-decoration:underline">❓ Belum ngerti Win Rate/istilah lain? Lihat Kamus Istilah</a></div>
 
   <!-- EQUITY CURVE REAL-TIME (gabung dengan Saldo MT4) -->
   <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px;text-align:left">
@@ -287,6 +369,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="sec-title">🏆 Score Dashboard</div>
   <div class="graph-card">
     <div id="scoreDashboard" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    <div style="text-align:center;margin-top:6px"><a href="#secKamusIstilah" style="font-size:9px;color:#7A5D1F;text-decoration:underline">❓ Belum ngerti Profit Factor/istilah lain? Lihat Kamus Istilah</a></div>
   </div>
 </div>
 
@@ -384,6 +467,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="graph-card">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Estimasi peluang akun kena Margin Call, dihitung dari win rate & risk/reward historis kamu. Angka ini teoretis — bukan prediksi pasti.</div>
     <div id="riskOfRuin" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    <div style="text-align:center;margin-top:6px"><a href="#secKamusIstilah" style="font-size:9px;color:#7A5D1F;text-decoration:underline">❓ Belum ngerti Avg Win/Avg Loss/Monte Carlo? Lihat Kamus Istilah</a></div>
   </div>
 </div>
 
@@ -392,6 +476,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="sec-title">🧠 Psikologi Trading (Mood vs Profit)</div>
   <div class="graph-card">
     <div id="moodStats" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    <div style="text-align:center;margin-top:6px"><a href="#secKamusIstilah" style="font-size:9px;color:#7A5D1F;text-decoration:underline">❓ Belum ngerti istilah di sini? Lihat Kamus Istilah</a></div>
   </div>
 </div>
 
@@ -401,6 +486,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   <div class="graph-card">
     <div style="font-size:10px;color:#8A6B26;line-height:1.6;margin-bottom:12px">Skor disiplin (0-100) dihitung dari Keyakinan Entry, Kesesuaian Rencana, dan Kualitas Eksekusi yang diisi tiap catat saldo harian. Dikelompokkan biar ketahuan: disiplin tinggi beneran nunjukin profit lebih baik apa nggak.</div>
     <div id="skorDisiplinStats" style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div>
+    <div style="text-align:center;margin-top:6px"><a href="#secKamusIstilah" style="font-size:9px;color:#7A5D1F;text-decoration:underline">❓ Belum ngerti Keyakinan Entry/istilah lain? Lihat Kamus Istilah</a></div>
   </div>
 </div>
 
@@ -2373,6 +2459,7 @@ async function resetRemCycle(){
   <div class="graph-card">
     <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Skor Kesehatan Finansial</div>
     <div id="skorKesehatanBox"></div>
+    <div style="text-align:center;margin-top:6px"><a href="#secKamusIstilah" style="font-size:9px;color:#7A5D1F;text-decoration:underline">❓ Belum ngerti Dana Darurat/Runway/istilah lain? Lihat Kamus Istilah</a></div>
   </div>
 </div>
 
@@ -2382,6 +2469,7 @@ async function resetRemCycle(){
   <div class="graph-card" style="margin-bottom:12px">
     <div style="font-size:9px;color:#5C4818;margin-bottom:12px;line-height:1.6">Berapa modal trading yang dibutuhkan agar profit bulanan rata-rata bisa menutup biaya hidup, tanpa perlu kerja lain. Dihitung dari rata-rata return bulanan historis dan rata-rata pengeluaran pribadi kamu.</div>
     <div id="fiNumberBox"></div>
+    <div style="text-align:center;margin-top:6px"><a href="#secKamusIstilah" style="font-size:9px;color:#7A5D1F;text-decoration:underline">❓ Belum ngerti FI Number? Lihat Kamus Istilah</a></div>
   </div>
 </div>
 
@@ -3390,6 +3478,7 @@ const fd=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short
 
 // ══ SEARCH MENU: cari & lompat ke bagian manapun di situs ══
 const SEARCH_MENU=[
+  {id:'secKamusIstilah', icon:'📖', label:'Kamus Istilah', desc:'Penjelasan sederhana Win Rate, ROI, Avg Loss, dan istilah trading lainnya', kw:'kamus istilah glosarium arti definisi win rate roi avg loss avg win monte carlo simulasi risk meter risk reward sharpe lot pip stop loss take profit mood keyakinan entry kesesuaian rencana kualitas eksekusi skor disiplin fi number financial independence skor kesehatan finansial dana darurat runway ekuitas kekayaan bersih laba rugi bersih pemula belajar', cat:'lain'},
   {id:'secSaldo', icon:'💰', label:'Saldo MT4 & Equity Curve', desc:'Saldo saat ini, win rate, total profit, grafik equity', kw:'saldo mt4 equity curve balance modal akun win rate', cat:'performa'},
   {id:'secScore', icon:'🏆', label:'Score Dashboard', desc:'Skor keseluruhan performa trading kamu', kw:'score dashboard skor nilai rating', cat:'performa'},
   {id:'secStatPair', icon:'📊', label:'Statistik Per Pair', desc:'Performa per XAUUSD, BTCUSD, Forex', kw:'statistik pair xauusd btcusd forex per pasangan', cat:'performa'},
@@ -3550,6 +3639,24 @@ function clearSearch(){
   searchCurrentResults=[];
   searchActiveIdx=-1;
   input.blur();
+}
+// ── KAMUS ISTILAH: filter ringan, murni cari teks di judul (summary) tiap istilah. Statis,
+// gak perlu fetch apapun — cocok buat glosarium yang isinya gak berubah-ubah. ──
+function filterKamusIstilah(){
+  const q=normalizeSearchText(document.getElementById('kamusIstilahFilter').value||'');
+  const items=document.querySelectorAll('#secKamusIstilah .kamus-item');
+  let visibleCount=0;
+  items.forEach(item=>{
+    const judul=normalizeSearchText(item.querySelector('summary').textContent||'');
+    const cocok = !q || judul.includes(q);
+    item.style.display = cocok ? '' : 'none';
+    if(cocok) visibleCount++;
+  });
+  document.querySelectorAll('#secKamusIstilah .kamus-grup').forEach(grup=>{
+    const adaYangKelihatan=[...grup.querySelectorAll('.kamus-item')].some(i=>i.style.display!=='none');
+    grup.style.display = adaYangKelihatan ? '' : 'none';
+  });
+  document.getElementById('kamusIstilahKosong').style.display = visibleCount===0 ? 'block' : 'none';
 }
 document.addEventListener('click', e=>{
   const wrap=document.getElementById('searchWrap');
