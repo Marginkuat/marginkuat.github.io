@@ -6976,8 +6976,17 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
     const cfgRem=getTargetBulanan();
     if(statusRem && statusRem.saldoAwalBulan){
       const nilaiTarget=Math.abs(statusRem.bawah);
+      // ── BUG FIX: dulu label ini HARDCODE "dari saldo awal" + statusRem.saldoAwalBulan,
+      // padahal nilai batas (bawah/nilaiTarget) sebenarnya dihitung dari statusRem.basisSaldo
+      // — yang bisa jadi saldo REAL-TIME (kalau getRemBasisMode()==='real_time'), BUKAN selalu
+      // saldo awal bulan. Sekarang label ikut basis yang BENERAN dipakai, biar gak
+      // membingungkan kayak kasus "±55% (¢641.43 dua arah, dari saldo awal ¢570.06)" padahal
+      // ¢641.43 itu 55% dari saldo real-time, bukan dari ¢570.06. ──
+      const basisLabel = (typeof getRemBasisMode==='function' && getRemBasisMode()==='real_time')
+        ? 'saldo real-time' : 'saldo awal bulan';
+      const nilaiBasis = (statusRem.basisSaldo!=null ? statusRem.basisSaldo : statusRem.saldoAwalBulan);
       const batasTeks = cfgRem.mode==='persen'
-        ? `±${cfgRem.value}% (${fc(nilaiTarget)} dua arah, dari saldo awal ${fc(statusRem.saldoAwalBulan)})`
+        ? `±${cfgRem.value}% (${fc(nilaiTarget)} dua arah, dari ${basisLabel} ${fc(nilaiBasis)})`
         : `${fc(nilaiTarget)} dua arah (nominal tetap tiap bulan)`;
       remStatusTeks = `batas rugi bulanan (REM) yang aktif sekarang: <b>${batasTeks}</b>`;
     }else{
