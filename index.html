@@ -320,9 +320,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 <!-- LABEL PERMANEN: profil risiko akun ini (SELALU tampil, otomatis ikut profil yang aktif di server) -->
 <div id="labelProfilRisiko" style="margin:0 0 14px"></div>
 
-<!-- BANNER MODE BAHAYA (penanda tambahan HARI INI, tampil kalau diaktifkan Admin) -->
-<div id="bannerModeBahaya" style="display:none"></div>
-
 <!-- BALANCE HERO -->
 <div class="balance-card" id="secSaldo">
   <div class="bal-label" style="display:flex;align-items:center;justify-content:center;gap:8px">
@@ -634,8 +631,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <div id="remCekOut2" style="margin-top:12px"></div>
     <div id="selisihOut2" style="margin-top:12px"></div>
     <div id="rrLevelsOut2" style="margin-top:16px"></div>
-    <div id="pendingOut2" style="margin-top:16px"></div>
-    <div id="xauGridOut2" style="margin-top:16px"></div>
 
     <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-top:14px;text-align:center">
       <div style="font-size:9px;color:#8A6B26;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Breakeven Win Rate</div>
@@ -757,7 +752,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 <div class="section" id="secKalkulator">
   <div class="sec-title">🧮 Kalkulator Agresif — Level 5%</div>
   <div class="graph-card">
-    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.5">Risk dikunci flat 5% di semua level (lebih agresif dari kalkulator Umum 2% di atas, lebih aman dari Bahaya 10-13% di bawah). Isi bebas — tentukan sendiri berapa pips yang dipertaruhkan (SL), target (TP), dan lot. Hasil $ dan VP terhitung otomatis.</div>
+    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.5">Risk dikunci flat 5% di semua level (lebih agresif dari kalkulator Umum 2% di atas). Isi bebas — tentukan sendiri berapa pips yang dipertaruhkan (SL), target (TP), dan lot. Hasil $ dan VP terhitung otomatis.</div>
 
     <div class="calc-row">
       <div>
@@ -897,10 +892,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 
     <div id="rrLevelsOut" style="margin-top:16px"></div>
 
-    <div id="pendingOut" style="margin-top:16px"></div>
-
-    <div id="xauGridOut" style="margin-top:16px"></div>
-
     <div class="calc-hero" style="margin-top:16px">
       <div class="calc-hero-lbl">Risk $ per Transaksi</div>
       <div class="calc-hero-val" id="calcOutRiskHero">$0.00</div>
@@ -1006,8 +997,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     if(!entry || slPips<=0){
       $('rrLevelsOut').innerHTML = '';
       $('selisihOut').innerHTML = '';
-      $('pendingOut').innerHTML = '';
-      $('xauGridOut').innerHTML = '';
       return;
     }
 
@@ -1072,95 +1061,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     });
 
     $('rrLevelsOut').innerHTML = html;
-
-    // ── Perbandingan harga: MT4/5 (langsung) vs Trading Family (pending order) ──
-    // Trading Family pakai pending order, jadi Entry digeser sebesar SPREAD ASLI pair
-    // (bukan SL preset), searah arah Buy/Sell. SL & TP tetap pakai SL preset yang dipilih.
-    const entryB = entry + dir*spread*factor;
-    const slB = entryB - dir*slPips*factor; // SL pending = entryB mundur sejauh SL preset yang dipilih (Standar/Medium/Hard)
-
-    const pendRow = (label, valA, valB) => pairName==='BTCUSD' ? `
-      <div style="margin-bottom:8px">
-        <div style="background:var(--bg1);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center">
-          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmtPrice(valA, decimals)}</div>
-        </div>
-      </div>` : `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div style="background:var(--bg1);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center">
-          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmtPrice(valA, decimals)}</div>
-        </div>
-        <div style="background:var(--bg1);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center">
-          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmtPrice(valB, decimals)}</div>
-        </div>
-      </div>`;
-
-    let pendingHtml = pairName==='BTCUSD'
-      ? `<div style="font-size:11px;color:#8A6B26;margin-bottom:10px;line-height:1.5">📋 Harga eksekusi langsung (MT4/5) — BTCUSD tidak tersedia di Trading Family:</div>
-      <div style="margin-bottom:4px">
-        <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">MT4/5 (Langsung)</div>
-      </div>`
-      : `<div style="font-size:11px;color:#8A6B26;margin-bottom:10px;line-height:1.5">📋 Dua opsi harga — kiri untuk eksekusi langsung (MT4/5), kanan untuk pending order (mis. Trading Family):</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
-        <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">MT4/5 (Langsung)</div>
-        <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">Trading Family (Pending)</div>
-      </div>`;
-
-    pendingHtml += pendRow(entryType==='buy'?'Buy':'Sell', entry, entryB);
-    pendingHtml += pendRow('Stop Loss', slPrice, slB);
-
-    tpList.forEach(tpPips=>{
-      const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
-      const tpA = entry + dir*tpPips*factor;
-      const tpB = entryB + dir*tpPips*factor;
-      pendingHtml += pendRow(`TP RR 1:${rrLabel}`, tpA, tpB);
-    });
-
-    $('pendingOut').innerHTML = pendingHtml;
-
-    // ── Pending order — KHUSUS XAUUSD, dibatasi maksimal 2x ──
-    if(pairName === 'XAUUSD'){
-      const orderLabel = entryType==='buy' ? 'Buy' : 'Sell';
-      const kes = [
-        { label: 'Ke 1 (Pending 1)', entry: entryB },
-        { label: 'Ke 2 (Pending 2)', entry: entryB - dir*100*factor }
-      ];
-      kes.forEach(k=>{ k.sl = k.entry - dir*slPips*factor; });
-
-      const gridRow = (label, vals) => `
-        <div style="display:grid;grid-template-columns:repeat(${vals.length},1fr);gap:6px;margin-bottom:8px">
-          ${vals.map(v=>`
-          <div style="background:var(--bg0);border-radius:8px;padding:7px 4px;text-align:center">
-            <div style="font-size:8.5px;color:#8A6B26;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px">${label}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#D4AF37;font-weight:700">${fmtPrice(v, decimals)}</div>
-          </div>`).join('')}
-        </div>`;
-
-      let gridHtml = `<div style="background:var(--bg1);border:1px solid #4A3A12;border-radius:10px;padding:12px">
-        <div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚡ Pending Order (Khusus XAUUSD, maks. 2x)</div>
-        <div style="display:grid;grid-template-columns:repeat(${kes.length},1fr);gap:6px;margin-bottom:4px">
-          ${kes.map(k=>`<div style="text-align:center;font-size:9px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.3px">${orderLabel} — ${k.label}</div>`).join('')}
-        </div>`;
-
-      gridHtml += gridRow('Entry', kes.map(k=>k.entry));
-      gridHtml += gridRow('Stop Loss', kes.map(k=>k.sl));
-
-      tpList.forEach(tpPips=>{
-        const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
-        gridHtml += gridRow(`TP RR 1:${rrLabel}`, kes.map(k=>k.entry + dir*tpPips*factor));
-      });
-
-      gridHtml += `<div style="font-size:10px;color:#8A6B26;margin-top:4px;line-height:1.4">Ke 1 = titik pending pertama (entry ± ${spread} pips selisih spread ${pairName}). Ke 2 = Ke 1 − 100 pips (aturan Trading Family: jarak antar pending 100 pips, maksimal 2 order). SL & TP tiap level pakai jarak pips dari SL preset yang dipilih (${slPips} pips). Otomatis berbalik arah kalau tipe diganti ke Sell.</div>`;
-      gridHtml += `</div>`;
-
-      $('xauGridOut').innerHTML = gridHtml;
-    } else {
-      $('xauGridOut').innerHTML = '';
-    }
   }
-
   pairSelectEl.addEventListener('change', ()=>{
     const [sl, tp] = pairSelectEl.value.split('|');
     slEl.value=sl; tpEl.value=tp;
@@ -1305,238 +1206,28 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<!-- KALKULATOR BAHAYA — LEVEL 10% (LOSS 3X = TURUN LEVEL) -->
-<div class="section" id="secKalkulatorBahaya">
-  <div class="sec-title">🔥 Kalkulator Bahaya — Level 10-13%</div>
-  <div class="graph-card" style="border:1px solid #7F1D1D">
-    <div style="background:#3A0F0F;border-radius:10px;padding:10px 12px;margin-bottom:14px">
-      <div style="font-size:11px;color:#FCA5A5;line-height:1.6"><b>⚠️ Risiko tinggi.</b> Risk per trade 10-13% (bukan 2% atau 5% seperti 2 kalkulator lain). Aturan: kalau kalah <b>3x beruntun</b> di level manapun → turun tepat 1 level. Tabel didesain supaya risk % riil gak pernah lewat <b>13%</b> per transaksi, sekalipun lot naik level.</div>
-    </div>
-
-    <label class="lbl">Pilih Pair</label>
-    <select class="inp" id="calcPairSelectB" style="margin-bottom:0">
-      <optgroup label="XAUUSD">
-        <option value="100|300" selected>XAUUSD Kerdil (100 pips)</option>
-        <option value="200|400">XAUUSD Standar (200 pips)</option>
-        <option value="250|500">XAUUSD Medium (250 pips)</option>
-        <option value="500|500">XAUUSD Hard (500 pips)</option>
-      </optgroup>
-      <optgroup label="Forex Standar (SL 10 pips)">
-        <option value="10|20">AUDUSD Standar (10 pips)</option>
-        <option value="10|20">EURGBP Standar (10 pips)</option>
-        <option value="10|20">NZDUSD Standar (10 pips)</option>
-        <option value="10|20">USDCHF Standar (10 pips)</option>
-      </optgroup>
-      <optgroup label="Forex Standar (SL 15 pips)">
-        <option value="15|30">AUDJPY Standar (15 pips)</option>
-        <option value="15|30">CADJPY Standar (15 pips)</option>
-        <option value="15|30">EURUSD Standar (15 pips)</option>
-        <option value="15|30">GBPUSD Standar (15 pips)</option>
-        <option value="15|30">NZDJPY Standar (15 pips)</option>
-        <option value="15|30">USDCAD Standar (15 pips)</option>
-      </optgroup>
-      <optgroup label="Forex Standar (SL 20 pips)">
-        <option value="20|40">CHFJPY Standar (20 pips)</option>
-        <option value="20|40">EURJPY Standar (20 pips)</option>
-        <option value="20|40">EURNZD Standar (20 pips)</option>
-        <option value="20|40">GBPJPY Standar (20 pips)</option>
-        <option value="20|40">USDJPY Standar (20 pips)</option>
-      </optgroup>
-      <optgroup label="BTCUSD">
-        <option value="300|600">BTCUSD Standar (300 poin)</option>
-      </optgroup>
-    </select>
-
-    <div class="calc-row" style="margin-top:12px">
-      <div>
-        <label class="lbl">Pips Dipertaruhkan (SL)</label>
-        <input type="number" class="inp" id="calcSLB" value="100" step="0.01">
-      </div>
-      <div>
-        <label class="lbl">Pips Target (TP)</label>
-        <input type="number" class="inp" id="calcTPB" value="300" step="0.01">
-      </div>
-    </div>
-
-    <label class="lbl">Nilai/Pip ($)</label>
-    <input type="number" class="inp" id="calcPipValueB" value="0.1" step="0.01">
-
-    <label class="lbl">Modal Kamu <span id="calcModalBSumber" style="color:#7A5D1F;font-weight:400;text-transform:none;letter-spacing:0"></span></label>
-    <input type="number" class="inp" id="calcModalB" value="100" step="1" min="0" style="margin-bottom:0">
-    <div style="font-size:8px;color:#5C4818;margin-top:4px">🔄 Otomatis keisi dari Saldo MT4 terakhir yang kamu input — tapi bebas diketik ulang manual (misal update saldo real-time pas lagi trading, biar langsung tau REM & level-nya di mana).</div>
-    <div style="height:1px;background:var(--border);margin:18px 0"></div>
-    <div style="font-size:11px;color:#8A6B26;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1 dan 1:2 sekaligus (pakai SL pips di atas sebagai basis).</div>
-    <div class="calc-row">
-      <div>
-        <label class="lbl">Entry Price</label>
-        <input type="number" class="inp" id="entryPriceB" value="" step="0.00001" placeholder="cth: 4139.00" style="margin-bottom:0">
-      </div>
-      <div>
-        <label class="lbl">Tipe</label>
-        <div class="calc-seg" id="entryTypeSegB">
-          <button data-type="buy" class="active">📈 Buy</button>
-          <button data-type="sell">📉 Sell</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="calcRekomOutB"></div>
-    <div id="remCekOutB" style="margin-top:12px"></div>
-    <div id="selisihOutB" style="margin-top:12px"></div>
-    <div id="rrLevelsOutB" style="margin-top:16px"></div>
-    <div id="pendingOutB" style="margin-top:16px"></div>
-    <div id="xauGridOutB" style="margin-top:16px"></div>
-
-    <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-top:14px;text-align:center">
-      <div style="font-size:9px;color:#8A6B26;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Breakeven Win Rate</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:800;color:#D4AF37" id="calcOutBEHeroB">0%</div>
-      <div style="font-size:9px;color:#5C4818;margin-top:4px" id="calcOutBENoteB">Isi SL/TP dulu buat lihat win rate minimal.</div>
-    </div>
-
-    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📢 Kabari Pengunjung & Investor</div>
-      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Kalau diaktifkan, muncul banner peringatan di paling atas situs (semua orang lihat, termasuk yang belum login) bahwa hari ini kamu trading pakai kalkulator BAHAYA 10%.</div>
-      <button class="btn" id="btnToggleModeBahaya" style="margin-bottom:0" onclick="toggleModeBahaya()">Memuat...</button>
-    </div>
-  </div>
-</div>
-
 <script>
-(function(){
-  const slElB=document.getElementById('calcSLB'), tpElB=document.getElementById('calcTPB'),
-        pipvalueElB=document.getElementById('calcPipValueB'), pairSelectElB=document.getElementById('calcPairSelectB'),
-        modalElB=document.getElementById('calcModalB'), rekomOutElB=document.getElementById('calcRekomOutB'),
-        remOutElB=document.getElementById('remCekOutB'), modalSumberElB=document.getElementById('calcModalBSumber'),
-        beHeroElB=document.getElementById('calcOutBEHeroB'), beNoteElB=document.getElementById('calcOutBENoteB');
-
-  // ── LANGKAH 1-2: Modal Kamu otomatis dari Saldo MT4 terakhir (bukan ketik manual) ──
-  // Dipanggil dari loadAll() setelah allSaldoData ke-fetch dari Supabase. Fungsi ini SATU
-  // pintu buat semua 3 kalkulator (2%, 5%, 10-13%) — bukan 3 fungsi terpisah, biar gak
-  // ada kemungkinan salah satu ketinggalan sinkron pas ditambah kalkulator baru nanti.
-  window.syncModalSemuaKalkulator=function(){
-    const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
-    if(!rows.length) return;
-    const terakhir=rows[rows.length-1];
-    const nilai=parseFloat(terakhir.saldo_mt4||0).toFixed(2);
-    const labelSumber=`(update: ${fd(terakhir.tanggal)})`;
-    [['calcModal2','calcModal2Sumber'], ['calcModal','calcModalSumber'], ['calcModalB','calcModalBSumber']].forEach(([idInput,idLabel])=>{
-      const inp=document.getElementById(idInput), lbl=document.getElementById(idLabel);
-      if(inp) inp.value=nilai;
-      if(lbl) lbl.textContent=labelSumber;
-    });
-    document.dispatchEvent(new CustomEvent('datukCalcChanged'));
-  };
-  window.syncModalKalkulatorBahaya=window.syncModalSemuaKalkulator; // alias, kompatibel sama kode lama
-
-  // ── LANGKAH 3-6: Cek REM — pakai fungsi generik buildRemCekHtmlGeneric() (SATU sumber
-  // kebenaran dipakai bareng oleh kalkulator 2%, 5%, dan 10-13% — lihat definisinya di dekat
-  // getStatusRemBulanIni()). Sengaja TIDAK bikin rumus batas baru yang terpisah di sini.
-
-  pairSelectElB.addEventListener('change', ()=>{
-    const [sl, tp] = pairSelectElB.value.split('|');
-    slElB.value=sl; tpElB.value=tp;
-    computeAllB();
+// ── Modal Kamu otomatis dari Saldo MT4 terakhir (bukan ketik manual) ──
+// Dipanggil dari loadAll() setelah allSaldoData ke-fetch dari Supabase. Fungsi ini SATU
+// pintu buat kalkulator Umum 2% & Agresif 5% — biar gak ada kemungkinan salah satu
+// ketinggalan sinkron pas ditambah kalkulator baru nanti.
+window.syncModalSemuaKalkulator=function(){
+  const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  if(!rows.length) return;
+  const terakhir=rows[rows.length-1];
+  const nilai=parseFloat(terakhir.saldo_mt4||0).toFixed(2);
+  const labelSumber=`(update: ${fd(terakhir.tanggal)})`;
+  [['calcModal2','calcModal2Sumber'], ['calcModal','calcModalSumber']].forEach(([idInput,idLabel])=>{
+    const inp=document.getElementById(idInput), lbl=document.getElementById(idLabel);
+    if(inp) inp.value=nilai;
+    if(lbl) lbl.textContent=labelSumber;
   });
-
-  function computeBEB(sl, tp){
-    if(sl>0 && tp>0){
-      const be = sl/(sl+tp);
-      beHeroElB.textContent = (be*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
-      beNoteElB.textContent = `Dari RR ${(tp/sl).toFixed(2)}:1 (SL ${sl} pips, TP ${tp} pips)`;
-    }else{
-      beHeroElB.textContent='0%';
-      beNoteElB.textContent='Isi SL/TP dulu buat lihat win rate minimal.';
-    }
-  }
-
-  // ══ LEVEL BAHAYA 10-13% — beda dari Agresif 5%/Umum 2%: BUKAN buffer flat, tapi REKURSIF ══
-  // Level 1: risk = TEPAT 10% dari modal level 1 (buffer 1/0.10 = 10x).
-  // Level 2 dst: target modal = target modal level sebelumnya + (LOSS_COUNT × risk $ di level ini).
-  //   Artinya: kalau kalah 3x beruntun PERSIS di level itu, saldo balik PAS ke target level sebelumnya (turun 1 level).
-  // Hasil sampingnya risk % riil di level 2 ke atas otomatis turun sedikit dari 10% (naik ke ~12.5% di level 2,
-  // lalu makin ngecil) — tapi didesain supaya TIDAK PERNAH tembus 13% di level manapun.
-  const LOT_START_B=0.01, LOT_STEP_B=0.01, RISK_PCT_B=0.10, LOSS_COUNT_B=3, N_LEVELS_B=12;
-
-  function buildLevelPlanB(sl, pipvalue){
-    const plan=[];
-    let modalPrev=0;
-    for(let i=0;i<N_LEVELS_B;i++){
-      const lot=Math.round((LOT_START_B+i*LOT_STEP_B)*100)/100;
-      const risk=sl*pipvalue*(lot/0.01);
-      const modal = i===0 ? (risk/RISK_PCT_B) : (modalPrev + LOSS_COUNT_B*risk);
-      modalPrev=modal;
-      plan.push({lot, risk, modal, riskPct: risk/modal*100});
-    }
-    return plan;
-  }
-
-  function buildLevelTableHtmlB(modalSaatIni, sl, pipvalue){
-    if(sl<=0 || pipvalue<=0) return '';
-    const plan=buildLevelPlanB(sl, pipvalue);
-
-    let levelIdx=-1;
-    plan.forEach((lv,i)=>{ if(modalSaatIni>=lv.modal) levelIdx=i; });
-    const levelSekarang=levelIdx+1;
-    const next=plan[levelIdx+1];
-
-    const rows=plan.map((lv,i)=>{
-      const tercapai=i<=levelIdx;
-      const aktif=i===levelIdx;
-      const bahaya=lv.riskPct>12.5;
-      return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:5px 0;border-bottom:1px solid var(--border);${aktif?'background:var(--bg3);border-radius:6px;padding-left:6px;padding-right:6px':''}">
-        <span style="color:${tercapai?'#4ADE80':'#7A5D1F'}">${tercapai?'✓':'○'} Level ${i+1} — lot ${lv.lot.toFixed(2)} <span style="color:${bahaya?'#F87171':'#5C4818'}">(risk ${lv.riskPct.toFixed(1)}%)</span></span>
-        <span style="text-align:right">
-          <span style="color:${tercapai?'#4ADE80':'#C8A84B'};font-weight:700">$${lv.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</span><br>
-          <span style="font-size:8px;color:#5C4818">risk $${lv.risk.toLocaleString('en-US',{maximumFractionDigits:2})}/trade</span>
-        </span>
-      </div>`;
-    }).join('');
-
-    return `
-      <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-top:12px">
-        <div style="text-align:center;margin-bottom:10px">
-          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">Level Saat Ini (Modal $${modalSaatIni.toLocaleString('en-US')})</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:${levelSekarang>0?'#F87171':'#F87171'}">${levelSekarang>0?'Level '+levelSekarang:'⚠️ Modal Habis'}</div>
-          ${levelSekarang<=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Modal di bawah $${plan[0].modal.toLocaleString('en-US',{maximumFractionDigits:2})} (lot minimum ${plan[0].lot.toFixed(2)}) — belum cukup buat masuk Level 1.</div>` : ''}
-          ${next ? `<div style="font-size:9px;color:#7A5D1F;margin-top:2px">Butuh saldo <b style="color:#D4AF37">$${next.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</b> (lot ${next.lot.toFixed(2)}) buat naik ke Level ${levelIdx+2}</div>` : `<div style="font-size:9px;color:#4ADE80;margin-top:2px">🏆 Sudah di level tertinggi tabel ini!</div>`}
-          ${levelIdx>=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Kalau ${LOSS_COUNT_B}x kalah beruntun di lot ${plan[levelIdx].lot.toFixed(2)}, saldo balik ke $${(levelIdx>0?plan[levelIdx-1].modal:0).toLocaleString('en-US',{maximumFractionDigits:2})} → turun ke Level ${levelIdx}</div>` : ''}
-          ${levelSekarang>0 ? `<div style="font-size:9px;color:#F87171;margin-top:6px;padding-top:6px;border-top:1px dashed #4A1414">⚠️ Potensi bangkrut total dari Level ${levelSekarang}: butuh <b>${levelSekarang}× beruntun</b> kejadian "${LOSS_COUNT_B}x kalah beruntun" (total ${levelSekarang*LOSS_COUNT_B} loss berturut-turut tanpa menang sekali pun) buat modal habis dari saldo sekarang.</div>` : ''}
-        </div>
-        <div style="font-size:8px;color:#8A6B26;text-align:center;margin-bottom:8px">👇 Level 1 dikunci risk pas 10%. Level 2+ = target level sebelumnya + (3× risk level ini) — jadi kalau kalah 3x beruntun, saldo balik PAS ke level sebelumnya:</div>
-        ${rows}
-        <div style="font-size:8px;color:#5C4818;margin-top:10px;line-height:1.6">🔥 Ini kalkulator paling agresif di situs ini. Risk % riil ada di kisaran 10–12.5% per trade, TIDAK PERNAH lewat 13%. Ganti pair/preset atau isi SL manual, tabel dihitung ulang otomatis.</div>
-      </div>`;
-  }
-
-  function computeAllB(){
-    const sl=parseFloat(slElB.value)||0;
-    const tp=parseFloat(tpElB.value)||0;
-    const pipvalue=parseFloat(pipvalueElB.value)||0;
-    const modal=parseFloat(modalElB.value)||0;
-    computeBEB(sl, tp);
-    if(modal>0 && sl>0 && pipvalue>0){
-      rekomOutElB.innerHTML = buildLevelTableHtmlB(modal, sl, pipvalue);
-      const plan=buildLevelPlanB(sl, pipvalue);
-      let levelIdx=-1;
-      plan.forEach((lv,i)=>{ if(modal>=lv.modal) levelIdx=i; });
-      const levelAktif=(levelIdx>=0 && plan[levelIdx]) ? plan[levelIdx] : null;
-      remOutElB.innerHTML = typeof buildRemCekHtmlGeneric==='function'
-        ? buildRemCekHtmlGeneric(levelAktif?levelAktif.risk:0, levelAktif?('lot '+levelAktif.lot.toFixed(2)):'', 'bahaya', modal)
-        : '';
-    }else{
-      rekomOutElB.innerHTML='';
-      remOutElB.innerHTML='';
-    }
-  }
-
-  [slElB,tpElB,pipvalueElB,modalElB].forEach(el=>el.addEventListener('input', computeAllB));
-  document.addEventListener('datukCalcChanged', computeAllB);
-  computeAllB();
-})();
+  document.dispatchEvent(new CustomEvent('datukCalcChanged'));
+};
 
 // ══════════════════════════════════════════
 // ENTRY PRICE + LEVEL SL/TP (RR 1:1, 1:2) — GENERIK, dipakai ulang
-// buat Kalkulator Umum (suffix '2') & Kalkulator Bahaya (suffix 'B'),
+// buat Kalkulator Umum (suffix '2'),
 // niru fitur yang tadinya cuma ada di Kalkulator Agresif (tanpa suffix).
 // ══════════════════════════════════════════
 function initEntryPriceCalcGeneric(suffix){
@@ -1602,7 +1293,6 @@ function initEntryPriceCalcGeneric(suffix){
 
     if(!entry || slPips<=0){
       $g('rrLevelsOut').innerHTML=''; $g('selisihOut').innerHTML='';
-      $g('pendingOut').innerHTML=''; $g('xauGridOut').innerHTML='';
       return;
     }
 
@@ -1659,96 +1349,16 @@ function initEntryPriceCalcGeneric(suffix){
       </div>`;
     });
     $g('rrLevelsOut').innerHTML = html;
-
-    const entryB = entry + dir*spread*factor;
-    const slB = entryB - dir*slPips*factor;
-
-    const pendRow = (label, valA, valB) => pairName==='BTCUSD' ? `
-      <div style="margin-bottom:8px">
-        <div style="background:var(--bg1);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center">
-          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmtPrice(valA, decimals)}</div>
-        </div>
-      </div>` : `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div style="background:var(--bg1);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center">
-          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmtPrice(valA, decimals)}</div>
-        </div>
-        <div style="background:var(--bg1);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center">
-          <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${label}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#D4AF37;font-weight:700">${fmtPrice(valB, decimals)}</div>
-        </div>
-      </div>`;
-
-    let pendingHtml = pairName==='BTCUSD'
-      ? `<div style="font-size:11px;color:#8A6B26;margin-bottom:10px;line-height:1.5">📋 Harga eksekusi langsung (MT4/5) — BTCUSD tidak tersedia di Trading Family:</div>
-      <div style="margin-bottom:4px">
-        <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">MT4/5 (Langsung)</div>
-      </div>`
-      : `<div style="font-size:11px;color:#8A6B26;margin-bottom:10px;line-height:1.5">📋 Dua opsi harga — kiri untuk eksekusi langsung (MT4/5), kanan untuk pending order (mis. Trading Family):</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
-        <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">MT4/5 (Langsung)</div>
-        <div style="text-align:center;font-size:10px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.5px">Trading Family (Pending)</div>
-      </div>`;
-
-    pendingHtml += pendRow(entryType==='buy'?'Buy':'Sell', entry, entryB);
-    pendingHtml += pendRow('Stop Loss', slPrice, slB);
-    tpList.forEach(tpPips=>{
-      const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
-      const tpA = entry + dir*tpPips*factor;
-      const tpB = entryB + dir*tpPips*factor;
-      pendingHtml += pendRow(`TP RR 1:${rrLabel}`, tpA, tpB);
-    });
-    $g('pendingOut').innerHTML = pendingHtml;
-
-    if(pairName === 'XAUUSD'){
-      const orderLabel = entryType==='buy' ? 'Buy' : 'Sell';
-      const kes = [
-        { label: 'Ke 1 (Pending 1)', entry: entryB },
-        { label: 'Ke 2 (Pending 2)', entry: entryB - dir*100*factor }
-      ];
-      kes.forEach(k=>{ k.sl = k.entry - dir*slPips*factor; });
-
-      const gridRow = (label, vals) => `
-        <div style="display:grid;grid-template-columns:repeat(${vals.length},1fr);gap:6px;margin-bottom:8px">
-          ${vals.map(v=>`
-          <div style="background:var(--bg0);border-radius:8px;padding:7px 4px;text-align:center">
-            <div style="font-size:8.5px;color:#8A6B26;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px">${label}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#D4AF37;font-weight:700">${fmtPrice(v, decimals)}</div>
-          </div>`).join('')}
-        </div>`;
-
-      let gridHtml = `<div style="background:var(--bg1);border:1px solid #4A3A12;border-radius:10px;padding:12px">
-        <div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚡ Pending Order (Khusus XAUUSD, maks. 2x)</div>
-        <div style="display:grid;grid-template-columns:repeat(${kes.length},1fr);gap:6px;margin-bottom:4px">
-          ${kes.map(k=>`<div style="text-align:center;font-size:9px;font-weight:700;color:#C8A84B;text-transform:uppercase;letter-spacing:.3px">${orderLabel} — ${k.label}</div>`).join('')}
-        </div>`;
-      gridHtml += gridRow('Entry', kes.map(k=>k.entry));
-      gridHtml += gridRow('Stop Loss', kes.map(k=>k.sl));
-      tpList.forEach(tpPips=>{
-        const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
-        gridHtml += gridRow(`TP RR 1:${rrLabel}`, kes.map(k=>k.entry + dir*tpPips*factor));
-      });
-      gridHtml += `<div style="font-size:10px;color:#8A6B26;margin-top:4px;line-height:1.4">Ke 1 = titik pending pertama (entry ± ${spread} pips selisih spread ${pairName}). Ke 2 = Ke 1 − 100 pips (aturan Trading Family: jarak antar pending 100 pips, maksimal 2 order). SL & TP tiap level pakai jarak pips dari SL preset yang dipilih (${slPips} pips). Otomatis berbalik arah kalau tipe diganti ke Sell.</div>`;
-      gridHtml += `</div>`;
-      $g('xauGridOut').innerHTML = gridHtml;
-    } else {
-      $g('xauGridOut').innerHTML = '';
-    }
   }
 }
 initEntryPriceCalcGeneric('2'); // Kalkulator Umum — Flat 2%
-initEntryPriceCalcGeneric('B'); // Kalkulator Bahaya — Level 10-13%
 
-// ══ TOGGLE BANNER "MODE BAHAYA" — disimpan di app_settings (Supabase), tampil ke SEMUA pengunjung ══
 // ══ PROFIL RISIKO AKTIF (label permanen di atas Saldo MT4) — disimpan di app_settings, ganti sendiri kapan aja ══
 const PROFIL_RISIKO_META={
   umum:    {judul:'AKUN INI PAKAI KALKULATOR UMUM', sub:'RISK 2% PER TRADE', warna1:'#14532D', warna2:'#052E16', border:'#4ADE80', teks:'#86EFAC', subteks:'#DCFCE7', ket:'Kalkulator paling aman di situs ini — risk dikunci flat 2%, lot dihitung ulang tiap saat dari saldo. Kotak Cek REM otomatis tampil di kalkulator ini, dan REM dikunci ke $100 tetap selama profil ini aktif.'},
-  agresif: {judul:'AKUN INI PAKAI KALKULATOR AGRESIF', sub:'RISK 5% PER TRADE', warna1:'#7C4A03', warna2:'#451A03', border:'#FBBF24', teks:'#FDE68A', subteks:'#FEF3C7', ket:'Level menengah — risk dikunci flat 5% di semua level, lebih tinggi dari Umum 2%, di bawah Bahaya 10-13%. Kotak Cek REM otomatis juga tampil di kalkulator ini — nilai targetnya diatur manual lewat "Ubah Target" (nggak auto-$100 kayak di Umum 2%).'},
-  bahaya:  {judul:'AKUN INI PAKAI KALKULATOR BAHAYA', sub:'RISK 10-13% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FCA5A5', subteks:'#FECACA', ket:'Bukan kalkulator Umum 2% atau Agresif 5% — akun ini secara default trading pakai risk tinggi. Pahami risikonya sebelum menilai performa saldo di bawah ini. REM (batas rugi bulanan akun) tetap AKTIF dan berlaku penuh — cuma kotak Cek REM otomatis di kalkulator ini sengaja tidak ditampilkan, karena di level risk setinggi ini disiplin harus dipegang manual, bukan mengandalkan indikator otomatis.'}
+  agresif: {judul:'AKUN INI PAKAI KALKULATOR AGRESIF', sub:'RISK 5% PER TRADE', warna1:'#7C4A03', warna2:'#451A03', border:'#FBBF24', teks:'#FDE68A', subteks:'#FEF3C7', ket:'Level menengah — risk dikunci flat 5% di semua level, lebih tinggi dari Umum 2%. Kotak Cek REM otomatis juga tampil di kalkulator ini — nilai targetnya diatur manual lewat "Ubah Target" (nggak auto-$100 kayak di Umum 2%).'}
 };
-let profilRisikoAktif='bahaya'; // default sebelum data server kebaca
+let profilRisikoAktif='agresif'; // default sebelum data server kebaca
 async function loadProfilRisiko(){
   try{
     const rows=await api('app_settings?select=value&key=eq.profil_risiko_aktif');
@@ -1760,7 +1370,7 @@ async function loadProfilRisiko(){
 function renderLabelProfilRisiko(){
   const el=document.getElementById('labelProfilRisiko');
   if(!el)return;
-  const p=PROFIL_RISIKO_META[profilRisikoAktif] || PROFIL_RISIKO_META.bahaya;
+  const p=PROFIL_RISIKO_META[profilRisikoAktif] || PROFIL_RISIKO_META.agresif;
   const opsiAdmin=isAdmin ? `
     <div style="display:flex;gap:6px;justify-content:center;margin-top:10px">
       ${Object.keys(PROFIL_RISIKO_META).map(k=>`<span onclick="setProfilRisiko('${k}')" style="font-size:9px;padding:4px 10px;border-radius:8px;cursor:pointer;font-weight:700;${k===profilRisikoAktif?`background:${p.border};color:#1a1a1a`:`background:rgba(255,255,255,.08);color:${p.subteks}`}">${PROFIL_RISIKO_META[k].judul.replace('AKUN INI PAKAI KALKULATOR ','')}</span>`).join('')}
@@ -1783,7 +1393,7 @@ async function setProfilRisiko(kode){
     renderInvCalcDisclaimer();
     if(typeof renderInvestorCalc==='function') renderInvestorCalc();
     // ── REM otomatis: cuma dikunci $100 tetap kalau profil = Umum 2%. ──
-    // Pindah ke Agresif 5% / Bahaya 10-13% TIDAK mengubah REM otomatis — dibiarkan
+    // Pindah ke Agresif 5% TIDAK mengubah REM otomatis — dibiarkan
     // apa adanya (nilai terakhir), admin atur sendiri manual lewat "Ubah Target".
     let remNote='';
     if(kode==='umum' && typeof setRemFixedOtomatis==='function'){
@@ -1802,8 +1412,8 @@ async function setProfilRisiko(kode){
 // "akun ini" = profil aktif; investor selalu ditaruh di akun standard 2%, jadi kalau MT4 lagi
 // pakai profil di atas 2%, disclaimer harus jelas beda risknya sama tempat modal investor.
 function invCalcRiskDisclaimerHtml(varian){
-  const p=PROFIL_RISIKO_META[profilRisikoAktif] || PROFIL_RISIKO_META.bahaya;
-  const labelSingkat=p.sub.toLowerCase(); // mis. "risk 10-13% per trade"
+  const p=PROFIL_RISIKO_META[profilRisikoAktif] || PROFIL_RISIKO_META.agresif;
+  const labelSingkat=p.sub.toLowerCase(); // mis. "risk 5% per trade"
   if(varian==='ringkas'){
     return `Data historis di atas berasal dari <b>akun sen (${labelSingkat})</b>, bukan dari <b>akun standard (risk 2%)</b> tempat modal investor akan ditempatkan. Belum bisa dijadikan acuan sampai ada cukup data dari akun standard.`;
   }
@@ -1812,70 +1422,6 @@ function invCalcRiskDisclaimerHtml(varian){
 function renderInvCalcDisclaimer(){
   const el=document.getElementById('invCalcDisclaimerRisk');
   if(el) el.innerHTML=invCalcRiskDisclaimerHtml();
-}
-
-let modeBahayaAktif=false;
-async function loadModeBahaya(){
-  try{
-    const rows=await api('app_settings?select=value&key=eq.mode_bahaya_aktif');
-    if(rows && rows.length){
-      const parsed=JSON.parse(rows[0].value);
-      modeBahayaAktif = !!(parsed && parsed.aktif);
-    }else{
-      modeBahayaAktif=false;
-    }
-  }catch(e){
-    modeBahayaAktif=false;
-  }
-  renderBannerModeBahaya();
-  renderTombolModeBahaya();
-}
-function renderBannerModeBahaya(){
-  const el=document.getElementById('bannerModeBahaya');
-  if(!el)return;
-  if(modeBahayaAktif){
-    el.style.display='block';
-    el.innerHTML=`<div style="background:linear-gradient(135deg,#7F1D1D,#450A0A);border:1px solid #F87171;border-radius:12px;padding:12px 14px;margin:0 0 14px;text-align:center">
-      <div style="font-size:12px;font-weight:800;color:#FCA5A5">🔥 HARI INI PAKAI KALKULATOR BAHAYA</div>
-      <div style="font-size:10px;color:#FECACA;margin-top:4px;line-height:1.5">Trading hari ini pakai risk 10-13% per transaksi (bukan 2%/5% seperti biasa). Buat pengunjung &amp; investor: performa hari ini kemungkinan lebih fluktuatif dari biasanya.</div>
-    </div>`;
-  }else{
-    el.style.display='none';
-    el.innerHTML='';
-  }
-}
-function renderTombolModeBahaya(){
-  const btn=document.getElementById('btnToggleModeBahaya');
-  if(!btn)return;
-  if(!isAdmin){
-    btn.style.display='none';
-    return;
-  }
-  btn.style.display='';
-  if(modeBahayaAktif){
-    btn.textContent='🔴 Matikan Banner Mode Bahaya';
-    btn.style.background='#7F1D1D'; btn.style.color='#FECACA'; btn.style.border='1px solid #F87171';
-  }else{
-    btn.textContent='🚨 Aktifkan Mode Bahaya Hari Ini';
-    btn.style.background=''; btn.style.color=''; btn.style.border='';
-  }
-}
-async function toggleModeBahaya(){
-  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
-  const newVal=!modeBahayaAktif;
-  try{
-    const payload=JSON.stringify({aktif:newVal, tanggal:new Date().toISOString().slice(0,10)});
-    const existing=await api('app_settings?select=key&key=eq.mode_bahaya_aktif');
-    if(existing.length) await api('app_settings?key=eq.mode_bahaya_aktif','PATCH',{value:payload});
-    else await api('app_settings','POST',{key:'mode_bahaya_aktif',value:payload});
-    modeBahayaAktif=newVal;
-    renderBannerModeBahaya();
-    renderTombolModeBahaya();
-    toast(newVal ? '🚨 Banner Mode Bahaya AKTIF — tampil ke semua pengunjung' : '✅ Banner Mode Bahaya dimatikan');
-  }catch(e){
-    console.error(e);
-    toast('❌ Gagal simpan status Mode Bahaya');
-  }
 }
 </script>
 
@@ -2258,7 +1804,6 @@ async function resetRemCycle(){
     <div class="cal-legend" style="margin-top:6px">
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#4ADE80;width:7px;height:7px;border-radius:50%"></div>🧮 Umum 2%</div>
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#FBBF24;width:7px;height:7px;border-radius:50%"></div>🧮 Agresif 5%</div>
-      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#F87171;width:7px;height:7px;border-radius:50%"></div>🧮 Bahaya 10-13%</div>
     </div>
   </div>
 </div>
@@ -3483,7 +3028,6 @@ const SEARCH_MENU=[
   {id:'secBenchmark', icon:'📈', label:'Performance vs Benchmark', desc:'Perbandingan performa vs XAUUSD/BTCUSD pasar', kw:'benchmark perbandingan pasar market vs', cat:'performa'},
   {id:'secKalkulator', icon:'🧮', label:'Kalkulator Agresif — Level 5%', desc:'Risk dikunci flat 5% per level, hitung lot, SL/TP, risk $, breakeven win rate', kw:'kalkulator agresif 5% risiko lot sl tp stop loss take profit breakeven level', cat:'kalkulator'},
   {id:'secKalkulatorFlat2', icon:'🧮', label:'Kalkulator Umum — Flat 2%', desc:'Hitung lot ulang tiap saat dari saldo, risk dikunci 2% (paling aman)', kw:'kalkulator umum flat 2% real time saldo lot risiko dua persen normal standar', cat:'kalkulator'},
-  {id:'secKalkulatorBahaya', icon:'🔥', label:'Kalkulator Bahaya — Level 10-13%', desc:'Risk 10-13% per trade, level naik/turun rekursif, kalah 3x turun level', kw:'kalkulator bahaya 10% 13% level agresif risiko tinggi turun level kalah 3x', cat:'kalkulator'},
   {id:'secRemProfitRugi', icon:'🛑', label:'Rem Profit & Rugi — Analis Trading Family', desc:'Target tetap ±1000 VP (pips dinormalisasi) — wajib berhenti kalau tercapai', kw:'rem profit rugi analis trading family stop 1000 pips vp target tetap berhenti sinyal', cat:'kalkulator'},
   {id:'secSewaBeli', icon:'🏠', label:'What-If: Sewa vs Beli Properti', desc:'Simulasi mana lebih untung, sewa atau KPR', kw:'sewa beli properti kpr rumah what if simulasi', cat:'kalkulator'},
   {id:'secInvestorDashboard', icon:'👥', label:'Investor Dashboard', desc:'Login investor lihat porsi modal, profit, ROI', kw:'investor dashboard login kode akses modal roi', cat:'investor'},
@@ -3814,7 +3358,6 @@ async function loadAll(){
   loadJournalVisual();
   loadBenchmark();
   await loadBukuTrading();
-  await loadModeBahaya();
   await loadProfilRisiko();
   // ── FIX #2: renderInvestorDashboard() di atas (baris paling awal fungsi ini) sempat jalan
   // SEBELUM loadTargetBulanan()/loadRemBasisMode()/loadProfilRisiko() selesai — jadi kartu
@@ -4210,10 +3753,10 @@ async function editTargetBulanan(){
     cachedTargetBulanan=newCfg;
     toast(`✅ Batas bulanan diperbarui: ±${isPersen?v+'%':fc(v)} untuk semua pengunjung`);
     renderGraph();
-    // ── FIX: sebelumnya cuma renderGraph() (update dashboard), TAPI kotak Cek REM di 3
-    // kalkulator (Umum/Agresif/Bahaya) gak ikut refresh karena mereka cuma recompute pas
+    // ── FIX: sebelumnya cuma renderGraph() (update dashboard), TAPI kotak Cek REM di
+    // kalkulator (Umum/Agresif) gak ikut refresh karena mereka cuma recompute pas
     // input/change di form-nya sendiri. Tembak event 'datukCalcChanged' yang emang udah
-    // didengerin ketiga kalkulator itu, biar langsung ikut update tanpa reload halaman. ──
+    // didengerin kedua kalkulator itu, biar langsung ikut update tanpa reload halaman. ──
     document.dispatchEvent(new Event('datukCalcChanged'));
   }catch(e){
     console.error(e);
@@ -4222,7 +3765,7 @@ async function editTargetBulanan(){
 }
 // ── Dipanggil OTOMATIS oleh setProfilRisiko() pas pindah ke profil "Umum 2%" ──
 // (bukan lewat prompt manual seperti editTargetBulanan). Cuma dipakai buat profil Umum;
-// pindah ke Agresif/Bahaya TIDAK memanggil ini — REM dibiarkan apa adanya, atur manual.
+// pindah ke Agresif TIDAK memanggil ini — REM dibiarkan apa adanya, atur manual.
 async function setRemFixedOtomatis(value){
   const newCfg={mode:'fixed', value};
   const payload=JSON.stringify(newCfg);
@@ -4421,8 +3964,12 @@ function graphNext(){graphMonth++;if(graphMonth>11){graphMonth=0;graphYear++;}re
 let riwayatCache=[];
 const RIWAYAT_PAGE_SIZE=30;
 let riwayatOffset=0, riwayatHasMore=true;
-// Badge kecil "🧮 Umum 2%" / "🧮 Agresif 5%" / "🧮 Bahaya 10-13%" — dipakai di Riwayat Harian,
+// Badge kecil "🧮 Umum 2%" / "🧮 Agresif 5%" — dipakai di Riwayat Harian,
 // Buku Trading, dan Export Laporan, biar pengunjung tau kalkulator apa yang dipakai hari itu.
+// Catatan: entri riwayat LAMA yang dulu ditandai profil_risiko:'bahaya' (sebelum Kalkulator
+// Bahaya dihapus) otomatis gak nampilin badge lagi — bukan error, PROFIL_RISIKO_META[kode]
+// sengaja return '' kalau kodenya udah gak dikenal, biar gak nunjuk ke kalkulator yang gak
+// ada lagi.
 function profilBadgeHtml(kode){
   if(!kode || !PROFIL_RISIKO_META[kode]) return '';
   const p=PROFIL_RISIKO_META[kode];
@@ -6699,14 +6246,14 @@ function getStatusRemBulanIni(){
   const {bawah}=hitungBatasBulanan(basisSaldo);
   return {aktif: totalBulanIni<=bawah, totalBulanIni, bawah, saldoAwalBulan, basisSaldo};
 }
-// ══ CEK REM GENERIK — dipakai bareng oleh SEMUA kalkulator (2%, 5%, 10-13%) ══
+// ══ CEK REM GENERIK — dipakai bareng oleh kalkulator Umum 2% & Agresif 5% ══
 // SATU fungsi, SATU sumber kebenaran (getStatusRemBulanIni/hitungBatasBulanan — sama persis
-// yang dipakai notifikasi Telegram & banner REM beranda). Supaya ketiga kalkulator gak pernah
+// yang dipakai notifikasi Telegram & banner REM beranda). Supaya kedua kalkulator gak pernah
 // menampilkan angka REM yang beda-beda satu sama lain.
-// ── ATURAN BARU: REM berlaku di Kalkulator Umum 2% & Agresif 5% (calcKode 'umum'/'agresif'),
-// TIDAK berlaku di Kalkulator Bahaya 10-13% — DAN cuma aktif kalau MODAL yang lagi dipakai di
-// kalkulator itu sendiri (input "Modal Kamu" — SAMA PERSIS variabel yang dipakai buat hitung
-// Level & Lot di atasnya) sudah minimal $1000. Di bawah itu dianggap belum mumpuni.
+// ── ATURAN: REM berlaku di Kalkulator Umum 2% & Agresif 5% (calcKode 'umum'/'agresif') — DAN
+// cuma aktif kalau MODAL yang lagi dipakai di kalkulator itu sendiri (input "Modal Kamu" — SAMA
+// PERSIS variabel yang dipakai buat hitung Level & Lot di atasnya) sudah minimal $1000. Di bawah
+// itu dianggap belum mumpuni.
 // PENTING: sengaja BUKAN pakai lastSaldoTerakhir (saldo MT4 real-time global) — itu variabel
 // beda dan unitnya beda (¢ butuh dibagi 100 buat jadi USD), jadi kalau dipakai buat threshold
 // ini malah salah baca vs modal yang beneran dipakai kalkulator (bug: pernah kejadian modal
@@ -6736,9 +6283,6 @@ const REM_SALDO_MINIMAL_USD = 1000;
 // halaman di-refresh karena cuma bergantung ke nilai input saat itu, tidak disimpan di mana pun.
 const REM_PREVIEW_LABEL_HTML = `<div style="font-size:8px;color:#B8860B;margin-top:8px;padding-top:6px;border-top:1px dashed #4A3C10;line-height:1.5">⚠️ <b>PREVIEW</b> dari angka manual di "Modal Kamu" — belum tersimpan resmi. Status REM asli (dashboard/beranda) tetap berlaku sampai data resmi diimport.</div>`;
 function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode, modalKalkulator){
-  if(calcKode==='bahaya'){
-    return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">ℹ️ REM (batas rugi bulanan) TIDAK berlaku di <b style="color:#C8A84B">Kalkulator Bahaya 10-13%</b> — cuma dicek otomatis di Umum 2% & Agresif 5%.</div>`;
-  }
   const modalCek = parseFloat(modalKalkulator)||0;
   if(modalCek < REM_SALDO_MINIMAL_USD){
     return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">⏳ REM belum aktif — Modal Kamu saat ini <b style="color:#C8A84B">$${modalCek.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</b> belum capai syarat minimal <b style="color:#C8A84B">$1,000</b>. REM baru mulai dicek otomatis begitu Modal Kamu tembus $1,000.</div>`;
@@ -6957,17 +6501,15 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
       <div style="font-size:7px;color:#5C4818;margin-top:6px">🕐 Dihitung otomatis per ${waktuHitungStr} (waktu perangkat)${totalSudahDidistribusi>0.005?` · Sudah dibagikan sejauh ini: ${mfc(totalSudahDidistribusi)}`:''}</div>
     </div>`;
   // ── Papan Edukasi/Disclaimer Otomatis: nerjemahin sistem manajemen risiko yang lagi aktif
-  // (profilRisikoAktif — 'umum'/'agresif'/'bahaya') ke bahasa awam buat investor, biar mereka
+  // (profilRisikoAktif — 'umum'/'agresif') ke bahasa awam buat investor, biar mereka
   // paham dana mereka ditradingkan dengan buffer & risk terukur, bukan asal-asalan.
-  // PENTING: REM (circuit breaker) itu proteksi akun-wide yang SELALU aktif apapun profilnya —
-  // yang beda cuma apakah kotak "Cek REM" muncul di kalkulatornya (khusus Bahaya sengaja
-  // disembunyikan). Makanya nilai REM di bawah diambil LIVE dari getStatusRemBulanIni()/
-  // getTargetBulanan() — SATU sumber kebenaran yang sama dipakai banner & kalkulator — bukan
-  // kalimat generik yang bisa keliru bilang "tidak ada proteksi". ──
+  // PENTING: REM (circuit breaker) itu proteksi akun-wide yang SELALU aktif apapun profilnya.
+  // Nilai REM di bawah diambil LIVE dari getStatusRemBulanIni()/getTargetBulanan() — SATU
+  // sumber kebenaran yang sama dipakai banner & kalkulator — bukan kalimat generik yang bisa
+  // keliru bilang "tidak ada proteksi". ──
   const RISIKO_TIER_META={
     umum:    {riskPct:'2', ketahanan:'50'},
-    agresif: {riskPct:'5', ketahanan:'20'},
-    bahaya:  {riskPct:'10-13', ketahanan:'7-10'}
+    agresif: {riskPct:'5', ketahanan:'20'}
   };
   const tierMeta = RISIKO_TIER_META[profilRisikoAktif] || RISIKO_TIER_META.umum;
   let remStatusTeks;
@@ -6995,10 +6537,9 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
   }else{
     remStatusTeks = 'batas rugi bulanan (REM) yang berlaku buat seluruh akun';
   }
-  const catatanBahaya = profilRisikoAktif==='bahaya' ? ' (kotak Cek REM otomatis sengaja tidak ditampilkan di kalkulator Bahaya, tapi REM di atas tetap berlaku penuh buat seluruh akun)' : '';
   const edukasiRisikoHtml = `
     <div style="background:var(--bg0);border:1px solid #3B82F6;border-radius:10px;padding:10px 12px;margin-bottom:8px">
-      <div style="font-size:10px;color:#93C5FD;font-weight:700;line-height:1.7">🛡️ <b>Keamanan Dana:</b> Dana ini dikelola dengan batas risiko maksimal <b>${tierMeta.riskPct}% per transaksi</b>. Sistem punya ketahanan sampai kira-kira <b>${tierMeta.ketahanan}x kekalahan berturut-turut</b> sebelum modal pokok benar-benar habis, dan otomatis wajib berhenti kalau ${remStatusTeks} tersentuh${catatanBahaya}. Modal pokok dilindungi ketat lewat aturan ini — bukan ditradingkan asal-asalan.</div>
+      <div style="font-size:10px;color:#93C5FD;font-weight:700;line-height:1.7">🛡️ <b>Keamanan Dana:</b> Dana ini dikelola dengan batas risiko maksimal <b>${tierMeta.riskPct}% per transaksi</b>. Sistem punya ketahanan sampai kira-kira <b>${tierMeta.ketahanan}x kekalahan berturut-turut</b> sebelum modal pokok benar-benar habis, dan otomatis wajib berhenti kalau ${remStatusTeks} tersentuh. Modal pokok dilindungi ketat lewat aturan ini — bukan ditradingkan asal-asalan.</div>
     </div>`;
   // rankInfo: {rank, total} — dihitung di pemanggil (admin: dari list lokal; investor: dari hasil RPC investor_login)
   let rankHtml='';
@@ -8671,7 +8212,6 @@ async function doLogin(){
     show('adminPanel');
     resetAdminIdleTimer();
     renderBalanceHero();
-    if(typeof renderTombolModeBahaya==='function') renderTombolModeBahaya();
     if(typeof renderLabelProfilRisiko==='function') renderLabelProfilRisiko();
     renderInvestorDashboard(); // Admin login → buka Investor Dashboard (section ini disembunyikan default dari publik)
     toast('✅ Masuk sebagai Admin');
@@ -8690,7 +8230,6 @@ async function logout(){
   show('btnAdmin');hide('btnLogout');
   hide('adminPanel');
   renderBalanceHero();
-  if(typeof renderTombolModeBahaya==='function') renderTombolModeBahaya();
     if(typeof renderLabelProfilRisiko==='function') renderLabelProfilRisiko();
   renderInvestorDashboard(); // Admin logout → Investor Dashboard sembunyi lagi total buat publik (kecuali masih login investor)
   toast('↩ Keluar dari mode Admin');
