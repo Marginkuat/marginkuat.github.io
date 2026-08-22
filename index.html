@@ -3983,10 +3983,40 @@ function profilLabelSingkat(kode){
   return p.judul.replace('AKUN INI PAKAI KALKULATOR ','').trim()+' '+p.sub.replace('RISK ','').replace(' PER TRADE','');
 }
 
+// ══ DAFTAR YANG BISA DILIPAT (COLLAPSIBLE) — dipakai bareng oleh Riwayat Harian, Riwayat
+// Deposit/WD, dan Aliran Uang, biar pengunjung/investor gak capek scroll panjang. Defaultnya
+// cuma tampilkan N item pertama (biasanya 5), sisanya disembunyikan di balik satu tombol
+// "Lihat X lainnya" yang tinggal di-tap buat buka semuanya sekaligus (gak perlu multi-klik).
+// PENTING: ini MURNI tampilan (collapse/expand div yang sudah ada di DOM) — tidak mengubah
+// data yang di-fetch, tidak memotong data, cuma nyembunyiin render-nya secara visual.
+function wrapCollapsibleListHtml(itemsHtml, opts){
+  opts = opts || {};
+  const previewCount = opts.previewCount || 5;
+  if(!itemsHtml.length) return '';
+  if(itemsHtml.length <= previewCount) return itemsHtml.join('');
+  const uid = 'cl_' + Math.random().toString(36).slice(2,9);
+  const visibleHtml = itemsHtml.slice(0, previewCount).join('');
+  const hiddenHtml = itemsHtml.slice(previewCount).join('');
+  const sisa = itemsHtml.length - previewCount;
+  return `${visibleHtml}
+    <div id="${uid}_more" style="display:none">${hiddenHtml}</div>
+    <div style="text-align:center;margin-top:10px">
+      <span id="${uid}_btn" onclick="toggleCollapsibleList('${uid}', ${sisa})" style="font-size:10px;color:#D4AF37;font-weight:700;cursor:pointer;text-decoration:underline">⬇️ Lihat ${sisa} lainnya</span>
+    </div>`;
+}
+function toggleCollapsibleList(uid, sisaCount){
+  const moreEl=document.getElementById(uid+'_more');
+  const btnEl=document.getElementById(uid+'_btn');
+  if(!moreEl || !btnEl) return;
+  const sedangTertutup = moreEl.style.display==='none';
+  moreEl.style.display = sedangTertutup ? 'block' : 'none';
+  btnEl.textContent = sedangTertutup ? '▲ Sembunyikan' : `⬇️ Lihat ${sisaCount} lainnya`;
+}
+
 function renderRiwayatRows(rows, append){
   const el=document.getElementById('riwayatList');
   if(!append && !rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada catatan</div>';return;}
-  const html=rows.map(r=>{
+  const itemsHtml=rows.map(r=>{
     const p=parseFloat(r.profit||0);
     const pColor=p>0?'#4ADE80':(p<0?'#F87171':'#8A6B26');
     return `<div class="riwayat-item" onclick="editRiwayatHarian('${r.tanggal}')" style="cursor:pointer">
@@ -3998,9 +4028,15 @@ function renderRiwayatRows(rows, append){
       </div>
       <div class="ri-profit" style="color:${pColor}">${p>=0?'+':''}${fc(p)}</div>
     </div>`;
-  }).join('');
-  if(append) el.insertAdjacentHTML('beforeend', html);
-  else el.innerHTML=html;
+  });
+  if(append){
+    // Batch "Muat Lebih" berikutnya ditambahkan apa adanya (user udah nunjukin niat lihat
+    // lebih banyak lewat tombol itu) — collapse cuma dipakai buat batch AWAL biar halaman
+    // pertama kali dibuka gak langsung panjang.
+    el.insertAdjacentHTML('beforeend', itemsHtml.join(''));
+  }else{
+    el.innerHTML=wrapCollapsibleListHtml(itemsHtml, {previewCount:5});
+  }
 }
 async function loadRiwayat(){
   try{
@@ -4294,7 +4330,7 @@ async function loadKas(){
 
     const el=document.getElementById('kasList');
     if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Belum ada catatan</div>';return;}
-    el.innerHTML=rows.map(r=>{
+    const itemsHtml=rows.map(r=>{
       let kursHtml='';
       if(r.nominal_asli && r.mata_uang_asli){
         const nominalFmt = r.mata_uang_asli==='IDR'
@@ -4314,7 +4350,8 @@ async function loadKas(){
         </div>
         <div class="ri-profit" style="color:#D4AF37">${fc(r.jumlah)}</div>
       </div>`;
-    }).join('');
+    });
+    el.innerHTML=wrapCollapsibleListHtml(itemsHtml, {previewCount:5});
   }catch(e){console.error(e);}
 }
 function setMataUang(mata){
@@ -4932,7 +4969,7 @@ function renderDepositWdRiwayat(){
     return;
   }
   const jumlahKecil=events.filter(e=>e.kecil).length;
-  el.innerHTML = events.slice(0,20).map(e=>{
+  const itemsHtml = events.slice(0,20).map(e=>{
     const warna=e.kecil?'#C89B3C':(e.tipe==='deposit'?'#4ADE80':'#F87171');
     const label=e.kecil ? `⚠️ Penyesuaian kecil (bukan pasti ${e.tipe==='deposit'?'deposit':'WD'} asli)` : (e.tipe==='deposit'?'📥 Deposit':'📤 WD');
     return `
@@ -4943,7 +4980,9 @@ function renderDepositWdRiwayat(){
       </div>
       <span style="font-size:13px;font-weight:700;color:${warna}">${e.tipe==='deposit'?'+':'-'}${fc(e.jumlah)}</span>
     </div>`;
-  }).join('') + (events.length>20?`<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">...dan ${events.length-20} transaksi lainnya (dihitung dari total di atas, cuma yang ditampilkan dibatasi 20 terbaru)</div>`:'')
+  });
+  el.innerHTML = wrapCollapsibleListHtml(itemsHtml, {previewCount:5})
+    + (events.length>20?`<div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">...dan ${events.length-20} transaksi lainnya (dihitung dari total di atas, cuma yang ditampilkan dibatasi 20 terbaru)</div>`:'')
     + (jumlahKecil>0?`<div style="font-size:9px;color:#C89B3C;text-align:center;margin-top:10px;line-height:1.6">⚠️ Ada ${jumlahKecil} entri "penyesuaian kecil" (di bawah ${fc(SELISIH_KECIL_THRESHOLD)}) — kemungkinan besar dari swap, komisi broker, atau saldo yang salah ketik, BUKAN pasti WD/deposit asli. Jujur aja: cek ulang input Saldo Harian di tanggal terkait kalau mau memastikan.</div>`:'')
     + `<div style="font-size:8px;color:#5C4818;text-align:center;margin-top:10px">Sumber: dihitung dari selisih Saldo Harian, bukan bukti mutasi transaksi asli — mau tambah/ubah, edit lewat "Input Saldo Harian".</div>`;
 }
