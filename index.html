@@ -1439,6 +1439,18 @@ function renderInvCalcDisclaimer(){
 
     <div id="remStatusOut"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
 
+    <!-- ISI OTOMATIS DARI SCREENSHOT (OCR) — best-effort, TIDAK 100% akurat. Cuma bantu
+         auto-isi form di bawah; admin TETAP wajib cek & tap "Catat" manual sebelum tersimpan.
+         Library Tesseract.js baru dimuat pas tombol ini dipakai (bukan pas halaman dibuka),
+         biar gak bikin loading awal situs lebih berat buat pengunjung yang gak butuh fitur ini. -->
+    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📷 Isi Otomatis dari Screenshot (Opsional)</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Upload screenshot kartu sinyal (misal dari Trading Family) yang ada tulisan "X.X Pips (Y.Y VP)" — situs coba baca angkanya otomatis. <b style="color:#C89B3C">Ini gak selalu akurat</b> — SELALU cek ulang hasilnya di form Pair/Pips/Hasil di bawah sebelum tap "Catat".</div>
+      <input type="file" accept="image/*" id="remOcrFile" style="display:none" onchange="prosesRemOcr(this.files[0])">
+      <button class="btn btn-ghost" onclick="document.getElementById('remOcrFile').click()" id="remOcrBtn" style="margin-bottom:0">📷 Pilih Screenshot</button>
+      <div id="remOcrStatus" style="font-size:10px;color:#8A6B26;margin-top:8px;min-height:14px;line-height:1.6"></div>
+    </div>
+
     <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:14px">
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">➕ Catat Hasil (Admin)</div>
       <div class="calc-row">
@@ -1537,6 +1549,80 @@ function updateRemPreview(){
   const mult=REM_VP_MULTIPLIER[pairEl.value]||1;
   const vp=Math.round(pips*mult*100)/100;
   el.textContent=`= ${pips} pips ${pairEl.value} × ${mult} = ${vp} VP`;
+}
+
+// ══ OCR SCREENSHOT — "Isi Otomatis dari Screenshot" di form Catat Hasil REM ══
+// Best-effort pakai Tesseract.js (client-side, dimuat on-demand dari CDN pas tombol dipakai).
+// TIDAK PERNAH auto-submit — cuma auto-isi field Pair/Pips/Hasil, admin tetap wajib review &
+// tap "Catat" sendiri. Kalau OCR gagal baca / salah baca, form tetap bisa diisi manual seperti
+// biasa — fitur ini murni pembantu, bukan pengganti input manual.
+function loadScriptOnce(src){
+  return new Promise((resolve,reject)=>{
+    if(document.querySelector(`script[src="${src}"]`)){ resolve(); return; }
+    const s=document.createElement('script');
+    s.src=src;
+    s.onload=()=>resolve();
+    s.onerror=()=>reject(new Error('Gagal memuat script: '+src));
+    document.head.appendChild(s);
+  });
+}
+async function prosesRemOcr(file){
+  if(!file) return;
+  const statusEl=document.getElementById('remOcrStatus');
+  const btnEl=document.getElementById('remOcrBtn');
+  const fileInput=document.getElementById('remOcrFile');
+  if(btnEl){ btnEl.disabled=true; btnEl.textContent='⏳ Membaca...'; }
+  if(statusEl) statusEl.innerHTML='⏳ Sedang membaca teks dari gambar, tunggu sebentar (bisa 10-30 detik tergantung koneksi &amp; HP)...';
+  try{
+    if(typeof Tesseract==='undefined'){
+      await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js');
+    }
+    const result=await Tesseract.recognize(file, 'eng');
+    parseDanIsiFormRemOcr(result.data.text||'');
+  }catch(e){
+    console.error(e);
+    if(statusEl) statusEl.innerHTML='<span style="color:#F87171">❌ Gagal membaca gambar (mungkin koneksi lambat atau library gagal dimuat). Coba lagi, atau isi manual di form bawah.</span>';
+  }finally{
+    if(btnEl){ btnEl.disabled=false; btnEl.textContent='📷 Pilih Screenshot Lain'; }
+    if(fileInput) fileInput.value=''; // reset biar bisa pilih file yang sama lagi kalau perlu
+  }
+}
+function parseDanIsiFormRemOcr(text){
+  const statusEl=document.getElementById('remOcrStatus');
+  const pairEl=document.getElementById('remPair'), pipsEl=document.getElementById('remPips');
+  // ── Pola dicari: "<angka> Pips" (wajib) dan opsional "(<angka> VP)" — contoh dari kartu
+  // sinyal Trading Family: "90.0 Pips (135.0 VP)". Regex butuh kata "Pips"/"VP" persis
+  // nempel di angkanya, biar gak salah nangkep angka lain kayak Signal ID atau No. Order. ──
+  const pipsMatch = text.match(/(-?\d+[.,]?\d*)\s*Pips/i);
+  const vpMatch = text.match(/(-?\d+[.,]?\d*)\s*VP/i);
+  if(!pipsMatch){
+    if(statusEl) statusEl.innerHTML='<span style="color:#F87171">⚠️ Gak nemu angka "Pips" di gambar ini. Coba screenshot yang lebih jelas/gak kepotong bagian hasilnya, atau isi manual di bawah.</span>';
+    return;
+  }
+  const pipsNum=parseFloat(pipsMatch[1].replace(',','.'));
+  const isRugi = pipsNum<0 || /\brugi\b|\bloss\b/i.test(text);
+  const pipsAbs=Math.abs(pipsNum);
+
+  // ── Cari nama pair: cocokkan ke daftar opsi dropdown yang sudah ada, biar gak pernah
+  // ngasih nilai yang gak valid buat select-nya. ──
+  let pairFound=null;
+  if(pairEl){
+    for(const opt of pairEl.options){
+      const regex=new RegExp('\\b'+opt.value+'\\b','i');
+      if(regex.test(text)){ pairFound=opt.value; break; }
+    }
+    if(pairFound) pairEl.value=pairFound;
+  }
+  if(pipsEl) pipsEl.value=pipsAbs;
+  remArahDipilih = isRugi ? 'rugi' : 'profit';
+  document.querySelectorAll('#remArahSeg button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.arah===remArahDipilih);
+  });
+  updateRemPreview();
+
+  const vpInfoHtml = vpMatch ? ` · VP di gambar: <b>${vpMatch[1]}</b>` : '';
+  const pairInfoHtml = pairFound ? ` · Pair: <b>${pairFound}</b>` : ' · Pair gak kedetek, pilih manual di atas';
+  if(statusEl) statusEl.innerHTML = `✅ Terbaca: <b>${pipsAbs} pips</b>${pairInfoHtml} · Arah: <b>${isRugi?'Rugi':'Profit'}</b>${vpInfoHtml}<br><span style="color:#C89B3C">⚠️ WAJIB cek lagi form Pair/Pips/Hasil di bawah sebelum tap Catat — kalau VP hasil hitung situs beda jauh dari "VP di gambar" di atas, kemungkinan Pair-nya salah kedetek.</span>`;
 }
 
 async function loadRemProfitRugi(){
