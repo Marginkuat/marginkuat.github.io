@@ -1539,8 +1539,11 @@ function renderInvCalcDisclaimer(){
           <input class="inp" type="number" id="remPips" placeholder="cth: 150" step="0.1" min="0">
         </div>
       </div>
-      <input class="inp" id="remKet" placeholder="Keterangan (opsional) — cth: sinyal pagi, MT4 pribadi, dll">
-      <div id="remPreview" style="font-size:10px;color:#5C4818;margin:-4px 0 10px;min-height:14px"></div>
+      <div>
+        <label class="lbl">Jam Closed At (opsional) — cth: 21:12</label>
+        <input class="inp" type="time" id="remJam">
+      </div>
+      <div id="remPreview" style="font-size:10px;color:#5C4818;margin:8px 0 10px;min-height:14px"></div>
       <button class="btn btn-p" onclick="simpanRemEntry()">💾 Catat</button>
     </div>
 
@@ -1804,15 +1807,15 @@ async function simpanRemEntry(){
   const tgl=document.getElementById('remTgl').value;
   const pair=document.getElementById('remPair').value;
   const pips=parseFloat(document.getElementById('remPips').value);
-  const ket=document.getElementById('remKet').value.trim();
+  const jam=document.getElementById('remJam').value; // format "HH:MM" dari input type=time, atau '' kalau kosong
   if(!tgl){toast('❌ Isi tanggal dulu');return;}
   if(!pips || pips<=0){toast('❌ Isi pips (angka positif)');return;}
   const vp=Math.round(pips*(REM_VP_MULTIPLIER[pair]||1)*100)/100;
   try{
-    await api('rem_entries','POST',{tanggal:tgl, pair, arah:remArahDipilih, pips_mentah:pips, vp, keterangan:ket||null});
+    await api('rem_entries','POST',{tanggal:tgl, pair, arah:remArahDipilih, pips_mentah:pips, vp, keterangan:jam||null});
     toast(`✅ Tercatat: ${remArahDipilih==='profit'?'+':'-'}${vp} VP`);
     document.getElementById('remPips').value='';
-    document.getElementById('remKet').value='';
+    document.getElementById('remJam').value='';
     document.getElementById('remPreview').textContent='';
     await loadRemProfitRugi();
   }catch(e){
