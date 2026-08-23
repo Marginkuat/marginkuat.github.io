@@ -9054,13 +9054,26 @@ async function loadScore(){
     const curDdLabelColor=curDdSkor>=3?'#4ADE80':curDdSkor>=2?'#C8A84B':'#F87171';
 
     // ── Total Score & Speedometer ──
-    const totalSkor=pfSkor+pmSkor+mlrSkor+rfSkor+ddSkor+curDdSkor;
-    const maxSkor=24;
-    const skorNorm=(totalSkor/maxSkor)*4;
+    // Disamakan dengan rumus RESMI Trading Family (weighted average, lihat BOBOT_SKOR_CHANNEL di
+    // renderRemScoreDashboard()) — TAPI tanpa Level/Status Channel/Subscriber (dashboard ini gak
+    // punya field manual itu). Bobot 4 metrik resmi yang dipakai: Profit Factor 17,65%, Monthly
+    // Loss Ratio 11,76%, Profit Months 5,88%, Recovery Factor 23,53% (total 58,82% dari 100% —
+    // sisanya 41,18% adalah bobot Level+Kemitraan+Subscriber yang dihapus, TIDAK direnormalisasi,
+    // jadi skor maksimal jujur cuma 2,35/4, bukan dipaksa full 4). Max DD vs Modal & Current
+    // Drawdown BUKAN bagian dari formula resmi Trading Family — kedua kartu itu tetap dihitung &
+    // ditampilkan sebagai info tambahan (skor per-kartu 0-4 tetap ada), tapi TIDAK ikut dijumlah
+    // ke skor total/gauge, biar 1:1 sama persis dengan cara resmi mereka. ──
+    const BOBOT_SCORE_DASHBOARD={pf:0.1765, mlr:0.1176, pm:0.0588, rf:0.2353};
+    const skorRataRata = pfSkor*BOBOT_SCORE_DASHBOARD.pf
+      + mlrSkor*BOBOT_SCORE_DASHBOARD.mlr
+      + pmSkor*BOBOT_SCORE_DASHBOARD.pm
+      + rfSkor*BOBOT_SCORE_DASHBOARD.rf;
+    const totalSkorMentah = pfSkor+mlrSkor+pmSkor+rfSkor; // total mentah 0-16, cuma buat keterangan
+    const skorRataRataTeks = skorRataRata.toFixed(2).replace('.',',');
 
     // Render speedometer SVG
     const el=document.getElementById('scoreDashboard');
-    const pct=totalSkor/maxSkor;
+    const pct=skorRataRata/4;
     const angle=-180+pct*180;
     const rad=(angle+90)*Math.PI/180;
     const cx=120,cy=100,r=80;
@@ -9085,10 +9098,10 @@ async function loadScore(){
         <circle cx="${cx}" cy="${cy}" r="5" fill="#D4AF37"/>
         <!-- Labels -->
         <text x="28" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">0</text>
-        <text x="212" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">24</text>
+        <text x="212" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">4</text>
         <!-- Score -->
-        <text x="120" y="90" font-size="22" font-weight="800" fill="#D4AF37" text-anchor="middle">${totalSkor}</text>
-        <text x="120" y="108" font-size="10" fill="#8A6B26" text-anchor="middle">dari 24 poin</text>
+        <text x="120" y="90" font-size="22" font-weight="800" fill="#D4AF37" text-anchor="middle">${skorRataRataTeks}</text>
+        <text x="120" y="108" font-size="10" fill="#8A6B26" text-anchor="middle">dari 4 (skor mentah total ${totalSkorMentah}/16)</text>
       </svg>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -9098,7 +9111,8 @@ async function loadScore(){
         ${scoreCard('Recovery Factor', rfVal.toFixed(2), rfSkor, rfLabel, rfLabelColor)}
         ${scoreCard('Max DD vs Modal', ddPct.toFixed(1)+'%', ddSkor, ddLabel, ddLabelColor)}
         ${scoreCard('Current Drawdown', curDdPct.toFixed(1)+'%', curDdSkor, curDdLabel, curDdLabelColor)}
-      </div>`;
+      </div>
+      <div style="font-size:8px;color:#5C4818;text-align:center;margin-top:10px;line-height:1.5">✅ Rumus resmi Traders Family (weighted average) tanpa Level/Status Channel/Subscriber (dashboard ini gak ada field manual itu) — bobot 4 metrik dipakai apa adanya (total 58,82%), gak dinormalisasi, jadi skor maksimal jujur 2,35/4. Max DD vs Modal &amp; Current Drawdown cuma info tambahan, gak ikut dihitung ke skor total (gak ada di formula resmi mereka).</div>`;
   }catch(e){console.error(e);}
 }
 
