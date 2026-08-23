@@ -1553,9 +1553,13 @@ function renderInvCalcDisclaimer(){
     </div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap">
         <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">📜 Riwayat Siklus Ini</div>
         <button class="btn btn-ghost" onclick="cekDuplikatRem()" style="margin-bottom:0;padding:6px 10px;font-size:10px;width:auto">🔍 Cek Duplikat</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+        <input class="inp" type="date" id="remListFilterTgl" onchange="applyRemListFilter()" style="margin-bottom:0;flex:1">
+        <button class="btn btn-ghost" onclick="clearRemListFilter()" id="remListFilterClearBtn" style="margin-bottom:0;padding:8px 12px;width:auto;display:none">✕</button>
       </div>
       <div id="remDupOut" style="margin-bottom:10px"></div>
       <div id="remListWrap"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
@@ -1787,40 +1791,85 @@ function renderRemStatus(){
     <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">${cycle.length} entri dicatat bulan ini</div>`;
 }
 
-let remListExpanded=false; // ── state tampilan Riwayat Siklus Ini: false = cuma 5 entri terbaru, true = semua ──
+let remListExpanded=false; // ── state tampilan: false = cuma 5 GRUP TANGGAL terbaru, true = semua tanggal ──
+let remListFilterTgl=null; // ── kalau diisi (format YYYY-MM-DD dari <input type=date>), list cuma nampilin tanggal itu ──
 const REM_LIST_LIMIT=5;
 
 function renderRemList(){
   const wrap=document.getElementById('remListWrap');
   if(!wrap)return;
   if(remTableMissing){ wrap.innerHTML=''; return; }
-  const cycle=[...currentRemCycle()].sort((a,b)=>b.id-a.id);
-  if(!cycle.length){ wrap.innerHTML=`<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Belum ada entri bulan ini.</div>`; return; }
+  const cycleAll=[...currentRemCycle()].sort((a,b)=>{
+    // ── Urutkan tanggal terbaru dulu, dalam tanggal yang sama urutkan jam (keterangan "HH:MM")
+    // terbaru dulu juga; entri tanpa jam ditaruh di bawah entri yang ada jamnya. ──
+    if(a.tanggal!==b.tanggal) return a.tanggal<b.tanggal?1:-1;
+    const ja=a.keterangan||'', jb=b.keterangan||'';
+    if(ja!==jb) return ja<jb?1:-1;
+    return b.id-a.id;
+  });
+  if(!cycleAll.length){ wrap.innerHTML=`<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Belum ada entri bulan ini.</div>`; return; }
 
-  const tampil = remListExpanded ? cycle : cycle.slice(0, REM_LIST_LIMIT);
-  const sisa = cycle.length - tampil.length;
+  const clearBtn=document.getElementById('remListFilterClearBtn');
+  if(clearBtn) clearBtn.style.display = remListFilterTgl ? 'block' : 'none';
 
-  const rows = tampil.map(e=>{
+  const cycle = remListFilterTgl ? cycleAll.filter(e=>e.tanggal===remListFilterTgl) : cycleAll;
+  if(!cycle.length){
+    wrap.innerHTML=`<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Gak ada entri di tanggal ${fd(remListFilterTgl)}.</div>`;
+    return;
+  }
+
+  // ── Kelompokkan per tanggal — tiap tanggal cuma ditulis SEKALI sbg header grup, entri di
+  // bawahnya udah gak perlu ulang tanggal lagi (lebih ringkas & gampang di-scan). ──
+  const grupTanggal=[];
+  cycle.forEach(e=>{
+    let g=grupTanggal.find(x=>x.tanggal===e.tanggal);
+    if(!g){ g={tanggal:e.tanggal, entries:[]}; grupTanggal.push(g); }
+    g.entries.push(e);
+  });
+
+  const tampilGrup = remListFilterTgl ? grupTanggal : (remListExpanded ? grupTanggal : grupTanggal.slice(0, REM_LIST_LIMIT));
+  const sisaGrup = grupTanggal.length - tampilGrup.length;
+
+  const rowHtml=(e)=>{
     const warna=e.arah==='profit'?'#4ADE80':'#F87171';
     const tanda=e.arah==='profit'?'+':'-';
     return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:6px 0;border-bottom:1px solid var(--border);gap:8px">
-      <span style="color:#8A6B26">${fd(e.tanggal)} · ${escapeHtml(e.pair||'')}${e.keterangan?' · '+escapeHtml(e.keterangan):''}</span>
+      <span style="color:#8A6B26">${escapeHtml(e.pair||'')}${e.keterangan?' · '+escapeHtml(e.keterangan):''}</span>
       <span style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <b style="color:${warna}">${tanda}${parseFloat(e.vp||0).toFixed(1)} VP</b>
         ${isAdmin?`<span onclick="hapusRemEntry(${e.id})" style="cursor:pointer;font-size:11px">🗑️</span>`:''}
       </span>
     </div>`;
-  }).join('');
+  };
 
-  const tombol = cycle.length>REM_LIST_LIMIT
-    ? `<div onclick="toggleRemList()" style="text-align:center;padding:10px 0 0;font-size:10px;color:#D4AF37;text-decoration:underline;cursor:pointer">${remListExpanded ? '▲ Lihat lebih sedikit' : `▼ Lihat semua (${cycle.length} entri, ${sisa} lagi)`}</div>`
+  const groupsHtml = tampilGrup.map(g=>`
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;font-weight:800;color:#D4AF37;padding:4px 0 2px">${fd(g.tanggal)} <span style="color:#5C4818;font-weight:400">(${g.entries.length} entri)</span></div>
+      ${g.entries.map(rowHtml).join('')}
+    </div>`).join('');
+
+  const tombol = (!remListFilterTgl && grupTanggal.length>REM_LIST_LIMIT)
+    ? `<div onclick="toggleRemList()" style="text-align:center;padding:6px 0 0;font-size:10px;color:#D4AF37;text-decoration:underline;cursor:pointer">${remListExpanded ? '▲ Lihat lebih sedikit' : `▼ Lihat semua (${grupTanggal.length} hari, ${sisaGrup} lagi)`}</div>`
     : '';
 
-  wrap.innerHTML = rows + tombol;
+  wrap.innerHTML = groupsHtml + tombol;
 }
 
 function toggleRemList(){
   remListExpanded=!remListExpanded;
+  renderRemList();
+}
+
+function applyRemListFilter(){
+  const val=document.getElementById('remListFilterTgl').value;
+  remListFilterTgl = val || null;
+  renderRemList();
+}
+
+function clearRemListFilter(){
+  remListFilterTgl=null;
+  const inp=document.getElementById('remListFilterTgl');
+  if(inp) inp.value='';
   renderRemList();
 }
 
