@@ -1753,13 +1753,20 @@ function renderRemStatus(){
     <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">${cycle.length} entri dicatat bulan ini</div>`;
 }
 
+let remListExpanded=false; // ── state tampilan Riwayat Siklus Ini: false = cuma 5 entri terbaru, true = semua ──
+const REM_LIST_LIMIT=5;
+
 function renderRemList(){
   const wrap=document.getElementById('remListWrap');
   if(!wrap)return;
   if(remTableMissing){ wrap.innerHTML=''; return; }
   const cycle=[...currentRemCycle()].sort((a,b)=>b.id-a.id);
   if(!cycle.length){ wrap.innerHTML=`<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Belum ada entri bulan ini.</div>`; return; }
-  wrap.innerHTML=cycle.map(e=>{
+
+  const tampil = remListExpanded ? cycle : cycle.slice(0, REM_LIST_LIMIT);
+  const sisa = cycle.length - tampil.length;
+
+  const rows = tampil.map(e=>{
     const warna=e.arah==='profit'?'#4ADE80':'#F87171';
     const tanda=e.arah==='profit'?'+':'-';
     return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:6px 0;border-bottom:1px solid var(--border);gap:8px">
@@ -1770,6 +1777,17 @@ function renderRemList(){
       </span>
     </div>`;
   }).join('');
+
+  const tombol = cycle.length>REM_LIST_LIMIT
+    ? `<div onclick="toggleRemList()" style="text-align:center;padding:10px 0 0;font-size:10px;color:#D4AF37;text-decoration:underline;cursor:pointer">${remListExpanded ? '▲ Lihat lebih sedikit' : `▼ Lihat semua (${cycle.length} entri, ${sisa} lagi)`}</div>`
+    : '';
+
+  wrap.innerHTML = rows + tombol;
+}
+
+function toggleRemList(){
+  remListExpanded=!remListExpanded;
+  renderRemList();
 }
 
 async function simpanRemEntry(){
