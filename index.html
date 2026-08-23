@@ -1553,7 +1553,11 @@ function renderInvCalcDisclaimer(){
     </div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📜 Riwayat Siklus Ini</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">📜 Riwayat Siklus Ini</div>
+        <button class="btn btn-ghost" onclick="cekDuplikatRem()" style="margin-bottom:0;padding:6px 10px;font-size:10px;width:auto">🔍 Cek Duplikat</button>
+      </div>
+      <div id="remDupOut" style="margin-bottom:10px"></div>
       <div id="remListWrap"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
     </div>
   </div>
@@ -1818,6 +1822,59 @@ function renderRemList(){
 function toggleRemList(){
   remListExpanded=!remListExpanded;
   renderRemList();
+}
+
+// ── Cek Duplikat: bantu admin (analis) audit histori "Rem Profit & Rugi" — soalnya ini bukan
+// hasil transaksi MT4 pribadi, tapi CATATAN MANUAL hasil sinyal analis di Trading Family. Yang
+// dicek: (1) entri kembar persis (tanggal+pair+jam+pips+arah sama semua — kemungkinan besar
+// kecatet 2x gak sengaja), dan (2) entri "mirip" (tanggal+pair+jam sama tapi pips/arah beda —
+// kemungkinan salah ketik pas revisi). Cuma nampilin & kasih tombol hapus per-entri; TIDAK ada
+// yang dihapus otomatis, semua keputusan tetap di tangan admin. ──
+function cekDuplikatRem(){
+  const out=document.getElementById('remDupOut');
+  if(!out)return;
+  if(!isAdmin){ out.innerHTML=`<div style="font-size:10px;color:#F87171;text-align:center;padding:8px 0">❌ Harus masuk sebagai Admin buat cek & hapus duplikat</div>`; return; }
+  const cycle=currentRemCycle();
+  if(!cycle.length){ out.innerHTML=`<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:8px 0">Belum ada entri bulan ini.</div>`; return; }
+
+  // key ketat: tanggal+pair+jam+arah+pips SAMA PERSIS → hampir pasti duplikat kecatet 2x
+  const grupPersis={};
+  // key longgar: tanggal+pair+jam SAMA, tapi isi lain (pips/arah) beda → mungkin salah ketik/revisi
+  const grupLonggar={};
+  cycle.forEach(e=>{
+    const jam=e.keterangan||'(tanpa jam)';
+    const kPersis=`${e.tanggal}|${e.pair}|${jam}|${e.arah}|${e.pips_mentah}`;
+    const kLonggar=`${e.tanggal}|${e.pair}|${jam}`;
+    (grupPersis[kPersis]=grupPersis[kPersis]||[]).push(e);
+    (grupLonggar[kLonggar]=grupLonggar[kLonggar]||[]).push(e);
+  });
+
+  const persisList=Object.values(grupPersis).filter(g=>g.length>1);
+  const longgarList=Object.values(grupLonggar).filter(g=>g.length>1 && !persisList.some(p=>p[0].tanggal===g[0].tanggal&&p[0].pair===g[0].pair&&p[0].keterangan===g[0].keterangan));
+
+  if(!persisList.length && !longgarList.length){
+    out.innerHTML=`<div style="font-size:10px;color:#4ADE80;text-align:center;padding:10px 0;border:1px solid #14532D;border-radius:8px;background:rgba(74,222,128,.06)">✅ Gak ketemu kandidat duplikat di ${cycle.length} entri bulan ini (dicek dari kombinasi tanggal+pair+jam).</div>`;
+    return;
+  }
+
+  const baris=(e)=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:4px 0;gap:8px">
+      <span style="color:#8A6B26">${fd(e.tanggal)} · ${escapeHtml(e.pair)} · ${escapeHtml(e.keterangan||'-')} · ${e.arah==='profit'?'+':'-'}${e.pips_mentah} pips</span>
+      <span onclick="hapusRemEntry(${e.id})" style="cursor:pointer;color:#F87171;flex-shrink:0">🗑️ Hapus</span>
+    </div>`;
+
+  let html=`<div style="border:1px solid #4A1414;border-radius:8px;padding:10px;background:rgba(248,113,113,.06)">
+    <div style="font-size:10px;font-weight:800;color:#F87171;margin-bottom:6px">⚠️ Ketemu kandidat duplikat — cek satu-satu, hapus yang emang salah (bukan auto-hapus)</div>`;
+
+  if(persisList.length){
+    html+=`<div style="font-size:9px;color:#C89B3C;margin:8px 0 4px">🔴 Kembar PERSIS (tanggal+pair+jam+arah+pips sama semua) — ${persisList.length} grup:</div>`;
+    persisList.forEach(g=>{ html+=`<div style="border-top:1px dashed #4A1414;padding-top:4px;margin-top:4px">${g.map(baris).join('')}</div>`; });
+  }
+  if(longgarList.length){
+    html+=`<div style="font-size:9px;color:#C89B3C;margin:10px 0 4px">🟡 Mirip (tanggal+pair+jam sama, tapi pips/arah beda — mungkin salah ketik) — ${longgarList.length} grup:</div>`;
+    longgarList.forEach(g=>{ html+=`<div style="border-top:1px dashed #4A1414;padding-top:4px;margin-top:4px">${g.map(baris).join('')}</div>`; });
+  }
+  html+=`</div>`;
+  out.innerHTML=html;
 }
 
 async function simpanRemEntry(){
