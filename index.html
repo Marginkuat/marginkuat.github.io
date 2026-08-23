@@ -1441,12 +1441,12 @@ function renderInvCalcDisclaimer(){
 <div class="section" id="secRemProfitRugi">
   <div class="sec-title">🛑 Rem Profit & Rugi — Analis Trading Family</div>
   <div class="graph-card">
-    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.6">Rem otomatis khusus Analis Trading Family — berlaku juga kalau MT4 pribadi mau ikut aturan yang sama. Satuan di sini "VP" (pips yang sudah dinormalisasi): Gold & Forex disamakan nilainya, pakai konversi yang sama dengan Kalkulator Risiko di atas. Dihitung PER BULAN KALENDER — otomatis mulai dari 0 lagi tiap tanggal 1, gak perlu reset manual.</div>
+    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.6">Rem otomatis khusus Analis Trading Family — berlaku juga kalau MT4 pribadi mau ikut aturan yang sama. Target dibandingkan pakai <b>Pips mentah</b> (sama kayak tampilan resmi di web Trading Family), bukan VP — VP cuma info konversi tambahan yang ditampilkan di sampingnya (Gold & Forex disamakan nilainya, pakai konversi yang sama dengan Kalkulator Risiko di atas). Dihitung PER BULAN KALENDER — otomatis mulai dari 0 lagi tiap tanggal 1, gak perlu reset manual.</div>
 
     <div style="background:#1E1B0F;border:2px solid #D4AF37;border-radius:12px;padding:12px;text-align:center;margin-bottom:14px">
       <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">🔒 Target Tetap Per Bulan (Dipatenkan)</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:800;color:#D4AF37;margin-top:4px">+500 / −1000 PIPS</div>
-      <div style="font-size:9px;color:#5C4818;margin-top:2px">Profit tembus +500 VP ATAU Rugi tembus −1000 VP di bulan berjalan → WAJIB berhenti sampai bulan berikutnya. Angka ini gak akan diubah-ubah.</div>
+      <div style="font-size:9px;color:#5C4818;margin-top:2px">Profit tembus +500 Pips ATAU Rugi tembus −1000 Pips di bulan berjalan → WAJIB berhenti sampai bulan berikutnya. Angka ini gak akan diubah-ubah.</div>
     </div>
 
     <div id="remStatusOut"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
@@ -1573,9 +1573,13 @@ function renderInvCalcDisclaimer(){
 // VP_MULTIPLIER di sini SENGAJA duplikat dari yang di Kalkulator Risiko (nilainya sama persis) —
 // soalnya yang di sana ke-lock di dalam closure kalkulator itu, gak bisa dipakai bareng dari sini.
 // ── Target REM Trading Family: ASIMETRIS +500 (profit) / -1000 (rugi), dihitung PER BULAN
-// KALENDER (bukan siklus manual lagi) — begitu ganti bulan, otomatis mulai dari 0 lagi. ──
-const REM_TARGET_PROFIT_VP=500;
-const REM_TARGET_RUGI_VP=1000;
+// KALENDER (bukan siklus manual lagi) — begitu ganti bulan, otomatis mulai dari 0 lagi.
+// PENTING: target & perbandingan "MASIH BOLEH LANJUT / STOP" dihitung dari PIPS MENTAH (bukan
+// VP), SAMA PERSIS kayak yang ditampilkan resmi di web Trading Family sendiri (mis. "623.0 Pips
+// (253.22 VP)" — Pips itu angka utama yang dibandingkan ke target, VP cuma info konversi
+// tambahan di sampingnya, BUKAN yang dipatenkan ke target). ──
+const REM_TARGET_PROFIT_PIPS=500;
+const REM_TARGET_RUGI_PIPS=1000;
 const REM_VP_MULTIPLIER={
   XAUUSD:0.2,
   AUDUSD:2, EURGBP:2, NZDUSD:2, USDCHF:2,
@@ -1710,35 +1714,40 @@ function renderRemStatus(){
     return;
   }
   const cycle=currentRemCycle();
+  // ── Metrik UTAMA yang dibandingkan ke target: PIPS MENTAH (bukan VP) — sama kayak tampilan
+  // resmi Trading Family. VP tetap dihitung & ditampilkan di sebelahnya sbg info konversi. ──
+  const totalProfitPips=cycle.filter(e=>e.arah==='profit').reduce((s,e)=>s+parseFloat(e.pips_mentah||0),0);
+  const totalRugiPips=cycle.filter(e=>e.arah==='rugi').reduce((s,e)=>s+parseFloat(e.pips_mentah||0),0);
+  const netPips=totalProfitPips-totalRugiPips;
   const totalProfitVP=cycle.filter(e=>e.arah==='profit').reduce((s,e)=>s+parseFloat(e.vp||0),0);
   const totalRugiVP=cycle.filter(e=>e.arah==='rugi').reduce((s,e)=>s+parseFloat(e.vp||0),0);
-  const net=totalProfitVP-totalRugiVP;
+  const netVP=totalProfitVP-totalRugiVP;
 
   let statusHtml;
-  if(net>=REM_TARGET_PROFIT_VP){
+  if(netPips>=REM_TARGET_PROFIT_PIPS){
     statusHtml=`<div style="text-align:center;padding:6px 0">
       <div style="font-size:14px;font-weight:900;color:#4ADE80">🛑 STOP — TARGET PROFIT BULAN INI TERCAPAI</div>
-      <div style="font-size:9px;color:#8A6B26;margin-top:4px">Net bulan ini: <b style="color:#4ADE80">+${net.toFixed(1)} VP</b>. Sesuai aturan tetap, WAJIB berhenti trading sampai bulan berikutnya.</div>
+      <div style="font-size:9px;color:#8A6B26;margin-top:4px">Net bulan ini: <b style="color:#4ADE80">+${netPips.toFixed(1)} Pips</b> (${netVP>=0?'+':''}${netVP.toFixed(2)} VP). Sesuai aturan tetap, WAJIB berhenti trading sampai bulan berikutnya.</div>
     </div>`;
-  }else if(net<=-REM_TARGET_RUGI_VP){
+  }else if(netPips<=-REM_TARGET_RUGI_PIPS){
     statusHtml=`<div style="text-align:center;padding:6px 0">
       <div style="font-size:14px;font-weight:900;color:#F87171">🛑 STOP — RUGI MAKSIMAL BULAN INI TERCAPAI</div>
-      <div style="font-size:9px;color:#8A6B26;margin-top:4px">Net bulan ini: <b style="color:#F87171">${net.toFixed(1)} VP</b>. Sesuai aturan tetap, WAJIB berhenti trading sampai bulan berikutnya.</div>
+      <div style="font-size:9px;color:#8A6B26;margin-top:4px">Net bulan ini: <b style="color:#F87171">${netPips.toFixed(1)} Pips</b> (${netVP.toFixed(2)} VP). Sesuai aturan tetap, WAJIB berhenti trading sampai bulan berikutnya.</div>
     </div>`;
   }else{
-    const pctProfit=Math.min(100, Math.max(0, net/REM_TARGET_PROFIT_VP*100));
-    const pctRugi=Math.min(100, Math.max(0, -net/REM_TARGET_RUGI_VP*100));
+    const pctProfit=Math.min(100, Math.max(0, netPips/REM_TARGET_PROFIT_PIPS*100));
+    const pctRugi=Math.min(100, Math.max(0, -netPips/REM_TARGET_RUGI_PIPS*100));
     statusHtml=`<div style="text-align:center;padding:6px 0 10px">
       <div style="font-size:14px;font-weight:900;color:#D4AF37">✅ MASIH BOLEH LANJUT</div>
-      <div style="font-size:9px;color:#8A6B26;margin-top:2px">Net bulan ini: <b style="color:${net>=0?'#4ADE80':'#F87171'}">${net>=0?'+':''}${net.toFixed(1)} VP</b> dari target +${REM_TARGET_PROFIT_VP}/−${REM_TARGET_RUGI_VP} VP</div>
+      <div style="font-size:9px;color:#8A6B26;margin-top:2px">Net bulan ini: <b style="color:${netPips>=0?'#4ADE80':'#F87171'}">${netPips>=0?'+':''}${netPips.toFixed(1)} Pips</b> (${netVP>=0?'+':''}${netVP.toFixed(2)} VP) dari target +${REM_TARGET_PROFIT_PIPS}/−${REM_TARGET_RUGI_PIPS} Pips</div>
     </div>
     <div style="display:flex;gap:8px;margin-top:6px">
       <div style="flex:1">
-        <div style="font-size:8px;color:#5C4818;margin-bottom:3px">Menuju Profit +${REM_TARGET_PROFIT_VP}</div>
+        <div style="font-size:8px;color:#5C4818;margin-bottom:3px">Menuju Profit +${REM_TARGET_PROFIT_PIPS}</div>
         <div class="progress-bar"><div style="height:100%;width:${pctProfit}%;background:linear-gradient(135deg,#16A34A,#4ADE80);border-radius:3px"></div></div>
       </div>
       <div style="flex:1">
-        <div style="font-size:8px;color:#5C4818;margin-bottom:3px">Menuju Rugi −${REM_TARGET_RUGI_VP}</div>
+        <div style="font-size:8px;color:#5C4818;margin-bottom:3px">Menuju Rugi −${REM_TARGET_RUGI_PIPS}</div>
         <div class="progress-bar"><div style="height:100%;width:${pctRugi}%;background:linear-gradient(135deg,#DC2626,#F87171);border-radius:3px"></div></div>
       </div>
     </div>`;
@@ -1746,9 +1755,9 @@ function renderRemStatus(){
 
   el.innerHTML=`${statusHtml}
     <div class="bal-grid" style="margin-top:14px">
-      <div class="bal-box"><div class="bal-box-val cg">${totalProfitVP.toFixed(1)}</div><div class="bal-box-lbl">Total Profit VP</div></div>
-      <div class="bal-box"><div class="bal-box-val cr">${totalRugiVP.toFixed(1)}</div><div class="bal-box-lbl">Total Rugi VP</div></div>
-      <div class="bal-box"><div class="bal-box-val" style="color:${net>=0?'#4ADE80':'#F87171'}">${net>=0?'+':''}${net.toFixed(1)}</div><div class="bal-box-lbl">Net VP</div></div>
+      <div class="bal-box"><div class="bal-box-val cg">${totalProfitPips.toFixed(1)}</div><div class="bal-box-lbl">Total Profit Pips<br><span style="font-size:8px;opacity:.7">(${totalProfitVP.toFixed(2)} VP)</span></div></div>
+      <div class="bal-box"><div class="bal-box-val cr">${totalRugiPips.toFixed(1)}</div><div class="bal-box-lbl">Total Rugi Pips<br><span style="font-size:8px;opacity:.7">(${totalRugiVP.toFixed(2)} VP)</span></div></div>
+      <div class="bal-box"><div class="bal-box-val" style="color:${netPips>=0?'#4ADE80':'#F87171'}">${netPips>=0?'+':''}${netPips.toFixed(1)}</div><div class="bal-box-lbl">Net Pips<br><span style="font-size:8px;opacity:.7">(${netVP>=0?'+':''}${netVP.toFixed(2)} VP)</span></div></div>
     </div>
     <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">${cycle.length} entri dicatat bulan ini</div>`;
 }
