@@ -1541,7 +1541,12 @@ function renderInvCalcDisclaimer(){
       </div>
       <div>
         <label class="lbl">Jam Closed At (opsional) — cth: 21:12</label>
-        <input class="inp" type="time" id="remJam">
+        <div style="display:flex;align-items:center;gap:6px">
+          <input class="inp" type="number" id="remJamH" placeholder="Jam" min="0" max="23" step="1" style="margin-bottom:0;text-align:center">
+          <span style="color:#8A6B26;font-weight:800;font-size:16px">:</span>
+          <input class="inp" type="number" id="remJamM" placeholder="Menit" min="0" max="59" step="1" style="margin-bottom:0;text-align:center">
+        </div>
+        <div style="font-size:8px;color:#5C4818;margin-top:4px">Ketik manual angka jam (0-23) & menitnya (0-59) — bisa menit berapa aja, gak dibulatkan ke kelipatan 5/10.</div>
       </div>
       <div id="remPreview" style="font-size:10px;color:#5C4818;margin:8px 0 10px;min-height:14px"></div>
       <button class="btn btn-p" onclick="simpanRemEntry()">💾 Catat</button>
@@ -1807,15 +1812,23 @@ async function simpanRemEntry(){
   const tgl=document.getElementById('remTgl').value;
   const pair=document.getElementById('remPair').value;
   const pips=parseFloat(document.getElementById('remPips').value);
-  const jam=document.getElementById('remJam').value; // format "HH:MM" dari input type=time, atau '' kalau kosong
+  const jamHRaw=document.getElementById('remJamH').value;
+  const jamMRaw=document.getElementById('remJamM').value;
   if(!tgl){toast('❌ Isi tanggal dulu');return;}
   if(!pips || pips<=0){toast('❌ Isi pips (angka positif)');return;}
+  let jam=null;
+  if(jamHRaw!=='' || jamMRaw!==''){
+    const h=parseInt(jamHRaw||'0',10), m=parseInt(jamMRaw||'0',10);
+    if(isNaN(h)||h<0||h>23||isNaN(m)||m<0||m>59){toast('❌ Jam/menit gak valid (jam 0-23, menit 0-59)');return;}
+    jam=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  }
   const vp=Math.round(pips*(REM_VP_MULTIPLIER[pair]||1)*100)/100;
   try{
-    await api('rem_entries','POST',{tanggal:tgl, pair, arah:remArahDipilih, pips_mentah:pips, vp, keterangan:jam||null});
+    await api('rem_entries','POST',{tanggal:tgl, pair, arah:remArahDipilih, pips_mentah:pips, vp, keterangan:jam});
     toast(`✅ Tercatat: ${remArahDipilih==='profit'?'+':'-'}${vp} VP`);
     document.getElementById('remPips').value='';
-    document.getElementById('remJam').value='';
+    document.getElementById('remJamH').value='';
+    document.getElementById('remJamM').value='';
     document.getElementById('remPreview').textContent='';
     await loadRemProfitRugi();
   }catch(e){
