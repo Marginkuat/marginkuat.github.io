@@ -1631,16 +1631,29 @@ async function prosesRemOcr(file){
   const btnEl=document.getElementById('remOcrBtn');
   const fileInput=document.getElementById('remOcrFile');
   if(btnEl){ btnEl.disabled=true; btnEl.textContent='⏳ Membaca...'; }
-  if(statusEl) statusEl.innerHTML='⏳ Sedang membaca teks dari gambar, tunggu sebentar (bisa 10-30 detik tergantung koneksi &amp; HP)...';
+  if(statusEl) statusEl.innerHTML='⏳ Sedang download engine OCR (±15MB, sekali aja per sesi) &amp; baca gambar — bisa lama kalau sinyal lemah, tunggu sebentar...';
+  // ── Timeout manual 60 detik: tanpa ini, kalau koneksi SANGAT lambat (di bawah beberapa
+  // KB/detik), request bisa nggantung lama banget tanpa pernah error atau selesai — bikin
+  // tombol "Membaca..." stuck. Dengan timeout, paling lama nunggu 60 detik baru dikasih tau
+  // gagal, sekalian kasih pesan yang nunjuk ke penyebab paling umum (koneksi lambat/CDN
+  // keblokir), bukan cuma "gagal membaca gambar" yang gak jelas kenapa. ──
+  const withTimeout=(promise, ms)=>Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('TIMEOUT_OCR')), ms))
+  ]);
   try{
     if(typeof Tesseract==='undefined'){
-      await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js');
+      await withTimeout(loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js'), 60000);
     }
-    const result=await Tesseract.recognize(file, 'eng');
+    const result=await withTimeout(Tesseract.recognize(file, 'eng'), 60000);
     parseDanIsiFormRemOcr(result.data.text||'');
   }catch(e){
     console.error(e);
-    if(statusEl) statusEl.innerHTML='<span style="color:#F87171">❌ Gagal membaca gambar (mungkin koneksi lambat atau library gagal dimuat). Coba lagi, atau isi manual di form bawah.</span>';
+    const kenaTimeout = e && e.message==='TIMEOUT_OCR';
+    const pesan = kenaTimeout
+      ? '❌ Kelamaan (lebih dari 60 detik) — kemungkinan besar sinyal/koneksi internet lagi lambat (OCR ini perlu download engine ±15MB dari internet). Coba pindah ke WiFi/sinyal lebih kuat, atau isi manual aja di form bawah.'
+      : '❌ Gagal membaca gambar — mungkin koneksi lambat, CDN library-nya keblokir provider, atau formatnya gak didukung. Coba lagi, atau isi manual di form bawah.';
+    if(statusEl) statusEl.innerHTML=`<span style="color:#F87171">${pesan}</span>`;
   }finally{
     if(btnEl){ btnEl.disabled=false; btnEl.textContent='📷 Pilih Screenshot Lain'; }
     if(fileInput) fileInput.value=''; // reset biar bisa pilih file yang sama lagi kalau perlu
