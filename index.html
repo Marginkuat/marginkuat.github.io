@@ -1795,6 +1795,33 @@ let remListExpanded=false; // ── state tampilan: false = cuma 5 GRUP TANGGAL
 let remListFilterTgl=null; // ── kalau diisi (format YYYY-MM-DD dari <input type=date>), list cuma nampilin tanggal itu ──
 const REM_LIST_LIMIT=5;
 
+// ── Checklist "sudah dicocokin ke TF": tersimpan di localStorage HP ini aja (bukan di database
+// Supabase — murni alat bantu audit manual, gak perlu ubah struktur tabel). Discope PER BULAN
+// (key ikut ymSekarang), soalnya target REM juga reset tiap bulan — biar centangan gak numpuk
+// dari bulan-bulan lama yang udah kelar diaudit. ──
+function remChecklistKey(){
+  const now=new Date();
+  return 'remChecklist_'+now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+}
+function loadRemChecklist(){
+  try{ return new Set(JSON.parse(localStorage.getItem(remChecklistKey())||'[]')); }
+  catch(e){ return new Set(); }
+}
+function saveRemChecklist(set){
+  try{ localStorage.setItem(remChecklistKey(), JSON.stringify([...set])); }catch(e){}
+}
+function toggleRemChecklist(id){
+  const set=loadRemChecklist();
+  if(set.has(id)) set.delete(id); else set.add(id);
+  saveRemChecklist(set);
+  renderRemList();
+}
+function resetRemChecklist(){
+  if(!confirm('Hapus semua centang "sudah dicocokin" bulan ini? Data entri REM-nya sendiri gak kehapus, cuma centangannya aja.'))return;
+  saveRemChecklist(new Set());
+  renderRemList();
+}
+
 function renderRemList(){
   const wrap=document.getElementById('remListWrap');
   if(!wrap)return;
@@ -1818,6 +1845,9 @@ function renderRemList(){
     return;
   }
 
+  const checklist=loadRemChecklist();
+  const totalCentang=cycleAll.filter(e=>checklist.has(e.id)).length;
+
   // ── Kelompokkan per tanggal — tiap tanggal cuma ditulis SEKALI sbg header grup, entri di
   // bawahnya udah gak perlu ulang tanggal lagi (lebih ringkas & gampang di-scan). ──
   const grupTanggal=[];
@@ -1833,26 +1863,39 @@ function renderRemList(){
   const rowHtml=(e)=>{
     const warna=e.arah==='profit'?'#4ADE80':'#F87171';
     const tanda=e.arah==='profit'?'+':'-';
+    const dicentang=checklist.has(e.id);
     return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:6px 0;border-bottom:1px solid var(--border);gap:8px">
-      <span style="color:#8A6B26">${escapeHtml(e.pair||'')}${e.keterangan?' · '+escapeHtml(e.keterangan):''}</span>
+      <span style="display:flex;align-items:center;gap:8px;min-width:0">
+        <input type="checkbox" onchange="toggleRemChecklist(${e.id})" ${dicentang?'checked':''} style="width:16px;height:16px;flex-shrink:0;accent-color:#4ADE80">
+        <span style="color:#8A6B26;${dicentang?'text-decoration:line-through;opacity:.55':''}">${escapeHtml(e.pair||'')}${e.keterangan?' · '+escapeHtml(e.keterangan):''}</span>
+      </span>
       <span style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <b style="color:${warna}">${tanda}${parseFloat(e.vp||0).toFixed(1)} VP</b>
+        <b style="color:${warna}${dicentang?';opacity:.55':''}">${tanda}${parseFloat(e.vp||0).toFixed(1)} VP</b>
         ${isAdmin?`<span onclick="hapusRemEntry(${e.id})" style="cursor:pointer;font-size:11px">🗑️</span>`:''}
       </span>
     </div>`;
   };
 
-  const groupsHtml = tampilGrup.map(g=>`
-    <div style="margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;color:#D4AF37;padding:4px 0 2px">${fd(g.tanggal)} <span style="color:#5C4818;font-weight:400">(${g.entries.length} entri)</span></div>
+  const groupsHtml = tampilGrup.map(g=>{
+    const centangDiGrup=g.entries.filter(e=>checklist.has(e.id)).length;
+    return `<div style="margin-bottom:10px">
+      <div style="font-size:10px;font-weight:800;color:#D4AF37;padding:4px 0 2px">${fd(g.tanggal)} <span style="color:#5C4818;font-weight:400">(${g.entries.length} entri${centangDiGrup?', ✅ '+centangDiGrup+' dicentang':''})</span></div>
       ${g.entries.map(rowHtml).join('')}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   const tombol = (!remListFilterTgl && grupTanggal.length>REM_LIST_LIMIT)
     ? `<div onclick="toggleRemList()" style="text-align:center;padding:6px 0 0;font-size:10px;color:#D4AF37;text-decoration:underline;cursor:pointer">${remListExpanded ? '▲ Lihat lebih sedikit' : `▼ Lihat semua (${grupTanggal.length} hari, ${sisaGrup} lagi)`}</div>`
     : '';
 
-  wrap.innerHTML = groupsHtml + tombol;
+  const headerCentang = totalCentang>0
+    ? `<div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;color:#5C4818;margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--border)">
+        <span>✅ Progres cocokin ke TF: <b style="color:#4ADE80">${totalCentang}/${cycleAll.length}</b> entri bulan ini</span>
+        <span onclick="resetRemChecklist()" style="cursor:pointer;color:#F87171;text-decoration:underline">Reset centang</span>
+      </div>`
+    : '';
+
+  wrap.innerHTML = headerCentang + groupsHtml + tombol;
 }
 
 function toggleRemList(){
