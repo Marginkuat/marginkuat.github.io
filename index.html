@@ -1165,12 +1165,24 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
           <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:${levelSekarang>0?'#4ADE80':'#F87171'}">${levelSekarang>0?'Level '+levelSekarang:'⚠️ Modal Habis'}</div>
           ${levelSekarang<=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Modal di bawah $${plan[0].modal.toLocaleString('en-US',{maximumFractionDigits:2})} (lot minimum ${plan[0].lot.toFixed(2)}) — belum cukup buat masuk Level 1 sama sekali.</div>` : ''}
           ${next ? `<div style="font-size:9px;color:#7A5D1F;margin-top:2px">Butuh saldo <b style="color:#D4AF37">$${next.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</b> (lot ${next.lot.toFixed(2)}) buat naik ke Level ${levelIdx+2}</div>` : `<div style="font-size:9px;color:#4ADE80;margin-top:2px">🏆 Sudah di level tertinggi tabel ini!</div>`}
-          ${levelIdx>=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Kalau ${LOSS_COUNT}x kalah beruntun di lot ${plan[levelIdx].lot.toFixed(2)}, turun ke Level ${levelIdx} (saldo $${(levelIdx>0?plan[levelIdx-1].modal:0).toLocaleString('en-US',{maximumFractionDigits:2})})</div>` : ''}
-          ${levelSekarang>0 ? `<div style="font-size:9px;color:#F87171;margin-top:6px;padding-top:6px;border-top:1px dashed #4A1414">⚠️ Potensi bangkrut total dari Level ${levelSekarang}: butuh <b>${levelSekarang}× beruntun</b> kejadian "${LOSS_COUNT}x kalah beruntun" (total ${levelSekarang*LOSS_COUNT} loss berturut-turut tanpa menang sekali pun) buat modal habis dari saldo sekarang.</div>` : ''}
+          ${levelIdx>=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Kalau ${LOSS_COUNT}x kalah beruntun di lot ${plan[levelIdx].lot.toFixed(2)} (rugi $${(LOSS_COUNT*plan[levelIdx].risk).toLocaleString('en-US',{maximumFractionDigits:2})}), turun ke Level ${levelIdx}</div>` : ''}
+          ${(()=>{
+            if(levelSekarang<=0) return '';
+            // ── Kerugian DOLLAR RIIL kalau level turun terus sampai habis dari level sekarang: jumlahkan
+            // LOSS_COUNT x risk di tiap level dari levelSekarang turun ke Level 1 (bukan snap ke angka
+            // target level di bawahnya — itu yang bikin teks lama "modal habis/bangkrut total" salah,
+            // padahal kerugian riilnya jauh lebih kecil dari saldo yang sebenarnya berkurang). ──
+            let totalRugi=0;
+            for(let L=levelSekarang; L>=1; L--){ totalRugi += LOSS_COUNT*plan[L-1].risk; }
+            const totalLoss=levelSekarang*LOSS_COUNT;
+            const sisaSaldo=modalSaatIni-totalRugi;
+            const sisaPct=modalSaatIni>0?(sisaSaldo/modalSaatIni*100):0;
+            return `<div style="font-size:9px;color:#F87171;margin-top:6px;padding-top:6px;border-top:1px dashed #4A1414">⚠️ Potensi kuras modal dari Level ${levelSekarang} sampai ke bawah Level 1: butuh <b>${levelSekarang}× beruntun</b> kejadian "${LOSS_COUNT}x kalah beruntun" (total ${totalLoss} loss berturut-turut tanpa menang sekali pun) — rugi dollar riil <b>≈ $${totalRugi.toLocaleString('en-US',{maximumFractionDigits:2})}</b>, sisa saldo <b>≈ $${sisaSaldo.toLocaleString('en-US',{maximumFractionDigits:2})} (${sisaPct.toFixed(0)}% dari modal sekarang)</b> — bukan berarti saldo jadi $0/margin call, cuma udah di bawah modal minimum buat lanjut sistem level ini.</div>`;
+          })()}
         </div>
         <div style="font-size:8px;color:#8A6B26;text-align:center;margin-bottom:8px">👇 Lot naik terus per level — tidak pernah turun lagi walau saldo makin besar. Target saldo & risk dihitung dari SL/nilai-pip yang aktif sekarang:</div>
         ${rows}
-        <div style="font-size:8px;color:#5C4818;margin-top:10px;line-height:1.6">💡 Aturan: ${LOSS_COUNT}× kalah beruntun di level manapun = turun TEPAT 1 level (saldo balik ke target level sebelumnya). Ganti pair/preset atau isi SL manual, semua target saldo & risk di atas otomatis dihitung ulang.</div>
+        <div style="font-size:8px;color:#5C4818;margin-top:10px;line-height:1.6">💡 Aturan: ${LOSS_COUNT}× kalah beruntun di level manapun = rugi $${LOSS_COUNT}×risk level itu, biasanya cukup buat saldo turun TEPAT 1 level (di bawah target modal level sekarang). Ganti pair/preset atau isi SL manual, semua target saldo & risk di atas otomatis dihitung ulang.</div>
       </div>`;
   }
 
