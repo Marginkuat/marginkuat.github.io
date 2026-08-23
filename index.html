@@ -1448,6 +1448,7 @@ function renderInvCalcDisclaimer(){
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📊 Score Channel</div>
       <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Skor gaya Trading Family (0-4 per metrik, total 0-28) — Level/Status/Subscriber diisi manual oleh Admin, 4 metrik lainnya dihitung otomatis dari histori REM di atas.</div>
       <div id="remScoreDashboard"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+      <div style="font-size:8px;color:#5C4818;text-align:center;margin:-6px 0 10px;line-height:1.5">⚠️ Format skala 0-4 disamakan dengan tampilan Trading Family, biar gampang dibandingin. Angka bisa beda sementara kalau data REM di atas belum lengkap sampai tanggal terbaru — begitu semua entri sampai hari ini sudah dicatat, hasilnya seharusnya mendekati/sama dengan skor resmi Trading Family.</div>
       <div id="remScoreAdminEdit" style="display:none;margin-top:14px;border-top:1px dashed var(--border);padding-top:12px">
         <div style="font-size:9px;color:#8A6B26;margin-bottom:8px">✏️ Edit Data Channel (Admin) — data ini dari sistem Trading Family, isi manual sesuai dashboard mereka</div>
         <label class="lbl">Level</label>
@@ -1886,7 +1887,15 @@ function renderRemScoreDashboard(){
   const colorOf=s=>s>=3?'#4ADE80':s>=2?'#C8A84B':'#F87171';
 
   const totalSkor = levelSkor+statusSkor+subSkor+pfSkor+mlrSkor+pmSkor+rfSkor;
-  const maxSkor=28;
+  const jumlahMetrik=7;
+  const maxSkor=jumlahMetrik*4; // 28 — dipakai buat hitung posisi jarum, BUKAN buat teks yang ditampilkan
+  // ── Tampilan gauge sengaja disamakan format-nya dengan Trading Family (skala rata-rata 0-4,
+  // format "0,41" pakai koma) — biar bisa dibandingin langsung apel-ke-apel begitu data REM
+  // lokal (rem_entries) udah lengkap sampai tanggal terbaru. Skor mentah per kartu (0-4) TETAP
+  // dijumlah dulu dari 7 metrik, baru dibagi 7 buat dapat rata-ratanya — bukan diganti jadi
+  // skala berbeda. ──
+  const skorRataRata = totalSkor/jumlahMetrik;
+  const skorRataRataTeks = skorRataRata.toFixed(2).replace('.',',');
   const pct=totalSkor/maxSkor;
   const angle=-180+pct*180;
   const rad=(angle+90)*Math.PI/180;
@@ -1908,9 +1917,9 @@ function renderRemScoreDashboard(){
       <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#D4AF37" stroke-width="3" stroke-linecap="round"/>
       <circle cx="${cx}" cy="${cy}" r="5" fill="#D4AF37"/>
       <text x="28" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">0</text>
-      <text x="212" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">28</text>
-      <text x="120" y="90" font-size="22" font-weight="800" fill="#D4AF37" text-anchor="middle">${totalSkor}</text>
-      <text x="120" y="108" font-size="10" fill="#8A6B26" text-anchor="middle">dari 28 poin</text>
+      <text x="212" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">4</text>
+      <text x="120" y="90" font-size="22" font-weight="800" fill="#D4AF37" text-anchor="middle">${skorRataRataTeks}</text>
+      <text x="120" y="108" font-size="10" fill="#8A6B26" text-anchor="middle">dari 4 (total ${totalSkor}/${maxSkor} poin)</text>
     </svg>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       ${scoreCard('Level', remChannelMeta.level, levelSkor, labelOf(levelSkor), colorOf(levelSkor))}
