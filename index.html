@@ -1634,6 +1634,44 @@ function loadScriptOnce(src){
     document.head.appendChild(s);
   });
 }
+function withTimeoutPromise(promise, ms){
+  return Promise.race([promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error('TIMEOUT_OCR')), ms))]);
+}
+
+// ── Beberapa provider/ISP di Indonesia suka blokir jsdelivr.net (paling umum dipakai buat CDN
+// npm). Kalau itu yang kejadian, retry ke jsdelivr lagi PASTI gagal terus walau internet lancar
+// — jadi disiapin CDN CADANGAN (unpkg) yang dicoba otomatis kalau yang pertama gagal. Tiap
+// config juga nentuin workerPath/corePath/langPath eksplisit yang SATU SUMBER SAMA (bukan
+// campur), soalnya kalau cuma script utamanya doang yang dialihin tapi core/worker/lang-nya
+// diam-diam masih default ke jsdelivr, hasilnya tetap gagal walau kelihatannya udah "fallback". ──
+const OCR_CDN_CONFIGS=[
+  { nama:'jsdelivr', script:'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js',
+    workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/worker.min.js',
+    corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@v5.0.0',
+    langPath:'https://tessdata.projectnaptha.com/4.0.0' },
+  { nama:'unpkg', script:'https://unpkg.com/tesseract.js@5.0.4/dist/tesseract.min.js',
+    workerPath:'https://unpkg.com/tesseract.js@5.0.4/dist/worker.min.js',
+    corePath:'https://unpkg.com/tesseract.js-core@5.0.0',
+    langPath:'https://tessdata.projectnaptha.com/4.0.0' },
+];
+let remOcrActiveCdn=null; // ── config CDN yang berhasil dimuat, dipakai ulang tiap gambar biar gak coba² lagi dari 0 ──
+
+async function loadTesseractEngine(statusEl){
+  if(typeof Tesseract!=='undefined' && remOcrActiveCdn) return remOcrActiveCdn;
+  const gagal=[];
+  for(const cfg of OCR_CDN_CONFIGS){
+    try{
+      if(statusEl) statusEl.innerHTML=`⏳ Coba download engine OCR dari ${cfg.nama} (±15MB, sekali aja per sesi)...`;
+      await withTimeoutPromise(loadScriptOnce(cfg.script), 25000);
+      remOcrActiveCdn=cfg;
+      return cfg;
+    }catch(e){
+      gagal.push(cfg.nama);
+      console.error(`CDN ${cfg.nama} gagal:`, e);
+    }
+  }
+  throw new Error('SEMUA_CDN_GAGAL:'+gagal.join(', '));
+}
 
 let remOcrBatch=[]; // ── array hasil parse tiap screenshot, ditampilkan sbg preview yg bisa diedit sebelum disimpan ──
 const REM_BULAN_MAP={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
@@ -1646,22 +1684,17 @@ async function prosesRemOcrBatch(fileList){
   const btnEl=document.getElementById('remOcrBtn');
   const fileInput=document.getElementById('remOcrFile');
   if(btnEl){ btnEl.disabled=true; }
-  const withTimeout=(promise, ms)=>Promise.race([
-    promise,
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('TIMEOUT_OCR')), ms))
-  ]);
   try{
-    if(typeof Tesseract==='undefined'){
-      if(statusEl) statusEl.innerHTML='⏳ Download engine OCR (±15MB, sekali aja per sesi) — bisa lama kalau sinyal lemah, tunggu sebentar...';
-      await withTimeout(loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js'), 60000);
-    }
+    const cdnCfg=await loadTesseractEngine(statusEl);
     // ── Diproses SATU-SATU (bukan Promise.all paralel) — Tesseract.js worker lumayan berat di
     // memori kalau dijalanin bersamaan buat banyak gambar sekaligus, apalagi di HP low-end.
     // Progress "gambar ke-X dari Y" juga lebih gampang ditampilin kalau sekuensial. ──
     for(let i=0;i<files.length;i++){
-      if(statusEl) statusEl.innerHTML=`⏳ Membaca gambar ${i+1} dari ${files.length}...`;
+      if(statusEl) statusEl.innerHTML=`⏳ Membaca gambar ${i+1} dari ${files.length} (via ${cdnCfg.nama})...`;
       try{
-        const result=await withTimeout(Tesseract.recognize(files[i], 'eng'), 60000);
+        const result=await withTimeoutPromise(Tesseract.recognize(files[i], 'eng', {
+          workerPath: cdnCfg.workerPath, corePath: cdnCfg.corePath, langPath: cdnCfg.langPath
+        }), 60000);
         const parsed=parseOcrTextRem(result.data.text||'', files[i].name);
         remOcrBatch.push(parsed);
       }catch(e){
@@ -1670,11 +1703,15 @@ async function prosesRemOcrBatch(fileList){
         remOcrBatch.push({ error: kenaTimeout ? 'Kelamaan (koneksi lambat)' : 'Gagal dibaca', fileName: files[i].name });
       }
     }
-    if(statusEl) statusEl.innerHTML=`✅ Selesai baca ${files.length} gambar. Cek satu-satu di bawah sebelum simpan.`;
+    if(statusEl) statusEl.innerHTML=`✅ Selesai baca ${files.length} gambar (via ${cdnCfg.nama}). Cek satu-satu di bawah sebelum simpan.`;
     renderRemOcrBatchPreview();
   }catch(e){
     console.error(e);
-    if(statusEl) statusEl.innerHTML='<span style="color:#F87171">❌ Gagal memuat engine OCR — mungkin koneksi lambat atau CDN library-nya keblokir provider. Coba lagi, atau isi manual di form bawah.</span>';
+    const semuaCdnGagal = e && String(e.message||'').startsWith('SEMUA_CDN_GAGAL');
+    const pesan = semuaCdnGagal
+      ? `❌ Gagal download engine OCR dari semua sumber (jsdelivr &amp; unpkg) — kemungkinan besar provider/ISP kamu blokir CDN ini, bukan soal lambat doang. Coba ganti ke WiFi lain / matiin VPN kalau ada / pakai kartu SIM lain, atau langsung isi manual di form bawah aja (lebih cepat &amp; pasti jalan).`
+      : '❌ Gagal memuat engine OCR — coba lagi, atau isi manual di form bawah.';
+    if(statusEl) statusEl.innerHTML=`<span style="color:#F87171">${pesan}</span>`;
   }finally{
     if(btnEl){ btnEl.disabled=false; btnEl.textContent='📷 Pilih Screenshot Lain'; }
     if(fileInput) fileInput.value='';
