@@ -1692,15 +1692,26 @@ async function prosesRemOcrBatch(fileList){
     for(let i=0;i<files.length;i++){
       if(statusEl) statusEl.innerHTML=`⏳ Membaca gambar ${i+1} dari ${files.length} (via ${cdnCfg.nama})...`;
       try{
-        const result=await withTimeoutPromise(Tesseract.recognize(files[i], 'eng', {
-          workerPath: cdnCfg.workerPath, corePath: cdnCfg.corePath, langPath: cdnCfg.langPath
-        }), 60000);
+        let result;
+        try{
+          // Percobaan 1: pakai workerPath/corePath/langPath eksplisit (biar konsisten 1 sumber CDN)
+          result=await withTimeoutPromise(Tesseract.recognize(files[i], 'eng', {
+            workerPath: cdnCfg.workerPath, corePath: cdnCfg.corePath, langPath: cdnCfg.langPath
+          }), 45000);
+        }catch(e1){
+          // ── Percobaan 2 (fallback): tanpa path eksplisit, biar Tesseract.js pakai default
+          // bawaannya sendiri. Kadang path yang di-set manual malah gak cocok/gak lengkap
+          // buat versi tertentu — daripada langsung nyerah, coba dulu jalur default library. ──
+          console.warn('Percobaan 1 gagal, coba fallback default paths:', e1);
+          result=await withTimeoutPromise(Tesseract.recognize(files[i], 'eng'), 45000);
+        }
         const parsed=parseOcrTextRem(result.data.text||'', files[i].name);
         remOcrBatch.push(parsed);
       }catch(e){
         console.error(e);
         const kenaTimeout = e && e.message==='TIMEOUT_OCR';
-        remOcrBatch.push({ error: kenaTimeout ? 'Kelamaan (koneksi lambat)' : 'Gagal dibaca', fileName: files[i].name });
+        const detailErr = e && e.message && e.message!=='TIMEOUT_OCR' ? ` (${String(e.name||'')}: ${String(e.message||'').slice(0,80)})` : '';
+        remOcrBatch.push({ error: (kenaTimeout ? 'Kelamaan (koneksi lambat)' : 'Gagal dibaca'+detailErr), fileName: files[i].name });
       }
     }
     if(statusEl) statusEl.innerHTML=`✅ Selesai baca ${files.length} gambar (via ${cdnCfg.nama}). Cek satu-satu di bawah sebelum simpan.`;
