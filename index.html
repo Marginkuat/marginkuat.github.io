@@ -1624,13 +1624,22 @@ function updateRemPreview(){
 // TIDAK PERNAH auto-submit — cuma auto-isi field Pair/Pips/Hasil, admin tetap wajib review &
 // tap "Catat" sendiri. Kalau OCR gagal baca / salah baca, form tetap bisa diisi manual seperti
 // biasa — fitur ini murni pembantu, bukan pengganti input manual.
+// ── Registry SUKSES BENERAN (bukan cuma "tag <script> ada di DOM") — soalnya kalau percobaan
+// sebelumnya GAGAL (onerror), tag <script>-nya kadung nempel di DOM tapi window.Tesseract gak
+// pernah kebentuk. Tanpa registry ini, percobaan berikutnya bakal ketemu tag lama itu, nganggep
+// "udah pernah dimuat, skip aja" (resolve langsung), padahal Tesseract beneran gak pernah ada —
+// itu penyebab persis error "Tesseract is not defined" walau status bilang "✅ Selesai". ──
+window.__loadedScriptsOk = window.__loadedScriptsOk || new Set();
 function loadScriptOnce(src){
   return new Promise((resolve,reject)=>{
-    if(document.querySelector(`script[src="${src}"]`)){ resolve(); return; }
+    if(window.__loadedScriptsOk.has(src)){ resolve(); return; }
+    // Buang tag lama (kalau ada, dari percobaan gagal sebelumnya) biar bener-bener nyoba dari nol
+    const tagLama=document.querySelector(`script[src="${src}"]`);
+    if(tagLama) tagLama.remove();
     const s=document.createElement('script');
     s.src=src;
-    s.onload=()=>resolve();
-    s.onerror=()=>reject(new Error('Gagal memuat script: '+src));
+    s.onload=()=>{ window.__loadedScriptsOk.add(src); resolve(); };
+    s.onerror=()=>{ s.remove(); reject(new Error('Gagal memuat script: '+src)); };
     document.head.appendChild(s);
   });
 }
