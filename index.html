@@ -1490,10 +1490,11 @@ function renderInvCalcDisclaimer(){
          biar gak bikin loading awal situs lebih berat buat pengunjung yang gak butuh fitur ini. -->
     <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:14px">
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📷 Isi Otomatis dari Screenshot (Opsional)</div>
-      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Upload screenshot kartu sinyal (misal dari Trading Family) yang ada tulisan "X.X Pips (Y.Y VP)" — situs coba baca angkanya otomatis. <b style="color:#C89B3C">Ini gak selalu akurat</b> — SELALU cek ulang hasilnya di form Pair/Pips/Hasil di bawah sebelum tap "Catat".</div>
-      <input type="file" accept="image/*" id="remOcrFile" style="display:none" onchange="prosesRemOcr(this.files[0])">
-      <button class="btn btn-ghost" onclick="document.getElementById('remOcrFile').click()" id="remOcrBtn" style="margin-bottom:0">📷 Pilih Screenshot</button>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Upload 1 atau BANYAK screenshot kartu sinyal sekaligus (misal dari Trading Family) yang ada tulisan "X.X Pips (Y.Y VP)" dan "Closed at ..." — situs coba baca semuanya otomatis jadi daftar di bawah. <b style="color:#C89B3C">Ini gak selalu akurat</b> — SELALU cek ulang tiap baris (Pair/Pips/Hasil/Tanggal/Jam) sebelum tap "Simpan Semua".</div>
+      <input type="file" accept="image/*" multiple id="remOcrFile" style="display:none" onchange="prosesRemOcrBatch(this.files)">
+      <button class="btn btn-ghost" onclick="document.getElementById('remOcrFile').click()" id="remOcrBtn" style="margin-bottom:0">📷 Pilih Screenshot (bisa banyak)</button>
       <div id="remOcrStatus" style="font-size:10px;color:#8A6B26;margin-top:8px;min-height:14px;line-height:1.6"></div>
+      <div id="remOcrBatchPreview"></div>
     </div>
 
     <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:14px">
@@ -1633,76 +1634,172 @@ function loadScriptOnce(src){
     document.head.appendChild(s);
   });
 }
-async function prosesRemOcr(file){
-  if(!file) return;
+
+let remOcrBatch=[]; // ── array hasil parse tiap screenshot, ditampilkan sbg preview yg bisa diedit sebelum disimpan ──
+const REM_BULAN_MAP={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
+  januari:1,februari:2,maret:3,april:4,mei:5,juni:6,juli:7,agustus:8,september:9,oktober:10,november:11,desember:12};
+
+async function prosesRemOcrBatch(fileList){
+  const files=[...(fileList||[])];
+  if(!files.length) return;
   const statusEl=document.getElementById('remOcrStatus');
   const btnEl=document.getElementById('remOcrBtn');
   const fileInput=document.getElementById('remOcrFile');
-  if(btnEl){ btnEl.disabled=true; btnEl.textContent='⏳ Membaca...'; }
-  if(statusEl) statusEl.innerHTML='⏳ Sedang download engine OCR (±15MB, sekali aja per sesi) &amp; baca gambar — bisa lama kalau sinyal lemah, tunggu sebentar...';
-  // ── Timeout manual 60 detik: tanpa ini, kalau koneksi SANGAT lambat (di bawah beberapa
-  // KB/detik), request bisa nggantung lama banget tanpa pernah error atau selesai — bikin
-  // tombol "Membaca..." stuck. Dengan timeout, paling lama nunggu 60 detik baru dikasih tau
-  // gagal, sekalian kasih pesan yang nunjuk ke penyebab paling umum (koneksi lambat/CDN
-  // keblokir), bukan cuma "gagal membaca gambar" yang gak jelas kenapa. ──
+  if(btnEl){ btnEl.disabled=true; }
   const withTimeout=(promise, ms)=>Promise.race([
     promise,
     new Promise((_,rej)=>setTimeout(()=>rej(new Error('TIMEOUT_OCR')), ms))
   ]);
   try{
     if(typeof Tesseract==='undefined'){
+      if(statusEl) statusEl.innerHTML='⏳ Download engine OCR (±15MB, sekali aja per sesi) — bisa lama kalau sinyal lemah, tunggu sebentar...';
       await withTimeout(loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js'), 60000);
     }
-    const result=await withTimeout(Tesseract.recognize(file, 'eng'), 60000);
-    parseDanIsiFormRemOcr(result.data.text||'');
+    // ── Diproses SATU-SATU (bukan Promise.all paralel) — Tesseract.js worker lumayan berat di
+    // memori kalau dijalanin bersamaan buat banyak gambar sekaligus, apalagi di HP low-end.
+    // Progress "gambar ke-X dari Y" juga lebih gampang ditampilin kalau sekuensial. ──
+    for(let i=0;i<files.length;i++){
+      if(statusEl) statusEl.innerHTML=`⏳ Membaca gambar ${i+1} dari ${files.length}...`;
+      try{
+        const result=await withTimeout(Tesseract.recognize(files[i], 'eng'), 60000);
+        const parsed=parseOcrTextRem(result.data.text||'', files[i].name);
+        remOcrBatch.push(parsed);
+      }catch(e){
+        console.error(e);
+        const kenaTimeout = e && e.message==='TIMEOUT_OCR';
+        remOcrBatch.push({ error: kenaTimeout ? 'Kelamaan (koneksi lambat)' : 'Gagal dibaca', fileName: files[i].name });
+      }
+    }
+    if(statusEl) statusEl.innerHTML=`✅ Selesai baca ${files.length} gambar. Cek satu-satu di bawah sebelum simpan.`;
+    renderRemOcrBatchPreview();
   }catch(e){
     console.error(e);
-    const kenaTimeout = e && e.message==='TIMEOUT_OCR';
-    const pesan = kenaTimeout
-      ? '❌ Kelamaan (lebih dari 60 detik) — kemungkinan besar sinyal/koneksi internet lagi lambat (OCR ini perlu download engine ±15MB dari internet). Coba pindah ke WiFi/sinyal lebih kuat, atau isi manual aja di form bawah.'
-      : '❌ Gagal membaca gambar — mungkin koneksi lambat, CDN library-nya keblokir provider, atau formatnya gak didukung. Coba lagi, atau isi manual di form bawah.';
-    if(statusEl) statusEl.innerHTML=`<span style="color:#F87171">${pesan}</span>`;
+    if(statusEl) statusEl.innerHTML='<span style="color:#F87171">❌ Gagal memuat engine OCR — mungkin koneksi lambat atau CDN library-nya keblokir provider. Coba lagi, atau isi manual di form bawah.</span>';
   }finally{
     if(btnEl){ btnEl.disabled=false; btnEl.textContent='📷 Pilih Screenshot Lain'; }
-    if(fileInput) fileInput.value=''; // reset biar bisa pilih file yang sama lagi kalau perlu
+    if(fileInput) fileInput.value='';
   }
 }
-function parseDanIsiFormRemOcr(text){
-  const statusEl=document.getElementById('remOcrStatus');
-  const pairEl=document.getElementById('remPair'), pipsEl=document.getElementById('remPips');
-  // ── Pola dicari: "<angka> Pips" (wajib) dan opsional "(<angka> VP)" — contoh dari kartu
-  // sinyal Trading Family: "90.0 Pips (135.0 VP)". Regex butuh kata "Pips"/"VP" persis
-  // nempel di angkanya, biar gak salah nangkep angka lain kayak Signal ID atau No. Order. ──
+
+// ── Parse 1 hasil OCR jadi objek entri siap-preview. Nyari 3 hal: (1) Pips+arah (wajib), (2)
+// nama Pair (opsional, dicocokkan ke daftar dropdown yg sudah ada), (3) tanggal+jam dari baris
+// "Closed at" kartu sinyal TF (format umum: "03 Aug 2026, 20:00 WIB"). Semua ini CUMA tebakan
+// awal — bakal ditampilin di preview yg bisa diedit manual sebelum disimpan, jadi walau salah
+// baca, gak ada resiko data salah kesimpen tanpa admin sadar. ──
+function parseOcrTextRem(text, fileName){
   const pipsMatch = text.match(/(-?\d+[.,]?\d*)\s*Pips/i);
   const vpMatch = text.match(/(-?\d+[.,]?\d*)\s*VP/i);
-  if(!pipsMatch){
-    if(statusEl) statusEl.innerHTML='<span style="color:#F87171">⚠️ Gak nemu angka "Pips" di gambar ini. Coba screenshot yang lebih jelas/gak kepotong bagian hasilnya, atau isi manual di bawah.</span>';
-    return;
-  }
+  if(!pipsMatch){ return { error:'Gak nemu angka "Pips" di gambar ini', fileName }; }
   const pipsNum=parseFloat(pipsMatch[1].replace(',','.'));
   const isRugi = pipsNum<0 || /\brugi\b|\bloss\b/i.test(text);
   const pipsAbs=Math.abs(pipsNum);
 
-  // ── Cari nama pair: cocokkan ke daftar opsi dropdown yang sudah ada, biar gak pernah
-  // ngasih nilai yang gak valid buat select-nya. ──
   let pairFound=null;
-  if(pairEl){
-    for(const opt of pairEl.options){
-      const regex=new RegExp('\\b'+opt.value+'\\b','i');
-      if(regex.test(text)){ pairFound=opt.value; break; }
-    }
-    if(pairFound) pairEl.value=pairFound;
-  }
-  if(pipsEl) pipsEl.value=pipsAbs;
-  remArahDipilih = isRugi ? 'rugi' : 'profit';
-  document.querySelectorAll('#remArahSeg button').forEach(b=>{
-    b.classList.toggle('active', b.dataset.arah===remArahDipilih);
-  });
-  updateRemPreview();
+  const pairOptions=['XAUUSD','AUDUSD','EURGBP','NZDUSD','USDCHF','AUDJPY','CADJPY','EURUSD','GBPUSD','NZDJPY','USDCAD','CHFJPY','EURJPY','GBPJPY','EURNZD','USDJPY','BTCUSD'];
+  for(const p of pairOptions){ if(new RegExp('\\b'+p+'\\b','i').test(text)){ pairFound=p; break; } }
 
-  const vpInfoHtml = vpMatch ? ` · VP di gambar: <b>${vpMatch[1]}</b>` : '';
-  const pairInfoHtml = pairFound ? ` · Pair: <b>${pairFound}</b>` : ' · Pair gak kedetek, pilih manual di atas';
-  if(statusEl) statusEl.innerHTML = `✅ Terbaca: <b>${pipsAbs} pips</b>${pairInfoHtml} · Arah: <b>${isRugi?'Rugi':'Profit'}</b>${vpInfoHtml}<br><span style="color:#C89B3C">⚠️ WAJIB cek lagi form Pair/Pips/Hasil di bawah sebelum tap Catat — kalau VP hasil hitung situs beda jauh dari "VP di gambar" di atas, kemungkinan Pair-nya salah kedetek.</span>`;
+  // Cari "Closed at <tgl bulan tahun>, <jam>:<menit>" — bulan boleh nama Inggris/Indonesia
+  let tanggalISO=null, jamHM=null;
+  const closedMatch = text.match(/Closed\s*at[\s\S]{0,50}?(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})[,.]?\s*(\d{1,2})[:.](\d{2})/i);
+  if(closedMatch){
+    const [,d,bulanTeks,y,h,m]=closedMatch;
+    const bulanNum=REM_BULAN_MAP[bulanTeks.toLowerCase()];
+    if(bulanNum){
+      tanggalISO=`${y}-${String(bulanNum).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      jamHM={h:parseInt(h,10), m:parseInt(m,10)};
+    }
+  }
+
+  return {
+    fileName, pair: pairFound, pipsAbs, arah: isRugi?'rugi':'profit',
+    tanggal: tanggalISO, jamH: jamHM?jamHM.h:null, jamM: jamHM?jamHM.m:null,
+    vpDiGambar: vpMatch ? vpMatch[1] : null
+  };
+}
+
+function renderRemOcrBatchPreview(){
+  const wrap=document.getElementById('remOcrBatchPreview');
+  if(!wrap)return;
+  if(!remOcrBatch.length){ wrap.innerHTML=''; return; }
+  const pairOpts=['XAUUSD','AUDUSD','EURGBP','NZDUSD','USDCHF','AUDJPY','CADJPY','EURUSD','GBPUSD','NZDJPY','USDCAD','CHFJPY','EURJPY','GBPJPY','EURNZD','USDJPY','BTCUSD'];
+  const rows=remOcrBatch.map((r,i)=>{
+    if(r.error){
+      return `<div style="border:1px solid #4A1414;border-radius:8px;padding:10px;margin-top:8px;background:rgba(248,113,113,.06)">
+        <div style="font-size:9px;color:#F87171">❌ ${escapeHtml(r.fileName||'')}: ${escapeHtml(r.error)}</div>
+      </div>`;
+    }
+    return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:8px" id="remOcrRow_${i}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:9px;color:#5C4818"><input type="checkbox" id="remOcrRow_${i}_pakai" checked style="width:14px;height:14px">${escapeHtml(r.fileName||'Gambar '+(i+1))}</label>
+        <span onclick="hapusRemOcrBatchRow(${i})" style="cursor:pointer;font-size:11px;color:#F87171">🗑️</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <select class="inp" id="remOcrRow_${i}_pair" style="margin-bottom:0;font-size:11px">
+          ${pairOpts.map(p=>`<option value="${p}" ${r.pair===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+        <select class="inp" id="remOcrRow_${i}_arah" style="margin-bottom:0;font-size:11px">
+          <option value="profit" ${r.arah==='profit'?'selected':''}>📈 Profit</option>
+          <option value="rugi" ${r.arah==='rugi'?'selected':''}>📉 Rugi</option>
+        </select>
+        <input class="inp" type="number" id="remOcrRow_${i}_pips" value="${r.pipsAbs}" placeholder="Pips" style="margin-bottom:0;font-size:11px">
+        <input class="inp" type="date" id="remOcrRow_${i}_tgl" value="${r.tanggal||''}" style="margin-bottom:0;font-size:11px">
+        <input class="inp" type="number" id="remOcrRow_${i}_jamH" value="${r.jamH??''}" placeholder="Jam" min="0" max="23" style="margin-bottom:0;font-size:11px">
+        <input class="inp" type="number" id="remOcrRow_${i}_jamM" value="${r.jamM??''}" placeholder="Menit" min="0" max="59" style="margin-bottom:0;font-size:11px">
+      </div>
+      ${!r.pair?'<div style="font-size:8px;color:#F87171;margin-top:4px">⚠️ Pair gak kedetek, pilih manual</div>':''}
+      ${!r.tanggal?'<div style="font-size:8px;color:#F87171;margin-top:4px">⚠️ Tanggal/jam gak kedetek dari "Closed at", isi manual</div>':''}
+      ${r.vpDiGambar?`<div style="font-size:8px;color:#5C4818;margin-top:4px">VP di gambar: ${r.vpDiGambar} — cek kecocokan sama Pair yang dipilih</div>`:''}
+    </div>`;
+  }).join('');
+
+  wrap.innerHTML=`<div style="margin-top:10px">${rows}</div>
+    <button class="btn btn-p" onclick="simpanRemOcrBatch()" style="margin-top:12px">💾 Simpan Semua ke Riwayat</button>
+    <div id="remOcrBatchSaveStatus" style="font-size:10px;color:#8A6B26;margin-top:6px;text-align:center"></div>`;
+}
+
+function hapusRemOcrBatchRow(i){
+  remOcrBatch.splice(i,1);
+  renderRemOcrBatchPreview();
+}
+
+async function simpanRemOcrBatch(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const statusEl=document.getElementById('remOcrBatchSaveStatus');
+  const payload=[];
+  const errors=[];
+  remOcrBatch.forEach((r,i)=>{
+    if(r.error) return;
+    const pakaiEl=document.getElementById(`remOcrRow_${i}_pakai`);
+    if(pakaiEl && !pakaiEl.checked) return; // baris dicentang-lepas oleh admin = skip
+    const pair=document.getElementById(`remOcrRow_${i}_pair`).value;
+    const arah=document.getElementById(`remOcrRow_${i}_arah`).value;
+    const pips=parseFloat(document.getElementById(`remOcrRow_${i}_pips`).value);
+    const tgl=document.getElementById(`remOcrRow_${i}_tgl`).value;
+    const jamH=document.getElementById(`remOcrRow_${i}_jamH`).value;
+    const jamM=document.getElementById(`remOcrRow_${i}_jamM`).value;
+    if(!tgl || !pips || pips<=0){ errors.push(`Baris ${i+1}: tanggal/pips belum lengkap`); return; }
+    let jam=null;
+    if(jamH!=='' || jamM!==''){
+      const h=parseInt(jamH||'0',10), m=parseInt(jamM||'0',10);
+      if(!isNaN(h)&&h>=0&&h<=23&&!isNaN(m)&&m>=0&&m<=59) jam=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+    const vp=Math.round(pips*(REM_VP_MULTIPLIER[pair]||1)*100)/100;
+    payload.push({tanggal:tgl, pair, arah, pips_mentah:pips, vp, keterangan:jam});
+  });
+  if(errors.length){ if(statusEl) statusEl.innerHTML=`<span style="color:#F87171">❌ ${errors.join('; ')}</span>`; return; }
+  if(!payload.length){ if(statusEl) statusEl.innerHTML='<span style="color:#F87171">❌ Gak ada baris yang dicentang buat disimpan.</span>'; return; }
+  if(statusEl) statusEl.innerHTML=`⏳ Menyimpan ${payload.length} entri...`;
+  try{
+    for(const p of payload){ await api('rem_entries','POST',p); }
+    toast(`✅ ${payload.length} entri tersimpan ke Riwayat`);
+    remOcrBatch=[];
+    document.getElementById('remOcrBatchPreview').innerHTML='';
+    document.getElementById('remOcrStatus').innerHTML='';
+    await loadRemProfitRugi();
+  }catch(e){
+    console.error(e);
+    if(statusEl) statusEl.innerHTML='<span style="color:#F87171">❌ Gagal simpan — coba lagi.</span>';
+  }
 }
 
 let remChannelMeta={level:'Pro', status:'Basic', subscriber:0};
