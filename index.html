@@ -349,26 +349,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
   </div>
 </div>
 
-<!-- GRAFIK KINERJA BULANAN (dipindah ke sini — tepat di atas Notifikasi, bisa ditarik/collapse kayak kartu profit-per-bulan di app Trading Family) -->
+<!-- GRAFIK KINERJA BULANAN — daftar tiap bulan (collapsible per-bulan sendiri-sendiri, kayak "Profit Per Month" di app Trading Family), diurut lama ke baru -->
 <div class="section" id="secGrafikBulanan">
-  <div class="graph-card">
-    <div onclick="toggleGrafikBulanan()" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer">
-      <div class="graph-nav" style="flex:1">
-        <button class="cal-nav-btn" onclick="event.stopPropagation();graphPrev()">‹</button>
-        <div style="text-align:center;flex:1">
-          <div class="graph-month" id="graphMonth">-</div>
-          <div class="graph-signal" id="graphSignal">0 Signal</div>
-        </div>
-        <button class="cal-nav-btn" onclick="event.stopPropagation();graphNext()">›</button>
-      </div>
-      <span id="graphCollapseIcon" style="font-size:16px;color:#8A6B26;margin-left:8px;transition:transform .2s">▲</span>
-    </div>
-    <div class="graph-total" id="graphTotal">¢0.00</div>
-    <div class="graph-pct" id="graphPct">0%</div>
-    <div id="graphCollapseBody">
-      <div id="graphSvgWrap" style="position:relative"></div>
-    </div>
-  </div>
+  <div class="sec-title">📈 Grafik Kinerja Bulanan</div>
+  <div id="grafikBulananListWrap"><div style="text-align:center;padding:20px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
 </div>
 
 <!-- NOTIFICATION CENTER -->
@@ -2956,7 +2940,7 @@ document.addEventListener('click', e=>{
 // ══ STATE ══
 let isAdmin=false;
 let calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
-let graphYear=new Date().getFullYear(),graphMonth=new Date().getMonth();
+
 let saldoData=[];
 let allSaldoData=[];
 
@@ -3316,100 +3300,111 @@ function ddCalPrev(){ddCalMonth--;if(ddCalMonth<0){ddCalMonth=11;ddCalYear--;}re
 function ddCalNext(){ddCalMonth++;if(ddCalMonth>11){ddCalMonth=0;ddCalYear++;}renderDDKalender();}
 
 // ══ GRAFIK BULANAN ══
+// ══ GRAFIK KINERJA BULANAN — daftar tiap bulan, collapsible sendiri-sendiri ══
+let grafikExpandedMonths=new Set(); // ── kartu bulan mana yang lagi kebuka (key "Y-M") ──
+let grafikListInited=false; // ── biar cuma sekali auto-expand bulan sekarang, gak reset tiap render ──
+const monthKey=(y,m)=>y+'-'+m;
+
 function renderGraph(){
   const bulanNama=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  set('graphMonth', `${bulanNama[graphMonth]} ${graphYear}`);
+  const now=new Date();
+  const nowKey=monthKey(now.getFullYear(), now.getMonth());
+  if(!grafikListInited){ grafikExpandedMonths.add(nowKey); grafikListInited=true; }
 
-  const rowsBulan = allSaldoData.filter(r=>{
-    const d=new Date(r.tanggal);
-    return d.getFullYear()===graphYear && d.getMonth()===graphMonth;
-  }).sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const wrap=document.getElementById('grafikBulananListWrap');
+  if(!wrap) return;
 
-  set('graphSignal', rowsBulan.length+' Hari Tercatat');
-
-  const wrap=document.getElementById('graphSvgWrap');
-  if(!rowsBulan.length){
-    set('graphTotal','¢0.00');
-    document.getElementById('graphTotal').style.color='#8A6B26';
-    set('graphPct','0%');
-    document.getElementById('graphPct').style.color='#8A6B26';
-    wrap.innerHTML='<div style="text-align:center;padding:30px 0;color:#7A5D1F;font-size:12px">Belum ada data bulan ini</div>';
-    renderTargetProgress(0, 0);
+  if(!allSaldoData || !allSaldoData.length){
+    wrap.innerHTML='<div style="text-align:center;padding:30px 0;color:#7A5D1F;font-size:12px">Belum ada data tercatat</div>';
+    renderTargetProgress(0, 0, true);
     return;
   }
 
-  // Hitung kumulatif profit harian dalam bulan ini, mulai dari 0
-  let kumulatif=0;
-  const points=[0]; // points[i] = kumulatif setelah hari ke-(i-1); points[0]=awal bulan (0)
-  const dailyInfo=[{tanggal:null,profit:null}]; // sejajar dengan points; index 0 = titik awal (tanpa data harian)
-  rowsBulan.forEach(r=>{
-    kumulatif+=parseFloat(r.profit||0);
-    points.push(kumulatif);
-    dailyInfo.push({tanggal:r.tanggal, profit:parseFloat(r.profit||0)});
+  // ── Kelompokkan semua entri per bulan-tahun, urut ASCENDING (lama ke baru) — bulan sekarang
+  // selalu di paling bawah list, sama kayak app Trading Family. ──
+  const groups={};
+  allSaldoData.forEach(r=>{
+    const d=new Date(r.tanggal);
+    const k=monthKey(d.getFullYear(), d.getMonth());
+    (groups[k]=groups[k]||[]).push(r);
+  });
+  const keys=Object.keys(groups).sort((a,b)=>{
+    const [ay,am]=a.split('-').map(Number), [by,bm]=b.split('-').map(Number);
+    return (ay*12+am)-(by*12+bm);
   });
 
-  const total=kumulatif;
-  const isProfit = total>=0;
-  const mainColor = isProfit ? '#4ADE80' : '#F87171';
-  const fillColorTop = isProfit ? 'rgba(74,222,128,0.35)' : 'rgba(248,113,113,0.35)';
-  const fillColorBottom = isProfit ? 'rgba(74,222,128,0.02)' : 'rgba(248,113,113,0.02)';
+  let currentMonthTotal=0, currentMonthRows=[];
+  const cardsHtml=keys.map(k=>{
+    const [y,m]=k.split('-').map(Number);
+    const rowsBulan=[...groups[k]].sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+    const total=rowsBulan.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+    const totalSignal=rowsBulan.reduce((s,r)=>s+parseFloat(r.jumlah_signal||0),0) || rowsBulan.length;
+    const isProfit=total>=0;
+    const mainColor=isProfit?'#4ADE80':'#F87171';
+    const expanded=grafikExpandedMonths.has(k);
+    if(k===nowKey){ currentMonthTotal=total; currentMonthRows=rowsBulan; }
 
-  set('graphTotal', (total>=0?'+':'')+fc(total));
-  document.getElementById('graphTotal').style.color=mainColor;
+    return `<div style="background:var(--bg2);border-radius:10px;padding:12px 14px;margin-bottom:8px">
+      <div onclick="toggleGrafikBulananCard('${k}')" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer">
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--text0)">${bulanNama[m]} ${y}</div>
+          <div style="font-size:10px;color:#7A5D1F;margin-top:2px">${totalSignal} Signal</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:14px;font-weight:800;color:${mainColor}">${total>=0?'+':''}${fc(total)}</div>
+          <span style="font-size:12px;color:#8A6B26;transition:transform .2s;display:inline-block;transform:rotate(${expanded?180:0}deg)">▼</span>
+        </div>
+      </div>
+      ${expanded ? `<div style="margin-top:12px">${buildMiniGrowthChartSvg(rowsBulan, mainColor)}</div>` : ''}
+    </div>`;
+  }).join('');
 
-  // Saldo awal bulan = saldo_mt4 hari pertama tercatat dikurangi profit hari itu
-  const saldoAwalBulan = parseFloat(rowsBulan[0].saldo_mt4||0) - parseFloat(rowsBulan[0].profit||0);
-  const pct = saldoAwalBulan>0 ? (total/saldoAwalBulan*100) : 0;
-  set('graphPct', (pct>=0?'+':'')+pct.toFixed(1)+'%');
-  document.getElementById('graphPct').style.color=mainColor;
+  wrap.innerHTML=cardsHtml;
 
-  // Render SVG
+  // ── Circuit Breaker SELALU pakai bulan REAL sekarang (bukan kartu mana yang lagi dibuka di
+  // list) — konsep nav ‹ › udah gak ada lagi, jadi ini gak lagi bisa "salah lihat" bulan lama. ──
+  const saldoAwalBulan = currentMonthRows.length ? (parseFloat(currentMonthRows[0].saldo_mt4||0) - parseFloat(currentMonthRows[0].profit||0)) : 0;
+  const basisUntukTarget = (getRemBasisMode()==='real_time' && (lastSaldoTerakhir||0)>0) ? lastSaldoTerakhir : saldoAwalBulan;
+  renderTargetProgress(currentMonthTotal, basisUntukTarget, true);
+}
+
+function toggleGrafikBulananCard(key){
+  if(grafikExpandedMonths.has(key)) grafikExpandedMonths.delete(key);
+  else grafikExpandedMonths.add(key);
+  renderGraph();
+}
+
+// ── Grafik area SVG statis per kartu bulan (non-interaktif — beda dari versi lama yang ada
+// tooltip drag, soalnya sekarang bisa BANYAK kartu kebuka bareng-bareng; drag-interaction per
+// kartu butuh id unik & state terpisah per kartu yang nambah kompleksitas tanpa banyak manfaat
+// buat tampilan ringkas kayak referensi Trading Family). ──
+function buildMiniGrowthChartSvg(rowsBulan, mainColor){
+  if(!rowsBulan.length) return '';
+  let kumulatif=0;
+  const points=[0];
+  rowsBulan.forEach(r=>{ kumulatif+=parseFloat(r.profit||0); points.push(kumulatif); });
+
   const W=300,H=140,pad=8;
   const minV=Math.min(...points), maxV=Math.max(...points);
-  const range = (maxV-minV)||1;
-  const xStep = (W-pad*2)/(points.length-1);
-  const yFor = v => H-pad - ((v-minV)/range)*(H-pad*2);
-  const xFor = i => pad + i*xStep;
+  const range=(maxV-minV)||1;
+  const xStep=(W-pad*2)/(points.length-1);
+  const yFor=v=>H-pad-((v-minV)/range)*(H-pad*2);
+  const xFor=i=>pad+i*xStep;
 
-  const linePts = points.map((v,i)=>`${xFor(i).toFixed(1)},${yFor(v).toFixed(1)}`).join(' ');
-  const zeroY = yFor(0).toFixed(1);
-  const areaPts = `${pad},${zeroY} ${linePts} ${xFor(points.length-1).toFixed(1)},${zeroY}`;
+  const linePts=points.map((v,i)=>`${xFor(i).toFixed(1)},${yFor(v).toFixed(1)}`).join(' ');
+  const zeroY=yFor(0).toFixed(1);
+  const areaPts=`${pad},${zeroY} ${linePts} ${xFor(points.length-1).toFixed(1)},${zeroY}`;
+  const fillColor = mainColor==='#4ADE80' ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)';
+  const tglAwal=fd(rowsBulan[0].tanggal), tglAkhir=fd(rowsBulan[rowsBulan.length-1].tanggal);
 
-  const tglAwal=fd(rowsBulan[0].tanggal);
-  const tglAkhir=fd(rowsBulan[rowsBulan.length-1].tanggal);
-
-  wrap.innerHTML=`
-    <svg id="graphSvg" viewBox="0 0 ${W} ${H}" style="width:100%;height:140px;display:block;touch-action:none;cursor:pointer">
-      <defs>
-        <linearGradient id="graphFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${fillColorTop}"/>
-          <stop offset="100%" stop-color="${fillColorBottom}"/>
-        </linearGradient>
-      </defs>
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:130px;display:block">
       <line x1="${pad}" y1="${zeroY}" x2="${W-pad}" y2="${zeroY}" stroke="var(--border)" stroke-width="1"/>
-      <polygon points="${areaPts}" fill="url(#graphFill)"/>
+      <polygon points="${areaPts}" fill="${fillColor}"/>
       <polyline points="${linePts}" fill="none" stroke="${mainColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      <line id="graphIndicatorLine" x1="0" y1="0" x2="0" y2="${H}" class="graph-dashed" style="display:none"/>
-      <circle id="graphIndicatorDot" r="4" class="graph-dot-outer" stroke="${mainColor}" style="display:none"/>
-      <circle id="graphIndicatorDotInner" r="2" class="graph-dot-inner" fill="${mainColor}" style="display:none"/>
     </svg>
     <div style="display:flex;justify-content:space-between;font-size:9px;color:#7A5D1F;margin-top:4px">
-      <span>${tglAwal}</span>
-      <span>${tglAkhir}</span>
-    </div>
-    <div class="graph-tooltip" id="graphTooltip">
-      <div class="graph-tooltip-date" id="graphTooltipDate">-</div>
-      <div class="graph-tooltip-val" id="graphTooltipVal">¢0.00</div>
+      <span>${tglAwal}</span><span>${tglAkhir}</span>
     </div>`;
-
-  setupGraphInteraction(points, dailyInfo, xFor, yFor, mainColor, W, pad);
-  // ── Basis buat Circuit Breaker: cuma pakai saldo real-time kalau BENERAN lagi liat bulan
-  // berjalan sekarang (bukan pas navigasi ke bulan lalu lewat ‹ › — histori tetap dikunci
-  // ke saldo awal bulan masing-masing, real-time cuma relevan buat bulan yang sedang jalan). ──
-  const nowForBasis=new Date();
-  const isBulanIniAktif = (graphYear===nowForBasis.getFullYear() && graphMonth===nowForBasis.getMonth());
-  const basisUntukTarget = (isBulanIniAktif && getRemBasisMode()==='real_time' && (lastSaldoTerakhir||0)>0) ? lastSaldoTerakhir : saldoAwalBulan;
-  renderTargetProgress(total, basisUntukTarget, isBulanIniAktif);
 }
 
 // ══ BATAS BULANAN (CIRCUIT BREAKER) — DUA ARAH, DUA MODE ══
@@ -3664,72 +3659,6 @@ function loadMonthlyComparison(){
     el.innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat perbandingan bulanan.</div>';
   }
 }
-function setupGraphInteraction(points, dailyInfo, xFor, yFor, mainColor, W, pad){
-  const svg=document.getElementById('graphSvg');
-  const tooltip=document.getElementById('graphTooltip');
-  const tooltipDate=document.getElementById('graphTooltipDate');
-  const tooltipVal=document.getElementById('graphTooltipVal');
-  const line=document.getElementById('graphIndicatorLine');
-  const dot=document.getElementById('graphIndicatorDot');
-  const dotInner=document.getElementById('graphIndicatorDotInner');
-  const wrap=document.getElementById('graphSvgWrap');
-
-  function showAt(clientX){
-    const rect=svg.getBoundingClientRect();
-    const relX=clientX-rect.left;
-    const svgX = (relX/rect.width)*W;
-    // cari index titik terdekat
-    let idx=0, bestDist=Infinity;
-    points.forEach((v,i)=>{
-      const d=Math.abs(xFor(i)-svgX);
-      if(d<bestDist){bestDist=d;idx=i;}
-    });
-    if(idx===0){ hideTooltip(); return; } // titik awal bulan, tidak ada data harian
-    const info=dailyInfo[idx];
-    const px=xFor(idx), py=yFor(points[idx]);
-
-    line.setAttribute('x1',px);line.setAttribute('x2',px);line.style.display='block';
-    dot.setAttribute('cx',px);dot.setAttribute('cy',py);dot.style.display='block';
-    dotInner.setAttribute('cx',px);dotInner.setAttribute('cy',py);dotInner.style.display='block';
-
-    const p=info.profit;
-    const pColor = p>0?'#4ADE80':(p<0?'#F87171':'#8A6B26');
-    tooltipDate.textContent=fd(info.tanggal);
-    tooltipVal.textContent=(p>=0?'+':'')+fc(p);
-    tooltipVal.style.color=pColor;
-
-    const rectWrap=wrap.getBoundingClientRect();
-    const pxPercent = px/W;
-    let leftPx = pxPercent*rectWrap.width;
-    tooltip.style.display='block';
-    const tooltipWidth=tooltip.offsetWidth||110;
-    leftPx = Math.max(4, Math.min(rectWrap.width-tooltipWidth-4, leftPx-tooltipWidth/2));
-    tooltip.style.left=leftPx+'px';
-  }
-  function hideTooltip(){
-    tooltip.style.display='none';
-    line.style.display='none';
-    dot.style.display='none';
-    dotInner.style.display='none';
-  }
-
-  let dragging=false;
-  svg.addEventListener('pointerdown',e=>{dragging=true;showAt(e.clientX);});
-  svg.addEventListener('pointermove',e=>{if(dragging)showAt(e.clientX);});
-  window.addEventListener('pointerup',()=>{dragging=false;});
-  svg.addEventListener('pointerleave',()=>{if(!dragging)hideTooltip();});
-}
-function graphPrev(){graphMonth--;if(graphMonth<0){graphMonth=11;graphYear--;}renderGraph();}
-function graphNext(){graphMonth++;if(graphMonth>11){graphMonth=0;graphYear++;}renderGraph();}
-let grafikBulananExpanded=true; // ── default kebuka, kayak kartu "Profit Per Month" di app Trading Family ──
-function toggleGrafikBulanan(){
-  grafikBulananExpanded=!grafikBulananExpanded;
-  const body=document.getElementById('graphCollapseBody');
-  const icon=document.getElementById('graphCollapseIcon');
-  if(body) body.style.display=grafikBulananExpanded?'block':'none';
-  if(icon) icon.style.transform=grafikBulananExpanded?'rotate(0deg)':'rotate(180deg)';
-}
-
 // ══ RIWAYAT ══
 let riwayatCache=[];
 const RIWAYAT_PAGE_SIZE=30;
