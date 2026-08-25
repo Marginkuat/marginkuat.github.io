@@ -1437,6 +1437,905 @@ function renderInvCalcDisclaimer(){
 }
 </script>
 
+<!-- REM PROFIT & RUGI — ANALIS TRADING FAMILY (target tetap +500/-1000 pips PER BULAN, dipatenkan) -->
+<div class="section" id="secRemProfitRugi">
+  <div class="sec-title">🛑 Rem Profit & Rugi — Analis Trading Family</div>
+  <div class="graph-card">
+    <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.6">Rem otomatis khusus Analis Trading Family — berlaku juga kalau MT4 pribadi mau ikut aturan yang sama. Target dibandingkan pakai <b>Pips mentah</b> (sama kayak tampilan resmi di web Trading Family), bukan VP — VP cuma info konversi tambahan yang ditampilkan di sampingnya (Gold & Forex disamakan nilainya, pakai konversi yang sama dengan Kalkulator Risiko di atas). Dihitung PER BULAN KALENDER — otomatis mulai dari 0 lagi tiap tanggal 1, gak perlu reset manual.</div>
+    <div style="font-size:9px;color:#5C4818;background:rgba(212,175,55,.08);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:14px;line-height:1.6">⏰ <b>Penting soal timing:</b> web/app resmi Trading Family biasanya BARU update angka Score/Reward-nya sekitar <b>jam 08:00 pagi hari berikutnya</b> (bukan real-time begitu sinyal closed). Kalau baru catat entri terus langsung bandingin ke halaman resmi mereka di hari yang sama, wajar keliatan beda — bukan berarti ada yang salah input/rumus. Bandingin lagi setelah jam 08:00 besoknya buat hasil yang apple-to-apple.</div>
+
+    <div style="background:#1E1B0F;border:2px solid #D4AF37;border-radius:12px;padding:12px;text-align:center;margin-bottom:14px">
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">🔒 Target Tetap Per Bulan (Dipatenkan)</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:800;color:#D4AF37;margin-top:4px">+500 / −1000 PIPS</div>
+      <div style="font-size:9px;color:#5C4818;margin-top:2px">Profit tembus +500 Pips ATAU Rugi tembus −1000 Pips di bulan berjalan → WAJIB berhenti sampai bulan berikutnya. Angka ini gak akan diubah-ubah.</div>
+    </div>
+
+    <div id="remStatusOut"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+
+    <!-- SCORE CHANNEL — mirip skor Trading Family (Level/Status/Subscriber diisi manual oleh
+         Admin karena itu data dari sistem Trading Family sendiri, bukan dari histori REM lokal;
+         4 metrik lain dihitung OTOMATIS dari histori REM di atas, formula & skor SAMA PERSIS
+         dengan Score Dashboard utama — cuma sumber datanya VP dari rem_entries, bukan profit
+         harian saldo MT4). Total 7 metrik × 4 poin = maksimal 28. -->
+    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📊 Score Channel</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Skor gaya Trading Family (0-4 per metrik, total 0-28) — Level/Status/Subscriber diisi manual oleh Admin, 4 metrik lainnya dihitung otomatis dari histori REM di atas.</div>
+      <div id="remScoreDashboard"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+      <div style="font-size:8px;color:#5C4818;text-align:center;margin:-6px 0 10px;line-height:1.5">✅ Pakai rumus resmi Traders Family (rata-rata berbobot per faktor: Level 17,65% · Kemitraan 17,65% · Subscriber 5,88% · Profit Factor 17,65% · Monthly Loss Ratio 11,76% · Profit Months 5,88% · Recovery Factor 23,53% — sudah diverifikasi cocok persis dengan contoh resmi mereka). 4 metrik otomatis (Profit Factor/MLR/Profit Months/Recovery Factor) dihitung dari <b>Pips mentah</b> (bukan VP), sama kayak tabel contoh resmi mereka. Angka bisa masih beda kalau data REM di atas belum lengkap sampai tanggal terbaru.</div>
+      <div id="remScoreAdminEdit" style="display:none;margin-top:14px;border-top:1px dashed var(--border);padding-top:12px">
+        <div style="font-size:9px;color:#8A6B26;margin-bottom:8px">✏️ Edit Data Channel (Admin) — data ini dari sistem Trading Family, isi manual sesuai dashboard mereka</div>
+        <label class="lbl">Level</label>
+        <select class="inp" id="remLevelInput" style="margin-bottom:10px">
+          <option value="Newbie">Newbie</option>
+          <option value="Rookie">Rookie</option>
+          <option value="Pro">Pro</option>
+          <option value="Elite">Elite</option>
+          <option value="Master">Master</option>
+          <option value="Legend">Legend</option>
+        </select>
+        <label class="lbl">Status Channel (Kemitraan)</label>
+        <select class="inp" id="remStatusInput" style="margin-bottom:10px">
+          <option value="Basic">Basic</option>
+          <option value="Prospect">Prospect</option>
+          <option value="Priority">Priority</option>
+        </select>
+        <label class="lbl">Jumlah Subscriber Berbayar</label>
+        <input class="inp" id="remSubscriberInput" type="number" min="0" placeholder="cth: 120" style="margin-bottom:10px">
+        <button class="btn btn-p" onclick="simpanRemChannelMeta()" style="margin-bottom:0">💾 Simpan Data Channel</button>
+      </div>
+    </div>
+
+    <!-- ISI OTOMATIS DARI SCREENSHOT (OCR) — best-effort, TIDAK 100% akurat. Cuma bantu
+         auto-isi form di bawah; admin TETAP wajib cek & tap "Catat" manual sebelum tersimpan.
+         Library Tesseract.js baru dimuat pas tombol ini dipakai (bukan pas halaman dibuka),
+         biar gak bikin loading awal situs lebih berat buat pengunjung yang gak butuh fitur ini. -->
+    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📷 Isi Otomatis dari Screenshot (Opsional)</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Upload 1 atau BANYAK screenshot kartu sinyal sekaligus (misal dari Trading Family) yang ada tulisan "X.X Pips (Y.Y VP)" dan "Closed at ..." — situs coba baca semuanya otomatis jadi daftar di bawah. <b style="color:#C89B3C">Ini gak selalu akurat</b> — SELALU cek ulang tiap baris (Pair/Pips/Hasil/Tanggal/Jam) sebelum tap "Simpan Semua".</div>
+      <input type="file" accept="image/*" multiple id="remOcrFile" style="display:none" onchange="prosesRemOcrBatch(this.files)">
+      <button class="btn btn-ghost" onclick="document.getElementById('remOcrFile').click()" id="remOcrBtn" style="margin-bottom:0">📷 Pilih Screenshot (bisa banyak)</button>
+      <div id="remOcrStatus" style="font-size:10px;color:#8A6B26;margin-top:8px;min-height:14px;line-height:1.6"></div>
+      <div id="remOcrBatchPreview"></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">➕ Catat Hasil (Admin)</div>
+      <div class="calc-row">
+        <div>
+          <label class="lbl">Tanggal</label>
+          <input class="inp" type="date" id="remTgl">
+        </div>
+        <div>
+          <label class="lbl">Pair</label>
+          <select class="inp" id="remPair">
+            <option value="XAUUSD">XAUUSD (Gold)</option>
+            <option value="AUDUSD">AUDUSD</option>
+            <option value="EURGBP">EURGBP</option>
+            <option value="NZDUSD">NZDUSD</option>
+            <option value="USDCHF">USDCHF</option>
+            <option value="AUDJPY">AUDJPY</option>
+            <option value="CADJPY">CADJPY</option>
+            <option value="EURUSD">EURUSD</option>
+            <option value="GBPUSD">GBPUSD</option>
+            <option value="NZDJPY">NZDJPY</option>
+            <option value="USDCAD">USDCAD</option>
+            <option value="CHFJPY">CHFJPY</option>
+            <option value="EURJPY">EURJPY</option>
+            <option value="GBPJPY">GBPJPY</option>
+            <option value="EURNZD">EURNZD</option>
+            <option value="USDJPY">USDJPY</option>
+            <option value="BTCUSD">BTCUSD</option>
+          </select>
+        </div>
+      </div>
+      <div class="calc-row">
+        <div>
+          <label class="lbl">Hasil</label>
+          <div class="calc-seg" id="remArahSeg">
+            <button data-arah="profit" class="active">📈 Profit</button>
+            <button data-arah="rugi">📉 Rugi</button>
+          </div>
+        </div>
+        <div>
+          <label class="lbl">Pips (mentah, pair di atas)</label>
+          <input class="inp" type="number" id="remPips" placeholder="cth: 150" step="0.1" min="0">
+        </div>
+      </div>
+      <div>
+        <label class="lbl">Jam Closed At (opsional) — cth: 21:12</label>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input class="inp" type="number" id="remJamH" placeholder="Jam" min="0" max="23" step="1" style="margin-bottom:0;text-align:center">
+          <span style="color:#8A6B26;font-weight:800;font-size:16px">:</span>
+          <input class="inp" type="number" id="remJamM" placeholder="Menit" min="0" max="59" step="1" style="margin-bottom:0;text-align:center">
+        </div>
+        <div style="font-size:8px;color:#5C4818;margin-top:4px">Ketik manual angka jam (0-23) & menitnya (0-59) — bisa menit berapa aja, gak dibulatkan ke kelipatan 5/10.</div>
+      </div>
+      <div id="remPreview" style="font-size:10px;color:#5C4818;margin:8px 0 10px;min-height:14px"></div>
+      <button class="btn btn-p" onclick="simpanRemEntry()">💾 Catat</button>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap">
+        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">📜 Riwayat Siklus Ini</div>
+        <button class="btn btn-ghost" onclick="cekDuplikatRem()" style="margin-bottom:0;padding:6px 10px;font-size:10px;width:auto">🔍 Cek Duplikat</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+        <input class="inp" type="date" id="remListFilterTgl" onchange="applyRemListFilter()" style="margin-bottom:0;flex:1">
+        <button class="btn btn-ghost" onclick="clearRemListFilter()" id="remListFilterClearBtn" style="margin-bottom:0;padding:8px 12px;width:auto;display:none">✕</button>
+      </div>
+      <div id="remDupOut" style="margin-bottom:10px"></div>
+      <div id="remListWrap"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const remArahBtns=document.querySelectorAll('#remArahSeg button');
+  remArahBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      remArahBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      remArahDipilih=btn.dataset.arah;
+    });
+  });
+  const remPairEl=document.getElementById('remPair'), remPipsEl=document.getElementById('remPips');
+  if(remPairEl) remPairEl.addEventListener('change', updateRemPreview);
+  if(remPipsEl) remPipsEl.addEventListener('input', updateRemPreview);
+})();
+</script>
+
+<script>
+// ══ REM PROFIT & RUGI — ANALIS TRADING FAMILY ══
+// Target DIPATENKAN, gak boleh diubah dari UI mana pun: ±1000 VP (pips yang sudah dinormalisasi).
+// VP_MULTIPLIER di sini SENGAJA duplikat dari yang di Kalkulator Risiko (nilainya sama persis) —
+// soalnya yang di sana ke-lock di dalam closure kalkulator itu, gak bisa dipakai bareng dari sini.
+// ── Target REM Trading Family: ASIMETRIS +500 (profit) / -1000 (rugi), dihitung PER BULAN
+// KALENDER (bukan siklus manual lagi) — begitu ganti bulan, otomatis mulai dari 0 lagi.
+// PENTING: target & perbandingan "MASIH BOLEH LANJUT / STOP" dihitung dari PIPS MENTAH (bukan
+// VP), SAMA PERSIS kayak yang ditampilkan resmi di web Trading Family sendiri (mis. "623.0 Pips
+// (253.22 VP)" — Pips itu angka utama yang dibandingkan ke target, VP cuma info konversi
+// tambahan di sampingnya, BUKAN yang dipatenkan ke target). ──
+const REM_TARGET_PROFIT_PIPS=500;
+const REM_TARGET_RUGI_PIPS=1000;
+const REM_VP_MULTIPLIER={
+  XAUUSD:0.2,
+  AUDUSD:2, EURGBP:2, NZDUSD:2, USDCHF:2,
+  AUDJPY:1.5, CADJPY:1.5, EURUSD:1.5, GBPUSD:1.5, NZDJPY:1.5, USDCAD:1.5,
+  CHFJPY:1, EURJPY:1, GBPJPY:1, EURNZD:1, USDJPY:1,
+  BTCUSD:1
+};
+let remArahDipilih='profit';
+let remEntries=[], remTableMissing=false;
+
+function updateRemPreview(){
+  const el=document.getElementById('remPreview');
+  if(!el)return;
+  const pairEl=document.getElementById('remPair'), pipsEl=document.getElementById('remPips');
+  if(!pairEl||!pipsEl)return;
+  const pips=parseFloat(pipsEl.value);
+  if(!pips || pips<=0){ el.textContent=''; return; }
+  const mult=REM_VP_MULTIPLIER[pairEl.value]||1;
+  const vp=Math.round(pips*mult*100)/100;
+  el.textContent=`= ${pips} pips ${pairEl.value} × ${mult} = ${vp} VP`;
+}
+
+// ══ OCR SCREENSHOT — "Isi Otomatis dari Screenshot" di form Catat Hasil REM ══
+// Best-effort pakai Tesseract.js (client-side, dimuat on-demand dari CDN pas tombol dipakai).
+// TIDAK PERNAH auto-submit — cuma auto-isi field Pair/Pips/Hasil, admin tetap wajib review &
+// tap "Catat" sendiri. Kalau OCR gagal baca / salah baca, form tetap bisa diisi manual seperti
+// biasa — fitur ini murni pembantu, bukan pengganti input manual.
+// ── Registry SUKSES BENERAN (bukan cuma "tag <script> ada di DOM") — soalnya kalau percobaan
+// sebelumnya GAGAL (onerror), tag <script>-nya kadung nempel di DOM tapi window.Tesseract gak
+// pernah kebentuk. Tanpa registry ini, percobaan berikutnya bakal ketemu tag lama itu, nganggep
+// "udah pernah dimuat, skip aja" (resolve langsung), padahal Tesseract beneran gak pernah ada —
+// itu penyebab persis error "Tesseract is not defined" walau status bilang "✅ Selesai". ──
+window.__loadedScriptsOk = window.__loadedScriptsOk || new Set();
+function loadScriptOnce(src){
+  return new Promise((resolve,reject)=>{
+    if(window.__loadedScriptsOk.has(src)){ resolve(); return; }
+    // Buang tag lama (kalau ada, dari percobaan gagal sebelumnya) biar bener-bener nyoba dari nol
+    const tagLama=document.querySelector(`script[src="${src}"]`);
+    if(tagLama) tagLama.remove();
+    const s=document.createElement('script');
+    s.src=src;
+    s.onload=()=>{ window.__loadedScriptsOk.add(src); resolve(); };
+    s.onerror=()=>{ s.remove(); reject(new Error('Gagal memuat script: '+src)); };
+    document.head.appendChild(s);
+  });
+}
+function withTimeoutPromise(promise, ms){
+  return Promise.race([promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error('TIMEOUT_OCR')), ms))]);
+}
+
+// ── Beberapa provider/ISP di Indonesia suka blokir jsdelivr.net (paling umum dipakai buat CDN
+// npm). Kalau itu yang kejadian, retry ke jsdelivr lagi PASTI gagal terus walau internet lancar
+// — jadi disiapin CDN CADANGAN (unpkg) yang dicoba otomatis kalau yang pertama gagal. Tiap
+// config juga nentuin workerPath/corePath/langPath eksplisit yang SATU SUMBER SAMA (bukan
+// campur), soalnya kalau cuma script utamanya doang yang dialihin tapi core/worker/lang-nya
+// diam-diam masih default ke jsdelivr, hasilnya tetap gagal walau kelihatannya udah "fallback". ──
+const OCR_CDN_CONFIGS=[
+  { nama:'jsdelivr', script:'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js',
+    workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/worker.min.js',
+    corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@v5.0.0',
+    langPath:'https://tessdata.projectnaptha.com/4.0.0' },
+  { nama:'unpkg', script:'https://unpkg.com/tesseract.js@5.0.4/dist/tesseract.min.js',
+    workerPath:'https://unpkg.com/tesseract.js@5.0.4/dist/worker.min.js',
+    corePath:'https://unpkg.com/tesseract.js-core@5.0.0',
+    langPath:'https://tessdata.projectnaptha.com/4.0.0' },
+];
+let remOcrActiveCdn=null; // ── config CDN yang berhasil dimuat, dipakai ulang tiap gambar biar gak coba² lagi dari 0 ──
+
+async function loadTesseractEngine(statusEl){
+  if(typeof Tesseract!=='undefined' && remOcrActiveCdn) return remOcrActiveCdn;
+  const gagal=[];
+  for(const cfg of OCR_CDN_CONFIGS){
+    try{
+      if(statusEl) statusEl.innerHTML=`⏳ Coba download engine OCR dari ${cfg.nama} (±15MB, sekali aja per sesi)...`;
+      await withTimeoutPromise(loadScriptOnce(cfg.script), 25000);
+      remOcrActiveCdn=cfg;
+      return cfg;
+    }catch(e){
+      gagal.push(cfg.nama);
+      console.error(`CDN ${cfg.nama} gagal:`, e);
+    }
+  }
+  throw new Error('SEMUA_CDN_GAGAL:'+gagal.join(', '));
+}
+
+let remOcrBatch=[]; // ── array hasil parse tiap screenshot, ditampilkan sbg preview yg bisa diedit sebelum disimpan ──
+const REM_BULAN_MAP={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
+  januari:1,februari:2,maret:3,april:4,mei:5,juni:6,juli:7,agustus:8,september:9,oktober:10,november:11,desember:12};
+
+async function prosesRemOcrBatch(fileList){
+  const files=[...(fileList||[])];
+  if(!files.length) return;
+  const statusEl=document.getElementById('remOcrStatus');
+  const btnEl=document.getElementById('remOcrBtn');
+  const fileInput=document.getElementById('remOcrFile');
+  if(btnEl){ btnEl.disabled=true; }
+  try{
+    const cdnCfg=await loadTesseractEngine(statusEl);
+    // ── Diproses SATU-SATU (bukan Promise.all paralel) — Tesseract.js worker lumayan berat di
+    // memori kalau dijalanin bersamaan buat banyak gambar sekaligus, apalagi di HP low-end.
+    // Progress "gambar ke-X dari Y" juga lebih gampang ditampilin kalau sekuensial. ──
+    for(let i=0;i<files.length;i++){
+      if(statusEl) statusEl.innerHTML=`⏳ Membaca gambar ${i+1} dari ${files.length} (via ${cdnCfg.nama})...`;
+      try{
+        let result;
+        try{
+          // Percobaan 1: pakai workerPath/corePath/langPath eksplisit (biar konsisten 1 sumber CDN)
+          result=await withTimeoutPromise(Tesseract.recognize(files[i], 'eng', {
+            workerPath: cdnCfg.workerPath, corePath: cdnCfg.corePath, langPath: cdnCfg.langPath
+          }), 45000);
+        }catch(e1){
+          // ── Percobaan 2 (fallback): tanpa path eksplisit, biar Tesseract.js pakai default
+          // bawaannya sendiri. Kadang path yang di-set manual malah gak cocok/gak lengkap
+          // buat versi tertentu — daripada langsung nyerah, coba dulu jalur default library. ──
+          console.warn('Percobaan 1 gagal, coba fallback default paths:', e1);
+          result=await withTimeoutPromise(Tesseract.recognize(files[i], 'eng'), 45000);
+        }
+        const parsed=parseOcrTextRem(result.data.text||'', files[i].name);
+        remOcrBatch.push(parsed);
+      }catch(e){
+        console.error(e);
+        const kenaTimeout = e && e.message==='TIMEOUT_OCR';
+        const detailErr = e && e.message && e.message!=='TIMEOUT_OCR' ? ` (${String(e.name||'')}: ${String(e.message||'').slice(0,80)})` : '';
+        remOcrBatch.push({ error: (kenaTimeout ? 'Kelamaan (koneksi lambat)' : 'Gagal dibaca'+detailErr), fileName: files[i].name });
+      }
+    }
+    if(statusEl) statusEl.innerHTML=`✅ Selesai baca ${files.length} gambar (via ${cdnCfg.nama}). Cek satu-satu di bawah sebelum simpan.`;
+    renderRemOcrBatchPreview();
+  }catch(e){
+    console.error(e);
+    const semuaCdnGagal = e && String(e.message||'').startsWith('SEMUA_CDN_GAGAL');
+    const pesan = semuaCdnGagal
+      ? `❌ Gagal download engine OCR dari semua sumber (jsdelivr &amp; unpkg) — kemungkinan besar provider/ISP kamu blokir CDN ini, bukan soal lambat doang. Coba ganti ke WiFi lain / matiin VPN kalau ada / pakai kartu SIM lain, atau langsung isi manual di form bawah aja (lebih cepat &amp; pasti jalan).`
+      : '❌ Gagal memuat engine OCR — coba lagi, atau isi manual di form bawah.';
+    if(statusEl) statusEl.innerHTML=`<span style="color:#F87171">${pesan}</span>`;
+  }finally{
+    if(btnEl){ btnEl.disabled=false; btnEl.textContent='📷 Pilih Screenshot Lain'; }
+    if(fileInput) fileInput.value='';
+  }
+}
+
+// ── Parse 1 hasil OCR jadi objek entri siap-preview. Nyari 3 hal: (1) Pips+arah (wajib), (2)
+// nama Pair (opsional, dicocokkan ke daftar dropdown yg sudah ada), (3) tanggal+jam dari baris
+// "Closed at" kartu sinyal TF (format umum: "03 Aug 2026, 20:00 WIB"). Semua ini CUMA tebakan
+// awal — bakal ditampilin di preview yg bisa diedit manual sebelum disimpan, jadi walau salah
+// baca, gak ada resiko data salah kesimpen tanpa admin sadar. ──
+function parseOcrTextRem(text, fileName){
+  const pipsMatch = text.match(/(-?\d+[.,]?\d*)\s*Pips/i);
+  const vpMatch = text.match(/(-?\d+[.,]?\d*)\s*VP/i);
+  if(!pipsMatch){ return { error:'Gak nemu angka "Pips" di gambar ini', fileName }; }
+  const pipsNum=parseFloat(pipsMatch[1].replace(',','.'));
+  const isRugi = pipsNum<0 || /\brugi\b|\bloss\b/i.test(text);
+  const pipsAbs=Math.abs(pipsNum);
+
+  let pairFound=null;
+  const pairOptions=['XAUUSD','AUDUSD','EURGBP','NZDUSD','USDCHF','AUDJPY','CADJPY','EURUSD','GBPUSD','NZDJPY','USDCAD','CHFJPY','EURJPY','GBPJPY','EURNZD','USDJPY','BTCUSD'];
+  for(const p of pairOptions){ if(new RegExp('\\b'+p+'\\b','i').test(text)){ pairFound=p; break; } }
+
+  // Cari "Closed at <tgl bulan tahun>, <jam>:<menit>" — bulan boleh nama Inggris/Indonesia
+  let tanggalISO=null, jamHM=null;
+  const closedMatch = text.match(/Closed\s*at[\s\S]{0,50}?(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})[,.]?\s*(\d{1,2})[:.](\d{2})/i);
+  if(closedMatch){
+    const [,d,bulanTeks,y,h,m]=closedMatch;
+    const bulanNum=REM_BULAN_MAP[bulanTeks.toLowerCase()];
+    if(bulanNum){
+      tanggalISO=`${y}-${String(bulanNum).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      jamHM={h:parseInt(h,10), m:parseInt(m,10)};
+    }
+  }
+
+  return {
+    fileName, pair: pairFound, pipsAbs, arah: isRugi?'rugi':'profit',
+    tanggal: tanggalISO, jamH: jamHM?jamHM.h:null, jamM: jamHM?jamHM.m:null,
+    vpDiGambar: vpMatch ? vpMatch[1] : null
+  };
+}
+
+function renderRemOcrBatchPreview(){
+  const wrap=document.getElementById('remOcrBatchPreview');
+  if(!wrap)return;
+  if(!remOcrBatch.length){ wrap.innerHTML=''; return; }
+  const pairOpts=['XAUUSD','AUDUSD','EURGBP','NZDUSD','USDCHF','AUDJPY','CADJPY','EURUSD','GBPUSD','NZDJPY','USDCAD','CHFJPY','EURJPY','GBPJPY','EURNZD','USDJPY','BTCUSD'];
+  const rows=remOcrBatch.map((r,i)=>{
+    if(r.error){
+      return `<div style="border:1px solid #4A1414;border-radius:8px;padding:10px;margin-top:8px;background:rgba(248,113,113,.06)">
+        <div style="font-size:9px;color:#F87171">❌ ${escapeHtml(r.fileName||'')}: ${escapeHtml(r.error)}</div>
+      </div>`;
+    }
+    return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:8px" id="remOcrRow_${i}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:9px;color:#5C4818"><input type="checkbox" id="remOcrRow_${i}_pakai" checked style="width:14px;height:14px">${escapeHtml(r.fileName||'Gambar '+(i+1))}</label>
+        <span onclick="hapusRemOcrBatchRow(${i})" style="cursor:pointer;font-size:11px;color:#F87171">🗑️</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <select class="inp" id="remOcrRow_${i}_pair" style="margin-bottom:0;font-size:11px">
+          ${pairOpts.map(p=>`<option value="${p}" ${r.pair===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+        <select class="inp" id="remOcrRow_${i}_arah" style="margin-bottom:0;font-size:11px">
+          <option value="profit" ${r.arah==='profit'?'selected':''}>📈 Profit</option>
+          <option value="rugi" ${r.arah==='rugi'?'selected':''}>📉 Rugi</option>
+        </select>
+        <input class="inp" type="number" id="remOcrRow_${i}_pips" value="${r.pipsAbs}" placeholder="Pips" style="margin-bottom:0;font-size:11px">
+        <input class="inp" type="date" id="remOcrRow_${i}_tgl" value="${r.tanggal||''}" style="margin-bottom:0;font-size:11px">
+        <input class="inp" type="number" id="remOcrRow_${i}_jamH" value="${r.jamH??''}" placeholder="Jam" min="0" max="23" style="margin-bottom:0;font-size:11px">
+        <input class="inp" type="number" id="remOcrRow_${i}_jamM" value="${r.jamM??''}" placeholder="Menit" min="0" max="59" style="margin-bottom:0;font-size:11px">
+      </div>
+      ${!r.pair?'<div style="font-size:8px;color:#F87171;margin-top:4px">⚠️ Pair gak kedetek, pilih manual</div>':''}
+      ${!r.tanggal?'<div style="font-size:8px;color:#F87171;margin-top:4px">⚠️ Tanggal/jam gak kedetek dari "Closed at", isi manual</div>':''}
+      ${r.vpDiGambar?`<div style="font-size:8px;color:#5C4818;margin-top:4px">VP di gambar: ${r.vpDiGambar} — cek kecocokan sama Pair yang dipilih</div>`:''}
+    </div>`;
+  }).join('');
+
+  wrap.innerHTML=`<div style="margin-top:10px">${rows}</div>
+    <button class="btn btn-p" onclick="simpanRemOcrBatch()" style="margin-top:12px">💾 Simpan Semua ke Riwayat</button>
+    <div id="remOcrBatchSaveStatus" style="font-size:10px;color:#8A6B26;margin-top:6px;text-align:center"></div>`;
+}
+
+function hapusRemOcrBatchRow(i){
+  remOcrBatch.splice(i,1);
+  renderRemOcrBatchPreview();
+}
+
+async function simpanRemOcrBatch(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const statusEl=document.getElementById('remOcrBatchSaveStatus');
+  const payload=[];
+  const errors=[];
+  remOcrBatch.forEach((r,i)=>{
+    if(r.error) return;
+    const pakaiEl=document.getElementById(`remOcrRow_${i}_pakai`);
+    if(pakaiEl && !pakaiEl.checked) return; // baris dicentang-lepas oleh admin = skip
+    const pair=document.getElementById(`remOcrRow_${i}_pair`).value;
+    const arah=document.getElementById(`remOcrRow_${i}_arah`).value;
+    const pips=parseFloat(document.getElementById(`remOcrRow_${i}_pips`).value);
+    const tgl=document.getElementById(`remOcrRow_${i}_tgl`).value;
+    const jamH=document.getElementById(`remOcrRow_${i}_jamH`).value;
+    const jamM=document.getElementById(`remOcrRow_${i}_jamM`).value;
+    if(!tgl || !pips || pips<=0){ errors.push(`Baris ${i+1}: tanggal/pips belum lengkap`); return; }
+    let jam=null;
+    if(jamH!=='' || jamM!==''){
+      const h=parseInt(jamH||'0',10), m=parseInt(jamM||'0',10);
+      if(!isNaN(h)&&h>=0&&h<=23&&!isNaN(m)&&m>=0&&m<=59) jam=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+    const vp=Math.round(pips*(REM_VP_MULTIPLIER[pair]||1)*100)/100;
+    payload.push({tanggal:tgl, pair, arah, pips_mentah:pips, vp, keterangan:jam});
+  });
+  if(errors.length){ if(statusEl) statusEl.innerHTML=`<span style="color:#F87171">❌ ${errors.join('; ')}</span>`; return; }
+  if(!payload.length){ if(statusEl) statusEl.innerHTML='<span style="color:#F87171">❌ Gak ada baris yang dicentang buat disimpan.</span>'; return; }
+  if(statusEl) statusEl.innerHTML=`⏳ Menyimpan ${payload.length} entri...`;
+  try{
+    for(const p of payload){ await api('rem_entries','POST',p); }
+    toast(`✅ ${payload.length} entri tersimpan ke Riwayat`);
+    remOcrBatch=[];
+    document.getElementById('remOcrBatchPreview').innerHTML='';
+    document.getElementById('remOcrStatus').innerHTML='';
+    await loadRemProfitRugi();
+  }catch(e){
+    console.error(e);
+    if(statusEl) statusEl.innerHTML='<span style="color:#F87171">❌ Gagal simpan — coba lagi.</span>';
+  }
+}
+
+let remChannelMeta={level:'Pro', status:'Basic', subscriber:0};
+async function loadRemProfitRugi(){
+  try{
+    remEntries=await api('rem_entries?select=*&order=id.asc');
+    remTableMissing=false;
+  }catch(e){
+    remEntries=[]; remTableMissing=true;
+  }
+  try{
+    const rows=await api('app_settings?select=value&key=eq.rem_channel_meta');
+    if(rows && rows.length){
+      const parsed=JSON.parse(rows[0].value);
+      remChannelMeta={level:parsed.level||'Pro', status:parsed.status||'Basic', subscriber:parseInt(parsed.subscriber)||0};
+    }
+  }catch(e){ /* pakai default kalau gagal/belum ada */ }
+  renderRemStatus();
+  renderRemList();
+  renderRemScoreDashboard();
+}
+
+// ── Siklus REM Trading Family = BULAN KALENDER BERJALAN, otomatis — bukan marker manual lagi.
+// Entri difilter berdasarkan field `tanggal` yang cocok dengan bulan+tahun sekarang (waktu
+// perangkat), jadi begitu tanggal 1 datang, hitungan Net VP otomatis mulai dari 0 lagi tanpa
+// perlu ada yang mencet tombol reset. ──
+function currentRemCycle(){
+  const now=new Date();
+  const ymSekarang = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  return remEntries.filter(e=>String(e.tanggal||'').startsWith(ymSekarang));
+}
+
+function renderRemStatus(){
+  const el=document.getElementById('remStatusOut');
+  if(!el)return;
+  if(remTableMissing){
+    el.innerHTML=`<div style="font-size:10px;color:#F87171;line-height:1.6;text-align:center">⚠️ Tabel <code>rem_entries</code> belum ada di Supabase. Minta yang bikin situs ini tambahkan tabelnya dulu biar Rem ini bisa mulai mencatat.</div>`;
+    return;
+  }
+  const cycle=currentRemCycle();
+  // ── Metrik UTAMA yang dibandingkan ke target: PIPS MENTAH (bukan VP) — sama kayak tampilan
+  // resmi Trading Family. VP tetap dihitung & ditampilkan di sebelahnya sbg info konversi. ──
+  const totalProfitPips=cycle.filter(e=>e.arah==='profit').reduce((s,e)=>s+parseFloat(e.pips_mentah||0),0);
+  const totalRugiPips=cycle.filter(e=>e.arah==='rugi').reduce((s,e)=>s+parseFloat(e.pips_mentah||0),0);
+  const netPips=totalProfitPips-totalRugiPips;
+  const totalProfitVP=cycle.filter(e=>e.arah==='profit').reduce((s,e)=>s+parseFloat(e.vp||0),0);
+  const totalRugiVP=cycle.filter(e=>e.arah==='rugi').reduce((s,e)=>s+parseFloat(e.vp||0),0);
+  const netVP=totalProfitVP-totalRugiVP;
+
+  let statusHtml;
+  if(netPips>=REM_TARGET_PROFIT_PIPS){
+    statusHtml=`<div style="text-align:center;padding:6px 0">
+      <div style="font-size:14px;font-weight:900;color:#4ADE80">🛑 STOP — TARGET PROFIT BULAN INI TERCAPAI</div>
+      <div style="font-size:9px;color:#8A6B26;margin-top:4px">Net bulan ini: <b style="color:#4ADE80">+${netPips.toFixed(1)} Pips</b> (${netVP>=0?'+':''}${netVP.toFixed(2)} VP). Sesuai aturan tetap, WAJIB berhenti trading sampai bulan berikutnya.</div>
+    </div>`;
+  }else if(netPips<=-REM_TARGET_RUGI_PIPS){
+    statusHtml=`<div style="text-align:center;padding:6px 0">
+      <div style="font-size:14px;font-weight:900;color:#F87171">🛑 STOP — RUGI MAKSIMAL BULAN INI TERCAPAI</div>
+      <div style="font-size:9px;color:#8A6B26;margin-top:4px">Net bulan ini: <b style="color:#F87171">${netPips.toFixed(1)} Pips</b> (${netVP.toFixed(2)} VP). Sesuai aturan tetap, WAJIB berhenti trading sampai bulan berikutnya.</div>
+    </div>`;
+  }else{
+    const pctProfit=Math.min(100, Math.max(0, netPips/REM_TARGET_PROFIT_PIPS*100));
+    const pctRugi=Math.min(100, Math.max(0, -netPips/REM_TARGET_RUGI_PIPS*100));
+    statusHtml=`<div style="text-align:center;padding:6px 0 10px">
+      <div style="font-size:14px;font-weight:900;color:#D4AF37">✅ MASIH BOLEH LANJUT</div>
+      <div style="font-size:9px;color:#8A6B26;margin-top:2px">Net bulan ini: <b style="color:${netPips>=0?'#4ADE80':'#F87171'}">${netPips>=0?'+':''}${netPips.toFixed(1)} Pips</b> (${netVP>=0?'+':''}${netVP.toFixed(2)} VP) dari target +${REM_TARGET_PROFIT_PIPS}/−${REM_TARGET_RUGI_PIPS} Pips</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <div style="flex:1">
+        <div style="font-size:8px;color:#5C4818;margin-bottom:3px">Menuju Profit +${REM_TARGET_PROFIT_PIPS}</div>
+        <div class="progress-bar"><div style="height:100%;width:${pctProfit}%;background:linear-gradient(135deg,#16A34A,#4ADE80);border-radius:3px"></div></div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:8px;color:#5C4818;margin-bottom:3px">Menuju Rugi −${REM_TARGET_RUGI_PIPS}</div>
+        <div class="progress-bar"><div style="height:100%;width:${pctRugi}%;background:linear-gradient(135deg,#DC2626,#F87171);border-radius:3px"></div></div>
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML=`${statusHtml}
+    <div class="bal-grid" style="margin-top:14px">
+      <div class="bal-box"><div class="bal-box-val cg">${totalProfitPips.toFixed(1)}</div><div class="bal-box-lbl">Total Profit Pips<br><span style="font-size:8px;opacity:.7">(${totalProfitVP.toFixed(2)} VP)</span></div></div>
+      <div class="bal-box"><div class="bal-box-val cr">${totalRugiPips.toFixed(1)}</div><div class="bal-box-lbl">Total Rugi Pips<br><span style="font-size:8px;opacity:.7">(${totalRugiVP.toFixed(2)} VP)</span></div></div>
+      <div class="bal-box"><div class="bal-box-val" style="color:${netPips>=0?'#4ADE80':'#F87171'}">${netPips>=0?'+':''}${netPips.toFixed(1)}</div><div class="bal-box-lbl">Net Pips<br><span style="font-size:8px;opacity:.7">(${netVP>=0?'+':''}${netVP.toFixed(2)} VP)</span></div></div>
+    </div>
+    <div style="font-size:9px;color:#5C4818;text-align:center;margin-top:8px">${cycle.length} entri dicatat bulan ini</div>`;
+}
+
+let remListExpanded=false; // ── state tampilan: false = cuma 5 GRUP TANGGAL terbaru, true = semua tanggal ──
+let remListFilterTgl=null; // ── kalau diisi (format YYYY-MM-DD dari <input type=date>), list cuma nampilin tanggal itu ──
+const REM_LIST_LIMIT=5;
+
+// ── Checklist "sudah dicocokin ke TF": tersimpan di localStorage HP ini aja (bukan di database
+// Supabase — murni alat bantu audit manual, gak perlu ubah struktur tabel). Discope PER BULAN
+// (key ikut ymSekarang), soalnya target REM juga reset tiap bulan — biar centangan gak numpuk
+// dari bulan-bulan lama yang udah kelar diaudit. ──
+function remChecklistKey(){
+  const now=new Date();
+  return 'remChecklist_'+now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+}
+function loadRemChecklist(){
+  try{ return new Set(JSON.parse(localStorage.getItem(remChecklistKey())||'[]')); }
+  catch(e){ return new Set(); }
+}
+function saveRemChecklist(set){
+  try{ localStorage.setItem(remChecklistKey(), JSON.stringify([...set])); }catch(e){}
+}
+function toggleRemChecklist(id){
+  const set=loadRemChecklist();
+  if(set.has(id)) set.delete(id); else set.add(id);
+  saveRemChecklist(set);
+  renderRemList();
+}
+function resetRemChecklist(){
+  if(!confirm('Hapus semua centang "sudah dicocokin" bulan ini? Data entri REM-nya sendiri gak kehapus, cuma centangannya aja.'))return;
+  saveRemChecklist(new Set());
+  renderRemList();
+}
+
+function renderRemList(){
+  const wrap=document.getElementById('remListWrap');
+  if(!wrap)return;
+  if(remTableMissing){ wrap.innerHTML=''; return; }
+  const cycleAll=[...currentRemCycle()].sort((a,b)=>{
+    // ── Urutkan tanggal terbaru dulu, dalam tanggal yang sama urutkan jam (keterangan "HH:MM")
+    // terbaru dulu juga; entri tanpa jam ditaruh di bawah entri yang ada jamnya. ──
+    if(a.tanggal!==b.tanggal) return a.tanggal<b.tanggal?1:-1;
+    const ja=a.keterangan||'', jb=b.keterangan||'';
+    if(ja!==jb) return ja<jb?1:-1;
+    return b.id-a.id;
+  });
+  if(!cycleAll.length){ wrap.innerHTML=`<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Belum ada entri bulan ini.</div>`; return; }
+
+  const clearBtn=document.getElementById('remListFilterClearBtn');
+  if(clearBtn) clearBtn.style.display = remListFilterTgl ? 'block' : 'none';
+
+  const cycle = remListFilterTgl ? cycleAll.filter(e=>e.tanggal===remListFilterTgl) : cycleAll;
+  if(!cycle.length){
+    wrap.innerHTML=`<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Gak ada entri di tanggal ${fd(remListFilterTgl)}.</div>`;
+    return;
+  }
+
+  const checklist=loadRemChecklist();
+  const totalCentang=cycleAll.filter(e=>checklist.has(e.id)).length;
+
+  // ── Kelompokkan per tanggal — tiap tanggal cuma ditulis SEKALI sbg header grup, entri di
+  // bawahnya udah gak perlu ulang tanggal lagi (lebih ringkas & gampang di-scan). ──
+  const grupTanggal=[];
+  cycle.forEach(e=>{
+    let g=grupTanggal.find(x=>x.tanggal===e.tanggal);
+    if(!g){ g={tanggal:e.tanggal, entries:[]}; grupTanggal.push(g); }
+    g.entries.push(e);
+  });
+
+  const tampilGrup = remListFilterTgl ? grupTanggal : (remListExpanded ? grupTanggal : grupTanggal.slice(0, REM_LIST_LIMIT));
+  const sisaGrup = grupTanggal.length - tampilGrup.length;
+
+  const rowHtml=(e)=>{
+    const warna=e.arah==='profit'?'#4ADE80':'#F87171';
+    const tanda=e.arah==='profit'?'+':'-';
+    const dicentang=checklist.has(e.id);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:6px 0;border-bottom:1px solid var(--border);gap:8px">
+      <span style="display:flex;align-items:center;gap:8px;min-width:0">
+        <input type="checkbox" onchange="toggleRemChecklist(${e.id})" ${dicentang?'checked':''} style="width:16px;height:16px;flex-shrink:0;accent-color:#4ADE80">
+        <span style="color:#8A6B26;${dicentang?'text-decoration:line-through;opacity:.55':''}">${escapeHtml(e.pair||'')}${e.keterangan?' · '+escapeHtml(e.keterangan):''}</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <b style="color:${warna}${dicentang?';opacity:.55':''}">${tanda}${parseFloat(e.vp||0).toFixed(1)} VP</b>
+        ${isAdmin?`<span onclick="hapusRemEntry(${e.id})" style="cursor:pointer;font-size:11px">🗑️</span>`:''}
+      </span>
+    </div>`;
+  };
+
+  const groupsHtml = tampilGrup.map(g=>{
+    const centangDiGrup=g.entries.filter(e=>checklist.has(e.id)).length;
+    return `<div style="margin-bottom:10px">
+      <div style="font-size:10px;font-weight:800;color:#D4AF37;padding:4px 0 2px">${fd(g.tanggal)} <span style="color:#5C4818;font-weight:400">(${g.entries.length} entri${centangDiGrup?', ✅ '+centangDiGrup+' dicentang':''})</span></div>
+      ${g.entries.map(rowHtml).join('')}
+    </div>`;
+  }).join('');
+
+  const tombol = (!remListFilterTgl && grupTanggal.length>REM_LIST_LIMIT)
+    ? `<div onclick="toggleRemList()" style="text-align:center;padding:6px 0 0;font-size:10px;color:#D4AF37;text-decoration:underline;cursor:pointer">${remListExpanded ? '▲ Lihat lebih sedikit' : `▼ Lihat semua (${grupTanggal.length} hari, ${sisaGrup} lagi)`}</div>`
+    : '';
+
+  const headerCentang = totalCentang>0
+    ? `<div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;color:#5C4818;margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--border)">
+        <span>✅ Progres cocokin ke TF: <b style="color:#4ADE80">${totalCentang}/${cycleAll.length}</b> entri bulan ini</span>
+        <span onclick="resetRemChecklist()" style="cursor:pointer;color:#F87171;text-decoration:underline">Reset centang</span>
+      </div>`
+    : '';
+
+  wrap.innerHTML = headerCentang + groupsHtml + tombol;
+}
+
+function toggleRemList(){
+  remListExpanded=!remListExpanded;
+  renderRemList();
+}
+
+function applyRemListFilter(){
+  const val=document.getElementById('remListFilterTgl').value;
+  remListFilterTgl = val || null;
+  renderRemList();
+}
+
+function clearRemListFilter(){
+  remListFilterTgl=null;
+  const inp=document.getElementById('remListFilterTgl');
+  if(inp) inp.value='';
+  renderRemList();
+}
+
+// ── Cek Duplikat: bantu admin (analis) audit histori "Rem Profit & Rugi" — soalnya ini bukan
+// hasil transaksi MT4 pribadi, tapi CATATAN MANUAL hasil sinyal analis di Trading Family. Yang
+// dicek: (1) entri kembar persis (tanggal+pair+jam+pips+arah sama semua — kemungkinan besar
+// kecatet 2x gak sengaja), dan (2) entri "mirip" (tanggal+pair+jam sama tapi pips/arah beda —
+// kemungkinan salah ketik pas revisi). Cuma nampilin & kasih tombol hapus per-entri; TIDAK ada
+// yang dihapus otomatis, semua keputusan tetap di tangan admin. ──
+function cekDuplikatRem(){
+  const out=document.getElementById('remDupOut');
+  if(!out)return;
+  if(!isAdmin){ out.innerHTML=`<div style="font-size:10px;color:#F87171;text-align:center;padding:8px 0">❌ Harus masuk sebagai Admin buat cek & hapus duplikat</div>`; return; }
+  const cycle=currentRemCycle();
+  if(!cycle.length){ out.innerHTML=`<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:8px 0">Belum ada entri bulan ini.</div>`; return; }
+
+  // key ketat: tanggal+pair+jam+arah+pips SAMA PERSIS → hampir pasti duplikat kecatet 2x
+  const grupPersis={};
+  // key longgar: tanggal+pair+jam SAMA, tapi isi lain (pips/arah) beda → mungkin salah ketik/revisi
+  const grupLonggar={};
+  cycle.forEach(e=>{
+    const jam=e.keterangan||'(tanpa jam)';
+    const kPersis=`${e.tanggal}|${e.pair}|${jam}|${e.arah}|${e.pips_mentah}`;
+    const kLonggar=`${e.tanggal}|${e.pair}|${jam}`;
+    (grupPersis[kPersis]=grupPersis[kPersis]||[]).push(e);
+    (grupLonggar[kLonggar]=grupLonggar[kLonggar]||[]).push(e);
+  });
+
+  const persisList=Object.values(grupPersis).filter(g=>g.length>1);
+  const longgarList=Object.values(grupLonggar).filter(g=>g.length>1 && !persisList.some(p=>p[0].tanggal===g[0].tanggal&&p[0].pair===g[0].pair&&p[0].keterangan===g[0].keterangan));
+
+  if(!persisList.length && !longgarList.length){
+    out.innerHTML=`<div style="font-size:10px;color:#4ADE80;text-align:center;padding:10px 0;border:1px solid #14532D;border-radius:8px;background:rgba(74,222,128,.06)">✅ Gak ketemu kandidat duplikat di ${cycle.length} entri bulan ini (dicek dari kombinasi tanggal+pair+jam).</div>`;
+    return;
+  }
+
+  const baris=(e)=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:4px 0;gap:8px">
+      <span style="color:#8A6B26">${fd(e.tanggal)} · ${escapeHtml(e.pair)} · ${escapeHtml(e.keterangan||'-')} · ${e.arah==='profit'?'+':'-'}${e.pips_mentah} pips</span>
+      <span onclick="hapusRemEntry(${e.id})" style="cursor:pointer;color:#F87171;flex-shrink:0">🗑️ Hapus</span>
+    </div>`;
+
+  let html=`<div style="border:1px solid #4A1414;border-radius:8px;padding:10px;background:rgba(248,113,113,.06)">
+    <div style="font-size:10px;font-weight:800;color:#F87171;margin-bottom:6px">⚠️ Ketemu kandidat duplikat — cek satu-satu, hapus yang emang salah (bukan auto-hapus)</div>`;
+
+  if(persisList.length){
+    html+=`<div style="font-size:9px;color:#C89B3C;margin:8px 0 4px">🔴 Kembar PERSIS (tanggal+pair+jam+arah+pips sama semua) — ${persisList.length} grup:</div>`;
+    persisList.forEach(g=>{ html+=`<div style="border-top:1px dashed #4A1414;padding-top:4px;margin-top:4px">${g.map(baris).join('')}</div>`; });
+  }
+  if(longgarList.length){
+    html+=`<div style="font-size:9px;color:#C89B3C;margin:10px 0 4px">🟡 Mirip (tanggal+pair+jam sama, tapi pips/arah beda — mungkin salah ketik) — ${longgarList.length} grup:</div>`;
+    longgarList.forEach(g=>{ html+=`<div style="border-top:1px dashed #4A1414;padding-top:4px;margin-top:4px">${g.map(baris).join('')}</div>`; });
+  }
+  html+=`</div>`;
+  out.innerHTML=html;
+}
+
+async function simpanRemEntry(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const tgl=document.getElementById('remTgl').value;
+  const pair=document.getElementById('remPair').value;
+  const pips=parseFloat(document.getElementById('remPips').value);
+  const jamHRaw=document.getElementById('remJamH').value;
+  const jamMRaw=document.getElementById('remJamM').value;
+  if(!tgl){toast('❌ Isi tanggal dulu');return;}
+  if(!pips || pips<=0){toast('❌ Isi pips (angka positif)');return;}
+  let jam=null;
+  if(jamHRaw!=='' || jamMRaw!==''){
+    const h=parseInt(jamHRaw||'0',10), m=parseInt(jamMRaw||'0',10);
+    if(isNaN(h)||h<0||h>23||isNaN(m)||m<0||m>59){toast('❌ Jam/menit gak valid (jam 0-23, menit 0-59)');return;}
+    jam=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  }
+  const vp=Math.round(pips*(REM_VP_MULTIPLIER[pair]||1)*100)/100;
+  try{
+    await api('rem_entries','POST',{tanggal:tgl, pair, arah:remArahDipilih, pips_mentah:pips, vp, keterangan:jam});
+    toast(`✅ Tercatat: ${remArahDipilih==='profit'?'+':'-'}${vp} VP`);
+    document.getElementById('remPips').value='';
+    document.getElementById('remJamH').value='';
+    document.getElementById('remJamM').value='';
+    document.getElementById('remPreview').textContent='';
+    await loadRemProfitRugi();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan — pastikan tabel "rem_entries" sudah dibuat di Supabase');
+  }
+}
+
+async function hapusRemEntry(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!confirm('Hapus entri ini?'))return;
+  try{
+    await api(`rem_entries?id=eq.${id}`,'DELETE');
+    toast('🗑️ Entri dihapus');
+    await loadRemProfitRugi();
+  }catch(e){ toast('❌ Gagal hapus'); }
+}
+
+async function simpanRemChannelMeta(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const level=document.getElementById('remLevelInput').value;
+  const status=document.getElementById('remStatusInput').value;
+  const subscriber=parseInt(document.getElementById('remSubscriberInput').value)||0;
+  const payload=JSON.stringify({level,status,subscriber});
+  try{
+    const existing=await api('app_settings?select=key&key=eq.rem_channel_meta');
+    if(existing.length) await api('app_settings?key=eq.rem_channel_meta','PATCH',{value:payload});
+    else await api('app_settings','POST',{key:'rem_channel_meta',value:payload});
+    remChannelMeta={level,status,subscriber};
+    toast('✅ Data channel tersimpan — langsung tampil ke semua pengunjung');
+    renderRemScoreDashboard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan data channel');
+  }
+}
+
+// ══ SCORE CHANNEL (REM Trading Family) — mirip skor Trading Family, total 7 metrik × 4 = 28 ══
+// 3 metrik (Level/Status Channel/Subscriber) MANUAL — data dari sistem Trading Family sendiri,
+// gak bisa dihitung dari histori lokal. 4 metrik lain (Profit Factor/Monthly Loss Ratio/Profit
+// Months/Recovery Factor) DIHITUNG OTOMATIS dari remEntries (histori REM di atas) — formula &
+// ambang skornya SAMA PERSIS dengan Score Dashboard utama di beranda (lihat loadScore()), cuma
+// sumber datanya beda: VP per entri REM (field `vp`, sudah dihitung final pas disimpan), bukan
+// profit harian dari saldo_harian. scoreCard()/showInfoSkor() dipakai bareng, jadi tampilannya
+// konsisten dan gak nulis ulang komponen UI. ──
+function renderRemScoreDashboard(){
+  const el=document.getElementById('remScoreDashboard');
+  if(!el) return;
+  const editBox=document.getElementById('remScoreAdminEdit');
+  if(editBox){
+    editBox.style.display = isAdmin ? 'block' : 'none';
+    if(isAdmin){
+      const lv=document.getElementById('remLevelInput'), st=document.getElementById('remStatusInput'), sb=document.getElementById('remSubscriberInput');
+      if(lv && document.activeElement!==lv) lv.value=remChannelMeta.level;
+      if(st && document.activeElement!==st) st.value=remChannelMeta.status;
+      if(sb && document.activeElement!==sb) sb.value=remChannelMeta.subscriber;
+    }
+  }
+
+  // ── Level, Status Channel: skor manual dari remChannelMeta ──
+  const levelSkorMap={Legend:4, Master:2, Elite:1};
+  const levelSkor=levelSkorMap[remChannelMeta.level]||0;
+  const statusSkorMap={Priority:4, Prospect:2};
+  const statusSkor=statusSkorMap[remChannelMeta.status]||0;
+
+  // ── 4 metrik otomatis dari histori REM (rem_entries), 6 bulan terakhir ──
+  const now=new Date();
+  const cutoff=new Date(now.getFullYear(), now.getMonth()-5, 1);
+  const r6=(remEntries||[]).filter(e=>e.tanggal && new Date(e.tanggal)>=cutoff).sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  // ── PENTING: 4 metrik ini (Profit Factor/Monthly Loss Ratio/Profit Months/Recovery Factor)
+  // pakai PIPS MENTAH, BUKAN VP — dokumentasi resmi Traders Family label kolom contoh
+  // perhitungannya eksplisit "(Pips)" ("Nett PL (Pips)", "Gross Profit (Pips)", "Gross Loss
+  // (Pips)"), jadi VP TIDAK dipakai sama sekali di rumus Score Channel ini (beda dari target
+  // REM +500/-1000 yang juga udah dibetulin ke Pips sebelumnya). ──
+  const pipsOf=e=>Math.abs(parseFloat(e.pips_mentah||0));
+
+  // ── Subscriber: skor manual dari remChannelMeta, TAPI dipaksa 0 kalau BULAN LALU (bukan
+  // bulan ini) gak ada signal settle sama sekali — aturan eksplisit dari dokumentasi resmi:
+  // "jika pada bulan sebelumnya analis tidak mempunyai signal settle, maka skor yang diperoleh
+  // adalah 0 poin", apapun jumlah subscriber-nya. ──
+  const bulanLaluAwal=new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const bulanLaluAkhir=new Date(now.getFullYear(), now.getMonth(), 1);
+  const adaSignalBulanLalu=(remEntries||[]).some(e=>{
+    if(!e.tanggal) return false;
+    const d=new Date(e.tanggal);
+    return d>=bulanLaluAwal && d<bulanLaluAkhir;
+  });
+  let subSkor=0;
+  if(adaSignalBulanLalu){
+    if(remChannelMeta.subscriber>=501)subSkor=4; else if(remChannelMeta.subscriber>=201)subSkor=3; else if(remChannelMeta.subscriber>=101)subSkor=2; else if(remChannelMeta.subscriber>=26)subSkor=1;
+  }
+
+  const totalGP=r6.filter(e=>e.arah==='profit').reduce((s,e)=>s+pipsOf(e),0);
+  const totalGL=r6.filter(e=>e.arah==='rugi').reduce((s,e)=>s+pipsOf(e),0);
+  const pf = totalGL>0 ? totalGP/totalGL : (totalGP>0?99:0);
+  let pfSkor=0;
+  if(pf>=2.1)pfSkor=4; else if(pf>=1.7)pfSkor=3; else if(pf>=1.4)pfSkor=2; else if(pf>=1.1)pfSkor=1;
+
+  const grouped={};
+  r6.forEach(e=>{
+    const d=new Date(e.tanggal);
+    const k=`${d.getFullYear()}-${d.getMonth()}`;
+    if(!grouped[k])grouped[k]=0;
+    grouped[k] += (e.arah==='profit' ? pipsOf(e) : -pipsOf(e));
+  });
+  const bulanValues=Object.values(grouped);
+  const bulanUntung=bulanValues.filter(v=>v>0); // ── dipakai Monthly Loss Ratio: "rata-rata profit 6 bulan" = rata-rata bulan yang PROFIT SAJA, bukan rata-rata semua 6 bulan (dikonfirmasi lewat contoh resmi Traders Family: (1500+2000+2500)/3, bukan dibagi 6) ──
+  const bulanProfit=bulanUntung.length;
+  let pmSkor=0;
+  if(bulanProfit>=6)pmSkor=4; else if(bulanProfit>=5)pmSkor=3; else if(bulanProfit>=3)pmSkor=2; else if(bulanProfit>=2)pmSkor=1;
+
+  const avgProfit=bulanUntung.length?bulanUntung.reduce((a,b)=>a+b,0)/bulanUntung.length:0;
+  const worstLoss=Math.min(...bulanValues,0);
+  const mlr=avgProfit>0?Math.abs(worstLoss)/avgProfit*100:0;
+  let mlrSkor=0;
+  if(mlr<=10)mlrSkor=4; else if(mlr<=50)mlrSkor=3; else if(mlr<=100)mlrSkor=2; else if(mlr<=150)mlrSkor=1;
+
+  let peak=0,maxDd=0,cumPL=0;
+  r6.forEach(e=>{
+    cumPL += (e.arah==='profit' ? pipsOf(e) : -pipsOf(e));
+    if(cumPL>peak)peak=cumPL;
+    const dd=peak-cumPL;
+    if(dd>maxDd)maxDd=dd;
+  });
+  const totalNetPL=r6.reduce((s,e)=>s+(e.arah==='profit'?pipsOf(e):-pipsOf(e)),0);
+  const rfVal=maxDd>0?totalNetPL/maxDd:0;
+  let rfSkor=0;
+  if(rfVal>=8)rfSkor=4; else if(rfVal>=5)rfSkor=3; else if(rfVal>=1.01)rfSkor=2; else if(rfVal>=0.01)rfSkor=1;
+
+  const labelOf=s=>s>=3?'High':s>=2?'Medium':'Low';
+  const colorOf=s=>s>=3?'#4ADE80':s>=2?'#C8A84B':'#F87171';
+
+  // ── FORMULA RESMI TRADERS FAMILY (dari tradersfamily.id/support — "Sistem Scoring Channel
+  // Analis") — BUKAN rata-rata sederhana (÷7), tapi RATA-RATA BERBOBOT: tiap skor mentah (0-4)
+  // dikali persentase bobot faktornya masing-masing, baru dijumlah. Bobot totalnya pas 100%.
+  // Sudah diverifikasi manual pakai contoh resmi mereka (Level Master=2, Priority=4, 130
+  // subscriber=2, Profit Factor 1,32=1, Monthly Loss Ratio 40%=3, Profit Months 3=2, Recovery
+  // Factor 3,73=2) → hasilnya 2,29, PERSIS sama dengan contoh di dokumentasi mereka.
+  // KOREKSI (24 Agu 2026): 4 metrik otomatis di atas (Profit Factor/MLR/Profit Months/Recovery
+  // Factor) sebelumnya salah pakai VP, padahal tabel contoh resmi TF eksplisit label kolomnya
+  // "(Pips)" — sekarang sudah dibetulin ke pips_mentah, sama kayak yang udah dibetulin di target
+  // REM +500/-1000 sebelumnya. Bobot & threshold skornya sendiri gak berubah, cuma satuan
+  // datanya yang dikoreksi. ──
+  const BOBOT_SKOR_CHANNEL={level:0.1765, kemitraan:0.1765, subscriber:0.0588, pf:0.1765, mlr:0.1176, pm:0.0588, rf:0.2353};
+  const skorRataRata = levelSkor*BOBOT_SKOR_CHANNEL.level
+    + statusSkor*BOBOT_SKOR_CHANNEL.kemitraan
+    + subSkor*BOBOT_SKOR_CHANNEL.subscriber
+    + pfSkor*BOBOT_SKOR_CHANNEL.pf
+    + mlrSkor*BOBOT_SKOR_CHANNEL.mlr
+    + pmSkor*BOBOT_SKOR_CHANNEL.pm
+    + rfSkor*BOBOT_SKOR_CHANNEL.rf;
+  const totalSkor = levelSkor+statusSkor+subSkor+pfSkor+mlrSkor+pmSkor+rfSkor; // total mentah 0-28, dipakai buat keterangan tambahan aja
+  const skorRataRataTeks = skorRataRata.toFixed(2).replace('.',',');
+  const pct=skorRataRata/4;
+  const angle=-180+pct*180;
+  const rad=(angle+90)*Math.PI/180;
+  const cx=120,cy=100,r=80;
+  const nx=cx+r*Math.cos(rad-Math.PI/2);
+  const ny=cy+r*Math.sin(rad-Math.PI/2);
+
+  el.innerHTML=`
+    <svg viewBox="0 0 240 115" style="width:100%;max-width:280px;display:block;margin:0 auto 12px">
+      <defs>
+        <linearGradient id="remGaugeGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#F87171"/>
+          <stop offset="50%" stop-color="#C8A84B"/>
+          <stop offset="100%" stop-color="#4ADE80"/>
+        </linearGradient>
+      </defs>
+      <path d="M 40,100 A 80,80 0 0,1 200,100" fill="none" stroke="var(--border)" stroke-width="14" stroke-linecap="round"/>
+      <path d="M 40,100 A 80,80 0 0,1 200,100" fill="none" stroke="url(#remGaugeGrad)" stroke-width="12" stroke-linecap="round" opacity="0.8"/>
+      <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#D4AF37" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="${cx}" cy="${cy}" r="5" fill="#D4AF37"/>
+      <text x="28" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">0</text>
+      <text x="212" y="112" font-size="10" fill="#7A5D1F" text-anchor="middle">4</text>
+      <text x="120" y="90" font-size="22" font-weight="800" fill="#D4AF37" text-anchor="middle">${skorRataRataTeks}</text>
+      <text x="120" y="108" font-size="10" fill="#8A6B26" text-anchor="middle">dari 4 (skor mentah total ${totalSkor}/28)</text>
+    </svg>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      ${scoreCard('Level', remChannelMeta.level, levelSkor, labelOf(levelSkor), colorOf(levelSkor))}
+      ${scoreCard('Status Channel', remChannelMeta.status, statusSkor, labelOf(statusSkor), colorOf(statusSkor))}
+      ${scoreCard('Subscriber', remChannelMeta.subscriber+' Investor', subSkor, labelOf(subSkor), colorOf(subSkor))}
+      ${scoreCard('Profit Factor', pf>=99?'∞':pf.toFixed(2), pfSkor, labelOf(pfSkor), colorOf(pfSkor))}
+      ${scoreCard('Monthly Loss Ratio', mlr.toFixed(1)+'%', mlrSkor, labelOf(mlrSkor), colorOf(mlrSkor))}
+      ${scoreCard('Profit Months', bulanProfit+' Bulan', pmSkor, labelOf(pmSkor), colorOf(pmSkor))}
+      ${scoreCard('Recovery Factor', rfVal.toFixed(2), rfSkor, labelOf(rfSkor), colorOf(rfSkor))}
+    </div>`;
+}
+</script>
+
 <!-- GRAFIK BULANAN -->
 <div class="section" id="secGrafikBulanan">
   <div class="sec-title">📈 Grafik Kinerja Bulanan</div>
@@ -2784,6 +3683,7 @@ const SEARCH_MENU=[
   {id:'secBenchmark', icon:'📈', label:'Performance vs Benchmark', desc:'Perbandingan performa vs XAUUSD/BTCUSD pasar', kw:'benchmark perbandingan pasar market vs', cat:'performa'},
   {id:'secKalkulator', icon:'🧮', label:'Kalkulator Agresif — Level 5%', desc:'Risk dikunci flat 5% per level, hitung lot, SL/TP, risk $, breakeven win rate', kw:'kalkulator agresif 5% risiko lot sl tp stop loss take profit breakeven level', cat:'kalkulator'},
   {id:'secKalkulatorFlat2', icon:'🧮', label:'Kalkulator Umum — Flat 2%', desc:'Hitung lot ulang tiap saat dari saldo, risk dikunci 2% (paling aman)', kw:'kalkulator umum flat 2% real time saldo lot risiko dua persen normal standar', cat:'kalkulator'},
+  {id:'secRemProfitRugi', icon:'🛑', label:'Rem Profit & Rugi — Analis Trading Family', desc:'Target tetap +500/−1000 VP per bulan, plus Score Channel (Level/Status/Subscriber/Profit Factor/dll)', kw:'rem profit rugi analis trading family stop 500 1000 pips vp target tetap berhenti sinyal bulan score channel level status kemitraan subscriber profit factor monthly loss ratio recovery factor skor', cat:'kalkulator'},
   {id:'secSewaBeli', icon:'🏠', label:'What-If: Sewa vs Beli Properti', desc:'Simulasi mana lebih untung, sewa atau KPR', kw:'sewa beli properti kpr rumah what if simulasi', cat:'kalkulator'},
   {id:'secInvestorDashboard', icon:'👥', label:'Investor Dashboard', desc:'Login investor lihat porsi modal, profit, ROI', kw:'investor dashboard login kode akses modal roi', cat:'investor'},
   {id:'secInvestorCalc', icon:'🧮', label:'Investor Calculator', desc:'Simulasi potensi return investasi berdasarkan histori', kw:'investor calculator simulasi return investasi', cat:'investor'},
@@ -3120,6 +4020,7 @@ async function loadAll(){
   // Render ulang di sini, setelah SEMUA data itu beneran kelar dimuat, biar kartu investor
   // ikut variabel yang sama persis dengan dashboard/kalkulator — bukan dihitung terpisah. ──
   renderInvestorDashboard();
+  await loadRemProfitRugi();
   checkAndKirimNotifikasi();
 }
 // ══════════════════════════════════════════
@@ -8007,6 +8908,7 @@ async function doLogin(){
     renderBalanceHero();
     if(typeof renderLabelProfilRisiko==='function') renderLabelProfilRisiko();
     renderInvestorDashboard(); // Admin login → buka Investor Dashboard (section ini disembunyikan default dari publik)
+    if(typeof renderRemScoreDashboard==='function') renderRemScoreDashboard(); // tampilkan kotak edit Level/Status/Subscriber
     toast('✅ Masuk sebagai Admin');
   }catch(e){
     await catatPercobaanLogin(emailKey,'admin',false);
@@ -8025,6 +8927,7 @@ async function logout(){
   renderBalanceHero();
     if(typeof renderLabelProfilRisiko==='function') renderLabelProfilRisiko();
   renderInvestorDashboard(); // Admin logout → Investor Dashboard sembunyi lagi total buat publik (kecuali masih login investor)
+  if(typeof renderRemScoreDashboard==='function') renderRemScoreDashboard(); // sembunyikan lagi kotak edit Level/Status/Subscriber
   toast('↩ Keluar dari mode Admin');
 }
 
@@ -8547,10 +9450,9 @@ async function loadScore(){
     const curDdLabelColor=curDdSkor>=3?'#4ADE80':curDdSkor>=2?'#C8A84B':'#F87171';
 
     // ── Total Score & Speedometer ──
-    // Disamakan dengan rumus RESMI Trading Family (weighted average — Level 17,65%, Kemitraan
-    // 17,65%, Subscriber 5,88%, Profit Factor 17,65%, Monthly Loss Ratio 11,76%, Profit Months
-    // 5,88%, Recovery Factor 23,53%) — TAPI tanpa Level/Status Channel/Subscriber (dashboard ini
-    // gak punya field manual itu). Bobot 4 metrik resmi yang dipakai: Profit Factor 17,65%, Monthly
+    // Disamakan dengan rumus RESMI Trading Family (weighted average, lihat BOBOT_SKOR_CHANNEL di
+    // renderRemScoreDashboard()) — TAPI tanpa Level/Status Channel/Subscriber (dashboard ini gak
+    // punya field manual itu). Bobot 4 metrik resmi yang dipakai: Profit Factor 17,65%, Monthly
     // Loss Ratio 11,76%, Profit Months 5,88%, Recovery Factor 23,53% (total 58,82% dari 100% —
     // sisanya 41,18% adalah bobot Level+Kemitraan+Subscriber yang dihapus, TIDAK direnormalisasi,
     // jadi skor maksimal jujur cuma 2,35/4, bukan dipaksa full 4). Max DD vs Modal & Current
