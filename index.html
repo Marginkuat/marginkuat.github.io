@@ -1539,13 +1539,13 @@ function renderInvCalcDisclaimer(){
   <div class="graph-card" style="margin-top:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">⭐ Skor Kredibilitas Channel</div>
-      <span onclick="editScoreMeta()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Level/Status</span>
+      <span onclick="editScoreMeta()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Level/Kemitraan</span>
     </div>
     <div id="scorePairTabs" style="display:flex;gap:6px;margin-bottom:10px">
       <button class="pair-tab active" data-sp="XAUUSD" onclick="setScoreCardPairGroup('XAUUSD')" style="flex:1;padding:6px;font-size:10px">XAUUSD</button>
       <button class="pair-tab" data-sp="FOREX" onclick="setScoreCardPairGroup('FOREX')" style="flex:1;padding:6px;font-size:10px">Forex</button>
     </div>
-    <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Skor 0–4 dihitung otomatis dari catatan trading pair ini (Profit Factor, Monthly Loss Ratio, Profit Months, Recovery Factor) + jumlah investor tercatat + Level/Status yang admin atur manual. <b>Catatan:</b> ambang skor (batas Low/Medium/High) di sini ditentukan sendiri berdasarkan standar umum trading, BUKAN meniru persis rumus rahasia platform pihak ketiga manapun.</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Skor 0–4 mengikuti rumus resmi (Level, Kemitraan, Subscriber, Profit Factor, Monthly Loss Ratio, Profit Months, Recovery Factor — masing-masing dibobot beda, dihitung dari rolling 6 bulan terakhir). Level &amp; Kemitraan admin atur manual (tombol di atas); sisanya otomatis dari catatan trading pair ini + jumlah investor. Channel &lt;6 bulan belum dapat skor.</div>
     <div id="scoreCardWrap">
       <div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div>
     </div>
@@ -3677,10 +3677,25 @@ function setTargetCardPairGroup(g){
 // bawah ini rumusan sendiri (standar umum trading), BUKAN reverse-engineer rumus rahasia
 // platform pihak ketiga manapun — karena rumus asli mereka tidak dipublikasikan.
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// SKOR KREDIBILITAS CHANNEL (0–4) — per grup pair (XAUUSD / FOREX)
+// Rumus mengikuti PERSIS ketentuan resmi platform "Traders Family" (dikirim user via
+// screenshot FAQ mereka): 7 faktor, masing-masing dibobot beda, dihitung dari ROLLING 6 BULAN
+// TERAKHIR (6 bulan kalender penuh SEBELUM bulan berjalan — sama seperti contoh resminya:
+// skor bulan Juli dihitung dari data Jan-Jun). Channel yang umurnya <6 bulan belum dapat skor.
+// ══════════════════════════════════════════
+const SCORE_LEVEL_MAP={'Legend':4,'Master':2,'Elite':1,'Newbie':0,'Rookie':0,'Pro':0};
+const SCORE_LEVEL_OPTIONS=['Newbie','Rookie','Pro','Elite','Master','Legend'];
+const SCORE_KEMITRAAN_MAP={'Priority Channel':4,'Prospect Channel':2,'Basic Channel':0};
+const SCORE_KEMITRAAN_OPTIONS=['Basic Channel','Prospect Channel','Priority Channel'];
+// Bobot faktor dalam satuan "per 17" (3/17≈17,65% ; 1/17≈5,88% ; 2/17≈11,76% ; 4/17≈23,53% — persis tabel resminya)
+const SCORE_BOBOT={level:3, kemitraan:3, subscriber:1, profitFactor:3, monthlyLossRatio:2, profitMonths:1, recoveryFactor:4};
+const SCORE_BOBOT_TOTAL_UNIT=17;
+
 let scoreCardPairGroup='XAUUSD';
 let cachedScoreMeta={
-  XAUUSD:{level:'Newbie', levelScore:0, statusChannel:'Basic', statusScore:0},
-  FOREX:{level:'Newbie', levelScore:0, statusChannel:'Basic', statusScore:0}
+  XAUUSD:{level:'Newbie', kemitraan:'Basic Channel'},
+  FOREX:{level:'Newbie', kemitraan:'Basic Channel'}
 };
 let cachedInvestorCountForScore=0;
 async function loadScoreMeta(){
@@ -3690,10 +3705,8 @@ async function loadScoreMeta(){
       if(rows && rows.length){
         const parsed=JSON.parse(rows[0].value);
         if(parsed) cachedScoreMeta[g]={
-          level: parsed.level||'Newbie',
-          levelScore: Math.max(0,Math.min(4, parseInt(parsed.levelScore)||0)),
-          statusChannel: parsed.statusChannel||'Basic',
-          statusScore: Math.max(0,Math.min(4, parseInt(parsed.statusScore)||0))
+          level: SCORE_LEVEL_OPTIONS.includes(parsed.level) ? parsed.level : 'Newbie',
+          kemitraan: SCORE_KEMITRAAN_OPTIONS.includes(parsed.kemitraan) ? parsed.kemitraan : 'Basic Channel'
         };
       }
     }catch(e){ console.error('Gagal load score_meta_'+g, e); }
@@ -3704,24 +3717,19 @@ async function loadScoreMeta(){
   }catch(e){ console.error('Gagal load jumlah investor untuk skor', e); }
 }
 async function editScoreMeta(){
-  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah Level/Status');return;}
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah Level/Kemitraan');return;}
   const g=scoreCardPairGroup||'XAUUSD';
   const labelGrup=g==='FOREX'?'Forex':g;
   const cur=cachedScoreMeta[g];
-  const levelInput=prompt(`[${labelGrup}] Nama Level channel (mis. Newbie / Rising / Pro / Elite):`, cur.level);
+  const levelInput=prompt(`[${labelGrup}] Level channel — ketik PERSIS salah satu:\n${SCORE_LEVEL_OPTIONS.join(' / ')}`, cur.level);
   if(levelInput===null)return;
-  const levelScoreInput=prompt(`[${labelGrup}] Skor Level (0-4):`, String(cur.levelScore));
-  if(levelScoreInput===null)return;
-  const statusInput=prompt(`[${labelGrup}] Nama Status Channel (mis. Basic / Verified / Premium):`, cur.statusChannel);
-  if(statusInput===null)return;
-  const statusScoreInput=prompt(`[${labelGrup}] Skor Status Channel (0-4):`, String(cur.statusScore));
-  if(statusScoreInput===null)return;
-  const newMeta={
-    level: levelInput.trim()||'Newbie',
-    levelScore: Math.max(0,Math.min(4, parseInt(levelScoreInput)||0)),
-    statusChannel: statusInput.trim()||'Basic',
-    statusScore: Math.max(0,Math.min(4, parseInt(statusScoreInput)||0))
-  };
+  const levelMatch=SCORE_LEVEL_OPTIONS.find(o=>o.toLowerCase()===levelInput.trim().toLowerCase());
+  if(!levelMatch){toast('❌ Nama level tidak dikenali — harus persis salah satu: '+SCORE_LEVEL_OPTIONS.join(', '));return;}
+  const kemInput=prompt(`[${labelGrup}] Status Kemitraan — ketik PERSIS salah satu:\n${SCORE_KEMITRAAN_OPTIONS.join(' / ')}`, cur.kemitraan);
+  if(kemInput===null)return;
+  const kemMatch=SCORE_KEMITRAAN_OPTIONS.find(o=>o.toLowerCase()===kemInput.trim().toLowerCase());
+  if(!kemMatch){toast('❌ Nama status kemitraan tidak dikenali — harus persis salah satu: '+SCORE_KEMITRAAN_OPTIONS.join(', '));return;}
+  const newMeta={level:levelMatch, kemitraan:kemMatch};
   try{
     const payload=JSON.stringify(newMeta);
     const key='score_meta_'+g;
@@ -3729,11 +3737,11 @@ async function editScoreMeta(){
     if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:payload}); }
     else{ await api('app_settings','POST',{key,value:payload}); }
     cachedScoreMeta[g]=newMeta;
-    toast(`✅ Level/Status ${labelGrup} diperbarui untuk semua pengunjung`);
+    toast(`✅ Level/Kemitraan ${labelGrup} diperbarui untuk semua pengunjung`);
     renderScoreCard();
   }catch(e){
     console.error(e);
-    toast('❌ Gagal simpan Level/Status ke server: '+(e.message||'').slice(0,120));
+    toast('❌ Gagal simpan Level/Kemitraan ke server: '+(e.message||'').slice(0,120));
   }
 }
 function setScoreCardPairGroup(g){
@@ -3741,34 +3749,64 @@ function setScoreCardPairGroup(g){
   document.querySelectorAll('#scorePairTabs .pair-tab').forEach(b=>b.classList.toggle('active', b.dataset.sp===g));
   renderScoreCard();
 }
-// Hitung 4 metrik objektif dari data saldo_harian, difilter ke pair tertentu, SELURUH histori
-// (bukan cuma bulan berjalan) — biar sampelnya cukup buat metrik bulanan (Profit Months dkk).
+// 6 kunci bulan kalender ("YYYY-MM"), dari yang terlama ke terbaru, TIDAK termasuk bulan berjalan
+// — persis pola contoh resminya (skor Juli dihitung dari Jan-Jun, bukan ikut Juli yang masih jalan).
+function getRolling6MonthKeys(){
+  const now=new Date();
+  const keys=[];
+  for(let i=6;i>=1;i--){
+    const d=new Date(now.getFullYear(), now.getMonth()-i, 1);
+    keys.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
+  }
+  return keys;
+}
+function bulanKeyOf(tanggal){
+  const d=new Date(tanggal);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+// Cek ada catatan sinyal settle di BULAN LALU (dipakai buat aturan khusus: kalau bulan lalu
+// nggak ada sinyal settle sama sekali, skor Subscriber otomatis 0 — sesuai ketentuan resmi).
+function adaSinyalBulanLalu(pairGroup){
+  const g=pairGroup||'XAUUSD';
+  const now=new Date();
+  const prev=new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const key=prev.getFullYear()+'-'+String(prev.getMonth()+1).padStart(2,'0');
+  return (allSaldoData||[]).some(r=>(r.pair||'XAUUSD')===g && bulanKeyOf(r.tanggal)===key);
+}
 function computeScoreMetrics(pairGroup){
   const g=pairGroup||'XAUUSD';
-  const rows=(allSaldoData||[]).filter(r=>(r.pair||'XAUUSD')===g);
-  if(!rows.length) return null;
+  const allRowsGroup=(allSaldoData||[]).filter(r=>(r.pair||'XAUUSD')===g);
+  if(!allRowsGroup.length) return null;
 
-  // Profit Factor: total profit harian (yg positif) / total loss harian (yg negatif, absolut)
+  const earliestDate=new Date(allRowsGroup.slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal))[0].tanggal);
+  const umurHari=(new Date()-earliestDate)/(1000*60*60*24);
+  const cukupUmur = umurHari>=182; // ±6 bulan, sesuai syarat resmi "channel minimal 6 bulan"
+
+  const bulanKeys=getRolling6MonthKeys();
+  const rows6bln=allRowsGroup.filter(r=>bulanKeys.includes(bulanKeyOf(r.tanggal)));
+
+  // Profit Factor = Gross Profit 6 bulan terakhir : Gross Loss 6 bulan terakhir (level harian, dijumlah)
   let grossProfit=0, grossLoss=0;
-  rows.forEach(r=>{ const p=parseFloat(r.profit||0); if(p>0) grossProfit+=p; else grossLoss+=Math.abs(p); });
+  rows6bln.forEach(r=>{ const p=parseFloat(r.profit||0); if(p>0) grossProfit+=p; else grossLoss+=Math.abs(p); });
   const profitFactor = grossLoss>0 ? grossProfit/grossLoss : (grossProfit>0 ? Infinity : 0);
 
-  // Kelompokkan per bulan kalender buat Monthly Loss Ratio & Profit Months
+  // Kelompokkan per bulan (cuma bulan yang beneran ada datanya)
   const perBulan={};
-  rows.forEach(r=>{
-    const d=new Date(r.tanggal);
-    const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-    perBulan[key]=(perBulan[key]||0)+parseFloat(r.profit||0);
-  });
-  const bulanKeys=Object.keys(perBulan).sort();
-  const totalMonths=bulanKeys.length;
-  const profitMonths=bulanKeys.filter(k=>perBulan[k]>0).length;
-  let profitBulanPositif=0, lossBulanNegatif=0;
-  bulanKeys.forEach(k=>{ if(perBulan[k]>0) profitBulanPositif+=perBulan[k]; else lossBulanNegatif+=Math.abs(perBulan[k]); });
-  const monthlyLossRatio = profitBulanPositif>0 ? (lossBulanNegatif/profitBulanPositif*100) : (lossBulanNegatif>0 ? Infinity : 0);
+  rows6bln.forEach(r=>{ const key=bulanKeyOf(r.tanggal); perBulan[key]=(perBulan[key]||0)+parseFloat(r.profit||0); });
+  const netMonthly=Object.values(perBulan);
+  const profitMonths=netMonthly.filter(v=>v>0).length;
 
-  // Recovery Factor: net profit keseluruhan / max drawdown dari kurva ekuitas kumulatif (harian, urut tanggal)
-  const rowsUrut=rows.slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  // Monthly Loss Ratio = (Loss TERBESAR 6 bulan terakhir : rata-rata PROFIT 6 bulan terakhir) x 100%
+  const lossTerbesar = netMonthly.length ? Math.abs(Math.min(0, Math.min(...netMonthly))) : 0;
+  const profitVals=netMonthly.filter(v=>v>0);
+  const rataRataProfit = profitVals.length ? profitVals.reduce((a,b)=>a+b,0)/profitVals.length : 0;
+  const monthlyLossRatio = rataRataProfit>0 ? (lossTerbesar/rataRataProfit*100) : (lossTerbesar>0 ? Infinity : 0);
+
+  // Recovery Factor = Nett P/L 6 bulan terakhir : Drawdown terbesar 6 bulan terakhir.
+  // Drawdown dihitung dari kurva ekuitas HARIAN (bukan cuma total bulanan) — ini standar &
+  // lebih akurat, karena drawdown riil bisa terjadi di TENGAH bulan yang tak kelihatan kalau
+  // cuma lihat total bulanan.
+  const rowsUrut=rows6bln.slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
   let kumulatif=0, puncak=0, maxDD=0;
   rowsUrut.forEach(r=>{
     kumulatif+=parseFloat(r.profit||0);
@@ -3776,58 +3814,89 @@ function computeScoreMetrics(pairGroup){
     const dd=puncak-kumulatif;
     if(dd>maxDD) maxDD=dd;
   });
-  const netProfit=kumulatif;
-  const recoveryFactor = maxDD>0 ? netProfit/maxDD : (netProfit>0 ? Infinity : 0);
+  const netProfit6bln=kumulatif;
+  const recoveryFactor = maxDD>0 ? netProfit6bln/maxDD : (netProfit6bln>0 ? Infinity : 0);
 
-  return {profitFactor, monthlyLossRatio, profitMonths, totalMonths, recoveryFactor, netProfit, maxDD, grossProfit, grossLoss};
+  return {cukupUmur, umurHari, profitFactor, monthlyLossRatio, profitMonths, totalBulanAdaData:netMonthly.length, recoveryFactor, netProfit6bln, maxDD, grossProfit, grossLoss, lossTerbesar, rataRataProfit};
 }
-// Ambang batas Low(0-1)/Medium(2)/High(3-4) — rumusan sendiri, lihat catatan di atas.
+// ── Ambang batas skor 0-4 PERSIS tabel resmi Traders Family ──
+function bandLevel(levelName){ return SCORE_LEVEL_MAP[levelName]!=null ? SCORE_LEVEL_MAP[levelName] : 0; }
+function bandKemitraan(name){ return SCORE_KEMITRAAN_MAP[name]!=null ? SCORE_KEMITRAAN_MAP[name] : 0; }
+function bandSubscriber(n, adaSignalBulanLalu){
+  if(!adaSignalBulanLalu) return 0; // aturan resmi: bulan lalu tanpa sinyal settle = otomatis 0
+  if(n>=501) return 4; if(n>=201) return 3; if(n>=101) return 2; if(n>=26) return 1; return 0;
+}
 function bandProfitFactor(v){
   if(!isFinite(v)) return 4;
-  if(v<1) return 0; if(v<1.25) return 1; if(v<1.5) return 2; if(v<2) return 3; return 4;
+  if(v>=2.1) return 4; if(v>=1.7) return 3; if(v>=1.4) return 2; if(v>=1.1) return 1; return 0;
 }
 function bandMonthlyLossRatio(v){ // makin kecil makin bagus
   if(!isFinite(v)) return 0;
-  if(v>=120) return 0; if(v>=90) return 1; if(v>=60) return 2; if(v>=30) return 3; return 4;
+  if(v<=10) return 4; if(v<=50) return 3; if(v<=100) return 2; if(v<=150) return 1; return 0;
 }
-function bandProfitMonths(profitMonths, totalMonths){
-  if(!totalMonths) return 0;
-  const rasio=profitMonths/totalMonths;
-  if(rasio<0.25) return 0; if(rasio<0.45) return 1; if(rasio<0.6) return 2; if(rasio<0.8) return 3; return 4;
+function bandProfitMonths(n){
+  if(n>=6) return 4; if(n===5) return 3; if(n>=3) return 2; if(n===2) return 1; return 0;
 }
 function bandRecoveryFactor(v){
   if(!isFinite(v)) return 4;
-  if(v<0) return 0; if(v<0.5) return 1; if(v<1) return 2; if(v<2) return 3; return 4;
-}
-function bandSubscriber(n){
-  if(n<=0) return 0; if(n<=2) return 1; if(n<=5) return 2; if(n<=10) return 3; return 4;
+  if(v>=8) return 4; if(v>=5) return 3; if(v>=1.01) return 2; if(v>=0.01) return 1; return 0;
 }
 function scoreLabel(score){ return score<=1?{teks:'Low',warna:'#D9534F'}:score===2?{teks:'Medium',warna:'#C99A2E'}:{teks:'High',warna:'#3E9142'}; }
+// Total skor tertimbang (weighted average) — PERSIS metodologi resmi: Σ(skor × bobot) / total_unit_bobot
+function hitungTotalSkorTertimbang(scores){
+  let sum=0;
+  for(const k in SCORE_BOBOT) sum += (scores[k]||0)*SCORE_BOBOT[k];
+  return sum/SCORE_BOBOT_TOTAL_UNIT;
+}
+// Rekomendasi range harga channel berdasarkan Total Skor — PERSIS tabel resmi
+function getRangeHargaChannel(totalSkor){
+  if(totalSkor<=2) return {min:77000, max:200000};
+  if(totalSkor<=3) return {min:177000, max:300000};
+  if(totalSkor<=3.5) return {min:277000, max:400000};
+  return {min:377000, max:500000};
+}
+function fmtRupiah(n){ return 'Rp'+Math.round(n).toLocaleString('id-ID'); }
 function renderScoreCard(){
   const wrap=document.getElementById('scoreCardWrap');
   if(!wrap) return;
   const g=scoreCardPairGroup||'XAUUSD';
   const labelGrup=g==='FOREX'?'Forex':g;
   const m=computeScoreMetrics(g);
-  const meta=cachedScoreMeta[g]||{level:'Newbie',levelScore:0,statusChannel:'Basic',statusScore:0};
+  const meta=cachedScoreMeta[g]||{level:'Newbie', kemitraan:'Basic Channel'};
 
   if(!m){
     wrap.innerHTML=`<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:10px">Belum ada catatan trading ${labelGrup} untuk dihitung skornya.</div>`;
     return;
   }
+  if(!m.cukupUmur){
+    const sisaHari=Math.max(0, Math.ceil(182-m.umurHari));
+    wrap.innerHTML=`<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:10px;line-height:1.6">
+      Channel ${labelGrup} baru berjalan <b>${Math.floor(m.umurHari)} hari</b> — syarat skor minimal ~6 bulan (182 hari).<br>
+      Sisa ±${sisaHari} hari lagi. Sementara ini channel dianggap "channel free" (belum punya skor/rekomendasi harga).
+    </div>`;
+    return;
+  }
 
-  const sSubs=bandSubscriber(cachedInvestorCountForScore);
+  const adaSinyal=adaSinyalBulanLalu(g);
+  const sLevel=bandLevel(meta.level);
+  const sKem=bandKemitraan(meta.kemitraan);
+  const sSubs=bandSubscriber(cachedInvestorCountForScore, adaSinyal);
   const sPF=bandProfitFactor(m.profitFactor);
   const sMLR=bandMonthlyLossRatio(m.monthlyLossRatio);
-  const sPM=bandProfitMonths(m.profitMonths, m.totalMonths);
+  const sPM=bandProfitMonths(m.profitMonths);
   const sRF=bandRecoveryFactor(m.recoveryFactor);
-  const semuaSkor=[meta.levelScore, meta.statusScore, sSubs, sPF, sMLR, sPM, sRF];
-  const skorRerata=semuaSkor.reduce((a,b)=>a+b,0)/semuaSkor.length;
+  const scores={level:sLevel, kemitraan:sKem, subscriber:sSubs, profitFactor:sPF, monthlyLossRatio:sMLR, profitMonths:sPM, recoveryFactor:sRF};
+  const totalSkor=hitungTotalSkorTertimbang(scores);
+  const range=getRangeHargaChannel(totalSkor);
+  const isLevelRendah = SCORE_LEVEL_MAP[meta.level]===0; // Newbie/Rookie/Pro
 
-  const kotak=(judul,nilaiTeks,score)=>{
+  const kotak=(judul,nilaiTeks,score,bobotPersen)=>{
     const lb=scoreLabel(score);
     return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px">
-      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${judul}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">${judul}</div>
+        <div style="font-size:8px;color:#A08840">bobot ${bobotPersen}%</div>
+      </div>
       <div style="font-size:11px;color:#3A2E10;margin-bottom:6px">${nilaiTeks}</div>
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-size:14px;font-weight:800;color:#3A2E10">${score}<span style="font-size:9px;color:#8A6B26;font-weight:400">/4</span></span>
@@ -3839,21 +3908,28 @@ function renderScoreCard(){
   const pfTeks = isFinite(m.profitFactor) ? m.profitFactor.toFixed(2) : '∞';
   const mlrTeks = isFinite(m.monthlyLossRatio) ? m.monthlyLossRatio.toFixed(1)+'%' : '∞';
   const rfTeks = isFinite(m.recoveryFactor) ? m.recoveryFactor.toFixed(2) : '∞';
+  const bobotPersenOf=(k)=> (SCORE_BOBOT[k]/SCORE_BOBOT_TOTAL_UNIT*100).toFixed(2);
 
   wrap.innerHTML=`
-    <div style="text-align:center;margin-bottom:14px">
-      <div style="font-size:32px;font-weight:800;color:#3A2E10">${skorRerata.toFixed(2)}<span style="font-size:14px;color:#8A6B26;font-weight:400">/4</span></div>
-      <div style="font-size:9px;color:#8A6B26">Skor rata-rata ${labelGrup} — dari 7 metrik di bawah</div>
+    <div style="text-align:center;margin-bottom:12px">
+      <div style="font-size:32px;font-weight:800;color:#3A2E10">${totalSkor.toFixed(2)}<span style="font-size:14px;color:#8A6B26;font-weight:400">/4</span></div>
+      <div style="font-size:9px;color:#8A6B26">Total Skor ${labelGrup} (rata-rata tertimbang, rolling 6 bulan terakhir)</div>
+    </div>
+    <div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:center">
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Rekomendasi Harga Channel</div>
+      <div style="font-size:15px;font-weight:800;color:#D4AF37">${fmtRupiah(range.min)} – ${fmtRupiah(range.max)}</div>
+      ${isLevelRendah?`<div style="font-size:8px;color:#8A6B26;margin-top:3px">Level ${meta.level} → boleh pakai harga MINIMUM di range ini, atau digratiskan (Free)</div>`:''}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      ${kotak('Level', meta.level, meta.levelScore)}
-      ${kotak('Status Channel', meta.statusChannel, meta.statusScore)}
-      ${kotak('Subscriber', cachedInvestorCountForScore+' Investor', sSubs)}
-      ${kotak('Profit Factor', pfTeks, sPF)}
-      ${kotak('Mthly. Loss Ratio', mlrTeks, sMLR)}
-      ${kotak('Profit Months', m.profitMonths+' / '+m.totalMonths+' bulan', sPM)}
-      ${kotak('Recovery Factor', rfTeks, sRF)}
-    </div>`;
+      ${kotak('Level', meta.level, sLevel, bobotPersenOf('level'))}
+      ${kotak('Kemitraan', meta.kemitraan, sKem, bobotPersenOf('kemitraan'))}
+      ${kotak('Subscriber', cachedInvestorCountForScore+' Investor'+(adaSinyal?'':' (0 — bulan lalu tanpa sinyal settle)'), sSubs, bobotPersenOf('subscriber'))}
+      ${kotak('Profit Factor', pfTeks, sPF, bobotPersenOf('profitFactor'))}
+      ${kotak('Mthly. Loss Ratio', mlrTeks, sMLR, bobotPersenOf('monthlyLossRatio'))}
+      ${kotak('Profit Months', m.profitMonths+' / 6 bulan', sPM, bobotPersenOf('profitMonths'))}
+      ${kotak('Recovery Factor', rfTeks, sRF, bobotPersenOf('recoveryFactor'))}
+    </div>
+    <div style="font-size:8px;color:#8A6B26;margin-top:10px;line-height:1.5">Rolling 6 bulan: ${getRolling6MonthKeys()[0]} s/d ${getRolling6MonthKeys()[5]}. Total Skor = Σ(skor faktor × bobotnya) ÷ 17. Sesuai ketentuan resmi, harga bisa diubah manual sekali di tanggal 1–3 tiap bulan; sistem ini BELUM auto-adjust otomatis tiap tanggal 1 — anggap kotak rekomendasi harga di atas sebagai acuan yang kamu terapkan manual.</div>`;
 }
 function renderTargetProgress(basisSaldo, isBulanIniAktif){
   const wrap=document.getElementById('targetProgressWrap');
