@@ -1536,7 +1536,7 @@ function renderInvCalcDisclaimer(){
     </div>
   </div>
 
-  <div class="graph-card" style="margin-top:12px">
+  <div class="graph-card" id="secSkorChannel" style="margin-top:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">⭐ Skor Kredibilitas Channel</div>
       <span onclick="editScoreMeta()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Level/Kemitraan</span>
@@ -2876,6 +2876,7 @@ const SEARCH_MENU=[
   {id:'secPortofolioSaham', icon:'📈', label:'Dashboard Portofolio Saham', desc:'Ringkasan saham yang dipegang, gain/loss', kw:'portofolio saham dashboard gain loss lot lembar', cat:'keuangan'},
   {id:'secPortofolioInvestasi', icon:'📊', label:'Investment Portfolio Dashboard', desc:'Breakdown investasi di luar MT4 dari Neraca', kw:'investment portfolio dashboard neraca aset reksadana deposito obligasi', cat:'keuangan'},
   {id:'secGrafikBulanan', icon:'📈', label:'Grafik Kinerja Bulanan & Target', desc:'Grafik profit bulanan dan progress target', kw:'grafik kinerja bulanan target bulan ini progress', cat:'grafik'},
+  {id:'secSkorChannel', icon:'⭐', label:'Skor Kredibilitas Channel', desc:'Skor 0-4: Level, Kemitraan, Subscriber, Profit Factor, Monthly Loss Ratio, Profit Months, Recovery Factor — XAUUSD & Forex terpisah, plus rekomendasi harga channel', kw:'skor kredibilitas channel score level kemitraan subscriber profit factor monthly loss ratio profit months recovery factor rekomendasi harga channel traders family', cat:'grafik'},
   {id:'secPerbandingan', icon:'📊', label:'Perbandingan Bulanan', desc:'Bandingkan performa antar bulan', kw:'perbandingan bulanan monthly comparison', cat:'grafik'},
   {id:'secBukuTrading', icon:'📖', label:'Buku Trading (Cerita Bulanan)', desc:'Tulis rangkuman cerita tiap bulan, jadi bahan buku setelah 1 tahun', kw:'buku trading cerita bulanan jurnal diary pengalaman naskah menulis bab', cat:'jurnal'},
   {id:'secKalender', icon:'📅', label:'Kalender Trading', desc:'Kalender harian profit/loss', kw:'kalender trading calendar harian', cat:'grafik'},
