@@ -1521,11 +1521,15 @@ function renderInvCalcDisclaimer(){
     <div id="graphSvgWrap" style="position:relative"></div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">🚦 Batas Bulanan (Circuit Breaker)</div>
         <span onclick="editTargetBulanan()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Target</span>
       </div>
-      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Batas dua arah: kena +target = berhenti karena udah cuan, kena -target = REM wajib stop loss trading bulan ini. Bisa diatur pakai % dari saldo awal bulan atau nominal $ tetap. Khusus mode %, acuannya bisa dikunci ke saldo awal bulan ATAU ikut saldo real-time (link "🔄 Ganti" di bawah progress bar) — real-time cocok kalau sering ada deposit/WD investor di tengah bulan.</div>
+      <div id="targetPairTabs" style="display:flex;gap:6px;margin-bottom:8px">
+        <button class="pair-tab active" data-tp="XAUUSD" onclick="setTargetCardPairGroup('XAUUSD')" style="flex:1;padding:6px;font-size:10px">XAUUSD</button>
+        <button class="pair-tab" data-tp="FOREX" onclick="setTargetCardPairGroup('FOREX')" style="flex:1;padding:6px;font-size:10px">Forex</button>
+      </div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Batas dua arah: kena +target = berhenti karena udah cuan, kena -target = REM wajib stop loss trading bulan ini. XAUUSD &amp; Forex punya target/batas SENDIRI-SENDIRI (pilih tab di atas) — dihitung dari P/L harian yang pair-nya sesuai. Bisa diatur pakai % dari saldo awal bulan atau nominal $ tetap. Khusus mode %, acuannya bisa dikunci ke saldo awal bulan ATAU ikut saldo real-time (link "🔄 Ganti" di bawah progress bar) — real-time cocok kalau sering ada deposit/WD investor di tengah bulan.</div>
       <div id="targetProgressWrap">
         <div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div>
       </div>
@@ -3478,7 +3482,7 @@ function renderGraph(){
   const nowForBasis=new Date();
   const isBulanIniAktif = (graphYear===nowForBasis.getFullYear() && graphMonth===nowForBasis.getMonth());
   const basisUntukTarget = (isBulanIniAktif && getRemBasisMode()==='real_time' && (lastSaldoTerakhir||0)>0) ? lastSaldoTerakhir : saldoAwalBulan;
-  renderTargetProgress(total, basisUntukTarget, isBulanIniAktif);
+  renderTargetProgress(basisUntukTarget, isBulanIniAktif);
 }
 
 // ══ BATAS BULANAN (CIRCUIT BREAKER) — DUA ARAH, DUA MODE ══
@@ -3488,7 +3492,28 @@ function renderGraph(){
 //   - mode 'persen': batas atas/bawah = ±(value% dari saldo awal bulan berjalan)
 //   - mode 'fixed': batas atas/bawah = ±(value dalam ¢/sen, tetap tiap bulan)
 // Kompatibel mundur: kalau isi lama cuma angka polos (bukan JSON), dianggap mode 'fixed'.
-let cachedTargetBulanan={mode:'persen', value:10}; // default sebelum data server kebaca
+// ── REM/Target kini TERPISAH per grup pair (XAUUSD / FOREX / BTCUSD) — sebelumnya cuma satu
+// nilai gabungan untuk seluruh akun. Key lama 'target_bulanan' (tanpa suffix) dipertahankan
+// sebagai fallback/migrasi: kalau grup tertentu belum pernah diatur sendiri, dia pakai nilai
+// lama itu sebagai starting point (nilai lama itu biasanya representasi XAUUSD, karena situs
+// ini awalnya cuma dipakai untuk XAUUSD). ──
+let cachedTargetBulananByPair={
+  XAUUSD:{mode:'persen', value:10},
+  FOREX:{mode:'persen', value:10},
+  BTCUSD:{mode:'persen', value:10}
+}; // default sebelum data server kebaca
+function parseTargetCfgRaw(raw){
+  try{
+    const parsed=JSON.parse(raw);
+    if(parsed && parsed.mode && !isNaN(parseFloat(parsed.value))){
+      return {mode:parsed.mode==='fixed'?'fixed':'persen', value:parseFloat(parsed.value)};
+    }
+  }catch(_){
+    const v=parseFloat(raw);
+    if(!isNaN(v)) return {mode:'fixed', value:v};
+  }
+  return null;
+}
 // ── Acuan basis buat mode 'persen': 'awal_bulan' (dikunci ke saldo awal bulan, LAMA/default)
 // atau 'real_time' (ikut saldo berjalan sekarang — otomatis nyesuain kalau ada deposit/WD
 // investor di tengah bulan, biar % REM selalu proporsional ke modal SEKARANG, bukan modal
@@ -3528,32 +3553,36 @@ async function toggleRemBasisMode(){
   }
 }
 async function loadTargetBulanan(){
+  let legacyCfg=null;
   try{
-    const rows=await api('app_settings?select=value&key=eq.target_bulanan');
-    if(rows && rows.length){
-      const raw=rows[0].value;
-      try{
-        const parsed=JSON.parse(raw);
-        if(parsed && parsed.mode && !isNaN(parseFloat(parsed.value))){
-          cachedTargetBulanan={mode:parsed.mode==='fixed'?'fixed':'persen', value:parseFloat(parsed.value)};
-        }
-      }catch(_){
-        // format lama: angka polos = nominal $ tetap
-        const v=parseFloat(raw);
-        if(!isNaN(v)) cachedTargetBulanan={mode:'fixed', value:v};
-      }
-    }
+    const legacyRows=await api('app_settings?select=value&key=eq.target_bulanan');
+    if(legacyRows && legacyRows.length) legacyCfg=parseTargetCfgRaw(legacyRows[0].value);
   }catch(e){
-    console.error('Gagal load target bulanan dari server, pakai default/cache terakhir', e);
+    console.error('Gagal load target bulanan (legacy) dari server, pakai default/cache terakhir', e);
+  }
+  for(const g of ['XAUUSD','FOREX','BTCUSD']){
+    try{
+      const rows=await api('app_settings?select=value&key=eq.target_bulanan_'+g);
+      if(rows && rows.length){
+        const cfg=parseTargetCfgRaw(rows[0].value);
+        if(cfg) cachedTargetBulananByPair[g]=cfg;
+      }else if(legacyCfg){
+        // Belum pernah diatur khusus buat grup ini — pakai nilai lama (gabungan) sebagai default.
+        cachedTargetBulananByPair[g]=legacyCfg;
+      }
+    }catch(e){
+      console.error('Gagal load target_bulanan_'+g+' dari server, pakai default/cache terakhir', e);
+    }
   }
 }
-function getTargetBulanan(){
-  return cachedTargetBulanan;
+function getTargetBulanan(pairGroup){
+  const g=pairGroup||'XAUUSD';
+  return cachedTargetBulananByPair[g]||cachedTargetBulananByPair.XAUUSD;
 }
-// Hitung batas atas (+) dan batas bawah (-) dalam ¢/sen, berdasar mode aktif.
+// Hitung batas atas (+) dan batas bawah (-) dalam ¢/sen, berdasar mode aktif grup pair tsb.
 // saldoAwalBulan dibutuhkan untuk mode 'persen' — kalau 0/tidak ada, mode persen gak bisa dihitung.
-function hitungBatasBulanan(saldoAwalBulan){
-  const cfg=getTargetBulanan();
+function hitungBatasBulanan(saldoAwalBulan, pairGroup){
+  const cfg=getTargetBulanan(pairGroup);
   let batas;
   if(cfg.mode==='persen'){
     batas = saldoAwalBulan>0 ? (saldoAwalBulan*cfg.value/100) : 0;
@@ -3564,9 +3593,11 @@ function hitungBatasBulanan(saldoAwalBulan){
 }
 async function editTargetBulanan(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah target');return;}
-  const cur=getTargetBulanan();
+  const pairGroup=targetCardPairGroup||'XAUUSD';
+  const labelGrup = pairGroup==='FOREX' ? 'Forex' : pairGroup;
+  const cur=getTargetBulanan(pairGroup);
   const contoh = cur.mode==='persen' ? cur.value+'%' : String(cur.value);
-  const input=prompt('Ketik batas profit/loss bulanan (dua arah, +/- sama besar) — ini tampil sama ke semua pengunjung.\n\nContoh: "10%" (persen dari saldo awal bulan, otomatis nyesuain modal) atau "500" (nominal ¢/sen tetap tiap bulan).', contoh);
+  const input=prompt(`Ketik batas profit/loss bulanan KHUSUS ${labelGrup} (dua arah, +/- sama besar) — ini tampil sama ke semua pengunjung.\n\nContoh: "10%" (persen dari saldo awal bulan, otomatis nyesuain modal) atau "500" (nominal ¢/sen tetap tiap bulan).`, contoh);
   if(input===null)return;
   const trimmed=input.trim();
   const isPersen = trimmed.endsWith('%');
@@ -3575,14 +3606,15 @@ async function editTargetBulanan(){
   const newCfg={mode: isPersen?'persen':'fixed', value:v};
   try{
     const payload=JSON.stringify(newCfg);
-    const existing=await api('app_settings?select=key&key=eq.target_bulanan');
+    const key='target_bulanan_'+pairGroup;
+    const existing=await api('app_settings?select=key&key=eq.'+key);
     if(existing.length){
-      await api('app_settings?key=eq.target_bulanan','PATCH',{value:payload});
+      await api('app_settings?key=eq.'+key,'PATCH',{value:payload});
     }else{
-      await api('app_settings','POST',{key:'target_bulanan',value:payload});
+      await api('app_settings','POST',{key,value:payload});
     }
-    cachedTargetBulanan=newCfg;
-    toast(`✅ Batas bulanan diperbarui: ±${isPersen?v+'%':fc(v)} untuk semua pengunjung`);
+    cachedTargetBulananByPair[pairGroup]=newCfg;
+    toast(`✅ Batas bulanan ${labelGrup} diperbarui: ±${isPersen?v+'%':fc(v)} untuk semua pengunjung`);
     renderGraph();
     // ── FIX: sebelumnya cuma renderGraph() (update dashboard), TAPI kotak Cek REM di
     // kalkulator (Umum/Agresif) gak ikut refresh karena mereka cuma recompute pas
@@ -3597,31 +3629,48 @@ async function editTargetBulanan(){
 // ── Dipanggil OTOMATIS oleh setProfilRisiko() pas pindah ke profil "Umum 2%" ──
 // (bukan lewat prompt manual seperti editTargetBulanan). Cuma dipakai buat profil Umum;
 // pindah ke Agresif TIDAK memanggil ini — REM dibiarkan apa adanya, atur manual.
-async function setRemFixedOtomatis(value){
+async function setRemFixedOtomatis(value, pairGroup){
+  const g=pairGroup||'XAUUSD';
   const newCfg={mode:'fixed', value};
   const payload=JSON.stringify(newCfg);
-  const existing=await api('app_settings?select=key&key=eq.target_bulanan');
+  const key='target_bulanan_'+g;
+  const existing=await api('app_settings?select=key&key=eq.'+key);
   if(existing.length){
-    await api('app_settings?key=eq.target_bulanan','PATCH',{value:payload});
+    await api('app_settings?key=eq.'+key,'PATCH',{value:payload});
   }else{
-    await api('app_settings','POST',{key:'target_bulanan',value:payload});
+    await api('app_settings','POST',{key,value:payload});
   }
-  cachedTargetBulanan=newCfg;
+  cachedTargetBulananByPair[g]=newCfg;
   if(typeof renderGraph==='function') renderGraph();
   document.dispatchEvent(new Event('datukCalcChanged'));
 }
-function renderTargetProgress(totalBulanIni, basisSaldo, isBulanIniAktif){
+// State tampilan kartu "Batas Bulanan" — grup pair mana yang lagi dilihat/diedit (XAUUSD atau FOREX)
+let targetCardPairGroup='XAUUSD';
+function setTargetCardPairGroup(g){
+  targetCardPairGroup=g;
+  document.querySelectorAll('#targetPairTabs .pair-tab').forEach(b=>b.classList.toggle('active', b.dataset.tp===g));
+  // Sengaja panggil renderGraph() (bukan renderTargetProgress() langsung) supaya basis saldo
+  // & status "bulan ini aktif/tidak" dihitung ulang dengan benar sebelum progress bar direfresh.
+  if(typeof renderGraph==='function') renderGraph();
+}
+function renderTargetProgress(basisSaldo, isBulanIniAktif){
   const wrap=document.getElementById('targetProgressWrap');
   if(!wrap)return;
-  const cfg=getTargetBulanan();
-  const {atas, bawah} = hitungBatasBulanan(basisSaldo||0);
+  const pairGroup=targetCardPairGroup||'XAUUSD';
+  const cfg=getTargetBulanan(pairGroup);
+  const {atas, bawah} = hitungBatasBulanan(basisSaldo||0, pairGroup);
 
   if(cfg.mode==='persen' && !(basisSaldo>0)){
     wrap.innerHTML=`<div style="text-align:center;font-size:10px;color:#7A5D1F;padding:6px">Mode % butuh data saldo — belum ada catatan bulan ini.</div>`;
     return;
   }
 
-  const total=totalBulanIni||0;
+  // Total P/L bulan ini KHUSUS pair yang lagi dipilih (XAUUSD atau FOREX), bukan gabungan akun.
+  const rowsBulanPair=(allSaldoData||[]).filter(r=>{
+    const d=new Date(r.tanggal);
+    return d.getFullYear()===graphYear && d.getMonth()===graphMonth && (r.pair||'XAUUSD')===pairGroup;
+  });
+  const total=rowsBulanPair.reduce((s,r)=>s+parseFloat(r.profit||0),0);
   const range=(atas-bawah)||1;
   const pctPos=Math.max(0, Math.min(100, ((total-bawah)/range)*100));
   const pctZero=Math.max(0, Math.min(100, ((0-bawah)/range)*100));
@@ -3664,7 +3713,7 @@ function renderTargetProgress(totalBulanIni, basisSaldo, isBulanIniAktif){
         ${total>=0 ? `left:${pctZero}%;width:${Math.max(0,pctPos-pctZero)}%` : `left:${pctPos}%;width:${Math.max(0,pctZero-pctPos)}%`}"></div>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:9px;color:#7A5D1F;margin-top:4px">
-      <span>${total>=0?'+':''}${fc(total)}</span>
+      <span>${total>=0?'+':''}${fc(total)} (${pairGroup==='FOREX'?'Forex':pairGroup})</span>
       <span>${pctPos.toFixed(0)}% dari rentang</span>
     </div>
     <div style="text-align:center;font-size:10px;color:${barColor};margin-top:8px;font-weight:700">${statusHtml}</div>
@@ -5841,17 +5890,21 @@ async function checkAndKirimNotifikasi(){
     const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
     if(!rows.length) return;
 
-    // ── Target/Batas Bulanan ──
+    // ── Target/Batas Bulanan — dicek TERPISAH per grup pair (XAUUSD & FOREX) ──
     const now=new Date();
     const rowsBulanIni=rows.filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); });
-    let targetAtas=false, targetBawah=false;
+    const groupFlags={XAUUSD:{atas:false,bawah:false}, FOREX:{atas:false,bawah:false}};
     if(rowsBulanIni.length){
-      const totalBulanIni=rowsBulanIni.reduce((s,r)=>s+parseFloat(r.profit||0),0);
       const saldoAwalBulan=parseFloat(rowsBulanIni[0].saldo_mt4||0)-parseFloat(rowsBulanIni[0].profit||0);
-      const {atas, bawah}=hitungBatasBulanan(saldoAwalBulan);
-      targetAtas = totalBulanIni>=atas;
-      targetBawah = totalBulanIni<=bawah;
+      ['XAUUSD','FOREX'].forEach(g=>{
+        const rowsGroup=rowsBulanIni.filter(r=>(r.pair||'XAUUSD')===g);
+        const totalGroup=rowsGroup.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+        const {atas, bawah}=hitungBatasBulanan(saldoAwalBulan, g);
+        groupFlags[g]={atas: totalGroup>=atas, bawah: totalGroup<=bawah};
+      });
     }
+    const targetAtas = groupFlags.XAUUSD.atas || groupFlags.FOREX.atas;
+    const targetBawah = groupFlags.XAUUSD.bawah || groupFlags.FOREX.bawah;
 
     // ── Risk Meter ──
     const rm=getRiskMeterData();
@@ -5866,8 +5919,14 @@ async function checkAndKirimNotifikasi(){
     const prev=getNotifLastState();
     const cur={targetAtas, targetBawah, riskMerah};
     const pesanList=[];
-    if(targetAtas && !prev.targetAtas) pesanList.push('🎉 Target profit bulanan TERCAPAI! Pertimbangkan berhenti trading bulan ini.');
-    if(targetBawah && !prev.targetBawah) pesanList.push('🔴 KENA REM — batas rugi bulanan tercapai! Disiplin berhenti trading sekarang.');
+    if(targetAtas && !prev.targetAtas){
+      const grupTeks=[groupFlags.XAUUSD.atas?'XAUUSD':null, groupFlags.FOREX.atas?'Forex':null].filter(Boolean).join(' & ');
+      pesanList.push(`🎉 Target profit bulanan TERCAPAI (${grupTeks})! Pertimbangkan berhenti trading pair itu bulan ini.`);
+    }
+    if(targetBawah && !prev.targetBawah){
+      const grupTeks=[groupFlags.XAUUSD.bawah?'XAUUSD':null, groupFlags.FOREX.bawah?'Forex':null].filter(Boolean).join(' & ');
+      pesanList.push(`🔴 KENA REM (${grupTeks}) — batas rugi bulanan tercapai! Disiplin berhenti trading pair itu sekarang.`);
+    }
     if(riskMerah && !prev.riskMerah) pesanList.push('🚨 Risk Meter menyala MERAH — cek Current Drawdown / Risk of Ruin / Risk per Trade di situs.');
 
     if(pesanList.length){
@@ -6102,18 +6161,22 @@ async function fetchInvestorsAdmin(){
 }
 // Cek status REM (batas rugi bulanan) bulan berjalan — dipakai buat notifikasi DAN
 // buat cegah investor baru masuk diam-diam pas akun lagi kena REM (transparansi).
-function getStatusRemBulanIni(){
+function getStatusRemBulanIni(pairGroup){
+  const g=pairGroup||'XAUUSD';
   const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
   const now=new Date();
   const rowsBulanIni=rows.filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); });
   if(!rowsBulanIni.length) return {aktif:false, totalBulanIni:0, bawah:0, saldoAwalBulan:0, basisSaldo:0};
-  const totalBulanIni=rowsBulanIni.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+  // P/L bulan ini KHUSUS grup pair ini — tapi saldo awal bulan tetap dari akun keseluruhan
+  // (satu akun MT4 dipakai bareng buat semua pair, jadi basis saldonya memang gabungan).
+  const rowsBulanIniGrup=rowsBulanIni.filter(r=>(r.pair||'XAUUSD')===g);
+  const totalBulanIni=rowsBulanIniGrup.reduce((s,r)=>s+parseFloat(r.profit||0),0);
   const saldoAwalBulan=parseFloat(rowsBulanIni[0].saldo_mt4||0)-parseFloat(rowsBulanIni[0].profit||0);
   // ── Basis buat mode 'persen': kalau acuan = real_time, pakai saldo BERJALAN sekarang
   // (lastSaldoTerakhir) — otomatis nyesuain kalau ada deposit/WD investor di tengah bulan.
   // Kalau acuan = awal_bulan (default), tetap kunci ke saldoAwalBulan kayak sebelumnya. ──
   const basisSaldo = (getRemBasisMode()==='real_time' && (lastSaldoTerakhir||0)>0) ? lastSaldoTerakhir : saldoAwalBulan;
-  const {bawah}=hitungBatasBulanan(basisSaldo);
+  const {bawah}=hitungBatasBulanan(basisSaldo, g);
   return {aktif: totalBulanIni<=bawah, totalBulanIni, bawah, saldoAwalBulan, basisSaldo};
 }
 // ══ CEK REM GENERIK — dipakai bareng oleh kalkulator Umum 2% & Agresif 5% ══
@@ -6152,17 +6215,18 @@ const REM_SALDO_MINIMAL_USD = 1000;
 // Pengunjung/Investor maupun saat login Admin (tidak ada logic role di sini). Hilang begitu
 // halaman di-refresh karena cuma bergantung ke nilai input saat itu, tidak disimpan di mana pun.
 const REM_PREVIEW_LABEL_HTML = `<div style="font-size:8px;color:#B8860B;margin-top:8px;padding-top:6px;border-top:1px dashed #4A3C10;line-height:1.5">⚠️ <b>PREVIEW</b> dari angka manual di "Modal Kamu" — belum tersimpan resmi. Status REM asli (dashboard/beranda) tetap berlaku sampai data resmi diimport.</div>`;
-function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode, modalKalkulator){
+function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode, modalKalkulator, pairGroup){
+  const g=pairGroup||'XAUUSD';
   const modalCek = parseFloat(modalKalkulator)||0;
   if(typeof getStatusRemBulanIni!=='function' || typeof hitungBatasBulanan!=='function') return '';
-  const status=getStatusRemBulanIni();
+  const status=getStatusRemBulanIni(g);
   if(!status || !status.saldoAwalBulan){
-    return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">ℹ️ Cek REM: belum ada data saldo bulan ini buat dihitung.</div>`;
+    return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">ℹ️ Cek REM (${g==='FOREX'?'Forex':g}): belum ada data saldo bulan ini buat dihitung.</div>`;
   }
   // P/L bulan ini_resmi — TETAP apa adanya dari data tersimpan, tidak ikut angka manual
   const totalLossBulanIni = status.totalBulanIni<0 ? -status.totalBulanIni : 0;
   // preview_batas_REM — dihitung ulang pakai modal yang LAGI DIKETIK di kalkulator ini
-  const previewBatasRem = hitungBatasBulanan(modalCek).atas;
+  const previewBatasRem = hitungBatasBulanan(modalCek, g).atas;
   // preview_sisa_REM
   const previewSisaRem = previewBatasRem - totalLossBulanIni;
   const previewAktif = status.totalBulanIni <= -previewBatasRem;
@@ -6206,19 +6270,21 @@ async function tambahInvestor(){
   // sebelum setoran investor baru diterima — biar gak ada dana masuk diam-diam pas kondisi
   // lagi bermasalah, dan biar tercatat jelas kalau nanti ditanya investor.
   let catatanRem=null;
-  const statusRem=getStatusRemBulanIni();
-  if(statusRem.aktif){
+  const statusRemXau=getStatusRemBulanIni('XAUUSD');
+  const statusRemFx=getStatusRemBulanIni('FOREX');
+  const grupKenaRem=[statusRemXau.aktif?{label:'XAUUSD',s:statusRemXau}:null, statusRemFx.aktif?{label:'Forex',s:statusRemFx}:null].filter(Boolean);
+  if(grupKenaRem.length){
+    const detailTeks=grupKenaRem.map(g=>`${g.label}: P/L ${fc(g.s.totalBulanIni)}, batas ${fc(g.s.bawah)}`).join('\n');
     const konfirmasi=confirm(
-      `⚠️ PERINGATAN: Akun ini SEDANG KENA REM bulan ini!\n\n`+
-      `Total P/L bulan berjalan: ${fc(statusRem.totalBulanIni)}\n`+
-      `Batas rugi bulanan: ${fc(statusRem.bawah)}\n\n`+
+      `⚠️ PERINGATAN: Akun ini SEDANG KENA REM bulan ini (${grupKenaRem.map(g=>g.label).join(' & ')})!\n\n`+
+      detailTeks+`\n\n`+
       `Menambahkan investor baru sekarang berarti dananya masuk saat kondisi akun lagi rugi ` +
       `melewati batas yang kamu tetapkan sendiri. Ini akan dicatat jelas di record investor ` +
       `(transparan kalau ditanya nanti).\n\n`+
       `Tetap lanjut tambahkan investor ini?`
     );
     if(!konfirmasi){ toast('❌ Dibatalkan — investor tidak ditambahkan karena akun sedang kena REM'); return; }
-    catatanRem=`⚠️ Bergabung saat akun KENA REM (${tglStr}) — P/L bulan berjalan saat itu: ${fc(statusRem.totalBulanIni)}, batas: ${fc(statusRem.bawah)}.`;
+    catatanRem=`⚠️ Bergabung saat akun KENA REM (${tglStr}) — ${grupKenaRem.map(g=>g.label).join(' & ')}: ${detailTeks.replace(/\n/g,'; ')}.`;
   }
 
   let kode=prompt(`Buat kode akses login untuk ${nama} (WAJIB minimal 6 karakter, disarankan 8+ campuran huruf & angka biar gak gampang ditebak/brute-force):`);
@@ -6381,26 +6447,26 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
   const tierMeta = RISIKO_TIER_META[profilRisikoAktif] || RISIKO_TIER_META.umum;
   let remStatusTeks;
   if(typeof getStatusRemBulanIni==='function' && typeof getTargetBulanan==='function'){
-    const statusRem=getStatusRemBulanIni();
-    const cfgRem=getTargetBulanan();
-    if(statusRem && statusRem.saldoAwalBulan){
-      const nilaiTarget=Math.abs(statusRem.bawah);
-      // ── BUG FIX: dulu label ini HARDCODE "dari saldo awal" + statusRem.saldoAwalBulan,
-      // padahal nilai batas (bawah/nilaiTarget) sebenarnya dihitung dari statusRem.basisSaldo
-      // — yang bisa jadi saldo REAL-TIME (kalau getRemBasisMode()==='real_time'), BUKAN selalu
-      // saldo awal bulan. Sekarang label ikut basis yang BENERAN dipakai, biar gak
-      // membingungkan kayak kasus "±55% (¢641.43 dua arah, dari saldo awal ¢570.06)" padahal
-      // ¢641.43 itu 55% dari saldo real-time, bukan dari ¢570.06. ──
-      const basisLabel = (typeof getRemBasisMode==='function' && getRemBasisMode()==='real_time')
-        ? 'saldo real-time' : 'saldo awal bulan';
-      const nilaiBasis = (statusRem.basisSaldo!=null ? statusRem.basisSaldo : statusRem.saldoAwalBulan);
-      const batasTeks = cfgRem.mode==='persen'
-        ? `±${cfgRem.value}% (${fc(nilaiTarget)} dua arah, dari ${basisLabel} ${fc(nilaiBasis)})`
-        : `${fc(nilaiTarget)} dua arah (nominal tetap tiap bulan)`;
-      remStatusTeks = `batas rugi bulanan (REM) yang aktif sekarang: <b>${batasTeks}</b>`;
-    }else{
-      remStatusTeks = 'batas rugi bulanan (REM) — aktif, tapi belum ada catatan trading bulan ini buat dihitung nominalnya';
-    }
+    const basisLabel = (typeof getRemBasisMode==='function' && getRemBasisMode()==='real_time')
+      ? 'saldo real-time' : 'saldo awal bulan';
+    // ── REM sekarang dihitung TERPISAH per grup pair (XAUUSD & Forex) — masing-masing punya
+    // target/batasnya sendiri, jadi ditampilkan sebagai dua baris terpisah di banner ini. ──
+    const potongan=[];
+    [['XAUUSD','XAUUSD'],['FOREX','Forex']].forEach(([g,label])=>{
+      const statusRem=getStatusRemBulanIni(g);
+      const cfgRem=getTargetBulanan(g);
+      if(statusRem && statusRem.saldoAwalBulan){
+        const nilaiTarget=Math.abs(statusRem.bawah);
+        const nilaiBasis = (statusRem.basisSaldo!=null ? statusRem.basisSaldo : statusRem.saldoAwalBulan);
+        const batasTeks = cfgRem.mode==='persen'
+          ? `±${cfgRem.value}% (${fc(nilaiTarget)} dua arah, dari ${basisLabel} ${fc(nilaiBasis)})`
+          : `${fc(nilaiTarget)} dua arah (nominal tetap tiap bulan)`;
+        potongan.push(`<b>${label}</b>: ${batasTeks}`);
+      }
+    });
+    remStatusTeks = potongan.length
+      ? `batas rugi bulanan (REM) yang aktif sekarang — ${potongan.join(' &nbsp;|&nbsp; ')}`
+      : 'batas rugi bulanan (REM) — aktif, tapi belum ada catatan trading bulan ini buat dihitung nominalnya';
   }else{
     remStatusTeks = 'batas rugi bulanan (REM) yang berlaku buat seluruh akun';
   }
