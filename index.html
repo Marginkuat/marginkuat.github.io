@@ -316,6 +316,40 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     <div style="font-size:8px;color:#5C4818;margin-top:14px;line-height:1.6;text-align:center">Penjelasan di atas ditulis sesederhana mungkin buat pemula. Kalau ada istilah lain yang belum ada di sini, cek juga tombol "ⓘ" kecil yang ada di beberapa kotak statistik (misal di Score Dashboard) — itu penjelasan lebih detail lengkap dengan rumus & skornya.</div>
   </div>
 </div>
+<script>
+// Ringkas tiap grup Kamus Istilah: tampilkan cuma 4 istilah pertama, sisanya disembunyikan
+// sampai tombol "Lihat X istilah lainnya" ditap. Kalau lagi nyari (filter aktif), semua
+// istilah yang cocok tetap kelihatan apapun status ringkas/expand-nya (lihat filterKamusIstilah).
+(function(){
+  const VISIBLE_N = 4;
+  document.querySelectorAll('#secKamusIstilah .kamus-grup').forEach(grup=>{
+    const items = grup.querySelectorAll('.kamus-item');
+    if(items.length <= VISIBLE_N) return;
+    items.forEach((item,i)=>{
+      if(i>=VISIBLE_N){
+        item.classList.add('kamus-collapsed-item');
+        item.style.display='none';
+      }
+    });
+    const sisa = items.length - VISIBLE_N;
+    const wrap = document.createElement('div');
+    wrap.style.textAlign='center';
+    wrap.style.marginTop='4px';
+    wrap.innerHTML = `<span class="kamus-toggle-btn" onclick="toggleKamusGrup(this)" style="font-size:9px;color:#D4AF37;cursor:pointer;text-decoration:underline">👇 Lihat ${sisa} istilah lainnya</span>`;
+    grup.appendChild(wrap);
+  });
+})();
+function toggleKamusGrup(btn){
+  const grup = btn.closest('.kamus-grup');
+  if(!grup) return;
+  const expanded = grup.classList.toggle('grup-expanded');
+  grup.querySelectorAll('.kamus-collapsed-item').forEach(item=>{
+    item.style.display = expanded ? '' : 'none';
+  });
+  const sisa = grup.querySelectorAll('.kamus-collapsed-item').length;
+  btn.textContent = expanded ? '🔼 Sembunyikan' : `👇 Lihat ${sisa} istilah lainnya`;
+}
+</script>
 
 <!-- LABEL PERMANEN: profil risiko akun ini (SELALU tampil, otomatis ikut profil yang aktif di server) -->
 <div id="labelProfilRisiko" style="margin:0 0 14px"></div>
@@ -641,6 +675,36 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
 </div>
 
 <script>
+// Helper umum: ringkas daftar baris tabel (lot/level) jadi cuma 3 baris di sekitar baris
+// aktif, sisanya disembunyikan di balik tombol "Lihat semua X baris" biar gak makan tempat.
+function mkRingkasRows(rowsArr, activeIdx, uid, visibleN){
+  visibleN = visibleN || 3;
+  const n = rowsArr.length;
+  if(n<=visibleN) return rowsArr.join('');
+  let start = 0;
+  if(activeIdx>=0){
+    start = Math.max(0, activeIdx - Math.floor((visibleN-1)/2));
+    start = Math.min(start, Math.max(0, n-visibleN));
+  }
+  const end = Math.min(n, start+visibleN);
+  let html='';
+  rowsArr.forEach((r,i)=>{
+    html += (i<start || i>=end) ? `<div class="rk-${uid}" style="display:none">${r}</div>` : r;
+  });
+  html += `<div style="text-align:center;margin-top:8px"><span id="rk-btn-${uid}" data-total="${n}" onclick="toggleRingkasRows('${uid}')" style="font-size:9px;color:#D4AF37;cursor:pointer;text-decoration:underline">👇 Lihat semua ${n} baris</span></div>`;
+  return html;
+}
+function toggleRingkasRows(uid){
+  const rows = document.querySelectorAll('.rk-'+uid);
+  const btn = document.getElementById('rk-btn-'+uid);
+  if(!rows.length || !btn) return;
+  const willShow = rows[0].style.display==='none';
+  rows.forEach(r=> r.style.display = willShow? '' : 'none');
+  const total = btn.getAttribute('data-total');
+  btn.textContent = willShow ? '🔼 Sembunyikan' : `👇 Lihat semua ${total} baris`;
+}
+</script>
+<script>
 (function(){
   const slEl2=document.getElementById('calcSL2'), tpEl2=document.getElementById('calcTP2'),
         pipvalueEl2=document.getElementById('calcPipValue2'),
@@ -689,7 +753,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     let activeIdx=-1;
     bands.forEach((s,i)=>{ if(modalSaatIni>=s) activeIdx=i; });
 
-    const rows = bands.map((saldo,i)=>{
+    const rowsArr = bands.map((saldo,i)=>{
       const targetRisk = saldo*0.02;
       let count = Math.floor(targetRisk/riskPerLot);
       if(count<1) count=1; // minimum lot 0.01
@@ -704,7 +768,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
           <span style="font-size:8px;color:#5C4818">${riskPct.toFixed(2)}% dari saldo</span>
         </span>
       </div>`;
-    }).join('');
+    });
+    const rows = mkRingkasRows(rowsArr, activeIdx, 'flat2', 3);
 
     const currentLot = activeIdx>=0 ? (Math.max(1,Math.floor((modalSaatIni*0.02)/riskPerLot))*0.01) : 0;
 
@@ -1145,7 +1210,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
     const levelSekarang=levelIdx+1;
     const next=plan[levelIdx+1];
 
-    const rows=plan.map((lv,i)=>{
+    const rowsArr=plan.map((lv,i)=>{
       const tercapai=i<=levelIdx;
       const aktif=i===levelIdx;
       const riskPct=(100/lv.buffer).toFixed(2);
@@ -1156,7 +1221,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#D4AF37;min-heig
           <span style="font-size:8px;color:#5C4818">risk $${lv.risk.toLocaleString('en-US',{maximumFractionDigits:2})}/trade</span>
         </span>
       </div>`;
-    }).join('');
+    });
+    const rows = mkRingkasRows(rowsArr, levelIdx, 'level', 3);
 
     return `
       <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-top:12px">
@@ -1442,7 +1508,6 @@ function renderInvCalcDisclaimer(){
   <div class="sec-title">🛑 Rem Profit & Rugi — Analis Trading Family</div>
   <div class="graph-card">
     <div style="font-size:11px;color:#8A6B26;margin-bottom:14px;line-height:1.6">Rem otomatis khusus Analis Trading Family — berlaku juga kalau MT4 pribadi mau ikut aturan yang sama. Target dibandingkan pakai <b>Pips mentah</b> (sama kayak tampilan resmi di web Trading Family), bukan VP — VP cuma info konversi tambahan yang ditampilkan di sampingnya (Gold & Forex disamakan nilainya, pakai konversi yang sama dengan Kalkulator Risiko di atas). Dihitung PER BULAN KALENDER — otomatis mulai dari 0 lagi tiap tanggal 1, gak perlu reset manual.</div>
-    <div style="font-size:9px;color:#5C4818;background:rgba(212,175,55,.08);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:14px;line-height:1.6">⏰ <b>Penting soal timing:</b> web/app resmi Trading Family biasanya BARU update angka Score/Reward-nya sekitar <b>jam 08:00 pagi hari berikutnya</b> (bukan real-time begitu sinyal closed). Kalau baru catat entri terus langsung bandingin ke halaman resmi mereka di hari yang sama, wajar keliatan beda — bukan berarti ada yang salah input/rumus. Bandingin lagi setelah jam 08:00 besoknya buat hasil yang apple-to-apple.</div>
 
     <div style="background:#1E1B0F;border:2px solid #D4AF37;border-radius:12px;padding:12px;text-align:center;margin-bottom:14px">
       <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">🔒 Target Tetap Per Bulan (Dipatenkan)</div>
@@ -1461,7 +1526,7 @@ function renderInvCalcDisclaimer(){
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📊 Score Channel</div>
       <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.6">Skor gaya Trading Family (0-4 per metrik, total 0-28) — Level/Status/Subscriber diisi manual oleh Admin, 4 metrik lainnya dihitung otomatis dari histori REM di atas.</div>
       <div id="remScoreDashboard"><div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Memuat...</div></div>
-      <div style="font-size:8px;color:#5C4818;text-align:center;margin:-6px 0 10px;line-height:1.5">✅ Pakai rumus resmi Traders Family (rata-rata berbobot per faktor: Level 17,65% · Kemitraan 17,65% · Subscriber 5,88% · Profit Factor 17,65% · Monthly Loss Ratio 11,76% · Profit Months 5,88% · Recovery Factor 23,53% — sudah diverifikasi cocok persis dengan contoh resmi mereka). 4 metrik otomatis (Profit Factor/MLR/Profit Months/Recovery Factor) dihitung dari <b>Pips mentah</b> (bukan VP), sama kayak tabel contoh resmi mereka. Angka bisa masih beda kalau data REM di atas belum lengkap sampai tanggal terbaru.</div>
+      <div style="font-size:8px;color:#5C4818;text-align:center;margin:-6px 0 10px;line-height:1.5">✅ Pakai rumus resmi Traders Family (rata-rata berbobot per faktor: Level 17,65% · Kemitraan 17,65% · Subscriber 5,88% · Profit Factor 17,65% · Monthly Loss Ratio 11,76% · Profit Months 5,88% · Recovery Factor 23,53% — sudah diverifikasi cocok persis dengan contoh resmi mereka). Angka bisa masih beda kalau data REM di atas belum lengkap sampai tanggal terbaru.</div>
       <div id="remScoreAdminEdit" style="display:none;margin-top:14px;border-top:1px dashed var(--border);padding-top:12px">
         <div style="font-size:9px;color:#8A6B26;margin-bottom:8px">✏️ Edit Data Channel (Admin) — data ini dari sistem Trading Family, isi manual sesuai dashboard mereka</div>
         <label class="lbl">Level</label>
@@ -2205,41 +2270,22 @@ function renderRemScoreDashboard(){
     }
   }
 
-  // ── Level, Status Channel: skor manual dari remChannelMeta ──
+  // ── Level, Status Channel, Subscriber: skor manual dari remChannelMeta ──
   const levelSkorMap={Legend:4, Master:2, Elite:1};
   const levelSkor=levelSkorMap[remChannelMeta.level]||0;
   const statusSkorMap={Priority:4, Prospect:2};
   const statusSkor=statusSkorMap[remChannelMeta.status]||0;
+  let subSkor=0;
+  if(remChannelMeta.subscriber>=501)subSkor=4; else if(remChannelMeta.subscriber>=201)subSkor=3; else if(remChannelMeta.subscriber>=101)subSkor=2; else if(remChannelMeta.subscriber>=26)subSkor=1;
 
   // ── 4 metrik otomatis dari histori REM (rem_entries), 6 bulan terakhir ──
   const now=new Date();
   const cutoff=new Date(now.getFullYear(), now.getMonth()-5, 1);
   const r6=(remEntries||[]).filter(e=>e.tanggal && new Date(e.tanggal)>=cutoff).sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
-  // ── PENTING: 4 metrik ini (Profit Factor/Monthly Loss Ratio/Profit Months/Recovery Factor)
-  // pakai PIPS MENTAH, BUKAN VP — dokumentasi resmi Traders Family label kolom contoh
-  // perhitungannya eksplisit "(Pips)" ("Nett PL (Pips)", "Gross Profit (Pips)", "Gross Loss
-  // (Pips)"), jadi VP TIDAK dipakai sama sekali di rumus Score Channel ini (beda dari target
-  // REM +500/-1000 yang juga udah dibetulin ke Pips sebelumnya). ──
-  const pipsOf=e=>Math.abs(parseFloat(e.pips_mentah||0));
+  const vpOf=e=>Math.abs(parseFloat(e.vp||0));
 
-  // ── Subscriber: skor manual dari remChannelMeta, TAPI dipaksa 0 kalau BULAN LALU (bukan
-  // bulan ini) gak ada signal settle sama sekali — aturan eksplisit dari dokumentasi resmi:
-  // "jika pada bulan sebelumnya analis tidak mempunyai signal settle, maka skor yang diperoleh
-  // adalah 0 poin", apapun jumlah subscriber-nya. ──
-  const bulanLaluAwal=new Date(now.getFullYear(), now.getMonth()-1, 1);
-  const bulanLaluAkhir=new Date(now.getFullYear(), now.getMonth(), 1);
-  const adaSignalBulanLalu=(remEntries||[]).some(e=>{
-    if(!e.tanggal) return false;
-    const d=new Date(e.tanggal);
-    return d>=bulanLaluAwal && d<bulanLaluAkhir;
-  });
-  let subSkor=0;
-  if(adaSignalBulanLalu){
-    if(remChannelMeta.subscriber>=501)subSkor=4; else if(remChannelMeta.subscriber>=201)subSkor=3; else if(remChannelMeta.subscriber>=101)subSkor=2; else if(remChannelMeta.subscriber>=26)subSkor=1;
-  }
-
-  const totalGP=r6.filter(e=>e.arah==='profit').reduce((s,e)=>s+pipsOf(e),0);
-  const totalGL=r6.filter(e=>e.arah==='rugi').reduce((s,e)=>s+pipsOf(e),0);
+  const totalGP=r6.filter(e=>e.arah==='profit').reduce((s,e)=>s+vpOf(e),0);
+  const totalGL=r6.filter(e=>e.arah==='rugi').reduce((s,e)=>s+vpOf(e),0);
   const pf = totalGL>0 ? totalGP/totalGL : (totalGP>0?99:0);
   let pfSkor=0;
   if(pf>=2.1)pfSkor=4; else if(pf>=1.7)pfSkor=3; else if(pf>=1.4)pfSkor=2; else if(pf>=1.1)pfSkor=1;
@@ -2249,7 +2295,7 @@ function renderRemScoreDashboard(){
     const d=new Date(e.tanggal);
     const k=`${d.getFullYear()}-${d.getMonth()}`;
     if(!grouped[k])grouped[k]=0;
-    grouped[k] += (e.arah==='profit' ? pipsOf(e) : -pipsOf(e));
+    grouped[k] += (e.arah==='profit' ? vpOf(e) : -vpOf(e));
   });
   const bulanValues=Object.values(grouped);
   const bulanUntung=bulanValues.filter(v=>v>0); // ── dipakai Monthly Loss Ratio: "rata-rata profit 6 bulan" = rata-rata bulan yang PROFIT SAJA, bukan rata-rata semua 6 bulan (dikonfirmasi lewat contoh resmi Traders Family: (1500+2000+2500)/3, bukan dibagi 6) ──
@@ -2265,12 +2311,12 @@ function renderRemScoreDashboard(){
 
   let peak=0,maxDd=0,cumPL=0;
   r6.forEach(e=>{
-    cumPL += (e.arah==='profit' ? pipsOf(e) : -pipsOf(e));
+    cumPL += (e.arah==='profit' ? vpOf(e) : -vpOf(e));
     if(cumPL>peak)peak=cumPL;
     const dd=peak-cumPL;
     if(dd>maxDd)maxDd=dd;
   });
-  const totalNetPL=r6.reduce((s,e)=>s+(e.arah==='profit'?pipsOf(e):-pipsOf(e)),0);
+  const totalNetPL=r6.reduce((s,e)=>s+(e.arah==='profit'?vpOf(e):-vpOf(e)),0);
   const rfVal=maxDd>0?totalNetPL/maxDd:0;
   let rfSkor=0;
   if(rfVal>=8)rfSkor=4; else if(rfVal>=5)rfSkor=3; else if(rfVal>=1.01)rfSkor=2; else if(rfVal>=0.01)rfSkor=1;
@@ -2283,12 +2329,7 @@ function renderRemScoreDashboard(){
   // dikali persentase bobot faktornya masing-masing, baru dijumlah. Bobot totalnya pas 100%.
   // Sudah diverifikasi manual pakai contoh resmi mereka (Level Master=2, Priority=4, 130
   // subscriber=2, Profit Factor 1,32=1, Monthly Loss Ratio 40%=3, Profit Months 3=2, Recovery
-  // Factor 3,73=2) → hasilnya 2,29, PERSIS sama dengan contoh di dokumentasi mereka.
-  // KOREKSI (24 Agu 2026): 4 metrik otomatis di atas (Profit Factor/MLR/Profit Months/Recovery
-  // Factor) sebelumnya salah pakai VP, padahal tabel contoh resmi TF eksplisit label kolomnya
-  // "(Pips)" — sekarang sudah dibetulin ke pips_mentah, sama kayak yang udah dibetulin di target
-  // REM +500/-1000 sebelumnya. Bobot & threshold skornya sendiri gak berubah, cuma satuan
-  // datanya yang dikoreksi. ──
+  // Factor 3,73=2) → hasilnya 2,29, PERSIS sama dengan contoh di dokumentasi mereka. ──
   const BOBOT_SKOR_CHANNEL={level:0.1765, kemitraan:0.1765, subscriber:0.0588, pf:0.1765, mlr:0.1176, pm:0.0588, rf:0.2353};
   const skorRataRata = levelSkor*BOBOT_SKOR_CHANNEL.level
     + statusSkor*BOBOT_SKOR_CHANNEL.kemitraan
@@ -3831,12 +3872,23 @@ function filterKamusIstilah(){
   items.forEach(item=>{
     const judul=normalizeSearchText(item.querySelector('summary').textContent||'');
     const cocok = !q || judul.includes(q);
-    item.style.display = cocok ? '' : 'none';
+    if(q){
+      // Lagi nyari: semua yang cocok kelihatan, apapun status ringkas/expand-nya.
+      item.style.display = cocok ? '' : 'none';
+    } else {
+      // Gak lagi nyari: balik ke status ringkas normal (item "lebih" cuma kelihatan kalau grupnya expanded).
+      const grup = item.closest('.kamus-grup');
+      const expanded = grup && grup.classList.contains('grup-expanded');
+      const isExtra = item.classList.contains('kamus-collapsed-item');
+      item.style.display = (isExtra && !expanded) ? 'none' : '';
+    }
     if(cocok) visibleCount++;
   });
   document.querySelectorAll('#secKamusIstilah .kamus-grup').forEach(grup=>{
     const adaYangKelihatan=[...grup.querySelectorAll('.kamus-item')].some(i=>i.style.display!=='none');
     grup.style.display = adaYangKelihatan ? '' : 'none';
+    const toggleBtn = grup.querySelector('.kamus-toggle-btn');
+    if(toggleBtn) toggleBtn.parentElement.style.display = q ? 'none' : '';
   });
   document.getElementById('kamusIstilahKosong').style.display = visibleCount===0 ? 'block' : 'none';
 }
@@ -7621,11 +7673,13 @@ function renderNotifCenter(){
     listEl.innerHTML='<div style="text-align:center;padding:16px;color:#7A5D1F;font-size:12px">Belum ada notifikasi.</div>';
     return;
   }
+  const VISIBLE_N=4;
+  const shownNotifs=notifs.slice(0,15);
   let html='';
-  notifs.slice(0,15).forEach(n=>{
+  shownNotifs.forEach((n,idx)=>{
     const isUnread=!readIds.has(n.id);
     html+=`
-      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--bg2);${isUnread?'':'opacity:.55'}">
+      <div class="notif-row" style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--bg2);${isUnread?'':'opacity:.55'}${idx>=VISIBLE_N?';display:none':''}">
         <div style="font-size:18px;flex-shrink:0">${n.icon}</div>
         <div style="flex:1">
           <div style="font-size:11px;font-weight:700;color:#D4AF37;display:flex;align-items:center;gap:6px">${n.title}${isUnread?'<span style="width:6px;height:6px;border-radius:50%;background:#F87171;display:inline-block;flex-shrink:0"></span>':''}</div>
@@ -7633,7 +7687,21 @@ function renderNotifCenter(){
         </div>
       </div>`;
   });
+  if(shownNotifs.length>VISIBLE_N){
+    html+=`<div style="text-align:center;margin-top:8px"><span id="notifToggleBtn" data-total="${shownNotifs.length}" onclick="toggleNotifRows()" style="font-size:9px;color:#D4AF37;cursor:pointer;text-decoration:underline">👇 Lihat semua ${shownNotifs.length} notifikasi</span></div>`;
+  }
   listEl.innerHTML=html;
+}
+function toggleNotifRows(){
+  const listEl=document.getElementById('notifList');
+  if(!listEl) return;
+  const rows=listEl.querySelectorAll('.notif-row');
+  const btn=document.getElementById('notifToggleBtn');
+  if(!rows.length || !btn) return;
+  const willShow = rows[4] && rows[4].style.display==='none';
+  rows.forEach((r,idx)=>{ if(idx>=4) r.style.display = willShow? 'flex':'none'; });
+  const total = btn.getAttribute('data-total');
+  btn.textContent = willShow ? '🔼 Sembunyikan' : `👇 Lihat semua ${total} notifikasi`;
 }
 
 // ══ INVESTOR CALCULATOR ══
