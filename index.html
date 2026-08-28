@@ -7030,9 +7030,6 @@ const REM_SALDO_MINIMAL_USD = 1000;
 const REM_PREVIEW_LABEL_HTML = `<div style="font-size:8px;color:#B8860B;margin-top:8px;padding-top:6px;border-top:1px dashed #4A3C10;line-height:1.5">⚠️ <b>PREVIEW</b> dari angka manual di "Modal Kamu" — belum tersimpan resmi. Status REM asli (dashboard/beranda) tetap berlaku sampai data resmi diimport.</div>`;
 function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode, modalKalkulator){
   const modalCek = parseFloat(modalKalkulator)||0;
-  if(modalCek < REM_SALDO_MINIMAL_USD){
-    return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:9px;color:#5C4818">⏳ REM belum aktif — Modal Kamu saat ini <b style="color:#C8A84B">$${modalCek.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</b> belum capai syarat minimal <b style="color:#C8A84B">$1,000</b>. REM baru mulai dicek otomatis begitu Modal Kamu tembus $1,000.</div>`;
-  }
   if(typeof getStatusRemBulanIni!=='function' || typeof hitungBatasBulanan!=='function') return '';
   const status=getStatusRemBulanIni();
   if(!status || !status.saldoAwalBulan){
