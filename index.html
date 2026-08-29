@@ -1551,15 +1551,15 @@ function renderInvCalcDisclaimer(){
     </div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">📝 Input Data Harian (khusus <span id="inpRingkasPairLabel">XAUUSD</span>)</div>
-      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Form terpisah dari "Input Saldo Harian" di Panel Admin (yang biasa kamu pakai buat laporan MT4) — biar gak ketuker/ketimpa. Pair-nya OTOMATIS ngikut tab yang lagi aktif di atas, gak perlu pilih manual. Kalau tanggal ini sudah pernah diisi untuk pair yang sama, datanya di-update (bukan bikin dobel); pair lain di tanggal yang sama TIDAK kesenggol.</div>
-      <label class="lbl">Tanggal</label>
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">📝 Input Sinyal (khusus <span id="inpRingkasPairLabel">XAUUSD</span>)</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Input SATU-SATU tiap sinyal yang closed (kayak notifikasi hasil sinyal) — bukan rekap harian. Kalau di tanggal yang sama sudah ada sinyal lain sebelumnya, hasilnya <b>DITAMBAHKAN</b> (bukan ditimpa). Pips otomatis dikonversi ke $ pakai <b>$0,10/pip di lot 0,01</b> (sesuai rumus forex 60pip=$6 &amp; XAUUSD 1000pip=$100 yang sudah kita hitung). Kalau lot/rumus konversi kamu beda, kasih tahu saya dulu sebelum lanjut input banyak.</div>
+      <label class="lbl">Tanggal (Closed at)</label>
       <input class="inp" type="date" id="inpRingkasTgl">
-      <label class="lbl">Profit/Loss Hari Ini ($) — isi minus kalau rugi, mis. -12.5</label>
-      <input class="inp" type="number" step="0.01" id="inpRingkasProfit" placeholder="12.50">
-      <label class="lbl">Jumlah Sinyal (opsional)</label>
-      <input class="inp" type="number" step="1" min="0" id="inpRingkasSignal" placeholder="0">
-      <button class="btn btn-p" onclick="simpanDataHarianRingkas()" style="margin-top:10px">💾 Simpan (pair: <span id="inpRingkasPairLabel2">XAUUSD</span>)</button>
+      <label class="lbl">Nama Pair Sinyal (opsional, mis. NZDUSD)</label>
+      <input class="inp" type="text" id="inpRingkasSimbol" placeholder="NZDUSD">
+      <label class="lbl">Hasil Sinyal (Pips) — isi minus kalau rugi, mis. -30</label>
+      <input class="inp" type="number" step="0.1" id="inpRingkasPips" placeholder="-30">
+      <button class="btn btn-p" onclick="simpanDataHarianRingkas()" style="margin-top:10px">💾 Simpan Sinyal (pair: <span id="inpRingkasPairLabel2">XAUUSD</span>)</button>
       <div id="inpRingkasStatus" style="font-size:10px;color:#7A5D1F;margin-top:8px;text-align:center"></div>
     </div>
   </div>
@@ -3773,45 +3773,57 @@ function setScoreCardPairGroup(g){
 // data ketimpa. Form ini pair-nya OTOMATIS ngikut tab yang aktif (gak perlu pilih manual), dan
 // saldo_mt4 dihitung otomatis (lanjutan dari saldo terakhir tercatat + profit hari ini) — supaya
 // tetap konsisten sama data yang dipakai tool lain, tapi user gak perlu mikir angka saldo_mt4. ──
+// $ per pip di lot 0,01 — sesuai rumus yang sudah disepakati: forex 60pip=$6, XAUUSD 1000pip=$100
+// (keduanya sama-sama $0,10/pip). Kalau lot/instrumen kamu beda rasio, kasih tahu dulu.
+const PIP_VALUE_USD_PER_0_01_LOT = 0.10;
 async function simpanDataHarianRingkas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
   const g=scoreCardPairGroup||'XAUUSD';
   const tgl=document.getElementById('inpRingkasTgl').value;
-  const profitInput=document.getElementById('inpRingkasProfit').value;
-  const jumlahSignal=parseInt(document.getElementById('inpRingkasSignal').value)||0;
+  const pairSimbol=(document.getElementById('inpRingkasSimbol').value||'').trim();
+  const pipsInput=document.getElementById('inpRingkasPips').value;
   const statusEl=document.getElementById('inpRingkasStatus');
   if(!tgl){toast('❌ Isi tanggal');return;}
-  if(profitInput.trim()===''){toast('❌ Isi Profit/Loss (boleh 0 kalau breakeven)');return;}
-  const profit=parseFloat(profitInput);
-  if(!isFinite(profit)){toast('❌ Angka profit gak valid');return;}
+  if(pipsInput.trim()===''){toast('❌ Isi hasil (pips) — boleh 0 kalau breakeven');return;}
+  const pips=parseFloat(pipsInput);
+  if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
+  const profitSinyalIni=pips*PIP_VALUE_USD_PER_0_01_LOT;
   try{
     statusEl.textContent='⏳ Menyimpan...';
-    // Cek dulu apakah tanggal+pair ini SUDAH ada — kalau ada, update (bukan bikin baris baru)
+    // Cek dulu apakah tanggal+pair ini SUDAH ada (dari sinyal lain di hari yang sama) —
+    // kalau ada, hasilnya DITAMBAHKAN ke yang sudah tersimpan, BUKAN menimpa.
     const ex=await api(`saldo_harian?tanggal=eq.${tgl}&pair=eq.${encodeURIComponent(g)}`);
-    let saldoMt4Baru;
+    const catatanSinyal=(pairSimbol?pairSimbol+' ':'')+(pips>=0?'+':'')+pips+'pip';
+    let saldoMt4Baru, profitBaru, jumlahSignalBaru, catatanBaru;
     if(ex.length){
-      // Sudah ada row buat tanggal+pair ini — pertahankan saldo_mt4 lama, cuma update profitnya.
-      // (Kalau saldo_mt4 ikut dihitung ulang dari "terakhir" tiap kali update, bisa ganda-hitung.)
-      saldoMt4Baru=parseFloat(ex[0].saldo_mt4||0);
+      const profitLama=parseFloat(ex[0].profit||0);
+      profitBaru=profitLama+profitSinyalIni;
+      saldoMt4Baru=parseFloat(ex[0].saldo_mt4||0)+profitSinyalIni;
+      jumlahSignalBaru=(parseInt(ex[0].jumlah_signal)||0)+1;
+      catatanBaru=(ex[0].catatan?ex[0].catatan+' | ':'')+catatanSinyal;
     }else{
       // Row baru — saldo_mt4 dihitung otomatis: lanjutan dari saldo TERAKHIR tercatat (lintas
-      // pair, karena satu akun trading yang sama) ditambah profit hari ini.
+      // pair, karena satu akun trading yang sama) ditambah profit sinyal ini.
       const semuaRowsUrut=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
-      const saldoTerakhir = semuaRowsUrut.length ? parseFloat(semuaRowsUrut[semuaRowsUrut.length-1].saldo_mt4||0) : 0;
-      saldoMt4Baru = saldoTerakhir + profit;
+      const saldoTerakhir=semuaRowsUrut.length?parseFloat(semuaRowsUrut[semuaRowsUrut.length-1].saldo_mt4||0):0;
+      profitBaru=profitSinyalIni;
+      saldoMt4Baru=saldoTerakhir+profitSinyalIni;
+      jumlahSignalBaru=1;
+      catatanBaru=catatanSinyal;
     }
     const bodyData={
       saldo_mt4: parseFloat(saldoMt4Baru.toFixed(2)),
-      profit: parseFloat(profit.toFixed(2)),
-      jumlah_signal: jumlahSignal,
-      pair: g
+      profit: parseFloat(profitBaru.toFixed(2)),
+      jumlah_signal: jumlahSignalBaru,
+      pair: g,
+      catatan: catatanBaru
     };
     if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyData);
     else await api('saldo_harian','POST',{tanggal:tgl, ...bodyData});
-    statusEl.textContent='✅ Tersimpan';
-    toast(`✅ Data ${g==='FOREX'?'Forex':g} tanggal ${tgl} tersimpan`);
-    document.getElementById('inpRingkasProfit').value='';
-    document.getElementById('inpRingkasSignal').value='';
+    statusEl.textContent=`✅ Tersimpan: ${pips>=0?'+':''}${pips} pip ≈ $${profitSinyalIni.toFixed(2)} — total hari ini $${profitBaru.toFixed(2)} (${jumlahSignalBaru} sinyal)`;
+    toast(`✅ Sinyal ${pairSimbol||g} tersimpan ke tanggal ${tgl}`);
+    document.getElementById('inpRingkasSimbol').value='';
+    document.getElementById('inpRingkasPips').value='';
     await loadAll();
   }catch(e){
     console.error(e);
