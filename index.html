@@ -1549,6 +1549,19 @@ function renderInvCalcDisclaimer(){
     <div id="scoreCardWrap">
       <div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div>
     </div>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">📝 Input Data Harian (khusus <span id="inpRingkasPairLabel">XAUUSD</span>)</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Form terpisah dari "Input Saldo Harian" di Panel Admin (yang biasa kamu pakai buat laporan MT4) — biar gak ketuker/ketimpa. Pair-nya OTOMATIS ngikut tab yang lagi aktif di atas, gak perlu pilih manual. Kalau tanggal ini sudah pernah diisi untuk pair yang sama, datanya di-update (bukan bikin dobel); pair lain di tanggal yang sama TIDAK kesenggol.</div>
+      <label class="lbl">Tanggal</label>
+      <input class="inp" type="date" id="inpRingkasTgl">
+      <label class="lbl">Profit/Loss Hari Ini ($) — isi minus kalau rugi, mis. -12.5</label>
+      <input class="inp" type="number" step="0.01" id="inpRingkasProfit" placeholder="12.50">
+      <label class="lbl">Jumlah Sinyal (opsional)</label>
+      <input class="inp" type="number" step="1" min="0" id="inpRingkasSignal" placeholder="0">
+      <button class="btn btn-p" onclick="simpanDataHarianRingkas()" style="margin-top:10px">💾 Simpan (pair: <span id="inpRingkasPairLabel2">XAUUSD</span>)</button>
+      <div id="inpRingkasStatus" style="font-size:10px;color:#7A5D1F;margin-top:8px;text-align:center"></div>
+    </div>
   </div>
 </div>
 
@@ -3151,6 +3164,8 @@ window.onload=async()=>{
     hide('loading');
     const d=new Date(),pad=n=>String(n).padStart(2,'0');
     document.getElementById('inpTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const inpRingkasTglEl=document.getElementById('inpRingkasTgl');
+    if(inpRingkasTglEl) inpRingkasTglEl.value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     document.getElementById('inpAutoSyncKas').checked = localStorage.getItem('mk_autosync_kas')!=='0';
     document.getElementById('kasTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     document.getElementById('bukuBulan').value=String(d.getMonth()+1);
@@ -3748,7 +3763,61 @@ async function editScoreMeta(){
 function setScoreCardPairGroup(g){
   scoreCardPairGroup=g;
   document.querySelectorAll('#scorePairTabs .pair-tab').forEach(b=>b.classList.toggle('active', b.dataset.sp===g));
+  const labelTeks = g==='FOREX' ? 'Forex' : g;
+  const l1=document.getElementById('inpRingkasPairLabel'); if(l1) l1.textContent=labelTeks;
+  const l2=document.getElementById('inpRingkasPairLabel2'); if(l2) l2.textContent=labelTeks;
   renderScoreCard();
+}
+// ── Form input ringkas KHUSUS Score Card — sengaja DIPISAH dari simpanSaldo() (form utama di
+// Panel Admin yang biasa dipakai buat laporan MT4), sesuai permintaan: jangan digabung, bahaya
+// data ketimpa. Form ini pair-nya OTOMATIS ngikut tab yang aktif (gak perlu pilih manual), dan
+// saldo_mt4 dihitung otomatis (lanjutan dari saldo terakhir tercatat + profit hari ini) — supaya
+// tetap konsisten sama data yang dipakai tool lain, tapi user gak perlu mikir angka saldo_mt4. ──
+async function simpanDataHarianRingkas(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
+  const g=scoreCardPairGroup||'XAUUSD';
+  const tgl=document.getElementById('inpRingkasTgl').value;
+  const profitInput=document.getElementById('inpRingkasProfit').value;
+  const jumlahSignal=parseInt(document.getElementById('inpRingkasSignal').value)||0;
+  const statusEl=document.getElementById('inpRingkasStatus');
+  if(!tgl){toast('❌ Isi tanggal');return;}
+  if(profitInput.trim()===''){toast('❌ Isi Profit/Loss (boleh 0 kalau breakeven)');return;}
+  const profit=parseFloat(profitInput);
+  if(!isFinite(profit)){toast('❌ Angka profit gak valid');return;}
+  try{
+    statusEl.textContent='⏳ Menyimpan...';
+    // Cek dulu apakah tanggal+pair ini SUDAH ada — kalau ada, update (bukan bikin baris baru)
+    const ex=await api(`saldo_harian?tanggal=eq.${tgl}&pair=eq.${encodeURIComponent(g)}`);
+    let saldoMt4Baru;
+    if(ex.length){
+      // Sudah ada row buat tanggal+pair ini — pertahankan saldo_mt4 lama, cuma update profitnya.
+      // (Kalau saldo_mt4 ikut dihitung ulang dari "terakhir" tiap kali update, bisa ganda-hitung.)
+      saldoMt4Baru=parseFloat(ex[0].saldo_mt4||0);
+    }else{
+      // Row baru — saldo_mt4 dihitung otomatis: lanjutan dari saldo TERAKHIR tercatat (lintas
+      // pair, karena satu akun trading yang sama) ditambah profit hari ini.
+      const semuaRowsUrut=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+      const saldoTerakhir = semuaRowsUrut.length ? parseFloat(semuaRowsUrut[semuaRowsUrut.length-1].saldo_mt4||0) : 0;
+      saldoMt4Baru = saldoTerakhir + profit;
+    }
+    const bodyData={
+      saldo_mt4: parseFloat(saldoMt4Baru.toFixed(2)),
+      profit: parseFloat(profit.toFixed(2)),
+      jumlah_signal: jumlahSignal,
+      pair: g
+    };
+    if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyData);
+    else await api('saldo_harian','POST',{tanggal:tgl, ...bodyData});
+    statusEl.textContent='✅ Tersimpan';
+    toast(`✅ Data ${g==='FOREX'?'Forex':g} tanggal ${tgl} tersimpan`);
+    document.getElementById('inpRingkasProfit').value='';
+    document.getElementById('inpRingkasSignal').value='';
+    await loadAll();
+  }catch(e){
+    console.error(e);
+    statusEl.textContent='❌ Gagal simpan';
+    toast('❌ Gagal simpan: '+(e.message||'').slice(0,150));
+  }
 }
 // 6 kunci bulan kalender ("YYYY-MM"), dari yang terlama ke terbaru, TIDAK termasuk bulan berjalan
 // — persis pola contoh resminya (skor Juli dihitung dari Jan-Jun, bukan ikut Juli yang masih jalan).
@@ -8577,7 +8646,12 @@ async function simpanSaldo(){
     };
     let savedOk=false, moodSaved=true, swapSaved=true;
     try{
-      const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
+      // ── FIX KRITIS: sebelumnya cek existing row cuma pakai tanggal SAJA (`tanggal=eq.${tgl}`).
+      // Itu bahaya begitu ada 2 pair (XAUUSD & FOREX) — simpan data Forex tanggal 1 Agustus bisa
+      // TIMPA data XAUUSD tanggal 1 Agustus yang udah ada (karena dianggap "row yang sama").
+      // Sekarang cek existing row pakai KOMBINASI tanggal+pair, biar XAUUSD & Forex di tanggal
+      // yang sama tetap jadi 2 row terpisah, gak saling menimpa. ──
+      const ex=await api(`saldo_harian?tanggal=eq.${tgl}&pair=eq.${encodeURIComponent(pair)}`);
       if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyData);
       else await api('saldo_harian','POST',{tanggal:tgl, profil_risiko:profilRisikoAktif, ...bodyData});
       savedOk=true;
@@ -8586,14 +8660,14 @@ async function simpanSaldo(){
       moodSaved=false; swapSaved=false;
       const { mood:_drop, swap:_drop2, keyakinan_entry:_d3, sesuai_rencana:_d4, kualitas_eksekusi:_d5, skor_disiplin:_d6, ...bodyNoMood } = bodyData;
       try{
-        const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
+        const ex=await api(`saldo_harian?tanggal=eq.${tgl}&pair=eq.${encodeURIComponent(pair)}`);
         if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyNoMood);
         else await api('saldo_harian','POST',{tanggal:tgl, profil_risiko:profilRisikoAktif, ...bodyNoMood});
         savedOk=true;
       }catch(errSwap){
         // Mungkin khusus 'profil_risiko' yang belum ada — coba sekali lagi tanpa itu
         try{
-          const ex2=await api(`saldo_harian?tanggal=eq.${tgl}`);
+          const ex2=await api(`saldo_harian?tanggal=eq.${tgl}&pair=eq.${encodeURIComponent(pair)}`);
           if(ex2.length) await api(`saldo_harian?id=eq.${ex2[0].id}`,'PATCH',bodyNoMood);
           else await api('saldo_harian','POST',{tanggal:tgl, ...bodyNoMood});
           savedOk=true;
@@ -10098,7 +10172,8 @@ async function importCSV(){
       };
       try{
         statusEl.textContent=`⏳ Memproses ${i}/${lines.length-1}...`;
-        const ex=await api(`saldo_harian?tanggal=eq.${tgl}`);
+        // FIX KRITIS sama seperti simpanSaldo(): cek existing row pakai tanggal+pair, bukan tanggal saja
+        const ex=await api(`saldo_harian?tanggal=eq.${tgl}&pair=eq.${encodeURIComponent(bodyData.pair)}`);
         if(ex.length) await api(`saldo_harian?id=eq.${ex[0].id}`,'PATCH',bodyData);
         else await api('saldo_harian','POST',{tanggal:tgl,...bodyData});
         sukses++;
@@ -11264,7 +11339,7 @@ async function simpanSemuaKeDatabase(){
   if(missingSaldo){
     if(!confirm('Kolom "Saldo Awal" tadi gak diisi, jadi Saldo MT4 per hari akan kosong (0). Lanjutkan simpan? (Bisa edit saldo manual nanti per hari lewat Riwayat Harian)')) return;
   }
-  if(!confirm(`Simpan ${__ekstrakHasil.length} hari ini langsung ke database? Kalau tanggalnya udah ada, datanya akan DITIMPA dengan angka baru ini.`)) return;
+  if(!confirm(`Simpan ${__ekstrakHasil.length} hari ini langsung ke database? Kalau tanggal+pair yang sama udah ada, datanya akan DITIMPA dengan angka baru ini (pair lain di tanggal yang sama TIDAK akan kesenggol).`)) return;
 
   btn.disabled=true;
   let sukses=0, gagal=0;
@@ -11281,9 +11356,10 @@ async function simpanSemuaKeDatabase(){
         jumlah_signal: d.count,
         pair: d.pair
       };
-      const existing=await api(`saldo_harian?select=id&tanggal=eq.${d.tanggal}`);
+      // FIX KRITIS sama seperti simpanSaldo(): cek existing row pakai tanggal+pair, bukan tanggal saja
+      const existing=await api(`saldo_harian?select=id&tanggal=eq.${d.tanggal}&pair=eq.${encodeURIComponent(d.pair)}`);
       if(existing.length){
-        await api(`saldo_harian?tanggal=eq.${d.tanggal}`,'PATCH',payload);
+        await api(`saldo_harian?id=eq.${existing[0].id}`,'PATCH',payload);
       }else{
         await api('saldo_harian','POST',payload);
       }
