@@ -4221,13 +4221,10 @@ function renderSatuChannelScore(g){
   if(!m){
     return `<div style="background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:12px">${headerChannel}<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:10px">Belum ada sinyal untuk dihitung skornya.</div></div>`;
   }
-  if(!m.cukupUmur){
-    const sisaHari=Math.max(0, Math.ceil(182-m.umurHari));
-    return `<div style="background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:12px">${headerChannel}<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:10px;line-height:1.6">
-      Channel baru berjalan <b>${Math.floor(m.umurHari)} hari</b> — syarat skor minimal ~6 bulan (182 hari).<br>
-      Sisa ±${sisaHari} hari lagi. Sementara ini channel dianggap "channel free".
-    </div></div>`;
-  }
+  // ── Gerbang "minimal 6 bulan" DIHAPUS atas permintaan — skor langsung dihitung & tampil dari
+  // data yang ada, walau channel baru berjalan beberapa hari. Syarat 182 hari itu aturan resmi
+  // Trading Family (buat penentuan HARGA channel di platform mereka), tapi tool INI kan cuma
+  // buat pantauan pribadi/REM, jadi gak perlu nunggu. ──
 
   const adaSinyal=adaSinyalBulanLalu(g);
   const sLevel=bandLevel(meta.level);
@@ -4246,7 +4243,7 @@ function renderSatuChannelScore(g){
   // sebelumnya" di aplikasi resminya) — ini bandingin Skor RESMI vs Skor RESMI bulan lalu. ──
   let badgeBanding='';
   const mBulanLalu=computeScoreMetrics(g, 1, false);
-  if(mBulanLalu && mBulanLalu.cukupUmur){
+  if(mBulanLalu){
     const sPF_lalu=bandProfitFactor(mBulanLalu.profitFactor);
     const sMLR_lalu=bandMonthlyLossRatio(mBulanLalu.monthlyLossRatio);
     const sPM_lalu=bandProfitMonths(mBulanLalu.profitMonths);
@@ -4267,7 +4264,7 @@ function renderSatuChannelScore(g){
   // (yang dikunci sampai tanggal 1 bulan depan, sesuai aturan Trading Family). ──
   let liveBlok='';
   const mLive=computeScoreMetrics(g, 0, true);
-  if(mLive && mLive.cukupUmur){
+  if(mLive){
     const sPF_l=bandProfitFactor(mLive.profitFactor);
     const sMLR_l=bandMonthlyLossRatio(mLive.monthlyLossRatio);
     const sPM_l=bandProfitMonths(mLive.profitMonths);
