@@ -1539,32 +1539,28 @@ function renderInvCalcDisclaimer(){
   <div class="graph-card" id="secSkorChannel" style="margin-top:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">⭐ Skor Kredibilitas Channel Analis</div>
-      <span onclick="editScoreMeta()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Nama/Level/Kemitraan</span>
     </div>
-    <div style="text-align:right;margin-bottom:6px">
-      <span onclick="editTanggalMulaiChannel()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">Atur Tanggal Mulai Channel</span>
-    </div>
-    <div id="scorePairTabs" style="display:flex;gap:6px;margin-bottom:10px">
-      <button class="pair-tab active" data-sp="XAUUSD" onclick="setScoreCardPairGroup('XAUUSD')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelXauusd">Datuk EURUSD</span></button>
-      <button class="pair-tab" data-sp="FOREX" onclick="setScoreCardPairGroup('FOREX')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelForex">Datuk Crypto 89</span></button>
-    </div>
-    <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Tool ini KHUSUS analis — cuma nampilin Score & untung/rugi sinyal, TIDAK PUNYA konsep saldo sama sekali (gak nyentuh laporan MT4/kalkulator/data lain). Skor 0–4 mengikuti rumus resmi, dihitung dari rolling 6 bulan terakhir. Channel &lt;6 bulan belum dapat skor.</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Tool ini KHUSUS analis — cuma nampilin Score & untung/rugi sinyal, TIDAK PUNYA konsep saldo sama sekali (gak nyentuh laporan MT4/kalkulator/data lain). Kedua channel tampil sekaligus di bawah, gak perlu gonta-ganti tab.</div>
     <div id="scoreCardWrap">
       <div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div>
     </div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">🚦 REM Pips (khusus <span id="remPipsPairLabel">Datuk EURUSD</span>)</div>
-        <span onclick="editRemPips()" style="font-size:10px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Batas</span>
-      </div>
-      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Rem/batas bulanan buat channel ini, satuan PIPS (bukan $/saldo). Simetris: kena +batas boleh berhenti karena udah cuan, kena -batas WAJIB stop trading channel ini bulan ini.</div>
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">🚦 REM Pips</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Batas bulanan tiap channel, satuan PIPS. Simetris: kena +batas boleh berhenti karena udah cuan, kena -batas WAJIB stop trading channel itu bulan ini.</div>
       <div id="remPipsWrap"><div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div></div>
     </div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">📝 Input Sinyal (khusus <span id="inpRingkasPairLabel">Datuk EURUSD</span>)</div>
-      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Input SATU-SATU tiap sinyal yang closed (kayak notifikasi hasil sinyal) — bukan rekap harian. Isi Pips DAN VP persis seperti yang ditampilkan di notifikasi sinyal kamu (dua-duanya diketik manual, bukan dihitung otomatis, karena rasio VP:pips beda-beda tiap pair).</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">📝 Input Sinyal</div>
+      </div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:8px;line-height:1.5">Input SATU-SATU tiap sinyal yang closed — bukan rekap harian. Isi Pips DAN VP persis seperti di notifikasi sinyal kamu (dua-duanya manual, karena rasio VP:pips beda-beda tiap pair).</div>
+      <label class="lbl">Channel</label>
+      <div id="inpSinyalPairTabs" style="display:flex;gap:6px;margin-bottom:10px">
+        <button class="pair-tab active" data-sp="XAUUSD" onclick="setInputSinyalPairGroup('XAUUSD')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelXauusd">Datuk EURUSD</span></button>
+        <button class="pair-tab" data-sp="FOREX" onclick="setInputSinyalPairGroup('FOREX')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelForex">Datuk Crypto 89</span></button>
+      </div>
       <label class="lbl">Tanggal (Closed at)</label>
       <input class="inp" type="date" id="inpRingkasTgl">
       <label class="lbl">Nama Pair Sinyal (opsional, mis. NZDUSD)</label>
@@ -1578,7 +1574,13 @@ function renderInvCalcDisclaimer(){
     </div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">📋 Riwayat Sinyal (bisa edit/hapus)</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">📋 Riwayat Sinyal (bisa edit/hapus)</div>
+      </div>
+      <div id="daftarSinyalPairTabs" style="display:flex;gap:6px;margin-bottom:10px">
+        <button class="pair-tab active" data-sp="XAUUSD" onclick="setDaftarSinyalPairGroup('XAUUSD')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelXauusd2">Datuk EURUSD</span></button>
+        <button class="pair-tab" data-sp="FOREX" onclick="setDaftarSinyalPairGroup('FOREX')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelForex2">Datuk Crypto 89</span></button>
+      </div>
       <div id="daftarSinyalWrap"><div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div></div>
     </div>
   </div>
@@ -3243,6 +3245,7 @@ async function loadAll(){
   await loadTanggalMulaiChannel();
   await loadSinyalAnalis();
   await loadRemPips();
+  syncSemuaLabelChannel();
   renderScoreCard();
   renderRemPipsCard();
   renderDaftarSinyal();
@@ -3749,7 +3752,6 @@ const SCORE_KEMITRAAN_OPTIONS=['Basic Channel','Prospect Channel','Priority Chan
 const SCORE_BOBOT={level:3, kemitraan:3, subscriber:1, profitFactor:3, monthlyLossRatio:2, profitMonths:1, recoveryFactor:4};
 const SCORE_BOBOT_TOTAL_UNIT=17;
 
-let scoreCardPairGroup='XAUUSD';
 let cachedScoreMeta={
   XAUUSD:{level:'Newbie', kemitraan:'Basic Channel', namaChannel:'Datuk EURUSD'},
   FOREX:{level:'Newbie', kemitraan:'Basic Channel', namaChannel:'Datuk Crypto 89'}
@@ -3774,13 +3776,12 @@ async function loadScoreMeta(){
     cachedInvestorCountForScore=(inv||[]).length;
   }catch(e){ console.error('Gagal load jumlah investor untuk skor', e); }
 }
-async function editScoreMeta(){
+async function editScoreMeta(g){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah Level/Kemitraan');return;}
-  const g=scoreCardPairGroup||'XAUUSD';
   const labelGrup=cachedScoreMeta[g].namaChannel||(g==='FOREX'?'Forex':g);
   const cur=cachedScoreMeta[g];
-  const namaInput=prompt(`[${g}] Nama channel (ditampilkan di tab & judul, mis. "Datuk EURUSD"):`, cur.namaChannel||'');
-  if(namaInput===null)return;
+  // Nama channel (mis. "Datuk EURUSD") SENGAJA tidak bisa diedit di sini — itu nama resmi
+  // terdaftar di Trading Family, bukan sesuatu yang bisa diganti-ganti dari situs ini.
   const levelInput=prompt(`[${labelGrup}] Level channel — ketik PERSIS salah satu:\n${SCORE_LEVEL_OPTIONS.join(' / ')}`, cur.level);
   if(levelInput===null)return;
   const levelMatch=SCORE_LEVEL_OPTIONS.find(o=>o.toLowerCase()===levelInput.trim().toLowerCase());
@@ -3789,7 +3790,7 @@ async function editScoreMeta(){
   if(kemInput===null)return;
   const kemMatch=SCORE_KEMITRAAN_OPTIONS.find(o=>o.toLowerCase()===kemInput.trim().toLowerCase());
   if(!kemMatch){toast('❌ Nama status kemitraan tidak dikenali — harus persis salah satu: '+SCORE_KEMITRAAN_OPTIONS.join(', '));return;}
-  const newMeta={level:levelMatch, kemitraan:kemMatch, namaChannel:namaInput.trim()||cur.namaChannel};
+  const newMeta={level:levelMatch, kemitraan:kemMatch, namaChannel:cur.namaChannel};
   try{
     const payload=JSON.stringify(newMeta);
     const key='score_meta_'+g;
@@ -3798,24 +3799,37 @@ async function editScoreMeta(){
     else{ await api('app_settings','POST',{key,value:payload}); }
     cachedScoreMeta[g]=newMeta;
     toast(`✅ ${newMeta.namaChannel} diperbarui untuk semua pengunjung`);
-    setScoreCardPairGroup(g);
+    renderScoreCard();
   }catch(e){
     console.error(e);
     toast('❌ Gagal simpan Level/Kemitraan ke server: '+(e.message||'').slice(0,120));
   }
 }
-function setScoreCardPairGroup(g){
-  scoreCardPairGroup=g;
-  document.querySelectorAll('#scorePairTabs .pair-tab').forEach(b=>b.classList.toggle('active', b.dataset.sp===g));
-  const labelTeks = (cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel) || (g==='FOREX'?'Forex':g);
-  const t1=document.getElementById('scoreTabLabelXauusd'); if(t1) t1.textContent=cachedScoreMeta.XAUUSD.namaChannel||'XAUUSD';
-  const t2=document.getElementById('scoreTabLabelForex'); if(t2) t2.textContent=cachedScoreMeta.FOREX.namaChannel||'Forex';
-  const l1=document.getElementById('inpRingkasPairLabel'); if(l1) l1.textContent=labelTeks;
+// ── Score & REM Pips SEKARANG SELALU nampilin KEDUA channel sekaligus (gak ada tab aktif buat
+// itu lagi) — jadi 2 fungsi di bawah ini KHUSUS ngatur pair mana yang lagi jadi target form
+// "Input Sinyal" & "Riwayat Sinyal" doang (karena submit sinyal & lihat riwayat itu inherently
+// satu channel per aksi). ──
+let inputSinyalPairGroup='XAUUSD';
+function setInputSinyalPairGroup(g){
+  inputSinyalPairGroup=g;
+  document.querySelectorAll('#inpSinyalPairTabs .pair-tab').forEach(b=>b.classList.toggle('active', b.dataset.sp===g));
+  const labelTeks=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||(g==='FOREX'?'Forex':g);
   const l2=document.getElementById('inpRingkasPairLabel2'); if(l2) l2.textContent=labelTeks;
-  const l3=document.getElementById('remPipsPairLabel'); if(l3) l3.textContent=labelTeks;
-  renderScoreCard();
-  renderRemPipsCard();
+}
+let daftarSinyalPairGroup='XAUUSD';
+function setDaftarSinyalPairGroup(g){
+  daftarSinyalPairGroup=g;
+  document.querySelectorAll('#daftarSinyalPairTabs .pair-tab').forEach(b=>b.classList.toggle('active', b.dataset.sp===g));
+  daftarSinyalExpanded=false;
   renderDaftarSinyal();
+}
+function syncSemuaLabelChannel(){
+  ['scoreTabLabelXauusd','scoreTabLabelForex','scoreTabLabelXauusd2','scoreTabLabelForex2'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    const g = id.toLowerCase().includes('xauusd') ? 'XAUUSD' : 'FOREX';
+    el.textContent=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+  });
 }
 // ══════════════════════════════════════════
 // PENYIMPANAN SENDIRI KHUSUS TOOL ANALIS — SAMA SEKALI TERPISAH dari tabel `saldo_harian`
@@ -3846,7 +3860,7 @@ async function simpanSinyalKeServer(g){
 function buatIdSinyal(){ return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 async function simpanDataHarianRingkas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
-  const g=scoreCardPairGroup||'XAUUSD';
+  const g=inputSinyalPairGroup||'XAUUSD';
   const tgl=document.getElementById('inpRingkasTgl').value;
   const pairSimbol=(document.getElementById('inpRingkasSimbol').value||'').trim();
   const pipsInput=document.getElementById('inpRingkasPips').value;
@@ -3927,7 +3941,7 @@ function toggleDaftarSinyal(){
 function renderDaftarSinyal(){
   const wrap=document.getElementById('daftarSinyalWrap');
   if(!wrap)return;
-  const g=scoreCardPairGroup||'XAUUSD';
+  const g=daftarSinyalPairGroup||'XAUUSD';
   const list=(cachedSinyalAnalis[g]||[]).slice().sort((a,b)=>new Date(b.tanggal)-new Date(a.tanggal));
   if(!list.length){
     wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:8px">Belum ada sinyal tercatat.</div>`;
@@ -3957,11 +3971,16 @@ function renderDaftarSinyal(){
 // 6 kunci bulan kalender ("YYYY-MM"), dari yang terlama ke terbaru. offsetBulan=0 → 6 bulan
 // SEBELUM bulan berjalan (persis contoh resmi: skor Juli dari Jan-Jun). offsetBulan=1 → geser
 // mundur 1 bulan lagi (dipakai buat hitung skor "bulan lalu" sebagai pembanding naik/turun).
-function getRolling6MonthKeys(offsetBulan){
+function getRolling6MonthKeys(offsetBulan, sertakanBulanBerjalan){
   const off=offsetBulan||0;
   const now=new Date();
   const keys=[];
-  for(let i=6+off;i>=1+off;i--){
+  // Mode resmi (default): 6 bulan SEBELUM bulan berjalan (persis rumus Trading Family).
+  // Mode live (sertakanBulanBerjalan=true): 6 bulan TERAKHIR TERMASUK bulan berjalan — biar
+  // update real-time pas kamu input sinyal hari ini juga.
+  const mulai = sertakanBulanBerjalan ? 5+off : 6+off;
+  const akhir = sertakanBulanBerjalan ? 0+off : 1+off;
+  for(let i=mulai;i>=akhir;i--){
     const d=new Date(now.getFullYear(), now.getMonth()-i, 1);
     keys.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
   }
@@ -3992,10 +4011,9 @@ async function loadTanggalMulaiChannel(){
     }catch(e){ console.error('Gagal load tgl_mulai_channel_'+g, e); }
   }
 }
-async function editTanggalMulaiChannel(){
+async function editTanggalMulaiChannel(g){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah tanggal mulai channel');return;}
-  const g=scoreCardPairGroup||'XAUUSD';
-  const labelGrup=g==='FOREX'?'Forex':g;
+  const labelGrup=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||(g==='FOREX'?'Forex':g);
   const cur=cachedTanggalMulaiChannel[g];
   const input=prompt(`[${labelGrup}] Tanggal channel ASLI mulai jalan (format YYYY-MM-DD). Ini buat ngitung syarat "minimal 6 bulan" — TIDAK harus sama dengan tanggal sinyal pertama di situs ini.\n\nKosongkan/batalkan buat pakai default (dihitung dari sinyal pertama yang ada).`, cur||'');
   if(input===null)return;
@@ -4033,9 +4051,8 @@ async function loadRemPips(){
     }catch(e){ console.error('Gagal load rem_pips_'+g, e); }
   }
 }
-async function editRemPips(){
+async function editRemPips(g){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah REM Pips');return;}
-  const g=scoreCardPairGroup||'XAUUSD';
   const labelGrup=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||(g==='FOREX'?'Forex':g);
   const input=prompt(`[${labelGrup}] Batas REM (simetris, dalam PIPS). Kena +batas = boleh berhenti karena udah cuan, kena -batas = WAJIB stop.\n\nContoh: "2000" artinya ±2000 pips.`, String(cachedRemPips[g]));
   if(input===null)return;
@@ -4058,43 +4075,50 @@ async function editRemPips(){
 function renderRemPipsCard(){
   const wrap=document.getElementById('remPipsWrap');
   if(!wrap)return;
-  const g=scoreCardPairGroup||'XAUUSD';
-  const batas=cachedRemPips[g]||0;
-  const now=new Date();
-  const rowsBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>{
-    const d=new Date(r.tanggal);
-    return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
-  });
-  const totalPipsBulanIni=rowsBulanIni.reduce((s,r)=>s+parseFloat(r.pips||0),0);
-  const pct=batas>0 ? Math.max(-100,Math.min(100, totalPipsBulanIni/batas*100)) : 0;
-  const kenaAtas = batas>0 && totalPipsBulanIni>=batas;
-  const kenaBawah = batas>0 && totalPipsBulanIni<=-batas;
-  const warnaBar = kenaBawah ? '#D9534F' : kenaAtas ? '#3E9142' : '#C99A2E';
-  const pctPos=(pct+100)/2; // 0-100 buat posisi bar dari kiri(-100%) ke kanan(+100%)
-  let statusTeks='Masih dalam batas normal';
-  let statusWarna='#8A6B26';
-  if(kenaBawah){ statusTeks='🔴 KENA REM — batas rugi bulanan tercapai, disiplin STOP dulu bulan ini'; statusWarna='#D9534F'; }
-  else if(kenaAtas){ statusTeks='🎉 Target tercapai — boleh berhenti, udah cuan sesuai batas'; statusWarna='#3E9142'; }
-
-  wrap.innerHTML=`
-    <div style="display:flex;justify-content:space-between;font-size:9px;color:#8A6B26;margin-bottom:4px">
-      <span>-${batas} pip</span>
-      <span>0</span>
-      <span>+${batas} pip</span>
-    </div>
-    <div style="position:relative;height:8px;background:var(--bg2);border-radius:6px;overflow:hidden">
-      <div style="position:absolute;left:${Math.min(50,pctPos)}%;right:${Math.max(0,50-pctPos)}%;top:0;bottom:0;background:${warnaBar};display:${pctPos>=50?'block':'none'}"></div>
-      <div style="position:absolute;right:${Math.min(50,100-pctPos)}%;left:${Math.max(0,pctPos-50)}%;top:0;bottom:0;background:${warnaBar};display:${pctPos<50?'block':'none'}"></div>
-      <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border)"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:9px;color:#7A5D1F;margin-top:4px">
-      <span>${totalPipsBulanIni>=0?'+':''}${totalPipsBulanIni.toFixed(1)} pip bulan ini</span>
-      <span>${rowsBulanIni.length} sinyal</span>
-    </div>
-    <div style="text-align:center;font-size:10px;color:${statusWarna};margin-top:8px;font-weight:700">${statusTeks}</div>
-    <div style="font-size:8px;color:#8A6B26;margin-top:6px;text-align:center">Referensi: ±${batas} pip ≈ $${(batas*PIP_VALUE_USD_PER_0_01_LOT).toFixed(2)} di lot 0,01 (tool ini gak nyimpen $/saldo, ini cuma buat gambaran)</div>`;
+  const potongan=['XAUUSD','FOREX'].map(g=>{
+    const labelGrup=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+    const batas=cachedRemPips[g]||0;
+    const now=new Date();
+    const rowsBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>{
+      const d=new Date(r.tanggal);
+      return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+    });
+    const totalPipsBulanIni=rowsBulanIni.reduce((s,r)=>s+parseFloat(r.pips||0),0);
+    const pct=batas>0 ? Math.max(-100,Math.min(100, totalPipsBulanIni/batas*100)) : 0;
+    const kenaAtas = batas>0 && totalPipsBulanIni>=batas;
+    const kenaBawah = batas>0 && totalPipsBulanIni<=-batas;
+    const warnaBar = kenaBawah ? '#D9534F' : kenaAtas ? '#3E9142' : '#C99A2E';
+    const pctPos=(pct+100)/2;
+    let statusTeks='Masih dalam batas normal';
+    let statusWarna='#8A6B26';
+    if(kenaBawah){ statusTeks='🔴 KENA REM — batas rugi bulanan tercapai, disiplin STOP dulu bulan ini'; statusWarna='#D9534F'; }
+    else if(kenaAtas){ statusTeks='🎉 Target tercapai — boleh berhenti, udah cuan sesuai batas'; statusWarna='#3E9142'; }
+    return `
+    <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:${g==='XAUUSD'?'10px':'0'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:10px;font-weight:700;color:#3A2E10">${labelGrup}</div>
+        <span onclick="editRemPips('${g}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Batas</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:#8A6B26;margin-bottom:4px">
+        <span>-${batas} pip</span>
+        <span>0</span>
+        <span>+${batas} pip</span>
+      </div>
+      <div style="position:relative;height:8px;background:var(--bg0);border-radius:6px;overflow:hidden">
+        <div style="position:absolute;left:${Math.min(50,pctPos)}%;right:${Math.max(0,50-pctPos)}%;top:0;bottom:0;background:${warnaBar};display:${pctPos>=50?'block':'none'}"></div>
+        <div style="position:absolute;right:${Math.min(50,100-pctPos)}%;left:${Math.max(0,pctPos-50)}%;top:0;bottom:0;background:${warnaBar};display:${pctPos<50?'block':'none'}"></div>
+        <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border)"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:#7A5D1F;margin-top:4px">
+        <span>${totalPipsBulanIni>=0?'+':''}${totalPipsBulanIni.toFixed(1)} pip bulan ini</span>
+        <span>${rowsBulanIni.length} sinyal</span>
+      </div>
+      <div style="text-align:center;font-size:10px;color:${statusWarna};margin-top:8px;font-weight:700">${statusTeks}</div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML=potongan;
 }
-function computeScoreMetrics(pairGroup, offsetBulan){
+function computeScoreMetrics(pairGroup, offsetBulan, live){
   const g=pairGroup||'XAUUSD';
   const allRowsGroup=cachedSinyalAnalis[g]||[];
   if(!allRowsGroup.length) return null;
@@ -4108,7 +4132,7 @@ function computeScoreMetrics(pairGroup, offsetBulan){
   const umurHari=(new Date()-earliestDate)/(1000*60*60*24);
   const cukupUmur = umurHari>=182; // ±6 bulan, sesuai syarat resmi "channel minimal 6 bulan"
 
-  const bulanKeys=getRolling6MonthKeys(offsetBulan||0);
+  const bulanKeys=getRolling6MonthKeys(offsetBulan||0, !!live);
   const rows6bln=allRowsGroup.filter(r=>bulanKeys.includes(bulanKeyOf(r.tanggal)));
 
   // Profit Factor = Gross Profit (VP) 6 bulan terakhir : Gross Loss (VP) 6 bulan terakhir
@@ -4181,25 +4205,28 @@ function getRangeHargaChannel(totalSkor){
   return {min:377000, max:500000};
 }
 function fmtRupiah(n){ return 'Rp'+Math.round(n).toLocaleString('id-ID'); }
-function renderScoreCard(){
-  const wrap=document.getElementById('scoreCardWrap');
-  if(!wrap) return;
-  const g=scoreCardPairGroup||'XAUUSD';
+function renderSatuChannelScore(g){
   const meta=cachedScoreMeta[g]||{level:'Newbie', kemitraan:'Basic Channel', namaChannel:g};
   const labelGrup=meta.namaChannel||(g==='FOREX'?'Forex':g);
-  const m=computeScoreMetrics(g, 0);
+  const m=computeScoreMetrics(g, 0, false); // Skor Resmi: 6 bulan SEBELUM bulan berjalan, persis Trading Family
+
+  const headerChannel=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div style="font-size:12px;font-weight:800;color:#3A2E10">${labelGrup}</div>
+    <div style="display:flex;gap:10px">
+      <span onclick="editScoreMeta('${g}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Level/Kemitraan</span>
+      <span onclick="editTanggalMulaiChannel('${g}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Tgl Mulai</span>
+    </div>
+  </div>`;
 
   if(!m){
-    wrap.innerHTML=`<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:10px">Belum ada sinyal ${labelGrup} untuk dihitung skornya.</div>`;
-    return;
+    return `<div style="background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:12px">${headerChannel}<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:10px">Belum ada sinyal untuk dihitung skornya.</div></div>`;
   }
   if(!m.cukupUmur){
     const sisaHari=Math.max(0, Math.ceil(182-m.umurHari));
-    wrap.innerHTML=`<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:10px;line-height:1.6">
-      Channel ${labelGrup} baru berjalan <b>${Math.floor(m.umurHari)} hari</b> — syarat skor minimal ~6 bulan (182 hari).<br>
-      Sisa ±${sisaHari} hari lagi. Sementara ini channel dianggap "channel free" (belum punya skor/rekomendasi harga).
-    </div>`;
-    return;
+    return `<div style="background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:12px">${headerChannel}<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:10px;line-height:1.6">
+      Channel baru berjalan <b>${Math.floor(m.umurHari)} hari</b> — syarat skor minimal ~6 bulan (182 hari).<br>
+      Sisa ±${sisaHari} hari lagi. Sementara ini channel dianggap "channel free".
+    </div></div>`;
   }
 
   const adaSinyal=adaSinyalBulanLalu(g);
@@ -4213,14 +4240,12 @@ function renderScoreCard(){
   const scores={level:sLevel, kemitraan:sKem, subscriber:sSubs, profitFactor:sPF, monthlyLossRatio:sMLR, profitMonths:sPM, recoveryFactor:sRF};
   const totalSkor=hitungTotalSkorTertimbang(scores);
   const range=getRangeHargaChannel(totalSkor);
-  const isLevelRendah = SCORE_LEVEL_MAP[meta.level]===0; // Newbie/Rookie/Pro
+  const isLevelRendah = SCORE_LEVEL_MAP[meta.level]===0;
 
   // ── Badge perbandingan vs skor bulan lalu (persis fitur "Skor turun/naik dari bulan
-  // sebelumnya" di aplikasi resminya). Level/Kemitraan/Subscriber dianggap SAMA (gak ada histori
-  // bulanan buat itu), cuma 4 faktor otomatis (Profit Factor, MLR, Profit Months, Recovery)
-  // yang dihitung ulang pakai jendela rolling 6-bulan yang digeser mundur 1 bulan.
+  // sebelumnya" di aplikasi resminya) — ini bandingin Skor RESMI vs Skor RESMI bulan lalu. ──
   let badgeBanding='';
-  const mBulanLalu=computeScoreMetrics(g, 1);
+  const mBulanLalu=computeScoreMetrics(g, 1, false);
   if(mBulanLalu && mBulanLalu.cukupUmur){
     const sPF_lalu=bandProfitFactor(mBulanLalu.profitFactor);
     const sMLR_lalu=bandMonthlyLossRatio(mBulanLalu.monthlyLossRatio);
@@ -4229,17 +4254,38 @@ function renderScoreCard(){
     const totalSkorLalu=hitungTotalSkorTertimbang({level:sLevel, kemitraan:sKem, subscriber:sSubs, profitFactor:sPF_lalu, monthlyLossRatio:sMLR_lalu, profitMonths:sPM_lalu, recoveryFactor:sRF_lalu});
     const selisih=totalSkor-totalSkorLalu;
     if(Math.abs(selisih)<0.005){
-      badgeBanding=`<div style="text-align:center;margin-bottom:10px"><span style="font-size:9px;background:var(--bg2);color:#8A6B26;padding:4px 10px;border-radius:20px">Tidak ada perubahan skor</span></div>`;
+      badgeBanding=`<div style="text-align:center;margin-bottom:8px"><span style="font-size:9px;background:var(--bg0);color:#8A6B26;padding:3px 9px;border-radius:20px">Tidak ada perubahan skor</span></div>`;
     }else if(selisih>0){
-      badgeBanding=`<div style="text-align:center;margin-bottom:10px"><span style="font-size:9px;background:#E8F5E9;color:#3E9142;padding:4px 10px;border-radius:20px">🔺 Skor naik dari bulan sebelumnya (${totalSkorLalu.toFixed(2)} → ${totalSkor.toFixed(2)})</span></div>`;
+      badgeBanding=`<div style="text-align:center;margin-bottom:8px"><span style="font-size:9px;background:#E8F5E9;color:#3E9142;padding:3px 9px;border-radius:20px">🔺 Naik dari bulan sebelumnya (${totalSkorLalu.toFixed(2)} → ${totalSkor.toFixed(2)})</span></div>`;
     }else{
-      badgeBanding=`<div style="text-align:center;margin-bottom:10px"><span style="font-size:9px;background:#FDECEA;color:#D9534F;padding:4px 10px;border-radius:20px">🔻 Skor turun dari bulan sebelumnya (${totalSkorLalu.toFixed(2)} → ${totalSkor.toFixed(2)})</span></div>`;
+      badgeBanding=`<div style="text-align:center;margin-bottom:8px"><span style="font-size:9px;background:#FDECEA;color:#D9534F;padding:3px 9px;border-radius:20px">🔻 Turun dari bulan sebelumnya (${totalSkorLalu.toFixed(2)} → ${totalSkor.toFixed(2)})</span></div>`;
     }
+  }
+
+  // ── Skor LIVE: jendela 6 bulan TERMASUK bulan berjalan — update real-time begitu kamu input
+  // sinyal hari ini. INI yang dipakai buat mantau performa harian/REM, BUKAN skor resmi di atas
+  // (yang dikunci sampai tanggal 1 bulan depan, sesuai aturan Trading Family). ──
+  let liveBlok='';
+  const mLive=computeScoreMetrics(g, 0, true);
+  if(mLive && mLive.cukupUmur){
+    const sPF_l=bandProfitFactor(mLive.profitFactor);
+    const sMLR_l=bandMonthlyLossRatio(mLive.monthlyLossRatio);
+    const sPM_l=bandProfitMonths(mLive.profitMonths);
+    const sRF_l=bandRecoveryFactor(mLive.recoveryFactor);
+    const totalSkorLive=hitungTotalSkorTertimbang({level:sLevel, kemitraan:sKem, subscriber:sSubs, profitFactor:sPF_l, monthlyLossRatio:sMLR_l, profitMonths:sPM_l, recoveryFactor:sRF_l});
+    const selisihLive=totalSkorLive-totalSkor;
+    const warnaLive = selisihLive>0.005 ? '#3E9142' : selisihLive<-0.005 ? '#D9534F' : '#8A6B26';
+    const panahLive = selisihLive>0.005 ? '🔺' : selisihLive<-0.005 ? '🔻' : '➖';
+    liveBlok=`<div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:center">
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">⚡ Skor Live (ikut sinyal bulan berjalan, buat REM harian)</div>
+      <div style="font-size:20px;font-weight:800;color:${warnaLive}">${totalSkorLive.toFixed(2)}<span style="font-size:11px;color:#8A6B26;font-weight:400">/4</span> <span style="font-size:11px">${panahLive}</span></div>
+      <div style="font-size:8px;color:#8A6B26;margin-top:2px">vs Skor Resmi ${totalSkor.toFixed(2)} — belum berlaku resmi sampai 1 bulan depan, ini cuma buat kamu pantau tren harian</div>
+    </div>`;
   }
 
   const kotak=(judul,nilaiTeks,score,bobotPersen)=>{
     const lb=scoreLabel(score);
-    return `<div style="background:var(--bg2);border-radius:10px;padding:10px 12px">
+    return `<div style="background:var(--bg0);border-radius:10px;padding:10px 12px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
         <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px">${judul}</div>
         <div style="font-size:8px;color:#A08840">bobot ${bobotPersen}%</div>
@@ -4257,12 +4303,14 @@ function renderScoreCard(){
   const rfTeks = isFinite(m.recoveryFactor) ? m.recoveryFactor.toFixed(2) : '∞';
   const bobotPersenOf=(k)=> (SCORE_BOBOT[k]/SCORE_BOBOT_TOTAL_UNIT*100).toFixed(2);
 
-  wrap.innerHTML=`
+  return `<div style="background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:14px">
+    ${headerChannel}
     <div style="text-align:center;margin-bottom:4px">
-      <div style="font-size:32px;font-weight:800;color:#3A2E10">${totalSkor.toFixed(2)}<span style="font-size:14px;color:#8A6B26;font-weight:400">/4</span></div>
-      <div style="font-size:9px;color:#8A6B26">Total Skor ${labelGrup} (rata-rata tertimbang, rolling 6 bulan terakhir)</div>
+      <div style="font-size:28px;font-weight:800;color:#3A2E10">${totalSkor.toFixed(2)}<span style="font-size:13px;color:#8A6B26;font-weight:400">/4</span></div>
+      <div style="font-size:9px;color:#8A6B26">Skor Resmi (rolling 6 bulan sebelum bulan berjalan — persis Trading Family)</div>
     </div>
     ${badgeBanding}
+    ${liveBlok}
     <div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:center">
       <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Rekomendasi Harga Channel</div>
       <div style="font-size:15px;font-weight:800;color:#D4AF37">${fmtRupiah(range.min)} – ${fmtRupiah(range.max)}</div>
@@ -4277,7 +4325,14 @@ function renderScoreCard(){
       ${kotak('Profit Months', m.profitMonths+' / 6 bulan', sPM, bobotPersenOf('profitMonths'))}
       ${kotak('Recovery Factor', rfTeks, sRF, bobotPersenOf('recoveryFactor'))}
     </div>
-    <div style="font-size:8px;color:#8A6B26;margin-top:10px;line-height:1.5">Rolling 6 bulan: ${getRolling6MonthKeys(0)[0]} s/d ${getRolling6MonthKeys(0)[5]}. Total Skor = Σ(skor faktor × bobotnya) ÷ 17. Sesuai ketentuan resmi, harga bisa diubah manual sekali di tanggal 1–3 tiap bulan; sistem ini BELUM auto-adjust otomatis tiap tanggal 1 — anggap kotak rekomendasi harga di atas sebagai acuan yang kamu terapkan manual.</div>`;
+    <div style="font-size:8px;color:#8A6B26;margin-top:10px;line-height:1.5">Rolling resmi: ${getRolling6MonthKeys(0)[0]} s/d ${getRolling6MonthKeys(0)[5]}. Total Skor = Σ(skor faktor × bobotnya) ÷ 17.</div>
+  </div>`;
+}
+function renderScoreCard(){
+  const wrap=document.getElementById('scoreCardWrap');
+  if(!wrap) return;
+  syncSemuaLabelChannel();
+  wrap.innerHTML = renderSatuChannelScore('XAUUSD') + renderSatuChannelScore('FOREX');
 }
 function renderTargetProgress(basisSaldo, isBulanIniAktif){
   const wrap=document.getElementById('targetProgressWrap');
