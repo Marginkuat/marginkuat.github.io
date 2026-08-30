@@ -1555,19 +1555,28 @@ function renderInvCalcDisclaimer(){
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">📝 Input Sinyal</div>
       </div>
-      <div style="font-size:9px;color:#5C4818;margin-bottom:8px;line-height:1.5">Input SATU-SATU tiap sinyal yang closed — bukan rekap harian. Isi Pips DAN VP persis seperti di notifikasi sinyal kamu (dua-duanya manual, karena rasio VP:pips beda-beda tiap pair).</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Input SATU-SATU tiap sinyal yang closed — bukan rekap harian.</div>
+      <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+        <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">✅ Cek List — sontek dari notifikasi sinyal</div>
+        <div style="font-size:9px;color:#3A2E10;line-height:1.9">
+          ☐ <b>Nama pair</b> — judul di atas notifikasi (mis. NZDUSD)<br>
+          ☐ <b>Closed at</b> — tanggal di baris "Closed at" (JAM diabaikan, cukup tanggalnya)<br>
+          ☐ <b>Pips</b> — angka sebelum kata "Pips" di kotak merah/hijau bawah<br>
+          ☐ <b>VP</b> — angka dalam kurung "(...VP)" di sebelahnya
+        </div>
+      </div>
       <label class="lbl">Channel</label>
       <div id="inpSinyalPairTabs" style="display:flex;gap:6px;margin-bottom:10px">
         <button class="pair-tab active" data-sp="XAUUSD" onclick="setInputSinyalPairGroup('XAUUSD')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelXauusd">Datuk EURUSD</span></button>
         <button class="pair-tab" data-sp="FOREX" onclick="setInputSinyalPairGroup('FOREX')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelForex">Datuk Crypto 89</span></button>
       </div>
-      <label class="lbl">Tanggal (Closed at)</label>
-      <input class="inp" type="date" id="inpRingkasTgl">
       <label class="lbl">Nama Pair Sinyal (opsional, mis. NZDUSD)</label>
       <input class="inp" type="text" id="inpRingkasSimbol" placeholder="NZDUSD">
-      <label class="lbl">Hasil Sinyal (Pips) — isi minus kalau rugi, mis. -30</label>
+      <label class="lbl">Closed at (tanggal sinyal ditutup)</label>
+      <input class="inp" type="date" id="inpRingkasTgl">
+      <label class="lbl">Pips — isi minus kalau rugi, mis. -30</label>
       <input class="inp" type="number" step="0.1" id="inpRingkasPips" placeholder="-30">
-      <label class="lbl">Hasil Sinyal (VP) — isi minus kalau rugi, mis. -60</label>
+      <label class="lbl">VP — isi minus kalau rugi, mis. -60</label>
       <input class="inp" type="number" step="0.01" id="inpRingkasVp" placeholder="-60">
       <button class="btn btn-p" onclick="simpanDataHarianRingkas()" style="margin-top:10px">💾 Simpan Sinyal (pair: <span id="inpRingkasPairLabel2">Datuk EURUSD</span>)</button>
       <div id="inpRingkasStatus" style="font-size:10px;color:#7A5D1F;margin-top:8px;text-align:center"></div>
