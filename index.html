@@ -4891,6 +4891,75 @@ async function fetchAllKasData(){
   }
 }
 
+// ── EDIT / HAPUS satu catatan di Riwayat Aliran Uang (list utama, BUKAN "Rekening per
+// Kategori") — biar salah kategori/nominal/tanggal bisa dibenerin tanpa perlu hapus-input ulang.
+// PENTING: ini cuma ubah/hapus baris di kas_pribadi, TIDAK NYENTUH tabel saldo_harian sama
+// sekali — jadi Laporan Harian/Bulanan/Tahunan (yang sumbernya dari saldo_harian, BUKAN dari
+// kas_pribadi) TIDAK KEPENGARUH. Yang berubah cuma breakdown kategori di "Rekap & Grafik Arus
+// Kas" (yang emang sumbernya kas_pribadi) — itu justru yang perlu dibenerin. ──
+async function editKasEntry(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  let row;
+  try{
+    const rows=await api('kas_pribadi?select=*&id=eq.'+id);
+    row=rows[0];
+  }catch(e){ toast('❌ Gagal ambil data: '+(e.message||'').slice(0,120)); return; }
+  if(!row){toast('❌ Data tidak ditemukan');return;}
+
+  const daftarKategori=Object.keys(kategoriMeta).map(k=>`${k} = ${kategoriMeta[k].label}`).join('\n');
+  const katBaru=prompt(`Ubah Kategori — ketik KEY persis salah satu:\n\n${daftarKategori}`, row.kategori||'');
+  if(katBaru===null)return;
+  if(katBaru.trim() && !kategoriMeta[katBaru.trim()]){toast('❌ Key kategori tidak dikenali');return;}
+
+  const dariBaru=prompt('Ubah "Dari":', row.dari||'');
+  if(dariBaru===null)return;
+  const keBaru=prompt('Ubah "Ke":', row.ke||'');
+  if(keBaru===null)return;
+  const jumlahBaruStr=prompt('Ubah nominal (¢):', row.jumlah);
+  if(jumlahBaruStr===null)return;
+  const jumlahBaru=parseFloat(jumlahBaruStr);
+  if(isNaN(jumlahBaru)||jumlahBaru<=0){toast('❌ Nominal tidak valid');return;}
+  const tglBaru=prompt('Ubah tanggal (YYYY-MM-DD):', row.tanggal);
+  if(tglBaru===null)return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(tglBaru)){toast('❌ Format tanggal salah, pakai YYYY-MM-DD');return;}
+  const ketBaruStr=prompt('Ubah catatan (opsional):', row.keterangan||'');
+  const ketBaru = ketBaruStr===null ? row.keterangan : (ketBaruStr.trim()||null);
+
+  try{
+    await api(`kas_pribadi?id=eq.${id}`,'PATCH',{
+      kategori: katBaru.trim()||null,
+      dari: dariBaru.trim()||row.dari,
+      ke: keBaru.trim()||row.ke,
+      jumlah: parseFloat(jumlahBaru.toFixed(2)),
+      tanggal: tglBaru,
+      keterangan: ketBaru
+    });
+    toast('✅ Catatan diperbarui — Laporan Harian/Bulanan/Tahunan TIDAK berubah, cuma Rekap Arus Kas yang ikut update');
+    loadKas();
+    if(typeof renderKasRingkasan==='function') renderKasRingkasan();
+    if(typeof renderKasRekap==='function') renderKasRekap();
+    if(typeof renderKasChart==='function') renderKasChart();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal update: '+(e.message||'').slice(0,150));
+  }
+}
+async function hapusKasEntry(id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!confirm('Hapus catatan ini dari Riwayat Aliran Uang? Ini CUMA hapus catatan kas_pribadi, TIDAK menyentuh Laporan Harian/Saldo Harian sama sekali.'))return;
+  try{
+    await api(`kas_pribadi?id=eq.${id}`,'DELETE');
+    toast('✅ Catatan dihapus');
+    loadKas();
+    if(typeof renderKasRingkasan==='function') renderKasRingkasan();
+    if(typeof renderKasRekap==='function') renderKasRekap();
+    if(typeof renderKasChart==='function') renderKasChart();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal hapus: '+(e.message||'').slice(0,150));
+  }
+}
+
 async function loadKas(){
   try{
     const rows=await api('kas_pribadi?select=*&order=tanggal.desc,created_at.desc&limit=50');
@@ -4915,7 +4984,10 @@ async function loadKas(){
           <div class="ri-cat" style="color:#7A5D1F">${escapeHtml(r.dari||'-')} → ${escapeHtml(r.ke||'-')}</div>
           ${kursHtml}
         </div>
-        <div class="ri-profit" style="color:#D4AF37">${fc(r.jumlah)}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="ri-profit" style="color:#D4AF37">${fc(r.jumlah)}</div>
+          ${isAdmin ? `<span onclick="editKasEntry(${r.id})" style="cursor:pointer;font-size:11px" title="Edit">✏️</span><span onclick="hapusKasEntry(${r.id})" style="cursor:pointer;font-size:11px" title="Hapus">🗑️</span>` : ''}
+        </div>
       </div>`;
     });
     el.innerHTML=wrapCollapsibleListHtml(itemsHtml, {previewCount:5});
