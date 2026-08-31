@@ -4906,11 +4906,14 @@ async function editKasEntry(id){
   }catch(e){ toast('❌ Gagal ambil data: '+(e.message||'').slice(0,120)); return; }
   if(!row){toast('❌ Data tidak ditemukan');return;}
 
-  const daftarKategori=Object.keys(kategoriMeta).map(k=>`${k} = ${kategoriMeta[k].label}`).join('\n');
-  const katBaru=prompt(`Ubah Kategori — ketik KEY persis salah satu:\n\n${daftarKategori}`, row.kategori||'');
-  if(katBaru===null)return;
-  if(katBaru.trim() && !kategoriMeta[katBaru.trim()]){toast('❌ Key kategori tidak dikenali');return;}
-
+  // ── Kategori dipilih lewat modal TAP (bukan ketik manual di prompt() — itu bikin bingung
+  // karena keliatan kayak daftar tapi sebenarnya cuma teks, harus diketik persis). ──
+  pilihKategoriModal(row.kategori, function(katBaru){
+    if(katBaru===null) return; // batal
+    lanjutkanEditKasEntry(id, row, katBaru);
+  });
+}
+function lanjutkanEditKasEntry(id, row, katBaru){
   const dariBaru=prompt('Ubah "Dari":', row.dari||'');
   if(dariBaru===null)return;
   const keBaru=prompt('Ubah "Ke":', row.ke||'');
@@ -4925,24 +4928,57 @@ async function editKasEntry(id){
   const ketBaruStr=prompt('Ubah catatan (opsional):', row.keterangan||'');
   const ketBaru = ketBaruStr===null ? row.keterangan : (ketBaruStr.trim()||null);
 
-  try{
-    await api(`kas_pribadi?id=eq.${id}`,'PATCH',{
-      kategori: katBaru.trim()||null,
-      dari: dariBaru.trim()||row.dari,
-      ke: keBaru.trim()||row.ke,
-      jumlah: parseFloat(jumlahBaru.toFixed(2)),
-      tanggal: tglBaru,
-      keterangan: ketBaru
-    });
-    toast('✅ Catatan diperbarui — Laporan Harian/Bulanan/Tahunan TIDAK berubah, cuma Rekap Arus Kas yang ikut update');
-    loadKas();
-    if(typeof renderKasRingkasan==='function') renderKasRingkasan();
-    if(typeof renderKasRekap==='function') renderKasRekap();
-    if(typeof renderKasChart==='function') renderKasChart();
-  }catch(e){
-    console.error(e);
-    toast('❌ Gagal update: '+(e.message||'').slice(0,150));
-  }
+  (async()=>{
+    try{
+      await api(`kas_pribadi?id=eq.${id}`,'PATCH',{
+        kategori: katBaru||null,
+        dari: dariBaru.trim()||row.dari,
+        ke: keBaru.trim()||row.ke,
+        jumlah: parseFloat(jumlahBaru.toFixed(2)),
+        tanggal: tglBaru,
+        keterangan: ketBaru
+      });
+      toast('✅ Catatan diperbarui — Laporan Harian/Bulanan/Tahunan TIDAK berubah, cuma Rekap Arus Kas yang ikut update');
+      loadKas();
+      if(typeof renderKasRingkasan==='function') renderKasRingkasan();
+      if(typeof renderKasRekap==='function') renderKasRekap();
+      if(typeof renderKasChart==='function') renderKasChart();
+    }catch(e){
+      console.error(e);
+      toast('❌ Gagal update: '+(e.message||'').slice(0,150));
+    }
+  })();
+}
+// ── Modal tap-pilih kategori — dibikin sendiri (bukan pakai <select> asli) biar gaya/warnanya
+// konsisten sama tema situs, dan biar bisa dipanggil dari mana aja pakai callback. ──
+function pilihKategoriModal(currentKey, callback){
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  const panel=document.createElement('div');
+  panel.style.cssText='background:var(--bg1);border-radius:16px 16px 0 0;padding:16px;max-height:78vh;overflow-y:auto;width:100%;max-width:480px;box-sizing:border-box';
+  panel.innerHTML=`<div style="font-size:13px;font-weight:700;color:#D4AF37;margin-bottom:12px;text-align:center">Pilih Kategori</div>`;
+  const list=document.createElement('div');
+  list.style.cssText='display:flex;flex-direction:column;gap:6px';
+  Object.keys(kategoriMeta).forEach(key=>{
+    const km=kategoriMeta[key];
+    const aktif = key===currentKey;
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.textContent=`${km.dot} ${km.label}`;
+    btn.style.cssText=`text-align:left;padding:11px 12px;border-radius:10px;border:1.5px solid ${aktif?'#B8860B':'var(--border)'};background:${aktif?'var(--bg3)':'var(--bg0)'};color:${aktif?'#D4AF37':'#C8A84B'};font-size:12px;cursor:pointer;font-weight:${aktif?'700':'400'}`;
+    btn.onclick=()=>{ if(overlay.parentNode) document.body.removeChild(overlay); callback(key); };
+    list.appendChild(btn);
+  });
+  panel.appendChild(list);
+  const cancelBtn=document.createElement('button');
+  cancelBtn.type='button';
+  cancelBtn.textContent='Batal';
+  cancelBtn.style.cssText='margin-top:12px;width:100%;padding:11px;border-radius:10px;border:1px solid var(--border);background:transparent;color:#7A5D1F;font-size:12px;cursor:pointer';
+  cancelBtn.onclick=()=>{ if(overlay.parentNode) document.body.removeChild(overlay); callback(null); };
+  panel.appendChild(cancelBtn);
+  overlay.appendChild(panel);
+  overlay.onclick=(e)=>{ if(e.target===overlay){ if(overlay.parentNode) document.body.removeChild(overlay); callback(null); } };
+  document.body.appendChild(overlay);
 }
 async function hapusKasEntry(id){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
