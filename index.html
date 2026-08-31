@@ -7270,7 +7270,28 @@ async function tambahDanaInvestor(id, nama, modalSaatIni){
   try{
     await api('investors?id=eq.'+encodeURIComponent(id),'PATCH',{modal:modalSaatIni+jumlah});
     await api('investor_transaksi','POST',{investor_id:id, jenis:'tambah_dana', jumlah, tanggal:tglStr, waktu, keterangan:ket||null});
-    toast(`✅ Dana ${nama} bertambah ${fc(jumlah)}`);
+    // ── FIX: dulu Tambah Dana Investor cuma update tabel investors, TIDAK PERNAH nyatet ke
+    // kas_pribadi (Aliran Uang) — jadi uang masuk dari investor gak kelihatan di laporan kas.
+    // Sekarang auto-catat, kategori 'modal_investor', sama persis kayak input manual biasa. ──
+    try{
+      await api('kas_pribadi','POST',{
+        tanggal: tglStr,
+        dari: `Modal Investor - ${nama}`,
+        ke: 'Saldo MT4',
+        jumlah: parseFloat(jumlah.toFixed(2)),
+        keterangan: ket ? `Investor ${nama}: ${ket}` : `Setoran dana investor (${nama})`,
+        kategori: 'modal_investor'
+      });
+    }catch(errKas){
+      try{
+        await api('kas_pribadi','POST',{
+          tanggal: tglStr, dari: `Modal Investor - ${nama}`, ke: 'Saldo MT4',
+          jumlah: parseFloat(jumlah.toFixed(2)),
+          keterangan: ket ? `Investor ${nama}: ${ket}` : `Setoran dana investor (${nama})`
+        });
+      }catch(errKas2){ console.error('Gagal auto-catat ke kas_pribadi (Tambah Dana Investor)', errKas2); }
+    }
+    toast(`✅ Dana ${nama} bertambah ${fc(jumlah)} (tercatat juga di Aliran Uang)`);
     renderInvestorDashboard();
   }catch(e){
     console.error(e);
@@ -7290,7 +7311,27 @@ async function tarikDanaInvestor(id, nama, modalSaatIni){
   try{
     await api('investors?id=eq.'+encodeURIComponent(id),'PATCH',{modal:Math.max(0,modalSaatIni-jumlah)});
     await api('investor_transaksi','POST',{investor_id:id, jenis:'tarik_dana', jumlah, tanggal:tglStr, waktu, keterangan:ket||null});
-    toast(`✅ Penarikan ${nama} sebesar ${fc(jumlah)} dicatat`);
+    // ── FIX: sama seperti Tambah Dana — Tarik Dana Investor sekarang juga auto-catat ke
+    // kas_pribadi, arah kebalikannya (dari Saldo MT4 ke investor). ──
+    try{
+      await api('kas_pribadi','POST',{
+        tanggal: tglStr,
+        dari: 'Saldo MT4',
+        ke: `Modal Investor - ${nama}`,
+        jumlah: parseFloat(jumlah.toFixed(2)),
+        keterangan: ket ? `Investor ${nama}: ${ket}` : `Penarikan dana investor (${nama})`,
+        kategori: 'modal_investor'
+      });
+    }catch(errKas){
+      try{
+        await api('kas_pribadi','POST',{
+          tanggal: tglStr, dari: 'Saldo MT4', ke: `Modal Investor - ${nama}`,
+          jumlah: parseFloat(jumlah.toFixed(2)),
+          keterangan: ket ? `Investor ${nama}: ${ket}` : `Penarikan dana investor (${nama})`
+        });
+      }catch(errKas2){ console.error('Gagal auto-catat ke kas_pribadi (Tarik Dana Investor)', errKas2); }
+    }
+    toast(`✅ Penarikan ${nama} sebesar ${fc(jumlah)} dicatat (tercatat juga di Aliran Uang)`);
     renderInvestorDashboard();
   }catch(e){
     console.error(e);
