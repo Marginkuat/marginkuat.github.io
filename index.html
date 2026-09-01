@@ -3251,6 +3251,7 @@ async function loadAll(){
   loadStatementList();
   renderGraph();
   await loadScoreMeta();
+  await loadTargetResmiAsli();
   await loadTanggalMulaiChannel();
   await loadSinyalAnalis();
   await loadRemPips();
@@ -3766,6 +3767,46 @@ let cachedScoreMeta={
   FOREX:{level:'Newbie', kemitraan:'Basic Channel', namaChannel:'Datuk Crypto 89'}
 };
 let cachedInvestorCountForScore=0;
+// ── Target Skor Resmi ASLI (dari app resminya, misal Trading Family) — diisi manual oleh admin
+// tiap bulan baru muncul di sana (contoh: Agustus 2026 = 0,35). Dipakai buat badge banding
+// "Skor Live situs ini vs Skor Resmi asli bulan terakhir", biar kelihatan tren naik/turun
+// menuju target, dan kapan sudah boleh berhenti nambah sinyal analisa. ──
+let cachedTargetResmiAsli={XAUUSD:null, FOREX:null}; // {nilai, labelBulan}
+async function loadTargetResmiAsli(){
+  for(const g of ['XAUUSD','FOREX']){
+    try{
+      const rows=await api('app_settings?select=value&key=eq.target_resmi_asli_'+g);
+      if(rows && rows.length && rows[0].value){
+        const parsed=JSON.parse(rows[0].value);
+        if(parsed && isFinite(parsed.nilai)) cachedTargetResmiAsli[g]={nilai:parseFloat(parsed.nilai), labelBulan:parsed.labelBulan||''};
+      }
+    }catch(e){ console.error('Gagal load target_resmi_asli_'+g, e); }
+  }
+}
+async function editTargetResmiChannel(g){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah Target Skor Resmi');return;}
+  const cur=cachedTargetResmiAsli[g];
+  const labelInput=prompt(`Label bulan skor resmi terakhir dari app ASLI (mis. "Agustus 2026"):`, cur?cur.labelBulan:'');
+  if(labelInput===null)return;
+  const nilaiInput=prompt(`Nilai skor resmi terakhir dari app ASLI buat bulan ${labelInput.trim()} (mis. 0.35):`, cur?String(cur.nilai):'');
+  if(nilaiInput===null)return;
+  const nilaiNum=parseFloat((nilaiInput||'').replace(',','.'));
+  if(!isFinite(nilaiNum)){toast('❌ Angka skor tidak valid');return;}
+  const newVal={nilai:nilaiNum, labelBulan:labelInput.trim()};
+  try{
+    const payload=JSON.stringify(newVal);
+    const key='target_resmi_asli_'+g;
+    const existing=await api('app_settings?select=key&key=eq.'+key);
+    if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:payload}); }
+    else{ await api('app_settings','POST',{key,value:payload}); }
+    cachedTargetResmiAsli[g]=newVal;
+    toast(`✅ Target skor resmi (${labelInput.trim()}: ${nilaiNum}) tersimpan`);
+    renderScoreCard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan target skor resmi: '+(e.message||'').slice(0,120));
+  }
+}
 async function loadScoreMeta(){
   for(const g of ['XAUUSD','FOREX']){
     try{
@@ -4282,10 +4323,31 @@ function renderSatuChannelScore(g){
     const selisihLive=totalSkorLive-totalSkor;
     const warnaLive = selisihLive>0.005 ? '#3E9142' : selisihLive<-0.005 ? '#D9534F' : '#8A6B26';
     const panahLive = selisihLive>0.005 ? '🔺' : selisihLive<-0.005 ? '🔻' : '➖';
+    // ── Badge target: banding Skor Live situs ini vs Skor Resmi ASLI (dari app resminya,
+    // mis. Trading Family) bulan terakhir yang diinput manual admin. Ini yang dipantau tiap
+    // hari buat tau tren September naik/turun dari baseline Agustus, dan kapan boleh berhenti
+    // nambah sinyal analisa (begitu Live > baseline). ──
+    const target=cachedTargetResmiAsli[g];
+    let targetBlokHtml='';
+    if(target && isFinite(target.nilai)){
+      const selisihTarget=totalSkorLive-target.nilai;
+      const tercapai=selisihTarget>0.005;
+      const warnaTarget=tercapai?'#3E9142':(selisihTarget<-0.005?'#D9534F':'#8A6B26');
+      const panahTarget=tercapai?'🔺':(selisihTarget<-0.005?'🔻':'➖');
+      targetBlokHtml=`<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
+        <div style="font-size:8px;color:#8A6B26">🎯 vs Skor Resmi asli ${target.labelBulan?escapeHtml(target.labelBulan):'bulan lalu'} (${target.nilai.toFixed(2)}):
+          <span style="color:${warnaTarget};font-weight:800">${panahTarget} ${selisihTarget>=0?'+':''}${selisihTarget.toFixed(2)}</span>
+        </div>
+        <div style="font-size:9px;font-weight:800;color:${tercapai?'#3E9142':'#8A6B26'};margin-top:3px">${tercapai?`✅ Target tercapai — sudah naik di atas ${target.labelBulan||'bulan lalu'}, boleh stop nambah sinyal analisa`:`⏳ Belum tercapai — terus catat sinyal sampai Skor Live > ${target.nilai.toFixed(2)}`}</div>
+      </div>`;
+    }
+    const editTargetLinkHtml = `<div style="text-align:right;margin-top:6px"><span onclick="editTargetResmiChannel('${g}')" style="font-size:8px;color:#7A5D1F;cursor:pointer;text-decoration:underline">${target?'Ubah':'+ Isi'} target skor resmi asli</span></div>`;
     liveBlok=`<div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:center">
       <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">⚡ Skor Live (ikut sinyal bulan berjalan, buat REM harian)</div>
       <div style="font-size:20px;font-weight:800;color:${warnaLive}">${totalSkorLive.toFixed(2)}<span style="font-size:11px;color:#8A6B26;font-weight:400">/4</span> <span style="font-size:11px">${panahLive}</span></div>
       <div style="font-size:8px;color:#8A6B26;margin-top:2px">vs Skor Resmi ${totalSkor.toFixed(2)} — belum berlaku resmi sampai 1 bulan depan, ini cuma buat kamu pantau tren harian</div>
+      ${targetBlokHtml}
+      ${editTargetLinkHtml}
     </div>`;
   }
 
