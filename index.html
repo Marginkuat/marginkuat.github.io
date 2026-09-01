@@ -7098,16 +7098,28 @@ async function tambahInvestor(){
   if(kode.length<8 || !/[a-zA-Z]/.test(kode) || !/[0-9]/.test(kode)){
     if(!confirm(`⚠️ Kode "${kode}" agak lemah (idealnya 8+ karakter, campuran huruf & angka). Ada proteksi lockout otomatis kalau ada yang coba tebak berkali-kali, tapi kode yang lebih kuat tetap lebih aman.\n\nLanjut pakai kode ini?`)) return;
   }
+  const noWaStr=prompt(`Nomor WhatsApp ${nama} (opsional, buat kirim laporan otomatis nanti — boleh dikosongkan & diisi belakangan):`, '');
+
   try{
     const dup=await api('investors?select=id&kode=eq.'+encodeURIComponent(kode));
     if(dup.length){toast('❌ Kode akses sudah dipakai investor lain, pakai kode lain');return;}
     const payload={id:Date.now().toString(36), nama, modal, tanggal:tglStr, kode};
     if(catatanRem) payload.catatan_rem=catatanRem;
+    if(noWaStr && noWaStr.trim()) payload.no_wa=noWaStr.trim();
     try{
       await api('investors','POST',payload);
     }catch(e2){
-      // Kalau kolom catatan_rem belum ada di tabel (SQL setup belum dijalankan), coba lagi
+      // Kalau kolom catatan_rem/no_wa belum ada di tabel (SQL setup belum dijalankan), coba lagi
       // tanpa kolom itu supaya investor tetap kesimpan — tapi tetap kasih tau admin.
+      if(payload.no_wa && /no_wa/i.test(e2.message||'')){
+        delete payload.no_wa;
+        try{
+          await api('investors','POST',payload);
+          toast('⚠️ Investor disimpan, TAPI nomor WA gagal (jalankan: ALTER TABLE investors ADD COLUMN no_wa text; di Supabase, lalu isi lewat "Ubah" di kartu investor)');
+          renderInvestorDashboard();
+          return;
+        }catch(e3){ e2=e3; }
+      }
       if(catatanRem && /catatan_rem/i.test(e2.message||'')){
         delete payload.catatan_rem;
         await api('investors','POST',payload);
@@ -7286,11 +7298,21 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
   const rekeningHtml = (isAdminMode||isSelfMode)
     ? `<div style="font-size:9px;color:#7A5D1F;margin-top:6px;border-top:1px solid var(--border);padding-top:6px">🏦 No. Rekening: <b style="color:#C8A84B">${rekening?escapeHtml(rekening):'(belum diisi)'}</b> <span onclick="editRekeningInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}','${escapeHtml(rekening).replace(/'/g,"\\'")}')" style="color:#7A5D1F;text-decoration:underline;cursor:pointer;margin-left:4px">Ubah</span></div>`
     : (rekening ? `<div style="font-size:9px;color:#7A5D1F;margin-top:6px;border-top:1px solid var(--border);padding-top:6px">🏦 No. Rekening: <b style="color:#C8A84B">${escapeHtml(rekening)}</b></div>` : '');
+  const noWa=inv.no_wa||'';
+  const noWaHtml = isAdminMode
+    ? `<div style="font-size:9px;color:#7A5D1F;margin-top:4px">💬 No. WA: <b style="color:#C8A84B">${noWa?escapeHtml(noWa):'(belum diisi)'}</b> <span onclick="editNoWaInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}','${escapeHtml(noWa).replace(/'/g,"\\'")}')" style="color:#7A5D1F;text-decoration:underline;cursor:pointer;margin-left:4px">Ubah</span></div>`
+    : '';
+  const kirimWaBtnHtml = isAdminMode
+    ? (noWa
+        ? `<button onclick="kirimLaporanWaInvestor('${escapeHtml(inv.nama).replace(/'/g,"\\'")}','${escapeHtml(noWa).replace(/'/g,"\\'")}',${parseFloat(inv.modal||0)},${currentVal},${profitShare},${roi},${tierMeta.riskPct})" style="flex:1;min-width:90px;padding:7px;border-radius:8px;border:1px solid #25D366;background:transparent;color:#25D366;font-size:9px;font-weight:700;cursor:pointer">💬 Kirim Laporan WA</button>`
+        : `<button onclick="editNoWaInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}','')" style="flex:1;min-width:90px;padding:7px;border-radius:8px;border:1px dashed #5C4818;background:transparent;color:#7A5D1F;font-size:9px;font-weight:700;cursor:pointer">💬 Isi No. WA dulu</button>`)
+    : '';
   const aksiAdminHtml = isAdminMode ? `
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
       <button onclick="tambahDanaInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}',${parseFloat(inv.modal||0)})" style="flex:1;min-width:90px;padding:7px;border-radius:8px;border:1px solid #4ADE80;background:transparent;color:#4ADE80;font-size:9px;font-weight:700;cursor:pointer">➕ Tambah Dana</button>
       <button onclick="tarikDanaInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}',${parseFloat(inv.modal||0)})" style="flex:1;min-width:90px;padding:7px;border-radius:8px;border:1px solid #F87171;background:transparent;color:#F87171;font-size:9px;font-weight:700;cursor:pointer">➖ Tarik Dana</button>
       <button onclick="catatDistribusiProfit('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}')" style="flex:1;min-width:90px;padding:7px;border-radius:8px;border:1px solid #FFD700;background:transparent;color:#FFD700;font-size:9px;font-weight:700;cursor:pointer">💰 Distribusi Profit</button>
+      ${kirimWaBtnHtml}
     </div>` : '';
   const riwayatOpen = __riwayatTransaksiOpenId===inv.id;
   const riwayatHtml = (isAdminMode||isSelfMode) ? `
@@ -7331,6 +7353,7 @@ function investorCardHtml(inv, profitSejakGabung, totalModalInvestorPool, showHa
       ${rankHtml?`<div style="font-size:9px;color:#7A5D1F;margin-top:4px">${rankHtml}</div>`:''}
       ${inv.catatan_rem?`<div style="font-size:9px;color:#FCA5A5;background:#3F1414;border:1px solid #7F1D1D;border-radius:8px;padding:8px 10px;margin-top:8px;line-height:1.5">${escapeHtml(inv.catatan_rem)}${isAdminMode?`<span onclick="editCatatanRemInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}','${escapeHtml(inv.catatan_rem).replace(/'/g,"\\'")}')" style="display:block;margin-top:4px;color:#F87171;text-decoration:underline;cursor:pointer;font-size:8px">Ubah catatan</span>`:''}</div>`:(isAdminMode?`<div style="text-align:right;margin-top:6px"><span onclick="editCatatanRemInvestor('${inv.id}','${escapeHtml(inv.nama).replace(/'/g,"\\'")}','')" style="font-size:8px;color:#7A5D1F;cursor:pointer;text-decoration:underline">+ Tambah catatan REM</span></div>`:'')}
       ${rekeningHtml}
+      ${noWaHtml}
       ${aksiAdminHtml}
       ${riwayatHtml}
       ${showHapus?`<div style="text-align:right;margin-top:6px"><span onclick="hapusInvestor('${inv.id}')" style="font-size:9px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Hapus</span></div>`:''}
@@ -7476,6 +7499,53 @@ async function editRekeningInvestor(id, nama, rekeningSaatIni){
     console.error(e);
     toast('❌ Gagal simpan (cek apakah kolom "rekening" sudah ditambahkan ke tabel investors): '+(e.message||'').slice(0,150));
   }
+}
+// ══ NOMOR WHATSAPP INVESTOR — dipakai buat tombol "Kirim Laporan WA" (wa.me, 1x tap kirim) ══
+// Disimpan di kolom 'no_wa' tabel investors. Kalau kolom belum ada di Supabase, tampil pesan
+// jelas biar admin tau harus jalanin ALTER TABLE dulu (pola sama seperti kolom 'rekening').
+function formatNoWa(raw){
+  let d=(raw||'').replace(/[^0-9]/g,'');
+  if(!d) return '';
+  if(d.startsWith('0')) d='62'+d.slice(1);
+  else if(!d.startsWith('62')) d='62'+d;
+  return d;
+}
+async function editNoWaInvestor(id, nama, noWaSaatIni){
+  if(!isAdmin && loggedInInvestorId!==id){toast('❌ Tidak diizinkan');return;}
+  const wa=prompt(`Nomor WhatsApp ${nama} (boleh format 08xx atau 62xx, buat kirim laporan otomatis):`, noWaSaatIni||'');
+  if(wa===null)return;
+  try{
+    await api('investors?id=eq.'+encodeURIComponent(id),'PATCH',{no_wa:wa.trim()});
+    toast('✅ Nomor WhatsApp tersimpan');
+    renderInvestorDashboard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan (jalankan dulu: ALTER TABLE investors ADD COLUMN no_wa text; di Supabase): '+(e.message||'').slice(0,150));
+  }
+}
+// Bangun teks laporan + buka wa.me dengan pesan SUDAH TERISI (admin tinggal tap "Kirim" di WA).
+// Jujur apa adanya: nominal & ROI langsung dari angka live yang sama seperti di kartu dashboard,
+// termasuk kalau lagi minus (gak dipoles/disembunyikan).
+function kirimLaporanWaInvestor(nama, noWa, modal, currentVal, profitShare, roi, riskPct){
+  const noWaFormatted=formatNoWa(noWa);
+  if(!noWaFormatted){toast('❌ Nomor WA belum diisi/valid');return;}
+  const tglStr=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+  const statusEmoji = profitShare>=0 ? '📈' : '📉';
+  const lines=[
+    `📊 LAPORAN HARIAN DANA`,
+    `📅 ${tglStr}`,
+    ``,
+    `Halo ${nama},`,
+    ``,
+    `Modal disetor: ${mfc(modal)}`,
+    `Nilai dana sekarang: ${mfc(currentVal)}`,
+    `${statusEmoji} Profit share: ${profitShare>=0?'+':''}${mfc(profitShare)}`,
+    `ROI: ${roi>=0?'+':''}${roi.toFixed(1)}%`,
+    ``,
+    `Dana tetap dijaga sesuai batas risiko (maks ${riskPct}%/transaksi). Ada pertanyaan, chat saya kapan aja 🙏`
+  ];
+  const text=encodeURIComponent(lines.join('\n'));
+  window.open(`https://wa.me/${noWaFormatted}?text=${text}`,'_blank');
 }
 
 // nggak ikut kebagian profit dari sebelum dia nyetor modal.
@@ -9207,6 +9277,10 @@ async function simpanSaldo(){
     renderWeeklyRecap();
     renderInvestorCalc();
     renderLapKeu();
+    // ── Pengingat kirim laporan WA ke investor, muncul tiap kali saldo harian baru tersimpan.
+    // Cuma pengingat (bukan kirim otomatis diam-diam) — admin tetap yang menekan tombol
+    // "Kirim Laporan WA" per investor di kartu masing-masing, isi pesan sudah otomatis terisi. ──
+    setTimeout(()=>{ toast('💬 Jangan lupa: tap "Kirim Laporan WA" di kartu tiap investor (scroll ke Investor Dashboard) buat kabari mereka hari ini'); }, 1600);
   }catch(e){
     console.error(e);
     toast('❌ Gagal: '+(e.message||'coba lagi').slice(0,200));
