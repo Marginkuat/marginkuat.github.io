@@ -4185,14 +4185,19 @@ function computeScoreMetrics(pairGroup, offsetBulan, live){
   const bulanKeys=getRolling6MonthKeys(offsetBulan||0, !!live);
   const rows6bln=allRowsGroup.filter(r=>bulanKeys.includes(bulanKeyOf(r.tanggal)));
 
-  // Profit Factor = Gross Profit (VP) 6 bulan terakhir : Gross Loss (VP) 6 bulan terakhir
+  // ── PENTING: rumus resmi TF pakai satuan PIPS, BUKAN VP ($) — diverifikasi ulang pakai data
+  // resmi TF (Aug 2026, datuk EURUSD): dengan kolom pips, Monthly Loss Ratio ketemu PERSIS
+  // 267.8% dan Profit Months PERSIS 4 bulan (cocok 1:1 sama tampilan resmi TF). Pakai kolom VP
+  // malah meleset jauh (392.9% & cuma 2 bulan). Jadi field 'vp' TIDAK dipakai buat Score sama
+  // sekali — VP cuma buat catatan/nominal pribadi, bukan komponen skor resmi. ──
+  // Profit Factor = Gross Profit (PIPS) 6 bulan terakhir : Gross Loss (PIPS) 6 bulan terakhir
   let grossProfit=0, grossLoss=0;
-  rows6bln.forEach(r=>{ const p=parseFloat(r.vp||0); if(p>0) grossProfit+=p; else grossLoss+=Math.abs(p); });
+  rows6bln.forEach(r=>{ const p=parseFloat(r.pips||0); if(p>0) grossProfit+=p; else grossLoss+=Math.abs(p); });
   const profitFactor = grossLoss>0 ? grossProfit/grossLoss : (grossProfit>0 ? Infinity : 0);
 
-  // Kelompokkan per bulan (VP, cuma bulan yang beneran ada sinyalnya)
+  // Kelompokkan per bulan (PIPS, cuma bulan yang beneran ada sinyalnya)
   const perBulan={};
-  rows6bln.forEach(r=>{ const key=bulanKeyOf(r.tanggal); perBulan[key]=(perBulan[key]||0)+parseFloat(r.vp||0); });
+  rows6bln.forEach(r=>{ const key=bulanKeyOf(r.tanggal); perBulan[key]=(perBulan[key]||0)+parseFloat(r.pips||0); });
   const netMonthly=Object.values(perBulan);
   const profitMonths=netMonthly.filter(v=>v>0).length;
 
@@ -4202,13 +4207,13 @@ function computeScoreMetrics(pairGroup, offsetBulan, live){
   const rataRataProfit = profitVals.length ? profitVals.reduce((a,b)=>a+b,0)/profitVals.length : 0;
   const monthlyLossRatio = rataRataProfit>0 ? (lossTerbesar/rataRataProfit*100) : (lossTerbesar>0 ? Infinity : 0);
 
-  // Recovery Factor = Nett VP 6 bulan terakhir : Drawdown terbesar 6 bulan terakhir (VP).
+  // Recovery Factor = Nett PIPS 6 bulan terakhir : Drawdown terbesar 6 bulan terakhir (PIPS).
   // Drawdown dihitung dari kurva kumulatif SINYAL (urut tanggal, per sinyal — bukan per hari),
   // lebih presisi karena beberapa sinyal bisa closed di tanggal yang sama.
   const rowsUrut=rows6bln.slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
   let kumulatif=0, puncak=0, maxDD=0;
   rowsUrut.forEach(r=>{
-    kumulatif+=parseFloat(r.vp||0);
+    kumulatif+=parseFloat(r.pips||0);
     if(kumulatif>puncak) puncak=kumulatif;
     const dd=puncak-kumulatif;
     if(dd>maxDD) maxDD=dd;
