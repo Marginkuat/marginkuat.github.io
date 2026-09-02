@@ -1570,8 +1570,28 @@ function renderInvCalcDisclaimer(){
         <button class="pair-tab active" data-sp="XAUUSD" onclick="setInputSinyalPairGroup('XAUUSD')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelXauusd">Datuk EURUSD</span></button>
         <button class="pair-tab" data-sp="FOREX" onclick="setInputSinyalPairGroup('FOREX')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelForex">Datuk Crypto 89</span></button>
       </div>
-      <label class="lbl">Nama Pair Sinyal (opsional, mis. NZDUSD)</label>
-      <input class="inp" type="text" id="inpRingkasSimbol" placeholder="NZDUSD" oninput="autoHitungVpRingkas()">
+      <label class="lbl">Nama Pair Sinyal</label>
+      <select class="inp" id="inpRingkasSimbolSelect" onchange="onSimbolSinyalPilihanBerubah()">
+        <option value="">— Pilih pair —</option>
+        <option value="XAUUSD">XAUUSD (Emas) — ×0,2</option>
+        <option value="NZDUSD">NZDUSD — ×2</option>
+        <option value="AUDUSD">AUDUSD — ×2</option>
+        <option value="EURGBP">EURGBP — ×2</option>
+        <option value="USDCHF">USDCHF — ×2</option>
+        <option value="USDCAD">USDCAD — ×1,5</option>
+        <option value="EURUSD">EURUSD — ×1,5</option>
+        <option value="GBPUSD">GBPUSD — ×1,5</option>
+        <option value="NZDJPY">NZDJPY — ×1,5</option>
+        <option value="CADJPY">CADJPY — ×1,5</option>
+        <option value="AUDJPY">AUDJPY — ×1,5</option>
+        <option value="CHFJPY">CHFJPY — ×1</option>
+        <option value="EURNZD">EURNZD — ×1</option>
+        <option value="USDJPY">USDJPY — ×1</option>
+        <option value="EURJPY">EURJPY — ×1</option>
+        <option value="GBPJPY">GBPJPY — ×1</option>
+        <option value="__LAINNYA__">Lainnya (ketik manual)…</option>
+      </select>
+      <input class="inp" type="text" id="inpRingkasSimbolManual" placeholder="mis. BTCUSD" style="display:none;margin-top:6px" oninput="autoHitungVpRingkas()">
       <label class="lbl">Closed at (tanggal sinyal ditutup)</label>
       <input class="inp" type="date" id="inpRingkasTgl">
       <label class="lbl">Jam ditutup (opsional — biar gampang dibedain kalau ada beberapa sinyal di tanggal sama)</label>
@@ -3973,13 +3993,28 @@ function multiplierVpDariSimbol(simbol){
   // TIDAK PASTI, biar admin sadar buat cek/isi manual, bukan dianggap seakurat pair yang terdaftar.
   return {nilai:1.5, pasti:false};
 }
+// Ambil nama pair yang lagi dipilih — dari dropdown, atau dari kolom manual kalau pilih "Lainnya".
+function getSimbolSinyalTerpilih(){
+  const selEl=document.getElementById('inpRingkasSimbolSelect');
+  if(!selEl) return '';
+  if(selEl.value==='__LAINNYA__'){
+    const manualEl=document.getElementById('inpRingkasSimbolManual');
+    return (manualEl && manualEl.value ? manualEl.value : '').trim();
+  }
+  return selEl.value||'';
+}
+function onSimbolSinyalPilihanBerubah(){
+  const selEl=document.getElementById('inpRingkasSimbolSelect');
+  const manualEl=document.getElementById('inpRingkasSimbolManual');
+  if(manualEl) manualEl.style.display = (selEl && selEl.value==='__LAINNYA__') ? 'block' : 'none';
+  autoHitungVpRingkas();
+}
 function autoHitungVpRingkas(){
-  const simbolEl=document.getElementById('inpRingkasSimbol');
   const pipsEl=document.getElementById('inpRingkasPips');
   const vpEl=document.getElementById('inpRingkasVp');
   const ketEl=document.getElementById('inpRingkasVpKeterangan');
-  if(!simbolEl||!pipsEl||!vpEl)return;
-  const simbol=simbolEl.value;
+  if(!pipsEl||!vpEl)return;
+  const simbol=getSimbolSinyalTerpilih();
   const pips=parseFloat(pipsEl.value);
   const {nilai:mult, pasti}=multiplierVpDariSimbol(simbol);
   const jenisTeks = pasti
@@ -3997,7 +4032,7 @@ async function simpanDataHarianRingkas(){
   const g=inputSinyalPairGroup||'XAUUSD';
   const tgl=document.getElementById('inpRingkasTgl').value;
   const jam=(document.getElementById('inpRingkasJam')||{}).value||null;
-  const pairSimbol=(document.getElementById('inpRingkasSimbol').value||'').trim();
+  const pairSimbol=getSimbolSinyalTerpilih();
   const pipsInput=document.getElementById('inpRingkasPips').value;
   const vpInput=document.getElementById('inpRingkasVp').value;
   const statusEl=document.getElementById('inpRingkasStatus');
@@ -4018,7 +4053,8 @@ async function simpanDataHarianRingkas(){
     await simpanSinyalKeServer(g);
     statusEl.textContent=`✅ Tersimpan: ${pips>=0?'+':''}${pips} pip / ${vp>=0?'+':''}${vp} VP`;
     toast(`✅ Sinyal ${pairSimbol||g} tersimpan (khusus tool analis, gak nyentuh data MT4/kalkulator lain)`);
-    document.getElementById('inpRingkasSimbol').value='';
+    const selEl0=document.getElementById('inpRingkasSimbolSelect'); if(selEl0) selEl0.value='';
+    const manualEl0=document.getElementById('inpRingkasSimbolManual'); if(manualEl0){ manualEl0.value=''; manualEl0.style.display='none'; }
     document.getElementById('inpRingkasPips').value='';
     document.getElementById('inpRingkasVp').value='';
     const ketEl0=document.getElementById('inpRingkasVpKeterangan'); if(ketEl0) ketEl0.textContent='';
