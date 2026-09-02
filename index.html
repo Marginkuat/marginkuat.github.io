@@ -1571,13 +1571,14 @@ function renderInvCalcDisclaimer(){
         <button class="pair-tab" data-sp="FOREX" onclick="setInputSinyalPairGroup('FOREX')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelForex">Datuk Crypto 89</span></button>
       </div>
       <label class="lbl">Nama Pair Sinyal (opsional, mis. NZDUSD)</label>
-      <input class="inp" type="text" id="inpRingkasSimbol" placeholder="NZDUSD">
+      <input class="inp" type="text" id="inpRingkasSimbol" placeholder="NZDUSD" oninput="autoHitungVpRingkas()">
       <label class="lbl">Closed at (tanggal sinyal ditutup)</label>
       <input class="inp" type="date" id="inpRingkasTgl">
       <label class="lbl">Pips — isi minus kalau rugi, mis. -30</label>
-      <input class="inp" type="number" step="0.1" id="inpRingkasPips" placeholder="-30">
-      <label class="lbl">VP — isi minus kalau rugi, mis. -60</label>
+      <input class="inp" type="number" step="0.1" id="inpRingkasPips" placeholder="-30" oninput="autoHitungVpRingkas()">
+      <label class="lbl">VP — otomatis terisi dari pips (boleh ubah manual kalau perlu)</label>
       <input class="inp" type="number" step="0.01" id="inpRingkasVp" placeholder="-60">
+      <div id="inpRingkasVpKeterangan" style="font-size:8px;color:#7A5D1F;margin-top:-4px;margin-bottom:6px"></div>
       <button class="btn btn-p" onclick="simpanDataHarianRingkas()" style="margin-top:10px">💾 Simpan Sinyal (pair: <span id="inpRingkasPairLabel2">Datuk EURUSD</span>)</button>
       <div id="inpRingkasStatus" style="font-size:10px;color:#7A5D1F;margin-top:8px;text-align:center"></div>
     </div>
@@ -3908,6 +3909,43 @@ async function simpanSinyalKeServer(g){
   else{ await api('app_settings','POST',{key,value:payload}); }
 }
 function buatIdSinyal(){ return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+// ── Auto-hitung VP dari Pips — pakai tabel "Value Pair" RESMI dari dokumentasi TF
+// (tradersfamily.id, snapshot per 1 Maret 2026). VP = Pips × Value Pair(simbol).
+// PENTING: TF sendiri bilang "Angka perkalian pada setiap pair dapat berubah tergantung
+// pergerakan Daily Range" — jadi tabel ini BISA BERUBAH sewaktu-waktu di TF. Kalau suatu saat
+// hasil auto-hitung meleset dari angka asli TF, kasih tau saya nilai barunya biar disesuaikan. ──
+const TABEL_VALUE_PAIR_RESMI_TF = { // per 1 Maret 2026
+  'NZDUSD':2, 'AUDUSD':2, 'EURGBP':2, 'USDCHF':2,
+  'USDCAD':1.5, 'EURUSD':1.5, 'GBPUSD':1.5, 'NZDJPY':1.5, 'CADJPY':1.5, 'AUDJPY':1.5,
+  'CHFJPY':1, 'EURNZD':1, 'USDJPY':1, 'EURJPY':1, 'GBPJPY':1,
+  'XAUUSD':0.2,
+};
+function multiplierVpDariSimbol(simbol){
+  const s=(simbol||'').toUpperCase().replace(/[^A-Z]/g,'');
+  if(TABEL_VALUE_PAIR_RESMI_TF[s]!=null) return {nilai:TABEL_VALUE_PAIR_RESMI_TF[s], pasti:true};
+  // Pair belum ada di tabel resmi yang kita punya — kasih perkiraan tengah (1.5) tapi tandai
+  // TIDAK PASTI, biar admin sadar buat cek/isi manual, bukan dianggap seakurat pair yang terdaftar.
+  return {nilai:1.5, pasti:false};
+}
+function autoHitungVpRingkas(){
+  const simbolEl=document.getElementById('inpRingkasSimbol');
+  const pipsEl=document.getElementById('inpRingkasPips');
+  const vpEl=document.getElementById('inpRingkasVp');
+  const ketEl=document.getElementById('inpRingkasVpKeterangan');
+  if(!simbolEl||!pipsEl||!vpEl)return;
+  const simbol=simbolEl.value;
+  const pips=parseFloat(pipsEl.value);
+  const {nilai:mult, pasti}=multiplierVpDariSimbol(simbol);
+  const jenisTeks = pasti
+    ? `${(simbol||'').toUpperCase().trim()} (Value Pair resmi TF ×${mult})`
+    : `pair belum terdaftar di tabel resmi — pakai perkiraan ×${mult}, CEK MANUAL ke TF ya`;
+  if(isFinite(pips)){
+    vpEl.value=(pips*mult).toFixed(2);
+    if(ketEl){ ketEl.textContent=`⚡ Auto: ${jenisTeks}`; ketEl.style.color = pasti ? '#7A5D1F' : '#D9534F'; }
+  } else {
+    if(ketEl){ ketEl.textContent=`⚡ Auto-isi begitu Pips diisi — terdeteksi: ${jenisTeks}`; ketEl.style.color = pasti ? '#7A5D1F' : '#D9534F'; }
+  }
+}
 async function simpanDataHarianRingkas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
   const g=inputSinyalPairGroup||'XAUUSD';
@@ -3934,6 +3972,7 @@ async function simpanDataHarianRingkas(){
     document.getElementById('inpRingkasSimbol').value='';
     document.getElementById('inpRingkasPips').value='';
     document.getElementById('inpRingkasVp').value='';
+    const ketEl0=document.getElementById('inpRingkasVpKeterangan'); if(ketEl0) ketEl0.textContent='';
     renderScoreCard();
     renderRemPipsCard();
     renderDaftarSinyal();
