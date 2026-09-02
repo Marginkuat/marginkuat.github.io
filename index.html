@@ -1574,6 +1574,8 @@ function renderInvCalcDisclaimer(){
       <input class="inp" type="text" id="inpRingkasSimbol" placeholder="NZDUSD" oninput="autoHitungVpRingkas()">
       <label class="lbl">Closed at (tanggal sinyal ditutup)</label>
       <input class="inp" type="date" id="inpRingkasTgl">
+      <label class="lbl">Jam ditutup (opsional — biar gampang dibedain kalau ada beberapa sinyal di tanggal sama)</label>
+      <input class="inp" type="time" id="inpRingkasJam">
       <label class="lbl">Pips — isi minus kalau rugi, mis. -30</label>
       <input class="inp" type="number" step="0.1" id="inpRingkasPips" placeholder="-30" oninput="autoHitungVpRingkas()">
       <label class="lbl">VP — otomatis terisi dari pips (boleh ubah manual kalau perlu)</label>
@@ -3197,6 +3199,8 @@ window.onload=async()=>{
     document.getElementById('inpTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     const inpRingkasTglEl=document.getElementById('inpRingkasTgl');
     if(inpRingkasTglEl) inpRingkasTglEl.value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const inpRingkasJamEl=document.getElementById('inpRingkasJam');
+    if(inpRingkasJamEl) inpRingkasJamEl.value=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
     document.getElementById('inpAutoSyncKas').checked = localStorage.getItem('mk_autosync_kas')!=='0';
     document.getElementById('kasTgl').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     document.getElementById('bukuBulan').value=String(d.getMonth()+1);
@@ -3950,6 +3954,7 @@ async function simpanDataHarianRingkas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
   const g=inputSinyalPairGroup||'XAUUSD';
   const tgl=document.getElementById('inpRingkasTgl').value;
+  const jam=(document.getElementById('inpRingkasJam')||{}).value||null;
   const pairSimbol=(document.getElementById('inpRingkasSimbol').value||'').trim();
   const pipsInput=document.getElementById('inpRingkasPips').value;
   const vpInput=document.getElementById('inpRingkasVp').value;
@@ -3965,7 +3970,9 @@ async function simpanDataHarianRingkas(){
     statusEl.textContent='⏳ Menyimpan...';
     // Setiap sinyal jadi ENTRY SENDIRI di array (dengan id unik biar bisa diedit/dihapus nanti)
     // — gak perlu cek/gabung dengan sinyal lain, penjumlahan per hari/bulan dihitung on-the-fly.
-    cachedSinyalAnalis[g].push({id:buatIdSinyal(), tanggal:tgl, simbol:pairSimbol||null, pips, vp});
+    // 'jam' opsional, cuma buat tampilan & urutan yang lebih presisi kalau ada >1 sinyal di
+    // tanggal yang sama (dipakai buat urutan kurva Recovery Factor juga).
+    cachedSinyalAnalis[g].push({id:buatIdSinyal(), tanggal:tgl, jam:jam||null, simbol:pairSimbol||null, pips, vp});
     await simpanSinyalKeServer(g);
     statusEl.textContent=`✅ Tersimpan: ${pips>=0?'+':''}${pips} pip / ${vp>=0?'+':''}${vp} VP`;
     toast(`✅ Sinyal ${pairSimbol||g} tersimpan (khusus tool analis, gak nyentuh data MT4/kalkulator lain)`);
@@ -4005,6 +4012,8 @@ async function editSinyal(g, id){
   if(!item)return;
   const tglBaru=prompt('Tanggal (YYYY-MM-DD):', item.tanggal);
   if(tglBaru===null)return;
+  const jamBaru=prompt('Jam (HH:MM, boleh kosong):', item.jam||'');
+  if(jamBaru===null)return;
   const simbolBaru=prompt('Nama pair sinyal (opsional):', item.simbol||'');
   if(simbolBaru===null)return;
   const pipsBaru=prompt('Pips:', String(item.pips));
@@ -4014,7 +4023,7 @@ async function editSinyal(g, id){
   const pipsNum=parseFloat(pipsBaru), vpNum=parseFloat(vpBaru);
   if(!tglBaru || !isFinite(pipsNum) || !isFinite(vpNum)){toast('❌ Data gak valid, batal diedit');return;}
   try{
-    item.tanggal=tglBaru; item.simbol=simbolBaru.trim()||null; item.pips=pipsNum; item.vp=vpNum;
+    item.tanggal=tglBaru; item.jam=jamBaru.trim()||null; item.simbol=simbolBaru.trim()||null; item.pips=pipsNum; item.vp=vpNum;
     await simpanSinyalKeServer(g);
     toast('✅ Sinyal diperbarui');
     renderScoreCard(); renderRemPipsCard(); renderDaftarSinyal();
@@ -4031,7 +4040,8 @@ function renderDaftarSinyal(){
   const wrap=document.getElementById('daftarSinyalWrap');
   if(!wrap)return;
   const g=daftarSinyalPairGroup||'XAUUSD';
-  const list=(cachedSinyalAnalis[g]||[]).slice().sort((a,b)=>new Date(b.tanggal)-new Date(a.tanggal));
+  const waktuOf=r=>new Date(r.tanggal+'T'+(r.jam||'00:00'));
+  const list=(cachedSinyalAnalis[g]||[]).slice().sort((a,b)=>waktuOf(b)-waktuOf(a));
   if(!list.length){
     wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:8px">Belum ada sinyal tercatat.</div>`;
     return;
@@ -4042,7 +4052,7 @@ function renderDaftarSinyal(){
     const warnaPip = r.pips>=0 ? '#3E9142' : '#D9534F';
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
       <div style="font-size:10px;color:#3A2E10">
-        <b>${r.simbol||g}</b> <span style="color:#8A6B26">— ${r.tanggal}</span><br>
+        <b>${r.simbol||g}</b> <span style="color:#8A6B26">— ${r.tanggal}${r.jam?' '+r.jam:''}</span><br>
         <span style="color:${warnaPip}">${r.pips>=0?'+':''}${r.pips} pip</span> / <span style="color:${warnaPip}">${r.vp>=0?'+':''}${r.vp} VP</span>
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0">
@@ -4249,7 +4259,7 @@ function computeScoreMetrics(pairGroup, offsetBulan, live){
   // Recovery Factor = Nett PIPS 6 bulan terakhir : Drawdown terbesar 6 bulan terakhir (PIPS).
   // Drawdown dihitung dari kurva kumulatif SINYAL (urut tanggal, per sinyal — bukan per hari),
   // lebih presisi karena beberapa sinyal bisa closed di tanggal yang sama.
-  const rowsUrut=rows6bln.slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const rowsUrut=rows6bln.slice().sort((a,b)=>new Date(a.tanggal+'T'+(a.jam||'00:00'))-new Date(b.tanggal+'T'+(b.jam||'00:00')));
   let kumulatif=0, puncak=0, maxDD=0;
   rowsUrut.forEach(r=>{
     kumulatif+=parseFloat(r.pips||0);
