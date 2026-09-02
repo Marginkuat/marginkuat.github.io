@@ -4513,6 +4513,14 @@ function renderSatuChannelScore(g){
   const ambangVp80 = adaSyarat80 ? targetMedal.avgMonthlyVp*0.8 : 0;
   const kurangVp80 = adaSyarat80 ? Math.max(0, ambangVp80-totalVpBulanIni) : 0;
   const medalTercapai = kurangSinyal===0 && kurangVp===0 && (!adaSyarat80 || kurangVp80===0);
+  // ── Kebutuhan VP/hari — kekurangan VP TERBESAR (mana yang lebih berat: syarat 300 VP atau
+  // syarat 80% Avg Monthly VP) dibagi sisa hari bulan berjalan, biar admin tau "harus ngebut
+  // berapa" per hari, bukan cuma "kurang berapa total". ──
+  const kekuranganVpTerbesar = Math.max(kurangVp, kurangVp80);
+  const skrg=new Date();
+  const akhirBulan=new Date(skrg.getFullYear(), skrg.getMonth()+1, 0); // tanggal terakhir bulan ini
+  const sisaHari=Math.max(1, Math.ceil((akhirBulan-skrg)/86400000)+1); // termasuk hari ini
+  const vpPerHari = kekuranganVpTerbesar>0 ? kekuranganVpTerbesar/sisaHari : 0;
   const baris=(label,now_,target_,kurang_,satuan)=>{
     const ok=kurang_<=0;
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">
@@ -4528,6 +4536,9 @@ function renderSatuChannelScore(g){
     kurangVp>0 ? `${kurangVp.toFixed(2)} VP (dari batas 300)` : null,
     kurangVp80>0 ? `${kurangVp80.toFixed(2)} VP (dari syarat 80% Avg Monthly)` : null,
   ].filter(Boolean).join(', ');
+  const kecepatanHtml = (!medalTercapai && vpPerHari>0)
+    ? `<div style="font-size:9px;color:#D9534F;margin-top:4px">⏱️ Sisa ${sisaHari} hari bulan ini — butuh rata-rata <b>${vpPerHari.toFixed(2)} VP/hari</b> (net) buat kejar target</div>`
+    : '';
   const medalBlokHtml=`<div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🏅 Progress TF Medal Bulan Ini</div>
     ${baris('Minimal Signal', jumlahSinyalBulanIni, targetMedal.minSinyal, kurangSinyal, 'sinyal')}
@@ -4536,6 +4547,7 @@ function renderSatuChannelScore(g){
     <div style="font-size:9px;font-weight:800;color:${medalTercapai?'#3E9142':'#D9534F'};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
       ${medalTercapai ? '✅ Syarat Medal bulan ini SUDAH LENGKAP' : `⚠️ Masih kurang: ${totalKurangTeks}`}
     </div>
+    ${kecepatanHtml}
     <div style="text-align:right;margin-top:6px"><span onclick="editTargetMedal('${g}')" style="font-size:8px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Ubah target Medal bulan ini</span></div>
   </div>`;
 
@@ -4570,8 +4582,8 @@ function renderSatuChannelScore(g){
     ${medalBlokHtml}
     <div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:center">
       <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Rekomendasi Harga Channel</div>
-      <div style="font-size:15px;font-weight:800;color:#D4AF37">${fmtRupiah(range.min)} – ${fmtRupiah(range.max)}</div>
-      ${isLevelRendah?`<div style="font-size:8px;color:#8A6B26;margin-top:3px">Level ${meta.level} → boleh pakai harga MINIMUM di range ini, atau digratiskan (Free)</div>`:''}
+      <div style="font-size:15px;font-weight:800;color:#D4AF37">${isLevelRendah ? fmtRupiah(range.min) : `${fmtRupiah(range.min)} – ${fmtRupiah(range.max)}`}</div>
+      ${isLevelRendah?`<div style="font-size:8px;color:#8A6B26;margin-top:3px">Level ${meta.level} → harga channel di TF cuma bisa 1 angka (bukan range), jadi pakai harga MINIMUM ini — atau digratiskan (Free)</div>`:''}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       ${kotak('Level', meta.level, sLevel, bobotPersenOf('level'))}
