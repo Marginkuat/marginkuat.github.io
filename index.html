@@ -3257,6 +3257,7 @@ async function loadAll(){
   renderGraph();
   await loadScoreMeta();
   await loadTargetResmiAsli();
+  await loadTargetMedal();
   await loadTanggalMulaiChannel();
   await loadSinyalAnalis();
   await loadRemPips();
@@ -3772,6 +3773,47 @@ let cachedScoreMeta={
   FOREX:{level:'Newbie', kemitraan:'Basic Channel', namaChannel:'Datuk Crypto 89'}
 };
 let cachedInvestorCountForScore=0;
+// ── Target TF Medal (Minimal Signal & Minimal VP per bulan) — ANGKA INI SERING BERUBAH tiap
+// bulan di TF (user bilang bakal dilaporkan tiap kali beda), makanya disimpan editable di sini,
+// BUKAN di-hardcode. Default 5 sinyal & 300 VP kalau belum pernah diisi admin. ──
+let cachedTargetMedal={XAUUSD:{minSinyal:5, minVp:300}, FOREX:{minSinyal:5, minVp:300}};
+async function loadTargetMedal(){
+  for(const g of ['XAUUSD','FOREX']){
+    try{
+      const rows=await api('app_settings?select=value&key=eq.target_medal_'+g);
+      if(rows && rows.length && rows[0].value){
+        const parsed=JSON.parse(rows[0].value);
+        if(parsed && isFinite(parsed.minSinyal) && isFinite(parsed.minVp)){
+          cachedTargetMedal[g]={minSinyal:parseFloat(parsed.minSinyal), minVp:parseFloat(parsed.minVp)};
+        }
+      }
+    }catch(e){ console.error('Gagal load target_medal_'+g, e); }
+  }
+}
+async function editTargetMedal(g){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah Target Medal');return;}
+  const cur=cachedTargetMedal[g]||{minSinyal:5, minVp:300};
+  const sinyalInput=prompt(`Minimal Signal per bulan (syarat TF Medal bulan ini):`, String(cur.minSinyal));
+  if(sinyalInput===null)return;
+  const vpInput=prompt(`Minimal VP per bulan (syarat TF Medal bulan ini):`, String(cur.minVp));
+  if(vpInput===null)return;
+  const sinyalNum=parseFloat(sinyalInput), vpNum=parseFloat(vpInput);
+  if(!isFinite(sinyalNum) || !isFinite(vpNum)){toast('❌ Angka tidak valid');return;}
+  const newVal={minSinyal:sinyalNum, minVp:vpNum};
+  try{
+    const payload=JSON.stringify(newVal);
+    const key='target_medal_'+g;
+    const existing=await api('app_settings?select=key&key=eq.'+key);
+    if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:payload}); }
+    else{ await api('app_settings','POST',{key,value:payload}); }
+    cachedTargetMedal[g]=newVal;
+    toast(`✅ Target Medal bulan ini tersimpan: min ${sinyalNum} sinyal & ${vpNum} VP`);
+    renderScoreCard();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan target Medal: '+(e.message||'').slice(0,120));
+  }
+}
 // ── Target Skor Resmi ASLI (dari app resminya, misal Trading Family) — diisi manual oleh admin
 // tiap bulan baru muncul di sana (contoh: Agustus 2026 = 0,35). Dipakai buat badge banding
 // "Skor Live situs ini vs Skor Resmi asli bulan terakhir", biar kelihatan tren naik/turun
@@ -4405,6 +4447,34 @@ function renderSatuChannelScore(g){
     </div>`;
   }
 
+  // ── Progress TF Medal Bulan Ini — hitung total SINYAL & VP bulan berjalan (kalender bulan
+  // ini, bukan rolling 6 bulan), dibanding target minimal yang berlaku bulan ini. Target ini
+  // SERING BERUBAH tiap bulan di TF, makanya admin bisa update sendiri via "Ubah target Medal". ──
+  const bulanIniKey=bulanKeyOf(new Date().toISOString().slice(0,10));
+  const sinyalBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>bulanKeyOf(r.tanggal)===bulanIniKey);
+  const jumlahSinyalBulanIni=sinyalBulanIni.length;
+  const totalVpBulanIni=sinyalBulanIni.reduce((a,r)=>a+parseFloat(r.vp||0),0);
+  const targetMedal=cachedTargetMedal[g]||{minSinyal:5, minVp:300};
+  const kurangSinyal=Math.max(0, targetMedal.minSinyal-jumlahSinyalBulanIni);
+  const kurangVp=Math.max(0, targetMedal.minVp-totalVpBulanIni);
+  const medalTercapai = kurangSinyal===0 && kurangVp===0;
+  const baris=(label,now_,target_,kurang_,satuan)=>{
+    const ok=kurang_<=0;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">
+      <div style="font-size:9px;color:#8A6B26">${label}</div>
+      <div style="font-size:10px;font-weight:700;color:${ok?'#3E9142':'#3A2E10'}">${now_}/${target_} ${satuan} ${ok?'✅':`<span style="color:#D9534F">(kurang ${kurang_%1===0?kurang_:kurang_.toFixed(2)})</span>`}</div>
+    </div>`;
+  };
+  const medalBlokHtml=`<div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🏅 Progress TF Medal Bulan Ini</div>
+    ${baris('Minimal Signal', jumlahSinyalBulanIni, targetMedal.minSinyal, kurangSinyal, 'sinyal')}
+    ${baris('Minimal VP', totalVpBulanIni.toFixed(2), targetMedal.minVp, kurangVp, 'VP')}
+    <div style="font-size:9px;font-weight:800;color:${medalTercapai?'#3E9142':'#D9534F'};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+      ${medalTercapai ? '✅ Syarat Medal bulan ini SUDAH LENGKAP' : `⚠️ Masih kurang${kurangSinyal>0?` ${kurangSinyal} sinyal`:''}${kurangSinyal>0&&kurangVp>0?' dan':''}${kurangVp>0?` ${kurangVp.toFixed(2)} VP`:''} lagi buat penuhi syarat Medal bulan ini`}
+    </div>
+    <div style="text-align:right;margin-top:6px"><span onclick="editTargetMedal('${g}')" style="font-size:8px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Ubah target Medal bulan ini</span></div>
+  </div>`;
+
   const kotak=(judul,nilaiTeks,score,bobotPersen)=>{
     const lb=scoreLabel(score);
     return `<div style="background:var(--bg0);border-radius:10px;padding:10px 12px">
@@ -4433,6 +4503,7 @@ function renderSatuChannelScore(g){
     </div>
     ${badgeBanding}
     ${liveBlok}
+    ${medalBlokHtml}
     <div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:center">
       <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Rekomendasi Harga Channel</div>
       <div style="font-size:15px;font-weight:800;color:#D4AF37">${fmtRupiah(range.min)} – ${fmtRupiah(range.max)}</div>
