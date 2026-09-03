@@ -4173,14 +4173,20 @@ function renderDaftarSinyal(){
     wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:8px">Belum ada sinyal tercatat.</div>`;
     return;
   }
+  const jumlahTercocok=list.filter(r=>r.cocok).length;
+  const ringkasanCocokHtml=`<div style="font-size:9px;color:#8A6B26;text-align:right;margin-bottom:4px">✅ Dicocokkan: ${jumlahTercocok}/${list.length}</div>`;
   const BATAS_TAMPIL=4;
   const tampil = daftarSinyalExpanded ? list : list.slice(0,BATAS_TAMPIL);
   const baris = tampil.map(r=>{
     const warnaPip = r.pips>=0 ? '#3E9142' : '#D9534F';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:10px;color:#3A2E10">
-        <b>${r.simbol||g}</b> <span style="color:#8A6B26">— ${r.tanggal}${r.jam?' '+r.jam:''}</span><br>
-        <span style="color:${warnaPip}">${r.pips>=0?'+':''}${r.pips} pip</span> / <span style="color:${warnaPip}">${r.vp>=0?'+':''}${r.vp} VP</span>
+    const cocok=!!r.cocok;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);${cocok?'opacity:0.55':''}">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <span onclick="toggleCocokSinyal('${g}','${r.id}')" style="font-size:16px;cursor:pointer;line-height:1.2;flex-shrink:0" title="Tandai sudah dicocokkan ke aplikasi TF">${cocok?'✅':'⬜'}</span>
+        <div style="font-size:10px;color:#3A2E10">
+          <b style="${cocok?'text-decoration:line-through':''}">${r.simbol||g}</b> <span style="color:#8A6B26">— ${r.tanggal}${r.jam?' '+r.jam:''}</span><br>
+          <span style="color:${warnaPip}">${r.pips>=0?'+':''}${r.pips} pip</span> / <span style="color:${warnaPip}">${r.vp>=0?'+':''}${r.vp} VP</span>
+        </div>
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0">
         <span onclick="editSinyal('${g}','${r.id}')" style="font-size:14px;cursor:pointer">✏️</span>
@@ -4192,7 +4198,21 @@ function renderDaftarSinyal(){
   const tombolToggle = list.length>BATAS_TAMPIL
     ? `<div onclick="toggleDaftarSinyal()" style="text-align:center;font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline;padding-top:8px">${daftarSinyalExpanded?'Sembunyikan':'Tampilkan '+sisaJumlah+' lainnya'}</div>`
     : '';
-  wrap.innerHTML=baris+tombolToggle;
+  wrap.innerHTML=ringkasanCocokHtml+baris+tombolToggle;
+}
+async function toggleCocokSinyal(g, id){
+  const item=(cachedSinyalAnalis[g]||[]).find(r=>r.id===id);
+  if(!item)return;
+  item.cocok=!item.cocok;
+  renderDaftarSinyal(); // update tampilan dulu biar berasa instan, baru simpan ke server
+  try{
+    await simpanSinyalKeServer(g);
+  }catch(e){
+    console.error(e);
+    item.cocok=!item.cocok; // gagal simpan -> balikin lagi
+    renderDaftarSinyal();
+    toast('❌ Gagal simpan status cocok: '+(e.message||'').slice(0,120));
+  }
 }
 // 6 kunci bulan kalender ("YYYY-MM"), dari yang terlama ke terbaru. offsetBulan=0 → 6 bulan
 // SEBELUM bulan berjalan (persis contoh resmi: skor Juli dari Jan-Jun). offsetBulan=1 → geser
