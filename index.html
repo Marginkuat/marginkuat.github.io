@@ -3789,9 +3789,29 @@ const SCORE_BOBOT={level:3, kemitraan:3, subscriber:1, profitFactor:3, monthlyLo
 const SCORE_BOBOT_TOTAL_UNIT=17;
 
 let cachedScoreMeta={
-  XAUUSD:{level:'Newbie', kemitraan:'Basic Channel', namaChannel:'Datuk EURUSD'},
-  FOREX:{level:'Newbie', kemitraan:'Basic Channel', namaChannel:'Datuk Crypto 89'}
+  XAUUSD:{level:'Newbie', kemitraan:'Basic Channel', namaChannel:'Datuk EURUSD', jumlahMedal:0},
+  FOREX:{level:'Newbie', kemitraan:'Basic Channel', namaChannel:'Datuk Crypto 89', jumlahMedal:0}
 };
+// ── Tabel resmi TF: syarat naik Level (TF Level tab) ditentukan dari JUMLAH TF MEDAL yang
+// terkumpul (bukan dari VP langsung). Kalau gak aktif post sinyal 2 bulan berturut-turut,
+// medal reset ke Newbie (0) — makanya kartu Progress Level di bawah selalu ingetin ini. ──
+const LEVEL_MEDAL_RANGE=[
+  {level:'Newbie', min:0, max:0, bonusPoint:null},
+  {level:'Rookie', min:1, max:2, bonusPoint:null},
+  {level:'Pro', min:3, max:4, bonusPoint:50},
+  {level:'Elite', min:5, max:7, bonusPoint:100},
+  {level:'Master', min:8, max:12, bonusPoint:300},
+  {level:'Legend', min:13, max:14, bonusPoint:500},
+];
+function infoLevelDariMedal(jumlahMedal){
+  const n=Math.max(0, parseFloat(jumlahMedal)||0);
+  let idxSaatIni=LEVEL_MEDAL_RANGE.findIndex(r=>n>=r.min && n<=r.max);
+  if(idxSaatIni===-1) idxSaatIni=LEVEL_MEDAL_RANGE.length-1; // di atas 14 medal -> tetap Legend (level maks)
+  const levelSaatIni=LEVEL_MEDAL_RANGE[idxSaatIni];
+  const levelBerikutnya=LEVEL_MEDAL_RANGE[idxSaatIni+1]||null;
+  const kurangMedal=levelBerikutnya ? Math.max(0, levelBerikutnya.min-n) : 0;
+  return {levelSaatIni, levelBerikutnya, kurangMedal, jumlahMedal:n};
+}
 let cachedInvestorCountForScore=0;
 // ── Target TF Medal (Minimal Signal, Minimal VP, & Avg Monthly VP) per bulan — ANGKA INI SERING
 // BERUBAH tiap bulan di TF (user bilang bakal dilaporkan tiap kali beda), makanya disimpan
@@ -3897,7 +3917,8 @@ async function loadScoreMeta(){
         if(parsed) cachedScoreMeta[g]={
           level: SCORE_LEVEL_OPTIONS.includes(parsed.level) ? parsed.level : 'Newbie',
           kemitraan: SCORE_KEMITRAAN_OPTIONS.includes(parsed.kemitraan) ? parsed.kemitraan : 'Basic Channel',
-          namaChannel: parsed.namaChannel || cachedScoreMeta[g].namaChannel
+          namaChannel: parsed.namaChannel || cachedScoreMeta[g].namaChannel,
+          jumlahMedal: isFinite(parsed.jumlahMedal) ? parseFloat(parsed.jumlahMedal) : (cachedScoreMeta[g].jumlahMedal||0)
         };
       }
     }catch(e){ console.error('Gagal load score_meta_'+g, e); }
@@ -3921,7 +3942,11 @@ async function editScoreMeta(g){
   if(kemInput===null)return;
   const kemMatch=SCORE_KEMITRAAN_OPTIONS.find(o=>o.toLowerCase()===kemInput.trim().toLowerCase());
   if(!kemMatch){toast('❌ Nama status kemitraan tidak dikenali — harus persis salah satu: '+SCORE_KEMITRAAN_OPTIONS.join(', '));return;}
-  const newMeta={level:levelMatch, kemitraan:kemMatch, namaChannel:cur.namaChannel};
+  const medalInput=prompt(`[${labelGrup}] Jumlah TF Medal terkumpul (dari halaman TF Reward → TF Level, mis. "Medal 4"):`, String(cur.jumlahMedal||0));
+  if(medalInput===null)return;
+  const medalNum=parseFloat(medalInput);
+  if(!isFinite(medalNum) || medalNum<0){toast('❌ Jumlah medal tidak valid');return;}
+  const newMeta={level:levelMatch, kemitraan:kemMatch, namaChannel:cur.namaChannel, jumlahMedal:medalNum};
   try{
     const payload=JSON.stringify(newMeta);
     const key='score_meta_'+g;
@@ -4509,8 +4534,14 @@ function renderSatuChannelScore(g){
   const targetMedal=cachedTargetMedal[g]||{minSinyal:5, minVp:300, avgMonthlyVp:null};
   const kurangSinyal=Math.max(0, targetMedal.minSinyal-jumlahSinyalBulanIni);
   const kurangVp=Math.max(0, targetMedal.minVp-totalVpBulanIni);
-  const adaSyarat80=targetMedal.avgMonthlyVp!=null && isFinite(targetMedal.avgMonthlyVp);
-  const ambangVp80 = adaSyarat80 ? targetMedal.avgMonthlyVp*0.8 : 0;
+  const adaSyarat80Mentah=targetMedal.avgMonthlyVp!=null && isFinite(targetMedal.avgMonthlyVp);
+  const ambangVp80Mentah = adaSyarat80Mentah ? targetMedal.avgMonthlyVp*0.8 : 0;
+  // ── ATURAN RESMI TF (dikonfirmasi dari dokumentasi "Sistem Perhitungan Baru untuk Kualifikasi
+  // Bulanan"): syarat "min 80% dari Avg Monthly VP" HANYA berlaku kalau hasil 80%-nya itu SUDAH
+  // ≥300 VP. Kalau di bawah 300, syarat kualifikasi balik ke poin 1-3 doang (minimal 300 VP flat)
+  // — jadi syarat ke-4 ini TIDAK ditampilkan/tidak dihitung sama sekali di kasus itu. ──
+  const adaSyarat80 = adaSyarat80Mentah && ambangVp80Mentah>=300;
+  const ambangVp80 = adaSyarat80 ? ambangVp80Mentah : 0;
   const kurangVp80 = adaSyarat80 ? Math.max(0, ambangVp80-totalVpBulanIni) : 0;
   const medalTercapai = kurangSinyal===0 && kurangVp===0 && (!adaSyarat80 || kurangVp80===0);
   // ── Kebutuhan VP/hari — kekurangan VP TERBESAR (mana yang lebih berat: syarat 300 VP atau
@@ -4530,7 +4561,7 @@ function renderSatuChannelScore(g){
   };
   const baris80Html = adaSyarat80
     ? baris(`Min 80% Avg Monthly VP (${targetMedal.avgMonthlyVp.toFixed(2)})`, totalVpBulanIni.toFixed(2), ambangVp80.toFixed(2), kurangVp80, 'VP')
-    : '';
+    : (adaSyarat80Mentah ? `<div style="font-size:8px;color:#8A6B26;padding:4px 0">ℹ️ Syarat 80% Avg Monthly VP (${ambangVp80Mentah.toFixed(2)}) tidak berlaku bulan ini karena di bawah 300 — otomatis pakai syarat 300 VP flat aja (poin 1-3)</div>` : '');
   const totalKurangTeks = [
     kurangSinyal>0 ? `${kurangSinyal} sinyal` : null,
     kurangVp>0 ? `${kurangVp.toFixed(2)} VP (dari batas 300)` : null,
@@ -4549,6 +4580,23 @@ function renderSatuChannelScore(g){
     </div>
     ${kecepatanHtml}
     <div style="text-align:right;margin-top:6px"><span onclick="editTargetMedal('${g}')" style="font-size:8px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Ubah target Medal bulan ini</span></div>
+  </div>`;
+
+  // ── Progress Level — dari JUMLAH TF MEDAL terkumpul (bukan VP), sesuai tabel resmi TF
+  // (Newbie 0 / Rookie 1-2 / Pro 3-4 / Elite 5-7 / Master 8-12 / Legend 13-14 medal). ──
+  const infoLevel=infoLevelDariMedal(meta.jumlahMedal||0);
+  const levelBlokHtml=`<div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎖️ Progress Level (dari Jumlah Medal)</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">
+      <div style="font-size:9px;color:#8A6B26">Level Sekarang</div>
+      <div style="font-size:10px;font-weight:700;color:#3A2E10">${infoLevel.levelSaatIni.level} (Medal ${infoLevel.jumlahMedal})</div>
+    </div>
+    ${infoLevel.levelBerikutnya ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">
+      <div style="font-size:9px;color:#8A6B26">Target Berikutnya</div>
+      <div style="font-size:10px;font-weight:700;color:${infoLevel.kurangMedal===0?'#3E9142':'#D9534F'}">${infoLevel.levelBerikutnya.level} (min Medal ${infoLevel.levelBerikutnya.min}) ${infoLevel.kurangMedal===0?'✅':`<span style="color:#D9534F">(kurang ${infoLevel.kurangMedal} medal)</span>`}</div>
+    </div>` : `<div style="font-size:9px;font-weight:800;color:#3E9142;padding:4px 0">✅ Sudah di level maksimal (Legend)</div>`}
+    <div style="font-size:8px;color:#D9534F;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">⚠️ Kalau gak aktif post sinyal 2 bulan berturut-turut, Medal RESET ke Newbie (0) — jaga konsistensi kualifikasi bulanan tiap bulan</div>
+    <div style="text-align:right;margin-top:6px"><span onclick="editScoreMeta('${g}')" style="font-size:8px;color:#7A5D1F;cursor:pointer;text-decoration:underline">Ubah jumlah Medal (di form Level/Kemitraan)</span></div>
   </div>`;
 
   const kotak=(judul,nilaiTeks,score,bobotPersen)=>{
@@ -4580,6 +4628,7 @@ function renderSatuChannelScore(g){
     ${badgeBanding}
     ${liveBlok}
     ${medalBlokHtml}
+    ${levelBlokHtml}
     <div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:center">
       <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Rekomendasi Harga Channel</div>
       <div style="font-size:15px;font-weight:800;color:#D4AF37">${isLevelRendah ? fmtRupiah(range.min) : `${fmtRupiah(range.min)} – ${fmtRupiah(range.max)}`}</div>
