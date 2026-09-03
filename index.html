@@ -4564,13 +4564,16 @@ function renderSatuChannelScore(g){
   const vpPerHari = kekuranganVpTerbesar>0 ? kekuranganVpTerbesar/sisaHari : 0;
   const baris=(label,now_,target_,kurang_,satuan)=>{
     const ok=kurang_<=0;
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">
-      <div style="font-size:9px;color:#8A6B26">${label}</div>
-      <div style="font-size:10px;font-weight:700;color:${ok?'#3E9142':'#3A2E10'}">${now_}/${target_} ${satuan} ${ok?'✅':`<span style="color:#D9534F">(kurang ${kurang_%1===0?kurang_:kurang_.toFixed(2)})</span>`}</div>
+    return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:10px;color:#3A2E10;font-weight:700">${label}</div>
+        <div style="font-size:9px;color:#8A6B26;margin-top:2px">Saat ini: ${now_}/${target_}${satuan?' '+satuan:''}</div>
+      </div>
+      <div style="width:20px;height:20px;border-radius:999px;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:8px;background:${ok?'#3E9142':'#5C4818'};color:#fff;font-size:11px">${ok?'✓':'○'}</div>
     </div>`;
   };
   const baris80Html = adaSyarat80
-    ? baris(`Min 80% Avg Monthly VP (${targetMedal.avgMonthlyVp.toFixed(2)})`, totalVpBulanIni.toFixed(2), ambangVp80.toFixed(2), kurangVp80, 'VP')
+    ? baris(`Min 80% Avg Monthly VP (${targetMedal.avgMonthlyVp.toFixed(2)})`, totalVpBulanIni.toFixed(2), ambangVp80.toFixed(2), kurangVp80, '')
     : (adaSyarat80Mentah ? `<div style="font-size:8px;color:#8A6B26;padding:4px 0">ℹ️ Syarat 80% Avg Monthly VP (${ambangVp80Mentah.toFixed(2)}) tidak berlaku bulan ini karena di bawah 300 — otomatis pakai syarat 300 VP flat aja (poin 1-3)</div>` : '');
   const totalKurangTeks = [
     kurangSinyal>0 ? `${kurangSinyal} sinyal` : null,
@@ -4581,11 +4584,11 @@ function renderSatuChannelScore(g){
     ? `<div style="font-size:9px;color:#D9534F;margin-top:4px">⏱️ Sisa ${sisaHari} hari bulan ini — butuh rata-rata <b>${vpPerHari.toFixed(2)} VP/hari</b> (net) buat kejar target</div>`
     : '';
   const medalBlokHtml=`<div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
-    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🏅 Progress TF Medal Bulan Ini</div>
-    ${baris('Minimal Signal', jumlahSinyalBulanIni, targetMedal.minSinyal, kurangSinyal, 'sinyal')}
-    ${baris('Minimal VP', totalVpBulanIni.toFixed(2), targetMedal.minVp, kurangVp, 'VP')}
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">🏅 Progress TF Medal Bulan Ini</div>
+    ${baris('Minimal Signal', jumlahSinyalBulanIni, targetMedal.minSinyal, kurangSinyal, '')}
+    ${baris('Minimal VP', totalVpBulanIni.toFixed(2), targetMedal.minVp, kurangVp, '')}
     ${baris80Html}
-    <div style="font-size:9px;font-weight:800;color:${medalTercapai?'#3E9142':'#D9534F'};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+    <div style="font-size:9px;font-weight:800;color:${medalTercapai?'#3E9142':'#D9534F'};margin-top:6px;padding-top:6px">
       ${medalTercapai ? '✅ Syarat Medal bulan ini SUDAH LENGKAP' : `⚠️ Masih kurang: ${totalKurangTeks}`}
     </div>
     ${kecepatanHtml}
