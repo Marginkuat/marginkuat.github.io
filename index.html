@@ -1644,6 +1644,21 @@ function renderInvCalcDisclaimer(){
       <input class="inp" type="text" id="inpRunningBatch" placeholder="mis. Forex 4 Sep">
       <label class="lbl">Tanggal dibuka</label>
       <input class="inp" type="date" id="inpRunningTgl">
+      <label class="lbl">Arah (opsional — buat saran otomatis pips pas nutup nanti)</label>
+      <select class="inp" id="inpRunningArah" onchange="document.getElementById('inpRunningHargaWrap').style.display = this.value ? 'block' : 'none'">
+        <option value="">— Gak perlu, isi pips manual pas nutup —</option>
+        <option value="buy">Buy</option>
+        <option value="sell">Sell</option>
+      </select>
+      <div id="inpRunningHargaWrap" style="display:none">
+        <label class="lbl">Harga Entry</label>
+        <input class="inp" type="number" step="any" id="inpRunningHarga" placeholder="mis. 91.950">
+        <label class="lbl">Harga TP</label>
+        <input class="inp" type="number" step="any" id="inpRunningTp" placeholder="mis. 91.050">
+        <label class="lbl">Harga SL</label>
+        <input class="inp" type="number" step="any" id="inpRunningSl" placeholder="mis. 92.400">
+        <div style="font-size:8px;color:#7A5D1F;margin-top:-4px;margin-bottom:6px">🔒 Angka harga ini CUMA buat saran otomatis pips pas ditutup nanti — TIDAK ditampilkan di kartu publik, cuma kelihatan pas login Admin.</div>
+      </div>
       <button class="btn" onclick="tambahSinyalRunning()" style="margin-top:8px">➕ Catat Sinyal Running</button>
       <div id="daftarRunningWrap" style="margin-top:10px"></div>
     </div>
@@ -2834,6 +2849,7 @@ async function restoreAdminSession(){
   show('adminPanel');
   resetAdminIdleTimer();
   if(typeof renderBalanceHero==='function') renderBalanceHero();
+  if(typeof loadSinyalAnalisPrivat==='function') loadSinyalAnalisPrivat().then(()=>{ if(typeof renderDaftarSinyal==='function') renderDaftarSinyal(); });
   return true;
 }
 
@@ -4032,6 +4048,32 @@ function syncSemuaLabelChannel(){
 // 'sinyal_analis_FOREX' — TIDAK ADA hubungan/query apapun ke tabel saldo_harian. ──
 // ══════════════════════════════════════════
 let cachedSinyalAnalis={XAUUSD:[], FOREX:[]};
+// ── Data SENSITIF (harga entry/TP/SL sinyal running) DIPISAH ke key/table beda:
+// 'sinyal_analis_privat_XAUUSD' / '_FOREX'. Ini BUKAN cuma disembunyikan dari tampilan —
+// dengan RLS Supabase yang benar (lihat catatan SQL), key berawalan 'sinyal_analis_privat_'
+// cuma bisa di-SELECT oleh sesi yang sudah login (role authenticated / Admin), jadi pengunjung
+// publik (anon key) gak bisa ambil datanya sama sekali dari server, bukan cuma "gak dirender".
+// Makanya loadSinyalAnalisPrivat() CUMA dipanggil kalau isAdmin true (setelah login berhasil).
+let cachedSinyalAnalisPrivat={XAUUSD:{}, FOREX:{}};
+async function loadSinyalAnalisPrivat(){
+  if(!isAdmin) return;
+  for(const g of ['XAUUSD','FOREX']){
+    try{
+      const rows=await api('app_settings?select=value&key=eq.sinyal_analis_privat_'+g);
+      if(rows && rows.length && rows[0].value){
+        const parsed=JSON.parse(rows[0].value);
+        if(parsed && typeof parsed==='object') cachedSinyalAnalisPrivat[g]=parsed;
+      }
+    }catch(e){ console.error('Gagal load sinyal_analis_privat_'+g, e); }
+  }
+}
+async function simpanSinyalPrivatKeServer(g){
+  const payload=JSON.stringify(cachedSinyalAnalisPrivat[g]);
+  const key='sinyal_analis_privat_'+g;
+  const existing=await api('app_settings?select=key&key=eq.'+key);
+  if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:payload}); }
+  else{ await api('app_settings','POST',{key,value:payload}); }
+}
 async function loadSinyalAnalis(){
   for(const g of ['XAUUSD','FOREX']){
     try{
@@ -4245,13 +4287,34 @@ async function tambahSinyalRunning(){
   const simbol=(document.getElementById('inpRunningSimbol')||{}).value||'';
   const batch=(document.getElementById('inpRunningBatch')||{}).value||'';
   const tgl=(document.getElementById('inpRunningTgl')||{}).value||new Date().toISOString().slice(0,10);
+  const arah=(document.getElementById('inpRunningArah')||{}).value||'';
+  const hargaEntry=parseFloat((document.getElementById('inpRunningHarga')||{}).value);
+  const hargaTp=parseFloat((document.getElementById('inpRunningTp')||{}).value);
+  const hargaSl=parseFloat((document.getElementById('inpRunningSl')||{}).value);
   if(!simbol.trim()){toast('❌ Isi nama pair dulu');return;}
   try{
-    cachedSinyalAnalis[g].push({id:buatIdSinyal(), tanggal:tgl, jam:null, simbol:simbol.trim(), batch:batch.trim()||null, status:'running', pips:null, vp:null});
+    const idBaru=buatIdSinyal();
+    // Field publik: TIDAK mengandung harga sama sekali.
+    const data={id:idBaru, tanggal:tgl, jam:null, simbol:simbol.trim(), batch:batch.trim()||null, status:'running', pips:null, vp:null};
+    cachedSinyalAnalis[g].push(data);
     await simpanSinyalKeServer(g);
+    // Field privat (harga entry/TP/SL): disimpan TERPISAH ke key 'sinyal_analis_privat_'+g,
+    // supaya bisa dilindungi RLS khusus role authenticated — gak numpang di array publik.
+    if(arah || isFinite(hargaEntry) || isFinite(hargaTp) || isFinite(hargaSl)){
+      cachedSinyalAnalisPrivat[g][idBaru]={
+        arah: arah||null,
+        hargaEntry: isFinite(hargaEntry) ? hargaEntry : null,
+        hargaTp: isFinite(hargaTp) ? hargaTp : null,
+        hargaSl: isFinite(hargaSl) ? hargaSl : null
+      };
+      await simpanSinyalPrivatKeServer(g);
+    }
     toast(`🏃 Sinyal ${simbol.trim()} dicatat sebagai running`);
     const s=document.getElementById('inpRunningSimbol'); if(s) s.value='';
     const b=document.getElementById('inpRunningBatch'); if(b) b.value='';
+    const a=document.getElementById('inpRunningArah'); if(a) a.value='';
+    const hw=document.getElementById('inpRunningHargaWrap'); if(hw) hw.style.display='none';
+    ['inpRunningHarga','inpRunningTp','inpRunningSl'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
     renderDaftarSinyal();
   }catch(e){
     console.error(e);
@@ -4267,6 +4330,10 @@ function renderDaftarRunning(){
     wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Gak ada sinyal running saat ini.</div>`;
     return;
   }
+  // PENTING: harga entry/TP/SL SENGAJA tidak pernah ditulis ke innerHTML di sini, walau
+  // isAdmin — supaya gak ada risiko data harga nyangkut di HTML/cache browser yang bisa
+  // ke-inspect orang lain di device yang sama. Cukup dipakai sebagai angka mentah pas hitung
+  // saran pips di tutupSinyalRunning(), gak pernah dirender ke layar sama sekali.
   wrap.innerHTML=list.map(r=>`
     <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:9px;padding:8px 10px;margin-bottom:6px">
       <div style="font-size:10px;color:#3A2E10;font-weight:700">${r.simbol||g}${r.batch?` <span style="color:#8A6B26;font-weight:400">— batch: ${r.batch}</span>`:''}</div>
@@ -4277,12 +4344,34 @@ function renderDaftarRunning(){
       </div>
     </div>`).join('');
 }
+// Faktor konversi pips->harga khusus tool analis (independen dari kalkulator lain di situs
+// ini, biar gak nyenggol kode kalkulator utama).
+function pipPriceFactorAnalis(pairName){
+  const s=(pairName||'').toUpperCase();
+  if(s==='XAUUSD') return 0.1;
+  if(s==='BTCUSD') return 1;
+  if(s.includes('JPY')) return 0.01;
+  return 0.0001;
+}
 async function tutupSinyalRunning(g, id, jenis){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const item=(cachedSinyalAnalis[g]||[]).find(r=>r.id===id && r.status==='running');
   if(!item)return;
   const labelJenis = jenis==='profit' ? 'PROFIT (cut lebih awal / kena TP)' : 'LOSS (kena Stop Loss)';
-  const pipsStr=prompt(`Tutup ${item.simbol||g} sebagai ${labelJenis}\n\nMasukkan Pips (${jenis==='sl'?'isi minus':'isi plus'}):`, jenis==='sl'?'-30':'30');
+  // Data harga entry/TP/SL (kalau ada) disimpan TERPISAH di cachedSinyalAnalisPrivat, bukan
+  // nempel di item publik — dipakai cuma buat SARAN pips otomatis, tetap boleh diedit manual.
+  const privat=(cachedSinyalAnalisPrivat[g]||{})[id]||null;
+  let saranPips=jenis==='sl'?'-30':'30';
+  if(privat && isFinite(privat.hargaEntry) && privat.arah){
+    const factor=pipPriceFactorAnalis(item.simbol);
+    const hargaAcuan = jenis==='profit' ? privat.hargaTp : privat.hargaSl;
+    if(isFinite(hargaAcuan) && factor){
+      const arahMult = privat.arah==='sell' ? -1 : 1;
+      const pipsHitung = ((hargaAcuan-privat.hargaEntry)*arahMult)/factor;
+      if(isFinite(pipsHitung)) saranPips=pipsHitung.toFixed(1);
+    }
+  }
+  const pipsStr=prompt(`Tutup ${item.simbol||g} sebagai ${labelJenis}\n\nMasukkan Pips (${jenis==='sl'?'isi minus':'isi plus'}) — saran otomatis dari TP/SL kalau ada, boleh diubah kalau closing beneran beda:`, saranPips);
   if(pipsStr===null)return;
   const pips=parseFloat(pipsStr);
   if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
@@ -4300,6 +4389,11 @@ async function tutupSinyalRunning(g, id, jenis){
     item.vp=vp;
     item.tanggal=new Date().toISOString().slice(0,10);
     await simpanSinyalKeServer(g);
+    // Bersihkan data harga privat begitu sinyal closed — udah gak perlu lagi buat saran pips.
+    if(cachedSinyalAnalisPrivat[g] && cachedSinyalAnalisPrivat[g][id]){
+      delete cachedSinyalAnalisPrivat[g][id];
+      await simpanSinyalPrivatKeServer(g);
+    }
     toast(`✅ ${item.simbol||g} ditutup: ${pips>=0?'+':''}${pips} pip / ${vp>=0?'+':''}${vp} VP`);
     renderScoreCard(); renderRemPipsCard(); renderDaftarSinyal();
   }catch(e){
@@ -9664,6 +9758,8 @@ async function doLogin(){
     renderBalanceHero();
     if(typeof renderLabelProfilRisiko==='function') renderLabelProfilRisiko();
     renderInvestorDashboard(); // Admin login → buka Investor Dashboard (section ini disembunyikan default dari publik)
+    await loadSinyalAnalisPrivat();
+    if(typeof renderDaftarSinyal==='function') renderDaftarSinyal();
     toast('✅ Masuk sebagai Admin');
   }catch(e){
     await catatPercobaanLogin(emailKey,'admin',false);
@@ -9679,6 +9775,9 @@ async function logout(){
   stopAdminIdleTimer();
   show('btnAdmin');hide('btnLogout');
   hide('adminPanel');
+  // Buang data harga privat dari memori browser begitu logout — gak boleh nyangkut di RAM/cache
+  // tab yang mungkin masih kebuka orang lain di device yang sama.
+  cachedSinyalAnalisPrivat={XAUUSD:{}, FOREX:{}};
   renderBalanceHero();
     if(typeof renderLabelProfilRisiko==='function') renderLabelProfilRisiko();
   renderInvestorDashboard(); // Admin logout → Investor Dashboard sembunyi lagi total buat publik (kecuali masih login investor)
