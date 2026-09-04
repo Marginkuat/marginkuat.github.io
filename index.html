@@ -1606,6 +1606,8 @@ function renderInvCalcDisclaimer(){
       <input class="inp" type="date" id="inpRingkasTgl">
       <label class="lbl">Jam ditutup (opsional — biar gampang dibedain kalau ada beberapa sinyal di tanggal sama)</label>
       <input class="inp" type="time" id="inpRingkasJam">
+      <label class="lbl">Batch / Grup (opsional — buat ngelompokin sinyal, mis. "Forex 4 Sep")</label>
+      <input class="inp" type="text" id="inpRingkasBatch" placeholder="mis. Forex 4 Sep">
       <label class="lbl">Pips — isi minus kalau rugi, mis. -30</label>
       <input class="inp" type="number" step="0.1" id="inpRingkasPips" placeholder="-30" oninput="autoHitungVpRingkas()">
       <label class="lbl">VP — otomatis terisi dari pips (boleh ubah manual kalau perlu)</label>
@@ -1624,6 +1626,31 @@ function renderInvCalcDisclaimer(){
         <button class="pair-tab" data-sp="FOREX" onclick="setDaftarSinyalPairGroup('FOREX')" style="flex:1;padding:6px;font-size:10px"><span id="scoreTabLabelForex2">Datuk Crypto 89</span></button>
       </div>
       <div id="daftarSinyalWrap"><div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:10px 12px;margin-bottom:12px">
+        <div style="font-size:10px;font-weight:800;color:#F87171;margin-bottom:4px">🔒 ATURAN SINYAL RUNNING</div>
+        <div style="font-size:9px;color:#F0B8B8;line-height:1.7">
+          Sinyal yang masih <b>running / belum closed</b> TIDAK BOLEH di-cut rugi manual.<br>
+          ✅ Boleh: tutup lebih awal kalau sudah <b>profit</b> (amankan cuan duluan).<br>
+          ❌ Tidak boleh: cut manual saat masih minus — <b>wajib ditunggu sampai beneran kena Stop Loss</b>.
+        </div>
+      </div>
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🏃 Sinyal Sedang Running</div>
+      <label class="lbl">Pair</label>
+      <input class="inp" type="text" id="inpRunningSimbol" placeholder="mis. EURUSD">
+      <label class="lbl">Batch / Grup (opsional)</label>
+      <input class="inp" type="text" id="inpRunningBatch" placeholder="mis. Forex 4 Sep">
+      <label class="lbl">Tanggal dibuka</label>
+      <input class="inp" type="date" id="inpRunningTgl">
+      <button class="btn" onclick="tambahSinyalRunning()" style="margin-top:8px">➕ Catat Sinyal Running</button>
+      <div id="daftarRunningWrap" style="margin-top:10px"></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📦 Ringkasan Net VP per Batch (channel ini)</div>
+      <div id="ringkasanBatchWrap"></div>
     </div>
   </div>
 </div>
@@ -4082,6 +4109,7 @@ async function simpanDataHarianRingkas(){
   const tgl=document.getElementById('inpRingkasTgl').value;
   const jam=(document.getElementById('inpRingkasJam')||{}).value||null;
   const pairSimbol=getSimbolSinyalTerpilih();
+  const batchInput=(document.getElementById('inpRingkasBatch')||{}).value||'';
   const pipsInput=document.getElementById('inpRingkasPips').value;
   const vpInput=document.getElementById('inpRingkasVp').value;
   const statusEl=document.getElementById('inpRingkasStatus');
@@ -4098,7 +4126,7 @@ async function simpanDataHarianRingkas(){
     // — gak perlu cek/gabung dengan sinyal lain, penjumlahan per hari/bulan dihitung on-the-fly.
     // 'jam' opsional, cuma buat tampilan & urutan yang lebih presisi kalau ada >1 sinyal di
     // tanggal yang sama (dipakai buat urutan kurva Recovery Factor juga).
-    cachedSinyalAnalis[g].push({id:buatIdSinyal(), tanggal:tgl, jam:jam||null, simbol:pairSimbol||null, pips, vp});
+    cachedSinyalAnalis[g].push({id:buatIdSinyal(), tanggal:tgl, jam:jam||null, simbol:pairSimbol||null, batch:batchInput.trim()||null, status:'closed', pips, vp});
     await simpanSinyalKeServer(g);
     statusEl.textContent=`✅ Tersimpan: ${pips>=0?'+':''}${pips} pip / ${vp>=0?'+':''}${vp} VP`;
     toast(`✅ Sinyal ${pairSimbol||g} tersimpan (khusus tool analis, gak nyentuh data MT4/kalkulator lain)`);
@@ -4106,6 +4134,7 @@ async function simpanDataHarianRingkas(){
     const manualEl0=document.getElementById('inpRingkasSimbolManual'); if(manualEl0){ manualEl0.value=''; manualEl0.style.display='none'; }
     document.getElementById('inpRingkasPips').value='';
     document.getElementById('inpRingkasVp').value='';
+    const batchEl0=document.getElementById('inpRingkasBatch'); if(batchEl0) batchEl0.value='';
     const ketEl0=document.getElementById('inpRingkasVpKeterangan'); if(ketEl0) ketEl0.textContent='';
     renderScoreCard();
     renderRemPipsCard();
@@ -4143,6 +4172,8 @@ async function editSinyal(g, id){
   if(jamBaru===null)return;
   const simbolBaru=prompt('Nama pair sinyal (opsional):', item.simbol||'');
   if(simbolBaru===null)return;
+  const batchBaru=prompt('Batch/Grup (opsional):', item.batch||'');
+  if(batchBaru===null)return;
   const pipsBaru=prompt('Pips:', String(item.pips));
   if(pipsBaru===null)return;
   const vpBaru=prompt('VP:', String(item.vp));
@@ -4150,7 +4181,7 @@ async function editSinyal(g, id){
   const pipsNum=parseFloat(pipsBaru), vpNum=parseFloat(vpBaru);
   if(!tglBaru || !isFinite(pipsNum) || !isFinite(vpNum)){toast('❌ Data gak valid, batal diedit');return;}
   try{
-    item.tanggal=tglBaru; item.jam=jamBaru.trim()||null; item.simbol=simbolBaru.trim()||null; item.pips=pipsNum; item.vp=vpNum;
+    item.tanggal=tglBaru; item.jam=jamBaru.trim()||null; item.simbol=simbolBaru.trim()||null; item.batch=batchBaru.trim()||null; item.status='closed'; item.pips=pipsNum; item.vp=vpNum;
     await simpanSinyalKeServer(g);
     toast('✅ Sinyal diperbarui');
     renderScoreCard(); renderRemPipsCard(); renderDaftarSinyal();
@@ -4168,7 +4199,9 @@ function renderDaftarSinyal(){
   if(!wrap)return;
   const g=daftarSinyalPairGroup||'XAUUSD';
   const waktuOf=r=>new Date(r.tanggal+'T'+(r.jam||'00:00'));
-  const list=(cachedSinyalAnalis[g]||[]).slice().sort((a,b)=>waktuOf(b)-waktuOf(a));
+  // Sinyal yang statusnya 'running' (belum closed, belum ada pips/VP final) ditampilkan
+  // terpisah di blok "🏃 Sinyal Sedang Running", jadi disingkirkan dulu dari riwayat closed ini.
+  const list=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running').slice().sort((a,b)=>waktuOf(b)-waktuOf(a));
   if(!list.length){
     wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:8px">Belum ada sinyal tercatat.</div>`;
     return;
@@ -4199,6 +4232,114 @@ function renderDaftarSinyal(){
     ? `<div onclick="toggleDaftarSinyal()" style="text-align:center;font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline;padding-top:8px">${daftarSinyalExpanded?'Sembunyikan':'Tampilkan '+sisaJumlah+' lainnya'}</div>`
     : '';
   wrap.innerHTML=ringkasanCocokHtml+baris+tombolToggle;
+  renderDaftarRunning();
+  renderRingkasanBatch();
+}
+// ── Sinyal Sedang Running — sinyal yang udah dibuka tapi belum closed (belum ada pips/VP
+// final). ATURAN: gak boleh di-cut rugi manual, cuma boleh ditutup kalau (a) lagi profit
+// (cut profit lebih awal) atau (b) beneran udah kena Stop Loss. Makanya cuma ada 2 tombol
+// tutup di bawah — TIDAK ADA tombol "cut loss manual". ──
+async function tambahSinyalRunning(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
+  const g=daftarSinyalPairGroup||'XAUUSD';
+  const simbol=(document.getElementById('inpRunningSimbol')||{}).value||'';
+  const batch=(document.getElementById('inpRunningBatch')||{}).value||'';
+  const tgl=(document.getElementById('inpRunningTgl')||{}).value||new Date().toISOString().slice(0,10);
+  if(!simbol.trim()){toast('❌ Isi nama pair dulu');return;}
+  try{
+    cachedSinyalAnalis[g].push({id:buatIdSinyal(), tanggal:tgl, jam:null, simbol:simbol.trim(), batch:batch.trim()||null, status:'running', pips:null, vp:null});
+    await simpanSinyalKeServer(g);
+    toast(`🏃 Sinyal ${simbol.trim()} dicatat sebagai running`);
+    const s=document.getElementById('inpRunningSimbol'); if(s) s.value='';
+    const b=document.getElementById('inpRunningBatch'); if(b) b.value='';
+    renderDaftarSinyal();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan sinyal running: '+(e.message||'').slice(0,120));
+  }
+}
+function renderDaftarRunning(){
+  const wrap=document.getElementById('daftarRunningWrap');
+  if(!wrap)return;
+  const g=daftarSinyalPairGroup||'XAUUSD';
+  const list=(cachedSinyalAnalis[g]||[]).filter(r=>r.status==='running');
+  if(!list.length){
+    wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Gak ada sinyal running saat ini.</div>`;
+    return;
+  }
+  wrap.innerHTML=list.map(r=>`
+    <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:9px;padding:8px 10px;margin-bottom:6px">
+      <div style="font-size:10px;color:#3A2E10;font-weight:700">${r.simbol||g}${r.batch?` <span style="color:#8A6B26;font-weight:400">— batch: ${r.batch}</span>`:''}</div>
+      <div style="font-size:9px;color:#8A6B26;margin-bottom:6px">Dibuka: ${r.tanggal}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn" onclick="tutupSinyalRunning('${g}','${r.id}','profit')" style="flex:1;padding:6px;font-size:9px;background:#1E4A14;border-color:#3E9142">🎯 Tutup — Profit</button>
+        <button class="btn" onclick="tutupSinyalRunning('${g}','${r.id}','sl')" style="flex:1;padding:6px;font-size:9px;background:#4A1414;border-color:#D9534F">🛑 Tutup — Kena SL</button>
+      </div>
+    </div>`).join('');
+}
+async function tutupSinyalRunning(g, id, jenis){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const item=(cachedSinyalAnalis[g]||[]).find(r=>r.id===id && r.status==='running');
+  if(!item)return;
+  const labelJenis = jenis==='profit' ? 'PROFIT (cut lebih awal / kena TP)' : 'LOSS (kena Stop Loss)';
+  const pipsStr=prompt(`Tutup ${item.simbol||g} sebagai ${labelJenis}\n\nMasukkan Pips (${jenis==='sl'?'isi minus':'isi plus'}):`, jenis==='sl'?'-30':'30');
+  if(pipsStr===null)return;
+  const pips=parseFloat(pipsStr);
+  if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
+  if(jenis==='profit' && pips<0){toast('❌ Tutup Profit tapi pips-nya minus? Cek lagi angkanya');return;}
+  if(jenis==='sl' && pips>0){toast('❌ Tutup Kena SL tapi pips-nya plus? Cek lagi angkanya');return;}
+  const {nilai:mult}=multiplierVpDariSimbol(item.simbol);
+  const vpSaran=(pips*mult).toFixed(2);
+  const vpStr=prompt('VP (otomatis dihitung dari tabel resmi, boleh ubah manual):', vpSaran);
+  if(vpStr===null)return;
+  const vp=parseFloat(vpStr);
+  if(!isFinite(vp)){toast('❌ Angka VP gak valid');return;}
+  try{
+    item.status='closed';
+    item.pips=pips;
+    item.vp=vp;
+    item.tanggal=new Date().toISOString().slice(0,10);
+    await simpanSinyalKeServer(g);
+    toast(`✅ ${item.simbol||g} ditutup: ${pips>=0?'+':''}${pips} pip / ${vp>=0?'+':''}${vp} VP`);
+    renderScoreCard(); renderRemPipsCard(); renderDaftarSinyal();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal menutup sinyal: '+(e.message||'').slice(0,120));
+  }
+}
+// ── Ringkasan Net VP per Batch — kelompokkan sinyal CLOSED (bukan yang masih running)
+// berdasarkan label batch, biar kelihatan mana batch yang net-nya nambah buffer VP dan mana
+// yang justru gerus. Sinyal tanpa batch label dikumpulkan jadi satu grup "(tanpa batch)". ──
+function renderRingkasanBatch(){
+  const wrap=document.getElementById('ringkasanBatchWrap');
+  if(!wrap)return;
+  const g=daftarSinyalPairGroup||'XAUUSD';
+  const closedList=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running');
+  if(!closedList.length){
+    wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Belum ada sinyal closed buat diringkas.</div>`;
+    return;
+  }
+  const grup={};
+  closedList.forEach(r=>{
+    const key=r.batch||'(tanpa batch)';
+    if(!grup[key]) grup[key]={pips:0, vp:0, win:0, loss:0, total:0};
+    grup[key].pips+=parseFloat(r.pips||0);
+    grup[key].vp+=parseFloat(r.vp||0);
+    grup[key].total+=1;
+    if(parseFloat(r.pips||0)>0) grup[key].win+=1; else if(parseFloat(r.pips||0)<0) grup[key].loss+=1;
+  });
+  const keys=Object.keys(grup).sort((a,b)=>grup[b].vp-grup[a].vp);
+  wrap.innerHTML=keys.map(key=>{
+    const d=grup[key];
+    const warna = d.vp>=0 ? '#3E9142' : '#D9534F';
+    return `<div style="background:var(--bg0);border:1px dashed var(--border);border-radius:9px;padding:8px 10px;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div style="font-size:10px;font-weight:700;color:#3A2E10">${key}</div>
+        <div style="font-size:8px;color:#8A6B26">${d.total} sinyal (${d.win}W/${d.loss}L)</div>
+      </div>
+      <div style="font-size:13px;font-weight:800;color:${warna};margin-top:2px">${d.vp>=0?'+':''}${d.vp.toFixed(2)} VP <span style="font-size:9px;font-weight:400;color:#8A6B26">(${d.pips>=0?'+':''}${d.pips.toFixed(1)} pip)</span></div>
+    </div>`;
+  }).join('');
 }
 async function toggleCocokSinyal(g, id){
   const item=(cachedSinyalAnalis[g]||[]).find(r=>r.id===id);
@@ -4469,7 +4610,7 @@ function urutkanSinyalByWaktu(list){
 }
 function hitungStateStrategiGold(g){
   const bulanIniKey=bulanKeyOf(new Date().toISOString().slice(0,10));
-  const rows=urutkanSinyalByWaktu((cachedSinyalAnalis[g]||[]).filter(r=>bulanKeyOf(r.tanggal)===bulanIniKey));
+  const rows=urutkanSinyalByWaktu((cachedSinyalAnalis[g]||[]).filter(r=>bulanKeyOf(r.tanggal)===bulanIniKey && r.status!=='running'));
   let state='A'; // A=200:400 (dasar), B=400:500 (lanjutan)
   rows.forEach(r=>{
     const menang=parseFloat(r.pips||0)>0;
@@ -4482,7 +4623,7 @@ function hitungStateStrategiGold(g){
 // belum ada histori sama sekali) — dipakai buat menaksir berapa VP yang hilang kalau SL kena.
 function estimasiMultiplierVp(g){
   const fallback = g==='XAUUSD' ? 0.2 : 1.5;
-  const rows=(cachedSinyalAnalis[g]||[]).filter(r=>parseFloat(r.pips||0)!==0);
+  const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && parseFloat(r.pips||0)!==0);
   if(!rows.length) return fallback;
   const avgs=rows.map(r=>Math.abs(parseFloat(r.vp||0))/Math.abs(parseFloat(r.pips||0))).filter(v=>isFinite(v)&&v>0);
   if(!avgs.length) return fallback;
@@ -4622,7 +4763,10 @@ function renderSatuChannelScore(g){
   // Syarat ke-4 (80% dari Avg Monthly VP) OPSIONAL — cuma tampil kalau admin sudah isi
   // avgMonthlyVp (gak semua channel/level kena syarat ini, kayak di level Rookie kadang belum). ──
   const bulanIniKey=bulanKeyOf(new Date().toISOString().slice(0,10));
-  const sinyalBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>bulanKeyOf(r.tanggal)===bulanIniKey);
+  // Sinyal berstatus 'running' (belum closed, belum ada pips/VP final) SENGAJA gak dihitung di
+  // sini — baru masuk ke Progress Medal/Skor begitu ditutup (Profit atau kena SL) dari blok
+  // "🏃 Sinyal Sedang Running", biar gak nge-inflate hitungan pakai sinyal yang belum settle.
+  const sinyalBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>bulanKeyOf(r.tanggal)===bulanIniKey && r.status!=='running');
   const jumlahSinyalBulanIni=sinyalBulanIni.length;
   const totalVpBulanIni=sinyalBulanIni.reduce((a,r)=>a+parseFloat(r.vp||0),0);
   const totalPipsBulanIni=sinyalBulanIni.reduce((a,r)=>a+parseFloat(r.pips||0),0);
