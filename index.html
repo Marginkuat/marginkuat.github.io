@@ -4908,19 +4908,46 @@ function renderSatuChannelScore(g){
   const bufferVp = totalVpBulanIni - ambangVpBerlaku;
   const vpLossList = sinyalBulanIni.map(r=>parseFloat(r.vp||0)).filter(v=>v<0);
   const avgVpLossBulanIni = vpLossList.length ? (vpLossList.reduce((a,b)=>a+b,0)/vpLossList.length) : null;
+  const worstVpLossBulanIni = vpLossList.length ? Math.min(...vpLossList) : null; // loss terbesar (paling negatif) bulan ini, buat skenario "kalau apes"
   const sinyalLossTertahan = (avgVpLossBulanIni && avgVpLossBulanIni<0) ? Math.floor(bufferVp/Math.abs(avgVpLossBulanIni)) : null;
+  const sinyalLossTertahanWorst = (worstVpLossBulanIni && worstVpLossBulanIni<0) ? Math.floor(bufferVp/Math.abs(worstVpLossBulanIni)) : null;
   const bufferWarna = bufferVp<0 ? '#D9534F' : (bufferVp<50 ? '#D9534F' : (bufferVp<150 ? '#C8A84B' : '#3E9142'));
   const bufferStatusTeks = bufferVp<0
     ? '❌ SUDAH DI BAWAH ambang — syarat VP bulan ini belum tercapai'
     : (bufferVp<50 ? '⚠️ Tipis — 1 sinyal loss VP besar berpotensi bikin syarat ini gagal, lebih baik selektif sisa bulan ini'
       : (bufferVp<150 ? '🟡 Sedang — masih ada ruang, tapi tetap pantau tiap ada sinyal loss'
         : '✅ Tebal — buffer cukup aman dari beberapa sinyal loss sekaligus'));
+  // ── REKOMENDASI LANJUT/STOP — verdict eksplisit biar gampang diputusin, dihitung dari
+  // "berapa kali sinyal loss (versi rata-rata) yang masih bisa diserap buffer sebelum jebol".
+  // Ambang keputusan: ≤1x = STOP, 2-3x = HATI-HATI/selektif, ≥4x = LANJUT aman. ──
+  let verdictIkon, verdictTeks, verdictWarna, verdictSaran;
+  if(bufferVp<0){
+    verdictIkon='❌'; verdictWarna='#D9534F'; verdictTeks='SUDAH JEBOL';
+    verdictSaran='Ambang VP bulan ini belum tercapai. Fokus tambah sinyal profit dulu buat nutup selisihnya, bukan buat naik level dulu.';
+  } else if(sinyalLossTertahan===null){
+    verdictIkon='ℹ️'; verdictWarna='#8A6B26'; verdictTeks='BELUM CUKUP DATA';
+    verdictSaran='Belum ada sinyal loss bulan ini buat dijadiin patokan. Buffer di atas masih murni angka statis — pantau manual tiap kena SL.';
+  } else if(sinyalLossTertahan<=1){
+    verdictIkon='🛑'; verdictWarna='#D9534F'; verdictTeks='PERTIMBANGKAN STOP DULU';
+    verdictSaran=`Buffer cuma tahan ±${Math.max(0,sinyalLossTertahan)}x sinyal loss (rata-rata) lagi. Kalau lanjut nambah sinyal baru, resiko ambang jebol tinggi — lebih aman berhenti nambah dulu, tunggu buffer nebel lagi dari sinyal yang lagi profit.`;
+  } else if(sinyalLossTertahan<=3){
+    verdictIkon='⚠️'; verdictWarna='#C8A84B'; verdictTeks='BOLEH LANJUT, TAPI SELEKTIF';
+    verdictSaran=`Buffer masih tahan ±${sinyalLossTertahan}x sinyal loss (rata-rata). Boleh lanjut, tapi pilih setup terbaik aja — hindari asal comot sinyal buat sekadar nambah jumlah.`;
+  } else {
+    verdictIkon='✅'; verdictWarna='#3E9142'; verdictTeks='AMAN LANJUT';
+    verdictSaran=`Buffer tahan ±${sinyalLossTertahan}x sinyal loss (rata-rata) — cukup tebal buat lanjut normal sesuai gaya trading kamu.`;
+  }
+  const verdictHtml=`<div style="background:${verdictWarna}22;border:1.5px solid ${verdictWarna};border-radius:9px;padding:9px 11px;margin:6px 0">
+    <div style="font-size:12px;font-weight:900;color:${verdictWarna}">${verdictIkon} REKOMENDASI: ${verdictTeks}</div>
+    <div style="font-size:9px;color:#3A2E10;margin-top:3px;line-height:1.5">${verdictSaran}</div>
+  </div>`;
   const bufferVpHtml = `<div style="background:var(--bg0);border:1px dashed ${bufferWarna};border-radius:8px;padding:8px 10px;margin:6px 0">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">💰 Buffer VP (di atas ambang ${ambangVpBerlaku.toFixed(2)}${adaSyarat80?' — pakai syarat 80% karena lebih ketat dari 300':' flat'})</div>
     <div style="font-size:15px;font-weight:800;color:${bufferWarna}">${bufferVp>=0?'+':''}${bufferVp.toFixed(2)} VP</div>
     <div style="font-size:9px;color:${bufferWarna};margin-top:2px;font-weight:600">${bufferStatusTeks}</div>
-    ${sinyalLossTertahan!==null ? `<div style="font-size:8px;color:#8A6B26;margin-top:4px">Berdasarkan rata-rata sinyal loss bulan ini (${avgVpLossBulanIni.toFixed(2)} VP/sinyal loss): buffer ini setara <b>${Math.max(0,sinyalLossTertahan)} sinyal loss</b> lagi sebelum ambang jebol</div>` : `<div style="font-size:8px;color:#8A6B26;margin-top:4px">Belum ada sinyal loss bulan ini buat dijadikan patokan — pantau manual tiap kali habis kena SL berapa VP-nya, lalu bandingkan ke angka buffer di atas</div>`}
-  </div>`;
+    ${sinyalLossTertahan!==null ? `<div style="font-size:8px;color:#8A6B26;margin-top:4px">📊 Rata-rata sinyal loss bulan ini: ${avgVpLossBulanIni.toFixed(2)} VP/sinyal → buffer setara <b>${Math.max(0,sinyalLossTertahan)}x loss</b> lagi sebelum ambang jebol</div>` : `<div style="font-size:8px;color:#8A6B26;margin-top:4px">Belum ada sinyal loss bulan ini buat dijadikan patokan — pantau manual tiap kali habis kena SL berapa VP-nya, lalu bandingkan ke angka buffer di atas</div>`}
+    ${sinyalLossTertahanWorst!==null ? `<div style="font-size:8px;color:#8A6B26;margin-top:2px">📉 Skenario apes (loss TERBESAR bulan ini, ${worstVpLossBulanIni.toFixed(2)} VP): buffer cuma tahan <b>${Math.max(0,sinyalLossTertahanWorst)}x loss</b> sebesar itu</div>` : ''}
+  </div>${verdictHtml}`;
   const totalKurangTeks = [
     kurangSinyal>0 ? `${kurangSinyal} sinyal` : null,
     kurangVp>0 ? `${kurangVp.toFixed(2)} VP (dari batas 300)` : null,
