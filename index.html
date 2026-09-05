@@ -4515,7 +4515,10 @@ function renderDaftarRunning(){
   // saran pips di tutupSinyalRunning(), gak pernah dirender ke layar sama sekali.
   wrap.innerHTML=renderProyeksiBufferRunning(g, list) + list.map(r=>`
     <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:9px;padding:8px 10px;margin-bottom:6px">
-      <div style="font-size:10px;color:#3A2E10;font-weight:700">${r.simbol||g}${r.batch?` <span style="color:#8A6B26;font-weight:400">— batch: ${r.batch}</span>`:''}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div style="font-size:10px;color:#3A2E10;font-weight:700">${r.simbol||g}${r.batch?` <span style="color:#8A6B26;font-weight:400">— batch: ${r.batch}</span>`:''}</div>
+        <span onclick="hapusSinyalRunning('${g}','${r.id}')" title="Hapus catatan (mis. salah channel/pair)" style="font-size:13px;cursor:pointer">🗑️</span>
+      </div>
       <div style="font-size:9px;color:#8A6B26;margin-bottom:6px">Dibuka: ${r.tanggal}</div>
       <div style="display:flex;gap:6px">
         <button class="btn" onclick="tutupSinyalRunning('${g}','${r.id}','profit')" style="flex:1;padding:6px;font-size:9px;background:#1E4A14;border-color:#3E9142">🎯 Tutup — Profit</button>
@@ -4594,6 +4597,29 @@ function pipPriceFactorAnalis(pairName){
   if(s==='BTCUSD') return 1;
   if(s.includes('JPY')) return 0.01;
   return 0.0001;
+}
+// ── Hapus sinyal Running — buat kasus salah channel/salah input, BUKAN buat "cut loss manual"
+// (itu tetap dilarang lewat 2 tombol Tutup di atas). Hapus di sini cuma ngilangin catatan yang
+// keliru dari sistem; posisi order aslinya di market/aplikasi TF gak ikut kehapus, cuma
+// catatannya di tools ini. Ikut bersihin data harga privat terkait biar gak nyangkut.
+async function hapusSinyalRunning(g, id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const item=(cachedSinyalAnalis[g]||[]).find(r=>r.id===id && r.status==='running');
+  if(!item)return;
+  if(!confirm(`Hapus catatan sinyal running ${item.simbol||g} (dibuka ${item.tanggal})?\n\nIni cuma hapus CATATAN di tools ini — kalau posisinya masih beneran kebuka di market/app TF, itu gak ikut kehapus, cuma catatannya di sini aja. Cocok dipakai kalau salah catat channel/pair.`))return;
+  try{
+    cachedSinyalAnalis[g]=cachedSinyalAnalis[g].filter(r=>r.id!==id);
+    await simpanSinyalKeServer(g);
+    if(cachedSinyalAnalisPrivat[g] && cachedSinyalAnalisPrivat[g][id]){
+      delete cachedSinyalAnalisPrivat[g][id];
+      await simpanSinyalPrivatKeServer(g);
+    }
+    toast('✅ Catatan sinyal running dihapus');
+    renderDaftarSinyal();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal hapus: '+(e.message||'').slice(0,120));
+  }
 }
 async function tutupSinyalRunning(g, id, jenis){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
