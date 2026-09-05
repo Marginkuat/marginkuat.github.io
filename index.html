@@ -3881,14 +3881,19 @@ let cachedTargetMedal={XAUUSD:{minSinyal:5, minVp:300, avgMonthlyVp:null}, FOREX
 // lain (mis. CADJPY) yang tetap jalan di channel yang sama. Tanpa override ini, kartu Strategi
 // bakal salah nebak (masih ngasumsiin gold aktif / ngeblend rasio VP gold+forex jadi rata-rata
 // yang gak akurat). Kalau override diisi, kartu Strategi pakai pair+SL+TP+rasio resmi dari sini.
-let cachedInstrumenAktif={XAUUSD:null, FOREX:null};
+let cachedInstrumenAktif={XAUUSD:[], FOREX:[]};
 async function loadInstrumenAktif(){
   for(const g of ['XAUUSD','FOREX']){
     try{
       const rows=await api('app_settings?select=value&key=eq.instrumen_aktif_'+g);
       if(rows && rows.length && rows[0].value){
         const parsed=JSON.parse(rows[0].value);
-        if(parsed && parsed.pair && isFinite(parsed.sl) && isFinite(parsed.tp)) cachedInstrumenAktif[g]=parsed;
+        if(Array.isArray(parsed)){
+          cachedInstrumenAktif[g]=parsed.filter(p=>p && p.pair && isFinite(p.sl) && isFinite(p.tp));
+        } else if(parsed && parsed.pair && isFinite(parsed.sl) && isFinite(parsed.tp)){
+          // Kompatibel sama data lama (format objek tunggal sebelum jadi array multi-instrumen).
+          cachedInstrumenAktif[g]=[parsed];
+        }
       }
     }catch(e){ console.error('Gagal load instrumen_aktif_'+g, e); }
   }
@@ -3900,27 +3905,40 @@ async function simpanInstrumenAktifKeServer(g){
   if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:payload}); }
   else{ await api('app_settings','POST',{key,value:payload}); }
 }
+// Bisa lebih dari 1 instrumen aktif sekaligus per channel (mis. channel EURUSD jalanin Gold
+// DAN CADJPY bareng) — makanya disimpan sebagai ARRAY, bukan 1 objek doang. Tiap pair dikasih
+// kartu resiko sendiri-sendiri di renderStrategiRisikoHtml, biar gak ada yang keluput.
 async function editInstrumenAktif(g){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah Instrumen Aktif');return;}
-  const cur=cachedInstrumenAktif[g];
-  const pakaiDefault=confirm(`Channel ini lagi override ke pair manual: ${cur?cur.pair+' (SL '+cur.sl+' / TP '+cur.tp+')':'(belum ada, masih default otomatis)'}\n\nTap OK buat ATUR/UBAH pair manual.\nTap Cancel buat HAPUS override (balik ke default otomatis: Gold progresif untuk XAUUSD, Flat 60:120 untuk FOREX).`);
-  if(!pakaiDefault){
-    cachedInstrumenAktif[g]=null;
-    try{ await simpanInstrumenAktifKeServer(g); toast('✅ Override dihapus, balik ke strategi default'); renderDaftarSinyal(); renderScoreCard(); }catch(e){ toast('❌ Gagal hapus override'); }
+  const list=cachedInstrumenAktif[g]||[];
+  const ringkasan=list.length ? list.map((p,i)=>`${i+1}. ${p.pair} (SL ${p.sl}/TP ${p.tp})`).join('\n') : '(belum ada override, masih default otomatis)';
+  const aksi=prompt(`Instrumen aktif manual channel ini sekarang:\n${ringkasan}\n\nKetik salah satu:\n- "tambah" buat nambah instrumen baru\n- angka (mis. "1") buat HAPUS instrumen nomor itu dari daftar\n- "kosongkan" buat hapus semua override (balik ke default otomatis)`, 'tambah');
+  if(aksi===null)return;
+  const aksiTrim=aksi.trim().toLowerCase();
+  if(aksiTrim==='kosongkan'){
+    cachedInstrumenAktif[g]=[];
+    try{ await simpanInstrumenAktifKeServer(g); toast('✅ Semua override dihapus, balik ke strategi default'); renderDaftarSinyal(); renderScoreCard(); }catch(e){ toast('❌ Gagal hapus override'); }
     return;
   }
-  const pair=prompt('Nama pair yang SEKARANG jalan di channel ini (mis. CADJPY):', cur?cur.pair:'');
+  const nomorHapus=parseInt(aksiTrim,10);
+  if(isFinite(nomorHapus) && nomorHapus>=1 && nomorHapus<=list.length){
+    const dihapus=list.splice(nomorHapus-1,1)[0];
+    try{ await simpanInstrumenAktifKeServer(g); toast(`✅ ${dihapus.pair} dihapus dari instrumen aktif`); renderDaftarSinyal(); renderScoreCard(); }catch(e){ toast('❌ Gagal simpan perubahan'); }
+    return;
+  }
+  const pair=prompt('Nama pair yang jalan di channel ini (mis. CADJPY, atau XAUUSD kalau gold masih ikut jalan):', '');
   if(pair===null || !pair.trim())return;
-  const slInput=prompt('SL yang dipakai (pips), mis. 45:', cur?String(cur.sl):'45');
+  const slInput=prompt(`SL yang dipakai untuk ${pair.trim().toUpperCase()} (pips), mis. 45:`, '45');
   if(slInput===null)return;
-  const tpInput=prompt('TP yang dipakai (pips), mis. 90:', cur?String(cur.tp):'90');
+  const tpInput=prompt(`TP yang dipakai untuk ${pair.trim().toUpperCase()} (pips), mis. 90:`, '90');
   if(tpInput===null)return;
   const sl=parseFloat(slInput), tp=parseFloat(tpInput);
   if(!isFinite(sl) || !isFinite(tp)){toast('❌ Angka SL/TP gak valid');return;}
-  cachedInstrumenAktif[g]={pair:pair.trim().toUpperCase(), sl, tp};
+  list.push({pair:pair.trim().toUpperCase(), sl, tp});
+  cachedInstrumenAktif[g]=list;
   try{
     await simpanInstrumenAktifKeServer(g);
-    toast(`✅ Instrumen aktif channel ini diset ke ${pair.trim().toUpperCase()} (${sl}:${tp})`);
+    toast(`✅ ${pair.trim().toUpperCase()} ditambahkan ke instrumen aktif channel ini`);
     renderDaftarSinyal(); renderScoreCard();
   }catch(e){ toast('❌ Gagal simpan override'); }
 }
@@ -4772,53 +4790,70 @@ function estimasiMultiplierVp(g){
   if(!avgs.length) return fallback;
   return avgs.reduce((a,b)=>a+b,0)/avgs.length;
 }
-function renderStrategiRisikoHtml(g, bufferVp){
-  const override=cachedInstrumenAktif[g];
-  let judul, slBerikutnya, tpBerikutnya, catatanState, mult, sumberRasio;
-  if(override){
-    // Mode OVERRIDE — instrumen aktif channel ini udah beda dari default (mis. gold di-stop,
-    // diganti pair forex lain). Pakai rasio VP RESMI dari tabel TF sesuai nama pair override,
-    // BUKAN rata-rata histori campuran (yang bisa nyampur data gold+forex lama jadi gak akurat).
-    const {nilai:multResmi, pasti}=multiplierVpDariSimbol(override.pair);
-    mult=multResmi;
-    sumberRasio = pasti ? `tabel resmi TF utk ${override.pair}` : `perkiraan (${override.pair} belum ada di tabel resmi TF, cek manual)`;
-    slBerikutnya=override.sl; tpBerikutnya=override.tp;
-    catatanState=`Mode override manual — instrumen aktif channel ini: <b>${override.pair}</b> (SL:TP ${override.sl}:${override.tp}), bukan default channel ini lagi.`;
-    judul=`📐 Strategi ${override.pair} (Manual)`;
-  } else if(g==='XAUUSD'){
-    const state=hitungStateStrategiGold(g);
-    mult=estimasiMultiplierVp(g);
-    sumberRasio='rata-rata histori sinyal channel ini';
-    if(state==='A'){
-      slBerikutnya=200; tpBerikutnya=400;
-      catatanState='Posisi saat ini: <b>200:400</b> (state dasar — sinyal terakhir Loss, atau belum ada sinyal bulan ini)';
-    } else {
-      slBerikutnya=400; tpBerikutnya=500;
-      catatanState='Posisi saat ini: <b>400:500</b> (state lanjutan — lagi dalam rentetan Win dari 200:400 atau lanjut Win di 400:500)';
-    }
-    judul='📐 Strategi Gold (Progresif)';
-  } else {
-    mult=estimasiMultiplierVp(g);
-    sumberRasio='rata-rata histori sinyal channel ini';
-    slBerikutnya=60; tpBerikutnya=120;
-    catatanState='Strategi flat — SL:TP selalu <b>60:120</b>, tidak berubah walau menang atau kalah';
-    judul='📐 Strategi Forex (Flat)';
-  }
+function renderSatuKartuInstrumen({judul, slBerikutnya, catatanState, mult, sumberRasio, aturanTeks, bufferVp}){
   const potensiLossVp=slBerikutnya*mult;
   const aman=bufferVp>=potensiLossVp;
   const statusWarna=aman?'#3E9142':'#D9534F';
   const statusTeks=aman
     ? `✅ AMAN — sinyal berikutnya (SL ${slBerikutnya} pips) kalau Loss, potensi -${potensiLossVp.toFixed(2)} VP masih tertutup buffer`
     : `🔴 BAHAYA — sinyal berikutnya (SL ${slBerikutnya} pips) kalau Loss, potensi -${potensiLossVp.toFixed(2)} VP MELEBIHI buffer — syarat VP bulan ini bisa gagal`;
-  const linkUbah = `<div onclick="editInstrumenAktif('${g}')" style="font-size:8px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin-top:5px">✏️ ${override?'Ubah/hapus':'Set'} instrumen aktif manual (kalau pair yang jalan udah beda dari default)</div>`;
-  return `<div style="background:var(--bg0);border:1.5px solid ${statusWarna};border-radius:8px;padding:8px 10px;margin:6px 0">
+  return {potensiLossVp, statusWarna, html:`<div style="background:var(--bg0);border:1.5px solid ${statusWarna};border-radius:8px;padding:8px 10px;margin:6px 0">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${judul}</div>
     <div style="font-size:9px;color:#3A2E10;margin-bottom:4px">${catatanState}</div>
-    <div style="font-size:8px;color:#8A6B26;margin-bottom:5px">Aturan: Win → naik ke jenjang berikutnya. Loss${(g==='XAUUSD'&&!override)?' (dari 400:500)':''} → balik ke ${override?override.sl+':'+override.tp:(g==='XAUUSD'?'200:400':'60:120')}.</div>
+    <div style="font-size:8px;color:#8A6B26;margin-bottom:5px">${aturanTeks}</div>
     <div style="font-size:11px;font-weight:800;color:${statusWarna};padding-top:5px;border-top:1px solid var(--border)">${statusTeks}</div>
     <div style="font-size:8px;color:#8A6B26;margin-top:3px">Estimasi rasio: ${mult.toFixed(3)} VP/pip (${sumberRasio})</div>
-    ${linkUbah}
-  </div>`;
+  </div>`};
+}
+// Satu channel bisa punya LEBIH DARI 1 instrumen aktif sekaligus (mis. channel EURUSD jalanin
+// Gold DAN CADJPY bareng) — tiap instrumen dari override dikasih kartu resiko sendiri-sendiri,
+// biar gak ada satupun yang keluput dari perhitungan buffer.
+function renderStrategiRisikoHtml(g, bufferVp){
+  const overrideList=cachedInstrumenAktif[g]||[];
+  const kartuKartu=[];
+  if(overrideList.length){
+    overrideList.forEach(ov=>{
+      const {nilai:multResmi, pasti}=multiplierVpDariSimbol(ov.pair);
+      const sumberRasio = pasti ? `tabel resmi TF utk ${ov.pair}` : `perkiraan (${ov.pair} belum ada di tabel resmi TF, cek manual)`;
+      kartuKartu.push(renderSatuKartuInstrumen({
+        judul:`📐 Strategi ${ov.pair} (Manual)`,
+        slBerikutnya:ov.sl,
+        catatanState:`Mode override manual — instrumen aktif channel ini: <b>${ov.pair}</b> (SL:TP ${ov.sl}:${ov.tp}).`,
+        mult:multResmi, sumberRasio,
+        aturanTeks:`SL:TP tetap ${ov.sl}:${ov.tp} (gak ada progresi otomatis buat override manual).`,
+        bufferVp
+      }));
+    });
+  } else if(g==='XAUUSD'){
+    const state=hitungStateStrategiGold(g);
+    const mult=estimasiMultiplierVp(g);
+    let slBerikutnya, catatanState;
+    if(state==='A'){
+      slBerikutnya=200;
+      catatanState='Posisi saat ini: <b>200:400</b> (state dasar — sinyal terakhir Loss, atau belum ada sinyal bulan ini)';
+    } else {
+      slBerikutnya=400;
+      catatanState='Posisi saat ini: <b>400:500</b> (state lanjutan — lagi dalam rentetan Win dari 200:400 atau lanjut Win di 400:500)';
+    }
+    kartuKartu.push(renderSatuKartuInstrumen({
+      judul:'📐 Strategi Gold (Progresif)', slBerikutnya, catatanState, mult,
+      sumberRasio:'rata-rata histori sinyal channel ini',
+      aturanTeks:'Aturan: Win → naik ke jenjang berikutnya. Loss (dari 400:500) → balik ke 200:400.',
+      bufferVp
+    }));
+  } else {
+    const mult=estimasiMultiplierVp(g);
+    kartuKartu.push(renderSatuKartuInstrumen({
+      judul:'📐 Strategi Forex (Flat)', slBerikutnya:60,
+      catatanState:'Strategi flat — SL:TP selalu <b>60:120</b>, tidak berubah walau menang atau kalah',
+      mult, sumberRasio:'rata-rata histori sinyal channel ini',
+      aturanTeks:'Aturan: Win → naik ke jenjang berikutnya. Loss → balik ke 60:120.',
+      bufferVp
+    }));
+  }
+  const ringkasanList=overrideList.length ? overrideList.map((p,i)=>`${i+1}. ${p.pair} (SL ${p.sl}/TP ${p.tp})`).join(', ') : '';
+  const linkUbah = `<div onclick="editInstrumenAktif('${g}')" style="font-size:8px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin:2px 0 8px">✏️ ${overrideList.length?'Kelola instrumen aktif ('+ringkasanList+')':'Set instrumen aktif manual'} (kalau pair yang jalan udah beda dari default, atau channel ini jalanin lebih dari 1 instrumen sekaligus)</div>`;
+  return linkUbah + kartuKartu.map(k=>k.html).join('');
 }
 function renderSatuChannelScore(g){
   const meta=cachedScoreMeta[g]||{level:'Newbie', kemitraan:'Basic Channel', namaChannel:g};
