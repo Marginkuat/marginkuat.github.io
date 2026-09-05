@@ -1639,7 +1639,27 @@ function renderInvCalcDisclaimer(){
       </div>
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🏃 Sinyal Sedang Running</div>
       <label class="lbl">Pair</label>
-      <input class="inp" type="text" id="inpRunningSimbol" placeholder="mis. EURUSD">
+      <select class="inp" id="inpRunningSimbolSelect" onchange="document.getElementById('inpRunningSimbolManual').style.display = this.value==='__LAINNYA__' ? 'block' : 'none'">
+        <option value="">— Pilih pair —</option>
+        <option value="XAUUSD">XAUUSD (Emas) — ×0,2</option>
+        <option value="NZDUSD">NZDUSD — ×2</option>
+        <option value="AUDUSD">AUDUSD — ×2</option>
+        <option value="EURGBP">EURGBP — ×2</option>
+        <option value="USDCHF">USDCHF — ×2</option>
+        <option value="USDCAD">USDCAD — ×1,5</option>
+        <option value="EURUSD">EURUSD — ×1,5</option>
+        <option value="GBPUSD">GBPUSD — ×1,5</option>
+        <option value="NZDJPY">NZDJPY — ×1,5</option>
+        <option value="CADJPY">CADJPY — ×1,5</option>
+        <option value="AUDJPY">AUDJPY — ×1,5</option>
+        <option value="CHFJPY">CHFJPY — ×1</option>
+        <option value="EURNZD">EURNZD — ×1</option>
+        <option value="USDJPY">USDJPY — ×1</option>
+        <option value="EURJPY">EURJPY — ×1</option>
+        <option value="GBPJPY">GBPJPY — ×1</option>
+        <option value="__LAINNYA__">Lainnya (ketik manual)…</option>
+      </select>
+      <input class="inp" type="text" id="inpRunningSimbolManual" placeholder="mis. BTCUSD" style="display:none;margin-top:6px">
       <label class="lbl">Batch / Grup (opsional)</label>
       <input class="inp" type="text" id="inpRunningBatch" placeholder="mis. Forex 4 Sep">
       <label class="lbl">Tanggal dibuka</label>
@@ -4426,14 +4446,16 @@ function renderDaftarSinyal(){
 async function tambahSinyalRunning(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
   const g=daftarSinyalPairGroup||'XAUUSD';
-  const simbol=(document.getElementById('inpRunningSimbol')||{}).value||'';
+  const selEl=document.getElementById('inpRunningSimbolSelect');
+  const manualEl=document.getElementById('inpRunningSimbolManual');
+  const simbol = (selEl && selEl.value==='__LAINNYA__') ? (manualEl?manualEl.value:'') : ((selEl||{}).value||'');
   const batch=(document.getElementById('inpRunningBatch')||{}).value||'';
   const tgl=(document.getElementById('inpRunningTgl')||{}).value||new Date().toISOString().slice(0,10);
   const arah=(document.getElementById('inpRunningArah')||{}).value||'';
   const hargaEntry=parseFloat((document.getElementById('inpRunningHarga')||{}).value);
   const hargaTp=parseFloat((document.getElementById('inpRunningTp')||{}).value);
   const hargaSl=parseFloat((document.getElementById('inpRunningSl')||{}).value);
-  if(!simbol.trim()){toast('❌ Isi nama pair dulu');return;}
+  if(!simbol.trim()){toast('❌ Pilih pair dulu dari daftar');return;}
   try{
     const idBaru=buatIdSinyal();
     // Field publik: TIDAK mengandung harga sama sekali.
@@ -4452,7 +4474,8 @@ async function tambahSinyalRunning(){
       await simpanSinyalPrivatKeServer(g);
     }
     toast(`🏃 Sinyal ${simbol.trim()} dicatat sebagai running`);
-    const s=document.getElementById('inpRunningSimbol'); if(s) s.value='';
+    const s=document.getElementById('inpRunningSimbolSelect'); if(s) s.value='';
+    const sm=document.getElementById('inpRunningSimbolManual'); if(sm){ sm.value=''; sm.style.display='none'; }
     const b=document.getElementById('inpRunningBatch'); if(b) b.value='';
     const a=document.getElementById('inpRunningArah'); if(a) a.value='';
     const hw=document.getElementById('inpRunningHargaWrap'); if(hw) hw.style.display='none';
