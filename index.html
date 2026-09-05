@@ -4463,6 +4463,20 @@ async function tambahSinyalRunning(){
     toast('❌ Gagal simpan sinyal running: '+(e.message||'').slice(0,120));
   }
 }
+// ── Fungsi bersama hitung Buffer VP channel — dipakai di kartu Skor DAN di proyeksi
+// Sinyal Running, biar gak duplikat logika dan selalu konsisten angkanya. ──
+function hitungBufferVpChannel(g){
+  const bulanIniKey=bulanKeyOf(new Date().toISOString().slice(0,10));
+  const sinyalBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>bulanKeyOf(r.tanggal)===bulanIniKey && r.status!=='running');
+  const totalVpBulanIni=sinyalBulanIni.reduce((a,r)=>a+parseFloat(r.vp||0),0);
+  const targetMedal=cachedTargetMedal[g]||{minSinyal:5, minVp:300, avgMonthlyVp:null};
+  const adaSyarat80Mentah=targetMedal.avgMonthlyVp!=null && isFinite(targetMedal.avgMonthlyVp);
+  const ambangVp80Mentah = adaSyarat80Mentah ? targetMedal.avgMonthlyVp*0.8 : 0;
+  const adaSyarat80 = adaSyarat80Mentah && ambangVp80Mentah>=300;
+  const ambangVp80 = adaSyarat80 ? ambangVp80Mentah : 0;
+  const ambangVpBerlaku = adaSyarat80 ? ambangVp80 : targetMedal.minVp;
+  return { bufferVp: totalVpBulanIni-ambangVpBerlaku, ambangVpBerlaku, totalVpBulanIni };
+}
 function renderDaftarRunning(){
   const wrap=document.getElementById('daftarRunningWrap');
   if(!wrap)return;
@@ -4476,7 +4490,7 @@ function renderDaftarRunning(){
   // isAdmin — supaya gak ada risiko data harga nyangkut di HTML/cache browser yang bisa
   // ke-inspect orang lain di device yang sama. Cukup dipakai sebagai angka mentah pas hitung
   // saran pips di tutupSinyalRunning(), gak pernah dirender ke layar sama sekali.
-  wrap.innerHTML=list.map(r=>`
+  wrap.innerHTML=renderProyeksiBufferRunning(g, list) + list.map(r=>`
     <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:9px;padding:8px 10px;margin-bottom:6px">
       <div style="font-size:10px;color:#3A2E10;font-weight:700">${r.simbol||g}${r.batch?` <span style="color:#8A6B26;font-weight:400">— batch: ${r.batch}</span>`:''}</div>
       <div style="font-size:9px;color:#8A6B26;margin-bottom:6px">Dibuka: ${r.tanggal}</div>
@@ -4485,6 +4499,69 @@ function renderDaftarRunning(){
         <button class="btn" onclick="tutupSinyalRunning('${g}','${r.id}','sl')" style="flex:1;padding:6px;font-size:9px;background:#4A1414;border-color:#D9534F">🛑 Tutup — Kena SL</button>
       </div>
     </div>`).join('');
+}
+// ── Proyeksi Buffer dari Sinyal Running — hitung berapa VP potensial kalau SEMUA sinyal
+// running yang lagi dipantau ini closed sebagai Win semua, dan berapa kalau closed sebagai
+// Loss semua, lalu dibandingkan ke Buffer VP saat ini. Kalau ada data harga privat (Admin
+// login, isi Entry/TP/SL waktu nyatet running), potensinya dihitung EKSAK dari situ. Kalau
+// gak ada, fallback pakai rata-rata VP win/loss historis simbol yang sama (atau channel ini
+// kalau simbolnya belum ada histori sama sekali). ──
+function estimasiPotensiVpSatuSinyal(g, item){
+  const privat=(cachedSinyalAnalisPrivat[g]||{})[item.id]||null;
+  const factor=pipPriceFactorAnalis(item.simbol);
+  const {nilai:mult}=multiplierVpDariSimbol(item.simbol);
+  if(privat && isFinite(privat.hargaEntry) && privat.arah && factor){
+    const arahMult=privat.arah==='sell' ? -1 : 1;
+    let potensiWinVp=null, potensiLossVp=null;
+    if(isFinite(privat.hargaTp)){
+      const pipsWin=((privat.hargaTp-privat.hargaEntry)*arahMult)/factor;
+      potensiWinVp=pipsWin*mult;
+    }
+    if(isFinite(privat.hargaSl)){
+      const pipsLoss=((privat.hargaSl-privat.hargaEntry)*arahMult)/factor;
+      potensiLossVp=pipsLoss*mult;
+    }
+    if(potensiWinVp!==null || potensiLossVp!==null) return {potensiWinVp, potensiLossVp, pasti:true};
+  }
+  // Fallback: rata-rata VP win/loss historis simbol yang sama di channel ini, atau kalau gak
+  // ada histori simbol itu sama sekali, pakai rata-rata seluruh channel sebagai perkiraan kasar.
+  const closedSemua=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running');
+  const closedSimbolSama=closedSemua.filter(r=>(r.simbol||'').toUpperCase()===(item.simbol||'').toUpperCase());
+  const sumberData = closedSimbolSama.length ? closedSimbolSama : closedSemua;
+  const winList=sumberData.map(r=>parseFloat(r.vp||0)).filter(v=>v>0);
+  const lossList=sumberData.map(r=>parseFloat(r.vp||0)).filter(v=>v<0);
+  const avgWin = winList.length ? winList.reduce((a,b)=>a+b,0)/winList.length : null;
+  const avgLoss = lossList.length ? lossList.reduce((a,b)=>a+b,0)/lossList.length : null;
+  return {potensiWinVp:avgWin, potensiLossVp:avgLoss, pasti:false};
+}
+function renderProyeksiBufferRunning(g, list){
+  const {bufferVp}=hitungBufferVpChannel(g);
+  let totalWinVp=0, totalLossVp=0, adaWinPasti=false, adaLossPasti=false, kurangDataWin=false, kurangDataLoss=false;
+  list.forEach(item=>{
+    const {potensiWinVp, potensiLossVp, pasti}=estimasiPotensiVpSatuSinyal(g, item);
+    if(potensiWinVp!==null){ totalWinVp+=potensiWinVp; if(pasti) adaWinPasti=true; } else kurangDataWin=true;
+    if(potensiLossVp!==null){ totalLossVp+=potensiLossVp; if(pasti) adaLossPasti=true; } else kurangDataLoss=true;
+  });
+  const bufferJikaSemuaWin=bufferVp+totalWinVp;
+  const bufferJikaSemuaLos=bufferVp+totalLossVp; // totalLossVp sudah negatif
+  const warnaWin='#3E9142', warnaLos = bufferJikaSemuaLos<0 ? '#D9534F' : '#C8A84B';
+  return `<div style="background:var(--bg0);border:1.5px dashed var(--border);border-radius:9px;padding:9px 11px;margin-bottom:10px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📊 Proyeksi Buffer dari ${list.length} Sinyal Running</div>
+    <div style="font-size:9px;color:#3A2E10;margin-bottom:6px">Buffer sekarang: <b>${bufferVp>=0?'+':''}${bufferVp.toFixed(2)} VP</b></div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;background:${warnaWin}15;border:1px solid ${warnaWin};border-radius:7px;padding:7px 8px">
+        <div style="font-size:8px;color:${warnaWin};font-weight:700">✅ KALAU SEMUA WIN</div>
+        <div style="font-size:8px;color:#8A6B26;margin:2px 0">+${totalWinVp.toFixed(2)} VP</div>
+        <div style="font-size:12px;font-weight:800;color:${warnaWin}">→ ${bufferJikaSemuaWin>=0?'+':''}${bufferJikaSemuaWin.toFixed(2)}</div>
+      </div>
+      <div style="flex:1;background:${warnaLos}15;border:1px solid ${warnaLos};border-radius:7px;padding:7px 8px">
+        <div style="font-size:8px;color:${warnaLos};font-weight:700">${bufferJikaSemuaLos<0?'🔴':'⚠️'} KALAU SEMUA LOSS</div>
+        <div style="font-size:8px;color:#8A6B26;margin:2px 0">${totalLossVp.toFixed(2)} VP</div>
+        <div style="font-size:12px;font-weight:800;color:${warnaLos}">→ ${bufferJikaSemuaLos>=0?'+':''}${bufferJikaSemuaLos.toFixed(2)}</div>
+      </div>
+    </div>
+    <div style="font-size:8px;color:#8A6B26;margin-top:6px">${adaWinPasti||adaLossPasti?'Sebagian dihitung EKSAK dari harga Entry/TP/SL yang tercatat, sebagian pakai perkiraan rata-rata histori.':'Dihitung dari perkiraan rata-rata VP win/loss histori channel/simbol ini (belum ada data harga Entry/TP/SL tercatat).'}${(kurangDataWin||kurangDataLoss)?' Beberapa sinyal belum punya cukup data buat diestimasi, jadi belum ikut dihitung di atas.':''}</div>
+  </div>`;
 }
 // Faktor konversi pips->harga khusus tool analis (independen dari kalkulator lain di situs
 // ini, biar gak nyenggol kode kalkulator utama).
