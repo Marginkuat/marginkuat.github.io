@@ -4625,44 +4625,79 @@ async function tutupSinyalRunning(g, id, jenis){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const item=(cachedSinyalAnalis[g]||[]).find(r=>r.id===id && r.status==='running');
   if(!item)return;
-  const labelJenis = jenis==='profit' ? 'PROFIT (cut lebih awal / kena TP)' : 'LOSS (kena Stop Loss)';
   // Data harga entry/TP/SL (kalau ada) disimpan TERPISAH di cachedSinyalAnalisPrivat, bukan
-  // nempel di item publik — dipakai cuma buat SARAN pips otomatis, tetap boleh diedit manual.
+  // nempel di item publik.
   const privat=(cachedSinyalAnalisPrivat[g]||{})[id]||null;
-  let saranPips=jenis==='sl'?'-30':'30';
-  if(privat && isFinite(privat.hargaEntry) && privat.arah){
-    const factor=pipPriceFactorAnalis(item.simbol);
-    const hargaAcuan = jenis==='profit' ? privat.hargaTp : privat.hargaSl;
-    if(isFinite(hargaAcuan) && factor){
-      const arahMult = privat.arah==='sell' ? -1 : 1;
-      const pipsHitung = ((hargaAcuan-privat.hargaEntry)*arahMult)/factor;
-      if(isFinite(pipsHitung)) saranPips=pipsHitung.toFixed(1);
+  const factor=pipPriceFactorAnalis(item.simbol);
+  const {nilai:mult}=multiplierVpDariSimbol(item.simbol);
+  const punyaDataHarga = privat && isFinite(privat.hargaEntry) && privat.arah && factor;
+  const hitungPipsDariHarga = (hargaAcuan)=>{
+    const arahMult = privat.arah==='sell' ? -1 : 1;
+    return ((hargaAcuan-privat.hargaEntry)*arahMult)/factor;
+  };
+  let pips=null, vp=null, otomatisPenuh=false;
+  if(jenis==='sl'){
+    // Aturan: SL cuma boleh ditutup kalau BENERAN kena Stop Loss (gak ada "cut loss manual").
+    // Jadi kalau harga SL-nya udah tercatat, hasilnya PASTI = harga SL itu — gak perlu
+    // ditanya/dikonfirmasi lagi, langsung dihitung otomatis dari situ.
+    if(punyaDataHarga && isFinite(privat.hargaSl)){
+      pips=hitungPipsDariHarga(privat.hargaSl);
+      vp=pips*mult;
+      otomatisPenuh=true;
+    } else {
+      const pipsStr=prompt(`Tutup ${item.simbol||g} sebagai LOSS (kena Stop Loss)\n\nMasukkan Pips (isi minus):`, '-30');
+      if(pipsStr===null)return;
+      pips=parseFloat(pipsStr);
+      if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
+      if(pips>0){toast('❌ Tutup Kena SL tapi pips-nya plus? Cek lagi angkanya');return;}
+      vp=pips*mult;
+    }
+  } else {
+    // Tutup Profit bisa 2 macam: beneran kena TP (harga akhir = harga TP persis), atau cut
+    // manual lebih awal sebelum nyampe TP (harga akhirnya beda, harus diisi manual).
+    const kenaTpPersis = punyaDataHarga && isFinite(privat.hargaTp)
+      ? confirm(`${item.simbol||g} ditutup sebagai PROFIT.\n\nTap OK kalau BENERAN kena TP persis (pips/VP dihitung otomatis dari harga TP tercatat, gak perlu ketik ulang).\nTap Cancel kalau ini CUT MANUAL sebelum nyampe TP (perlu isi pips manual).`)
+      : false;
+    if(kenaTpPersis){
+      pips=hitungPipsDariHarga(privat.hargaTp);
+      vp=pips*mult;
+      otomatisPenuh=true;
+    } else {
+      const saranPips = punyaDataHarga && isFinite(privat.hargaTp) ? hitungPipsDariHarga(privat.hargaTp).toFixed(1) : '30';
+      const pipsStr=prompt(`Tutup ${item.simbol||g} sebagai PROFIT (cut manual)\n\nMasukkan Pips (isi plus):`, saranPips);
+      if(pipsStr===null)return;
+      pips=parseFloat(pipsStr);
+      if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
+      if(pips<0){toast('❌ Tutup Profit tapi pips-nya minus? Cek lagi angkanya');return;}
+      vp=pips*mult;
     }
   }
-  const pipsStr=prompt(`Tutup ${item.simbol||g} sebagai ${labelJenis}\n\nMasukkan Pips (${jenis==='sl'?'isi minus':'isi plus'}) — saran otomatis dari TP/SL kalau ada, boleh diubah kalau closing beneran beda:`, saranPips);
-  if(pipsStr===null)return;
-  const pips=parseFloat(pipsStr);
-  if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
-  if(jenis==='profit' && pips<0){toast('❌ Tutup Profit tapi pips-nya minus? Cek lagi angkanya');return;}
-  if(jenis==='sl' && pips>0){toast('❌ Tutup Kena SL tapi pips-nya plus? Cek lagi angkanya');return;}
-  const {nilai:mult}=multiplierVpDariSimbol(item.simbol);
-  const vpSaran=(pips*mult).toFixed(2);
-  const vpStr=prompt('VP (otomatis dihitung dari tabel resmi, boleh ubah manual):', vpSaran);
-  if(vpStr===null)return;
-  const vp=parseFloat(vpStr);
-  if(!isFinite(vp)){toast('❌ Angka VP gak valid');return;}
+  // Kalau dihitung otomatis penuh dari harga tercatat, VP gak perlu ditanya ulang — kalau
+  // manual (fallback/cut), tetap dikasih kesempatan koreksi VP-nya sebelum simpan.
+  if(!otomatisPenuh){
+    const vpStr=prompt('VP (otomatis dihitung dari tabel resmi, boleh ubah manual):', vp.toFixed(2));
+    if(vpStr===null)return;
+    const vpBaru=parseFloat(vpStr);
+    if(!isFinite(vpBaru)){toast('❌ Angka VP gak valid');return;}
+    vp=vpBaru;
+  }
+  const now=new Date();
+  const jamDefault=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const jamStr=prompt(`Jam kena ${jenis==='sl'?'SL':'TP/tutup'} (format JJ:MM, kosongkan kalau gak tau persis):`, jamDefault);
+  if(jamStr===null)return;
   try{
     item.status='closed';
-    item.pips=pips;
-    item.vp=vp;
+    item.pips=Math.round(pips*10)/10;
+    item.vp=Math.round(vp*100)/100;
     item.tanggal=new Date().toISOString().slice(0,10);
+    item.jam=jamStr.trim()||null;
     await simpanSinyalKeServer(g);
     // Bersihkan data harga privat begitu sinyal closed — udah gak perlu lagi buat saran pips.
     if(cachedSinyalAnalisPrivat[g] && cachedSinyalAnalisPrivat[g][id]){
       delete cachedSinyalAnalisPrivat[g][id];
       await simpanSinyalPrivatKeServer(g);
     }
-    toast(`✅ ${item.simbol||g} ditutup: ${pips>=0?'+':''}${pips} pip / ${vp>=0?'+':''}${vp} VP`);
+    toast(`✅ ${item.simbol||g} ditutup: ${item.pips>=0?'+':''}${item.pips} pip / ${item.vp>=0?'+':''}${item.vp} VP`);
     renderScoreCard(); renderRemPipsCard(); renderDaftarSinyal();
   }catch(e){
     console.error(e);
