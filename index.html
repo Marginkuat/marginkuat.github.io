@@ -3908,39 +3908,114 @@ async function simpanInstrumenAktifKeServer(g){
 // Bisa lebih dari 1 instrumen aktif sekaligus per channel (mis. channel EURUSD jalanin Gold
 // DAN CADJPY bareng) — makanya disimpan sebagai ARRAY, bukan 1 objek doang. Tiap pair dikasih
 // kartu resiko sendiri-sendiri di renderStrategiRisikoHtml, biar gak ada yang keluput.
-async function editInstrumenAktif(g){
+// Daftar pair+SL yang sama kayak di Kalkulator Lot Size situs ini (biar konsisten, gak perlu
+// diketik ulang). TP SENGAJA gak dipakai dari sini — karena kamu udah patenkan RR 1:2 buat
+// override manual, TP selalu dihitung otomatis = SL × 2, apapun pair/tier yang dipilih.
+const OPSI_PAIR_KALKULATOR_HTML = `
+  <optgroup label="XAUUSD">
+    <option value="XAUUSD|100">XAUUSD Kerdil (SL 100)</option>
+    <option value="XAUUSD|200">XAUUSD Standar (SL 200)</option>
+    <option value="XAUUSD|250">XAUUSD Medium (SL 250)</option>
+    <option value="XAUUSD|500">XAUUSD Hard (SL 500)</option>
+  </optgroup>
+  <optgroup label="Forex Standar (SL 10)">
+    <option value="AUDUSD|10">AUDUSD Standar (SL 10)</option>
+    <option value="EURGBP|10">EURGBP Standar (SL 10)</option>
+    <option value="NZDUSD|10">NZDUSD Standar (SL 10)</option>
+    <option value="USDCHF|10">USDCHF Standar (SL 10)</option>
+  </optgroup>
+  <optgroup label="Forex Standar (SL 15)">
+    <option value="AUDJPY|15">AUDJPY Standar (SL 15)</option>
+    <option value="CADJPY|15">CADJPY Standar (SL 15)</option>
+    <option value="EURUSD|15">EURUSD Standar (SL 15)</option>
+    <option value="GBPUSD|15">GBPUSD Standar (SL 15)</option>
+    <option value="NZDJPY|15">NZDJPY Standar (SL 15)</option>
+    <option value="USDCAD|15">USDCAD Standar (SL 15)</option>
+  </optgroup>
+  <optgroup label="Forex Standar (SL 20)">
+    <option value="CHFJPY|20">CHFJPY Standar (SL 20)</option>
+    <option value="EURJPY|20">EURJPY Standar (SL 20)</option>
+    <option value="EURNZD|20">EURNZD Standar (SL 20)</option>
+    <option value="GBPJPY|20">GBPJPY Standar (SL 20)</option>
+    <option value="USDJPY|20">USDJPY Standar (SL 20)</option>
+  </optgroup>
+  <optgroup label="Forex Medium (SL 20)">
+    <option value="AUDUSD|20">AUDUSD Medium (SL 20)</option>
+    <option value="EURGBP|20">EURGBP Medium (SL 20)</option>
+    <option value="NZDUSD|20">NZDUSD Medium (SL 20)</option>
+    <option value="USDCHF|20">USDCHF Medium (SL 20)</option>
+  </optgroup>
+  <optgroup label="Forex Medium (SL 30)">
+    <option value="AUDJPY|30">AUDJPY Medium (SL 30)</option>
+    <option value="CADJPY|30">CADJPY Medium (SL 30)</option>
+    <option value="EURUSD|30">EURUSD Medium (SL 30)</option>
+    <option value="GBPUSD|30">GBPUSD Medium (SL 30)</option>
+    <option value="NZDJPY|30">NZDJPY Medium (SL 30)</option>
+    <option value="USDCAD|30">USDCAD Medium (SL 30)</option>
+  </optgroup>
+  <optgroup label="Forex Medium (SL 40)">
+    <option value="CHFJPY|40">CHFJPY Medium (SL 40)</option>
+    <option value="EURJPY|40">EURJPY Medium (SL 40)</option>
+    <option value="EURNZD|40">EURNZD Medium (SL 40)</option>
+    <option value="GBPJPY|40">GBPJPY Medium (SL 40)</option>
+    <option value="USDJPY|40">USDJPY Medium (SL 40)</option>
+  </optgroup>
+  <optgroup label="Forex Hard (SL 30)">
+    <option value="AUDUSD|30">AUDUSD Hard (SL 30)</option>
+    <option value="EURGBP|30">EURGBP Hard (SL 30)</option>
+    <option value="NZDUSD|30">NZDUSD Hard (SL 30)</option>
+    <option value="USDCHF|30">USDCHF Hard (SL 30)</option>
+  </optgroup>
+  <optgroup label="Forex Hard (SL 45)">
+    <option value="AUDJPY|45" selected>AUDJPY Hard (SL 45)</option>
+    <option value="CADJPY|45">CADJPY Hard (SL 45)</option>
+    <option value="EURUSD|45">EURUSD Hard (SL 45)</option>
+    <option value="GBPUSD|45">GBPUSD Hard (SL 45)</option>
+    <option value="NZDJPY|45">NZDJPY Hard (SL 45)</option>
+    <option value="USDCAD|45">USDCAD Hard (SL 45)</option>
+  </optgroup>
+  <optgroup label="Forex Hard (SL 60)">
+    <option value="CHFJPY|60">CHFJPY Hard (SL 60)</option>
+    <option value="EURJPY|60">EURJPY Hard (SL 60)</option>
+    <option value="EURNZD|60">EURNZD Hard (SL 60)</option>
+    <option value="GBPJPY|60">GBPJPY Hard (SL 60)</option>
+    <option value="USDJPY|60">USDJPY Hard (SL 60)</option>
+  </optgroup>`;
+async function tambahInstrumenAktifDariKalkulator(g){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah Instrumen Aktif');return;}
+  const selEl=document.getElementById('selInstrumenKalkulator_'+g);
+  if(!selEl || !selEl.value){toast('❌ Pilih pair dulu dari daftar');return;}
+  const [pair, slStr]=selEl.value.split('|');
+  const sl=parseFloat(slStr);
+  const tp=sl*2; // RR 1:2 dipatenkan — TP selalu 2× SL, gak perlu diketik manual.
   const list=cachedInstrumenAktif[g]||[];
-  const ringkasan=list.length ? list.map((p,i)=>`${i+1}. ${p.pair} (SL ${p.sl}/TP ${p.tp})`).join('\n') : '(belum ada override, masih default otomatis)';
-  const aksi=prompt(`Instrumen aktif manual channel ini sekarang:\n${ringkasan}\n\nKetik salah satu:\n- "tambah" buat nambah instrumen baru\n- angka (mis. "1") buat HAPUS instrumen nomor itu dari daftar\n- "kosongkan" buat hapus semua override (balik ke default otomatis)`, 'tambah');
-  if(aksi===null)return;
-  const aksiTrim=aksi.trim().toLowerCase();
-  if(aksiTrim==='kosongkan'){
-    cachedInstrumenAktif[g]=[];
-    try{ await simpanInstrumenAktifKeServer(g); toast('✅ Semua override dihapus, balik ke strategi default'); renderDaftarSinyal(); renderScoreCard(); }catch(e){ toast('❌ Gagal hapus override'); }
-    return;
-  }
-  const nomorHapus=parseInt(aksiTrim,10);
-  if(isFinite(nomorHapus) && nomorHapus>=1 && nomorHapus<=list.length){
-    const dihapus=list.splice(nomorHapus-1,1)[0];
-    try{ await simpanInstrumenAktifKeServer(g); toast(`✅ ${dihapus.pair} dihapus dari instrumen aktif`); renderDaftarSinyal(); renderScoreCard(); }catch(e){ toast('❌ Gagal simpan perubahan'); }
-    return;
-  }
-  const pair=prompt('Nama pair yang jalan di channel ini (mis. CADJPY, atau XAUUSD kalau gold masih ikut jalan):', '');
-  if(pair===null || !pair.trim())return;
-  const slInput=prompt(`SL yang dipakai untuk ${pair.trim().toUpperCase()} (pips), mis. 45:`, '45');
-  if(slInput===null)return;
-  const tpInput=prompt(`TP yang dipakai untuk ${pair.trim().toUpperCase()} (pips), mis. 90:`, '90');
-  if(tpInput===null)return;
-  const sl=parseFloat(slInput), tp=parseFloat(tpInput);
-  if(!isFinite(sl) || !isFinite(tp)){toast('❌ Angka SL/TP gak valid');return;}
-  list.push({pair:pair.trim().toUpperCase(), sl, tp});
+  list.push({pair, sl, tp});
   cachedInstrumenAktif[g]=list;
   try{
     await simpanInstrumenAktifKeServer(g);
-    toast(`✅ ${pair.trim().toUpperCase()} ditambahkan ke instrumen aktif channel ini`);
+    toast(`✅ ${pair} (SL ${sl} / TP ${tp}, RR 1:2) ditambahkan ke instrumen aktif`);
     renderDaftarSinyal(); renderScoreCard();
   }catch(e){ toast('❌ Gagal simpan override'); }
+}
+async function hapusSatuInstrumenAktif(g, idx){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const list=cachedInstrumenAktif[g]||[];
+  const dihapus=list.splice(idx,1)[0];
+  if(!dihapus)return;
+  try{
+    await simpanInstrumenAktifKeServer(g);
+    toast(`✅ ${dihapus.pair} dihapus dari instrumen aktif`);
+    renderDaftarSinyal(); renderScoreCard();
+  }catch(e){ toast('❌ Gagal simpan perubahan'); }
+}
+async function hapusSemuaInstrumenAktif(g){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  cachedInstrumenAktif[g]=[];
+  try{
+    await simpanInstrumenAktifKeServer(g);
+    toast('✅ Semua override dihapus, balik ke strategi default');
+    renderDaftarSinyal(); renderScoreCard();
+  }catch(e){ toast('❌ Gagal hapus override'); }
 }
 async function loadTargetMedal(){
   for(const g of ['XAUUSD','FOREX']){
@@ -4852,8 +4927,17 @@ function renderStrategiRisikoHtml(g, bufferVp){
     }));
   }
   const ringkasanList=overrideList.length ? overrideList.map((p,i)=>`${i+1}. ${p.pair} (SL ${p.sl}/TP ${p.tp})`).join(', ') : '';
-  const linkUbah = `<div onclick="editInstrumenAktif('${g}')" style="font-size:8px;color:#C8A84B;text-decoration:underline;cursor:pointer;margin:2px 0 8px">✏️ ${overrideList.length?'Kelola instrumen aktif ('+ringkasanList+')':'Set instrumen aktif manual'} (kalau pair yang jalan udah beda dari default, atau channel ini jalanin lebih dari 1 instrumen sekaligus)</div>`;
-  return linkUbah + kartuKartu.map(k=>k.html).join('');
+  // Dropdown pilih pair + SL langsung dari daftar kalkulator yang udah ada (OPSI_PAIR_KALKULATOR_HTML),
+  // TP dihitung OTOMATIS pakai RR 1:2 tetap (SL×2) — gak perlu ngetik SL/TP manual lagi tiap nambah.
+  const daftarChip = overrideList.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${overrideList.map((p,i)=>`<span style="font-size:9px;background:var(--bg0);border:1px solid var(--border);border-radius:999px;padding:3px 8px;display:inline-flex;align-items:center;gap:5px">${p.pair} (${p.sl}:${p.tp})<span onclick="hapusSatuInstrumenAktif('${g}',${i})" style="cursor:pointer;color:#D9534F;font-weight:800">✕</span></span>`).join('')}</div>` : '';
+  const kontrolHtml=`<div style="border:1px dashed var(--border);border-radius:8px;padding:8px 10px;margin:2px 0 10px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚙️ Instrumen Aktif Channel Ini</div>
+    ${daftarChip}
+    <select id="selInstrumenKalkulator_${g}" class="inp" style="margin-bottom:6px">${OPSI_PAIR_KALKULATOR_HTML}</select>
+    <button class="btn" onclick="tambahInstrumenAktifDariKalkulator('${g}')" style="width:100%;padding:7px;font-size:9px">➕ Tambah (RR 1:2 otomatis: TP = SL×2)</button>
+    ${overrideList.length ? `<div onclick="hapusSemuaInstrumenAktif('${g}')" style="text-align:center;font-size:8px;color:#8A6B26;text-decoration:underline;cursor:pointer;margin-top:6px">Kosongkan semua, balik ke default otomatis</div>` : ''}
+  </div>`;
+  return kontrolHtml + kartuKartu.map(k=>k.html).join('');
 }
 function renderSatuChannelScore(g){
   const meta=cachedScoreMeta[g]||{level:'Newbie', kemitraan:'Basic Channel', namaChannel:g};
