@@ -4492,13 +4492,14 @@ function hitungBufferVpChannel(g){
   const bulanIniKey=bulanKeyOf(new Date().toISOString().slice(0,10));
   const sinyalBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>bulanKeyOf(r.tanggal)===bulanIniKey && r.status!=='running');
   const totalVpBulanIni=sinyalBulanIni.reduce((a,r)=>a+parseFloat(r.vp||0),0);
+  const totalPipsBulanIni=sinyalBulanIni.reduce((a,r)=>a+parseFloat(r.pips||0),0);
   const targetMedal=cachedTargetMedal[g]||{minSinyal:5, minVp:300, avgMonthlyVp:null};
   const adaSyarat80Mentah=targetMedal.avgMonthlyVp!=null && isFinite(targetMedal.avgMonthlyVp);
   const ambangVp80Mentah = adaSyarat80Mentah ? targetMedal.avgMonthlyVp*0.8 : 0;
   const adaSyarat80 = adaSyarat80Mentah && ambangVp80Mentah>=300;
   const ambangVp80 = adaSyarat80 ? ambangVp80Mentah : 0;
   const ambangVpBerlaku = adaSyarat80 ? ambangVp80 : targetMedal.minVp;
-  return { bufferVp: totalVpBulanIni-ambangVpBerlaku, ambangVpBerlaku, totalVpBulanIni };
+  return { bufferVp: totalVpBulanIni-ambangVpBerlaku, ambangVpBerlaku, totalVpBulanIni, totalPipsBulanIni };
 }
 function renderDaftarRunning(){
   const wrap=document.getElementById('daftarRunningWrap');
@@ -4561,7 +4562,7 @@ function estimasiPotensiVpSatuSinyal(g, item){
   return {potensiWinVp:avgWin, potensiLossVp:avgLoss, pasti:false};
 }
 function renderProyeksiBufferRunning(g, list){
-  const {bufferVp}=hitungBufferVpChannel(g);
+  const {bufferVp, ambangVpBerlaku, totalVpBulanIni, totalPipsBulanIni}=hitungBufferVpChannel(g);
   let totalWinVp=0, totalLossVp=0, adaWinPasti=false, adaLossPasti=false, kurangDataWin=false, kurangDataLoss=false;
   list.forEach(item=>{
     const {potensiWinVp, potensiLossVp, pasti}=estimasiPotensiVpSatuSinyal(g, item);
@@ -4571,7 +4572,27 @@ function renderProyeksiBufferRunning(g, list){
   const bufferJikaSemuaWin=bufferVp+totalWinVp;
   const bufferJikaSemuaLos=bufferVp+totalLossVp; // totalLossVp sudah negatif
   const warnaWin='#3E9142', warnaLos = bufferJikaSemuaLos<0 ? '#D9534F' : '#C8A84B';
-  return `<div style="background:var(--bg0);border:1.5px dashed var(--border);border-radius:9px;padding:9px 11px;margin-bottom:10px">
+  // ── Kontrol Kejar VP — kalau SEMUA sinyal running ini loss, berapa sisa VP/pips FIX
+  // (yang udah beneran tercatat, bukan buffer di atas ambang) dan berapa VP tambahan yang
+  // masih perlu dikejar lewat sinyal baru buat balik nyampe ambang minimal bulan ini. ──
+  const vpFixKalauSemuaLos = totalVpBulanIni + totalLossVp;
+  const kekuranganKejar = Math.max(0, ambangVpBerlaku - vpFixKalauSemuaLos);
+  const kontrolWarna = kekuranganKejar>0 ? '#D9534F' : '#3E9142';
+  const kontrolHtml = `<div style="background:${kontrolWarna}15;border:1.5px solid ${kontrolWarna};border-radius:9px;padding:9px 11px;margin-bottom:10px">
+    <div style="font-size:9px;color:${kontrolWarna};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Kejar VP — Skenario Semua Running LOSS</div>
+    <div style="font-size:9px;color:#3A2E10;line-height:1.7">
+      VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> (dari sinyal yang udah closed)<br>
+      Pips fix tercatat sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
+      Ambang minimal bulan ini: <b>${ambangVpBerlaku.toFixed(2)} VP</b><br>
+      Kalau ${list.length} sinyal running semua Loss → VP fix jadi: <b style="color:${kontrolWarna}">${vpFixKalauSemuaLos.toFixed(2)}</b>
+    </div>
+    <div style="font-size:12px;font-weight:800;color:${kontrolWarna};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+      ${kekuranganKejar>0
+        ? `⚠️ Masih perlu kejar +${kekuranganKejar.toFixed(2)} VP lagi lewat sinyal baru buat nutup ke ambang minimal`
+        : `✅ Masih di atas ambang minimal walau semua running ini Loss — gak perlu buru-buru buka sinyal tambahan`}
+    </div>
+  </div>`;
+  return kontrolHtml + `<div style="background:var(--bg0);border:1.5px dashed var(--border);border-radius:9px;padding:9px 11px;margin-bottom:10px">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📊 Proyeksi Buffer dari ${list.length} Sinyal Running</div>
     <div style="font-size:9px;color:#3A2E10;margin-bottom:6px">Buffer sekarang: <b>${bufferVp>=0?'+':''}${bufferVp.toFixed(2)} VP</b></div>
     <div style="display:flex;gap:8px">
