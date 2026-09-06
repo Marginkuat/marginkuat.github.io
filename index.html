@@ -4539,35 +4539,37 @@ function estimasiPotensiVpSatuSinyal(g, item){
   const {nilai:mult}=multiplierVpDariSimbol(item.simbol);
   if(privat && isFinite(privat.hargaEntry) && privat.arah && factor){
     const arahMult=privat.arah==='sell' ? -1 : 1;
-    let potensiWinVp=null, potensiLossVp=null;
+    let potensiWinVp=null, potensiLossVp=null, potensiWinPips=null, potensiLossPips=null;
     if(isFinite(privat.hargaTp)){
-      const pipsWin=((privat.hargaTp-privat.hargaEntry)*arahMult)/factor;
-      potensiWinVp=pipsWin*mult;
+      potensiWinPips=((privat.hargaTp-privat.hargaEntry)*arahMult)/factor;
+      potensiWinVp=potensiWinPips*mult;
     }
     if(isFinite(privat.hargaSl)){
-      const pipsLoss=((privat.hargaSl-privat.hargaEntry)*arahMult)/factor;
-      potensiLossVp=pipsLoss*mult;
+      potensiLossPips=((privat.hargaSl-privat.hargaEntry)*arahMult)/factor;
+      potensiLossVp=potensiLossPips*mult;
     }
-    if(potensiWinVp!==null || potensiLossVp!==null) return {potensiWinVp, potensiLossVp, pasti:true};
+    if(potensiWinVp!==null || potensiLossVp!==null) return {potensiWinVp, potensiLossVp, potensiWinPips, potensiLossPips, pasti:true};
   }
-  // Fallback: rata-rata VP win/loss historis simbol yang sama di channel ini, atau kalau gak
-  // ada histori simbol itu sama sekali, pakai rata-rata seluruh channel sebagai perkiraan kasar.
+  // Fallback: rata-rata VP & pips win/loss historis simbol yang sama di channel ini, atau kalau
+  // gak ada histori simbol itu sama sekali, pakai rata-rata seluruh channel sebagai perkiraan kasar.
   const closedSemua=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running');
   const closedSimbolSama=closedSemua.filter(r=>(r.simbol||'').toUpperCase()===(item.simbol||'').toUpperCase());
   const sumberData = closedSimbolSama.length ? closedSimbolSama : closedSemua;
-  const winList=sumberData.map(r=>parseFloat(r.vp||0)).filter(v=>v>0);
-  const lossList=sumberData.map(r=>parseFloat(r.vp||0)).filter(v=>v<0);
-  const avgWin = winList.length ? winList.reduce((a,b)=>a+b,0)/winList.length : null;
-  const avgLoss = lossList.length ? lossList.reduce((a,b)=>a+b,0)/lossList.length : null;
-  return {potensiWinVp:avgWin, potensiLossVp:avgLoss, pasti:false};
+  const winRows=sumberData.filter(r=>parseFloat(r.vp||0)>0);
+  const lossRows=sumberData.filter(r=>parseFloat(r.vp||0)<0);
+  const avgWin = winRows.length ? winRows.reduce((a,r)=>a+parseFloat(r.vp||0),0)/winRows.length : null;
+  const avgLoss = lossRows.length ? lossRows.reduce((a,r)=>a+parseFloat(r.vp||0),0)/lossRows.length : null;
+  const avgWinPips = winRows.length ? winRows.reduce((a,r)=>a+parseFloat(r.pips||0),0)/winRows.length : null;
+  const avgLossPips = lossRows.length ? lossRows.reduce((a,r)=>a+parseFloat(r.pips||0),0)/lossRows.length : null;
+  return {potensiWinVp:avgWin, potensiLossVp:avgLoss, potensiWinPips:avgWinPips, potensiLossPips:avgLossPips, pasti:false};
 }
 function renderProyeksiBufferRunning(g, list){
   const {bufferVp, ambangVpBerlaku, totalVpBulanIni, totalPipsBulanIni}=hitungBufferVpChannel(g);
-  let totalWinVp=0, totalLossVp=0, adaWinPasti=false, adaLossPasti=false, kurangDataWin=false, kurangDataLoss=false;
+  let totalWinVp=0, totalLossVp=0, totalWinPips=0, totalLossPips=0, adaWinPasti=false, adaLossPasti=false, kurangDataWin=false, kurangDataLoss=false;
   list.forEach(item=>{
-    const {potensiWinVp, potensiLossVp, pasti}=estimasiPotensiVpSatuSinyal(g, item);
-    if(potensiWinVp!==null){ totalWinVp+=potensiWinVp; if(pasti) adaWinPasti=true; } else kurangDataWin=true;
-    if(potensiLossVp!==null){ totalLossVp+=potensiLossVp; if(pasti) adaLossPasti=true; } else kurangDataLoss=true;
+    const {potensiWinVp, potensiLossVp, potensiWinPips, potensiLossPips, pasti}=estimasiPotensiVpSatuSinyal(g, item);
+    if(potensiWinVp!==null){ totalWinVp+=potensiWinVp; totalWinPips+=(potensiWinPips||0); if(pasti) adaWinPasti=true; } else kurangDataWin=true;
+    if(potensiLossVp!==null){ totalLossVp+=potensiLossVp; totalLossPips+=(potensiLossPips||0); if(pasti) adaLossPasti=true; } else kurangDataLoss=true;
   });
   const bufferJikaSemuaWin=bufferVp+totalWinVp;
   const bufferJikaSemuaLos=bufferVp+totalLossVp; // totalLossVp sudah negatif
@@ -4576,15 +4578,16 @@ function renderProyeksiBufferRunning(g, list){
   // (yang udah beneran tercatat, bukan buffer di atas ambang) dan berapa VP tambahan yang
   // masih perlu dikejar lewat sinyal baru buat balik nyampe ambang minimal bulan ini. ──
   const vpFixKalauSemuaLos = totalVpBulanIni + totalLossVp;
+  const pipsFixKalauSemuaLos = totalPipsBulanIni + totalLossPips;
   const kekuranganKejar = Math.max(0, ambangVpBerlaku - vpFixKalauSemuaLos);
   const kontrolWarna = kekuranganKejar>0 ? '#D9534F' : '#3E9142';
   const kontrolHtml = `<div style="background:${kontrolWarna}15;border:1.5px solid ${kontrolWarna};border-radius:9px;padding:9px 11px;margin-bottom:10px">
     <div style="font-size:9px;color:${kontrolWarna};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Kejar VP — Skenario Semua Running LOSS</div>
     <div style="font-size:9px;color:#3A2E10;line-height:1.7">
-      VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> (dari sinyal yang udah closed)<br>
-      Pips fix tercatat sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
+      VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> | Pips fix sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
       Ambang minimal bulan ini: <b>${ambangVpBerlaku.toFixed(2)} VP</b><br>
-      Kalau ${list.length} sinyal running semua Loss → VP fix jadi: <b style="color:${kontrolWarna}">${vpFixKalauSemuaLos.toFixed(2)}</b>
+      Potensi kalau ${list.length} sinyal running semua Loss: <b style="color:${kontrolWarna}">${totalLossVp.toFixed(2)} VP / ${totalLossPips.toFixed(1)} pips</b><br>
+      → VP fix jadi: <b style="color:${kontrolWarna}">${vpFixKalauSemuaLos.toFixed(2)}</b> | Pips fix jadi: <b style="color:${kontrolWarna}">${pipsFixKalauSemuaLos.toFixed(1)}</b>
     </div>
     <div style="font-size:12px;font-weight:800;color:${kontrolWarna};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
       ${kekuranganKejar>0
@@ -4593,15 +4596,15 @@ function renderProyeksiBufferRunning(g, list){
     </div>
   </div>`;
   const vpFixKalauSemuaWin = totalVpBulanIni + totalWinVp;
+  const pipsFixKalauSemuaWin = totalPipsBulanIni + totalWinPips;
   const kontrolWinHtml = `<div style="background:${warnaWin}15;border:1.5px solid ${warnaWin};border-radius:9px;padding:9px 11px;margin-bottom:10px">
     <div style="font-size:9px;color:${warnaWin};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Total VP — Skenario Semua Running WIN</div>
     <div style="font-size:9px;color:#3A2E10;line-height:1.7">
-      VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> (dari sinyal yang udah closed)<br>
-      Pips fix tercatat sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
-      Potensi tambahan kalau ${list.length} sinyal running semua Win: <b style="color:${warnaWin}">+${totalWinVp.toFixed(2)} VP</b>
+      VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> | Pips fix sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
+      Potensi tambahan kalau ${list.length} sinyal running semua Win: <b style="color:${warnaWin}">+${totalWinVp.toFixed(2)} VP / +${totalWinPips.toFixed(1)} pips</b>
     </div>
     <div style="font-size:12px;font-weight:800;color:${warnaWin};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
-      ✅ Kalau semua Win → VP fix jadi: ${vpFixKalauSemuaWin.toFixed(2)} (naik +${totalWinVp.toFixed(2)} dari sekarang)
+      ✅ VP fix jadi: ${vpFixKalauSemuaWin.toFixed(2)} | Pips fix jadi: ${pipsFixKalauSemuaWin.toFixed(1)}
     </div>
   </div>`;
   return kontrolWinHtml + kontrolHtml + `<div style="background:var(--bg0);border:1.5px dashed var(--border);border-radius:9px;padding:9px 11px;margin-bottom:10px">
@@ -4610,12 +4613,12 @@ function renderProyeksiBufferRunning(g, list){
     <div style="display:flex;gap:8px">
       <div style="flex:1;background:${warnaWin}15;border:1px solid ${warnaWin};border-radius:7px;padding:7px 8px">
         <div style="font-size:8px;color:${warnaWin};font-weight:700">✅ KALAU SEMUA WIN</div>
-        <div style="font-size:8px;color:#8A6B26;margin:2px 0">+${totalWinVp.toFixed(2)} VP</div>
+        <div style="font-size:8px;color:#8A6B26;margin:2px 0">+${totalWinVp.toFixed(2)} VP / +${totalWinPips.toFixed(1)} pips</div>
         <div style="font-size:12px;font-weight:800;color:${warnaWin}">→ ${bufferJikaSemuaWin>=0?'+':''}${bufferJikaSemuaWin.toFixed(2)}</div>
       </div>
       <div style="flex:1;background:${warnaLos}15;border:1px solid ${warnaLos};border-radius:7px;padding:7px 8px">
         <div style="font-size:8px;color:${warnaLos};font-weight:700">${bufferJikaSemuaLos<0?'🔴':'⚠️'} KALAU SEMUA LOSS</div>
-        <div style="font-size:8px;color:#8A6B26;margin:2px 0">${totalLossVp.toFixed(2)} VP</div>
+        <div style="font-size:8px;color:#8A6B26;margin:2px 0">${totalLossVp.toFixed(2)} VP / ${totalLossPips.toFixed(1)} pips</div>
         <div style="font-size:12px;font-weight:800;color:${warnaLos}">→ ${bufferJikaSemuaLos>=0?'+':''}${bufferJikaSemuaLos.toFixed(2)}</div>
       </div>
     </div>
