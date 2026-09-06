@@ -4592,7 +4592,19 @@ function renderProyeksiBufferRunning(g, list){
         : `✅ Masih di atas ambang minimal walau semua running ini Loss — gak perlu buru-buru buka sinyal tambahan`}
     </div>
   </div>`;
-  return kontrolHtml + `<div style="background:var(--bg0);border:1.5px dashed var(--border);border-radius:9px;padding:9px 11px;margin-bottom:10px">
+  const vpFixKalauSemuaWin = totalVpBulanIni + totalWinVp;
+  const kontrolWinHtml = `<div style="background:${warnaWin}15;border:1.5px solid ${warnaWin};border-radius:9px;padding:9px 11px;margin-bottom:10px">
+    <div style="font-size:9px;color:${warnaWin};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Total VP — Skenario Semua Running WIN</div>
+    <div style="font-size:9px;color:#3A2E10;line-height:1.7">
+      VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> (dari sinyal yang udah closed)<br>
+      Pips fix tercatat sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
+      Potensi tambahan kalau ${list.length} sinyal running semua Win: <b style="color:${warnaWin}">+${totalWinVp.toFixed(2)} VP</b>
+    </div>
+    <div style="font-size:12px;font-weight:800;color:${warnaWin};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+      ✅ Kalau semua Win → VP fix jadi: ${vpFixKalauSemuaWin.toFixed(2)} (naik +${totalWinVp.toFixed(2)} dari sekarang)
+    </div>
+  </div>`;
+  return kontrolWinHtml + kontrolHtml + `<div style="background:var(--bg0);border:1.5px dashed var(--border);border-radius:9px;padding:9px 11px;margin-bottom:10px">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📊 Proyeksi Buffer dari ${list.length} Sinyal Running</div>
     <div style="font-size:9px;color:#3A2E10;margin-bottom:6px">Buffer sekarang: <b>${bufferVp>=0?'+':''}${bufferVp.toFixed(2)} VP</b></div>
     <div style="display:flex;gap:8px">
