@@ -1638,46 +1638,37 @@ function renderInvCalcDisclaimer(){
         </div>
       </div>
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🏃 Sinyal Sedang Running</div>
-      <label class="lbl">Pair</label>
-      <select class="inp" id="inpRunningSimbolSelect" onchange="document.getElementById('inpRunningSimbolManual').style.display = this.value==='__LAINNYA__' ? 'block' : 'none'">
-        <option value="">— Pilih pair —</option>
-        <option value="XAUUSD">XAUUSD (Emas) — ×0,2</option>
-        <option value="NZDUSD">NZDUSD — ×2</option>
-        <option value="AUDUSD">AUDUSD — ×2</option>
-        <option value="EURGBP">EURGBP — ×2</option>
-        <option value="USDCHF">USDCHF — ×2</option>
-        <option value="USDCAD">USDCAD — ×1,5</option>
-        <option value="EURUSD">EURUSD — ×1,5</option>
-        <option value="GBPUSD">GBPUSD — ×1,5</option>
-        <option value="NZDJPY">NZDJPY — ×1,5</option>
-        <option value="CADJPY">CADJPY — ×1,5</option>
-        <option value="AUDJPY">AUDJPY — ×1,5</option>
-        <option value="CHFJPY">CHFJPY — ×1</option>
-        <option value="EURNZD">EURNZD — ×1</option>
-        <option value="USDJPY">USDJPY — ×1</option>
-        <option value="EURJPY">EURJPY — ×1</option>
-        <option value="GBPJPY">GBPJPY — ×1</option>
-        <option value="__LAINNYA__">Lainnya (ketik manual)…</option>
+      <label class="lbl">Pair + Level + RR (pilih 1x, SL/TP otomatis kepasang)</label>
+      <select class="inp" id="inpRunningLevelSelect" onchange="document.getElementById('inpRunningSimbolManual').style.display = this.value==='__LAINNYA__' ? 'block' : 'none'; document.getElementById('inpRunningManualSlTpWrap').style.display = this.value==='__LAINNYA__' ? 'block' : 'none'">
+        <option value="">— Pilih pair + level —</option>
+        <option value="__LAINNYA__">Lainnya (pair/SL/TP custom)…</option>
       </select>
-      <input class="inp" type="text" id="inpRunningSimbolManual" placeholder="mis. BTCUSD" style="display:none;margin-top:6px">
+      <input class="inp" type="text" id="inpRunningSimbolManual" placeholder="Nama pair, mis. BTCUSD" style="display:none;margin-top:6px">
+      <div id="inpRunningManualSlTpWrap" style="display:none">
+        <div style="display:flex;gap:8px">
+          <div style="flex:1"><label class="lbl">SL (pips)</label><input class="inp" type="number" step="any" id="inpRunningManualSl" placeholder="mis. 30"></div>
+          <div style="flex:1"><label class="lbl">TP (pips)</label><input class="inp" type="number" step="any" id="inpRunningManualTp" placeholder="mis. 60"></div>
+        </div>
+      </div>
       <label class="lbl">Batch / Grup (opsional)</label>
       <input class="inp" type="text" id="inpRunningBatch" placeholder="mis. Forex 4 Sep">
       <label class="lbl">Tanggal dibuka</label>
       <input class="inp" type="date" id="inpRunningTgl">
-      <label class="lbl">Arah (opsional — buat saran otomatis pips pas nutup nanti)</label>
-      <select class="inp" id="inpRunningArah" onchange="document.getElementById('inpRunningHargaWrap').style.display = this.value ? 'block' : 'none'">
-        <option value="">— Gak perlu, isi pips manual pas nutup —</option>
-        <option value="buy">Buy</option>
-        <option value="sell">Sell</option>
-      </select>
-      <div id="inpRunningHargaWrap" style="display:none">
+      <div onclick="const w=document.getElementById('inpRunningHargaAdvWrap'); w.style.display = w.style.display==='none' ? 'block' : 'none'" style="font-size:9px;color:#8A6B26;text-decoration:underline;cursor:pointer;margin:6px 0">⚙️ Opsional: isi harga Entry/TP/SL persis (kalau mau catatan lebih presisi dari sekadar pips level)</div>
+      <div id="inpRunningHargaAdvWrap" style="display:none">
+        <label class="lbl">Arah</label>
+        <select class="inp" id="inpRunningArah">
+          <option value="">— Gak perlu —</option>
+          <option value="buy">Buy</option>
+          <option value="sell">Sell</option>
+        </select>
         <label class="lbl">Harga Entry</label>
         <input class="inp" type="number" step="any" id="inpRunningHarga" placeholder="mis. 91.950">
         <label class="lbl">Harga TP</label>
         <input class="inp" type="number" step="any" id="inpRunningTp" placeholder="mis. 91.050">
         <label class="lbl">Harga SL</label>
         <input class="inp" type="number" step="any" id="inpRunningSl" placeholder="mis. 92.400">
-        <div style="font-size:8px;color:#7A5D1F;margin-top:-4px;margin-bottom:6px">🔒 Angka harga ini CUMA buat saran otomatis pips pas ditutup nanti — TIDAK ditampilkan di kartu publik, cuma kelihatan pas login Admin.</div>
+        <div style="font-size:8px;color:#7A5D1F;margin-top:-4px;margin-bottom:6px">🔒 Angka harga ini TIDAK ditampilkan di kartu publik, cuma kelihatan pas login Admin. Kalau gak diisi, sistem tetap otomatis pakai SL/TP pips dari preset Level di atas.</div>
       </div>
       <button class="btn" onclick="tambahSinyalRunning()" style="margin-top:8px">➕ Catat Sinyal Running</button>
       <div id="daftarRunningWrap" style="margin-top:10px"></div>
@@ -3352,6 +3343,10 @@ async function loadAll(){
   await loadTargetResmiAsli();
   await loadTargetMedal();
   await loadInstrumenAktif();
+  const selLevelRunning=document.getElementById('inpRunningLevelSelect');
+  if(selLevelRunning){
+    selLevelRunning.innerHTML = `<option value="">— Pilih pair + level —</option>${OPSI_LEVEL_RUNNING_HTML}<option value="__LAINNYA__">Lainnya (pair/SL/TP custom)…</option>`;
+  }
   await loadTanggalMulaiChannel();
   await loadSinyalAnalis();
   await loadRemPips();
@@ -3931,6 +3926,90 @@ async function simpanInstrumenAktifKeServer(g){
 // Daftar pair+SL yang sama kayak di Kalkulator Lot Size situs ini (biar konsisten, gak perlu
 // diketik ulang). TP SENGAJA gak dipakai dari sini — karena kamu udah patenkan RR 1:2 buat
 // override manual, TP selalu dihitung otomatis = SL × 2, apapun pair/tier yang dipilih.
+// Daftar preset PAIR + LEVEL + SL + TP lengkap (nilai TP eksak sesuai level, BUKAN selalu
+// RR 1:2 — Kerdil gold itu RR 1:3, Hard gold RR 1:1, dst — makanya dibuat list sendiri persis
+// nyontek Kalkulator Umum Flat 2% biar akurat). Dipakai di form "Sinyal Sedang Running" biar
+// admin tinggal pilih 1x (pair+level+RR sekaligus), dan pas nutup sinyal (Win/Loss) pips-nya
+// udah otomatis diketahui dari level yang dipilih — gak perlu isi harga Entry/TP/SL lagi.
+const OPSI_LEVEL_RUNNING_HTML = `
+  <optgroup label="XAUUSD">
+    <option value="XAUUSD|100|300">XAUUSD Kerdil (100/300, RR 1:3)</option>
+    <option value="XAUUSD|200|400">XAUUSD Standar (200/400, RR 1:2)</option>
+    <option value="XAUUSD|250|500">XAUUSD Medium (250/500, RR 1:2)</option>
+    <option value="XAUUSD|500|500">XAUUSD Hard (500/500, RR 1:1)</option>
+    <option value="XAUUSD|300|300">XAUUSD 300/300 (RR 1:1)</option>
+    <option value="XAUUSD|300|400">XAUUSD 300/400 (RR 1:1,33)</option>
+    <option value="XAUUSD|300|500">XAUUSD 300/500 (RR 1:1,67)</option>
+    <option value="XAUUSD|400|400">XAUUSD 400/400 (RR 1:1)</option>
+    <option value="XAUUSD|400|500">XAUUSD 400/500 (RR 1:1,25)</option>
+  </optgroup>
+  <optgroup label="Forex Standar (SL 10)">
+    <option value="AUDUSD|10|20">AUDUSD Standar (10/20)</option>
+    <option value="EURGBP|10|20">EURGBP Standar (10/20)</option>
+    <option value="NZDUSD|10|20">NZDUSD Standar (10/20)</option>
+    <option value="USDCHF|10|20">USDCHF Standar (10/20)</option>
+  </optgroup>
+  <optgroup label="Forex Standar (SL 15)">
+    <option value="AUDJPY|15|30">AUDJPY Standar (15/30)</option>
+    <option value="CADJPY|15|30">CADJPY Standar (15/30)</option>
+    <option value="EURUSD|15|30">EURUSD Standar (15/30)</option>
+    <option value="GBPUSD|15|30">GBPUSD Standar (15/30)</option>
+    <option value="NZDJPY|15|30">NZDJPY Standar (15/30)</option>
+    <option value="USDCAD|15|30">USDCAD Standar (15/30)</option>
+  </optgroup>
+  <optgroup label="Forex Standar (SL 20)">
+    <option value="CHFJPY|20|40">CHFJPY Standar (20/40)</option>
+    <option value="EURJPY|20|40">EURJPY Standar (20/40)</option>
+    <option value="EURNZD|20|40">EURNZD Standar (20/40)</option>
+    <option value="GBPJPY|20|40">GBPJPY Standar (20/40)</option>
+    <option value="USDJPY|20|40">USDJPY Standar (20/40)</option>
+  </optgroup>
+  <optgroup label="BTCUSD">
+    <option value="BTCUSD|300|600">BTCUSD Standar (300/600 poin)</option>
+  </optgroup>
+  <optgroup label="Forex Medium (SL 20)">
+    <option value="AUDUSD|20|40">AUDUSD Medium (20/40)</option>
+    <option value="EURGBP|20|40">EURGBP Medium (20/40)</option>
+    <option value="NZDUSD|20|40">NZDUSD Medium (20/40)</option>
+    <option value="USDCHF|20|40">USDCHF Medium (20/40)</option>
+  </optgroup>
+  <optgroup label="Forex Medium (SL 30)">
+    <option value="AUDJPY|30|60">AUDJPY Medium (30/60)</option>
+    <option value="CADJPY|30|60">CADJPY Medium (30/60)</option>
+    <option value="EURUSD|30|60">EURUSD Medium (30/60)</option>
+    <option value="GBPUSD|30|60">GBPUSD Medium (30/60)</option>
+    <option value="NZDJPY|30|60">NZDJPY Medium (30/60)</option>
+    <option value="USDCAD|30|60">USDCAD Medium (30/60)</option>
+  </optgroup>
+  <optgroup label="Forex Medium (SL 40)">
+    <option value="CHFJPY|40|80">CHFJPY Medium (40/80)</option>
+    <option value="EURJPY|40|80">EURJPY Medium (40/80)</option>
+    <option value="EURNZD|40|80">EURNZD Medium (40/80)</option>
+    <option value="GBPJPY|40|80">GBPJPY Medium (40/80)</option>
+    <option value="USDJPY|40|80">USDJPY Medium (40/80)</option>
+  </optgroup>
+  <optgroup label="Forex Hard (SL 30)">
+    <option value="AUDUSD|30|30">AUDUSD Hard (30/30)</option>
+    <option value="EURGBP|30|30">EURGBP Hard (30/30)</option>
+    <option value="NZDUSD|30|30">NZDUSD Hard (30/30)</option>
+    <option value="USDCHF|30|30">USDCHF Hard (30/30)</option>
+  </optgroup>
+  <optgroup label="Forex Hard (SL 45)">
+    <option value="AUDJPY|45|45">AUDJPY Hard (45/45)</option>
+    <option value="CADJPY|45|45">CADJPY Hard (45/45)</option>
+    <option value="EURUSD|45|45">EURUSD Hard (45/45)</option>
+    <option value="GBPUSD|45|45">GBPUSD Hard (45/45)</option>
+    <option value="NZDJPY|45|45">NZDJPY Hard (45/45)</option>
+    <option value="USDCAD|45|45">USDCAD Hard (45/45)</option>
+  </optgroup>
+  <optgroup label="Forex Hard (SL 60)">
+    <option value="CHFJPY|60|60">CHFJPY Hard (60/60)</option>
+    <option value="EURJPY|60|60">EURJPY Hard (60/60)</option>
+    <option value="EURNZD|60|60">EURNZD Hard (60/60)</option>
+    <option value="GBPJPY|60|60">GBPJPY Hard (60/60)</option>
+    <option value="USDJPY|60|60">USDJPY Hard (60/60)</option>
+  </optgroup>
+`;
 const OPSI_PAIR_KALKULATOR_HTML = `
   <optgroup label="XAUUSD">
     <option value="XAUUSD|100">XAUUSD Kerdil (SL 100)</option>
@@ -4446,24 +4525,38 @@ function renderDaftarSinyal(){
 async function tambahSinyalRunning(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
   const g=daftarSinyalPairGroup||'XAUUSD';
-  const selEl=document.getElementById('inpRunningSimbolSelect');
+  const levelEl=document.getElementById('inpRunningLevelSelect');
   const manualEl=document.getElementById('inpRunningSimbolManual');
-  const simbol = (selEl && selEl.value==='__LAINNYA__') ? (manualEl?manualEl.value:'') : ((selEl||{}).value||'');
+  const levelVal=(levelEl||{}).value||'';
+  let simbol='', slPips=null, tpPips=null, levelLabel=null;
+  if(levelVal==='__LAINNYA__'){
+    simbol=(manualEl?manualEl.value:'')||'';
+    slPips=parseFloat((document.getElementById('inpRunningManualSl')||{}).value);
+    tpPips=parseFloat((document.getElementById('inpRunningManualTp')||{}).value);
+    slPips=isFinite(slPips)?slPips:null; tpPips=isFinite(tpPips)?tpPips:null;
+  } else if(levelVal){
+    const parts=levelVal.split('|');
+    simbol=parts[0]||'';
+    slPips=parseFloat(parts[1]); tpPips=parseFloat(parts[2]);
+    levelLabel=(levelEl.selectedOptions[0]||{}).textContent||null;
+  }
   const batch=(document.getElementById('inpRunningBatch')||{}).value||'';
   const tgl=(document.getElementById('inpRunningTgl')||{}).value||new Date().toISOString().slice(0,10);
   const arah=(document.getElementById('inpRunningArah')||{}).value||'';
   const hargaEntry=parseFloat((document.getElementById('inpRunningHarga')||{}).value);
   const hargaTp=parseFloat((document.getElementById('inpRunningTp')||{}).value);
   const hargaSl=parseFloat((document.getElementById('inpRunningSl')||{}).value);
-  if(!simbol.trim()){toast('❌ Pilih pair dulu dari daftar');return;}
+  if(!simbol.trim()){toast('❌ Pilih pair + level dulu dari daftar');return;}
   try{
     const idBaru=buatIdSinyal();
-    // Field publik: TIDAK mengandung harga sama sekali.
-    const data={id:idBaru, tanggal:tgl, jam:null, simbol:simbol.trim(), batch:batch.trim()||null, status:'running', pips:null, vp:null};
+    // Field publik: SL/TP di sini cuma ANGKA PIPS dari level yang dipilih (mis. "45 pips"),
+    // BUKAN harga transaksi asli — jadi aman ditampilkan, gak perlu masuk penyimpanan privat.
+    // Ini yang bikin pas nutup sinyal nanti (Win/Loss) pips-nya udah otomatis diketahui, gak
+    // perlu "mencocokkan" manual lagi ke harga TP/SL asli.
+    const data={id:idBaru, tanggal:tgl, jam:null, simbol:simbol.trim(), batch:batch.trim()||null, status:'running', pips:null, vp:null, slPips, tpPips, levelLabel};
     cachedSinyalAnalis[g].push(data);
     await simpanSinyalKeServer(g);
-    // Field privat (harga entry/TP/SL): disimpan TERPISAH ke key 'sinyal_analis_privat_'+g,
-    // supaya bisa dilindungi RLS khusus role authenticated — gak numpang di array publik.
+    // Field privat (harga entry/TP/SL persis, opsional) tetap disimpan terpisah kalau diisi.
     if(arah || isFinite(hargaEntry) || isFinite(hargaTp) || isFinite(hargaSl)){
       cachedSinyalAnalisPrivat[g][idBaru]={
         arah: arah||null,
@@ -4473,12 +4566,14 @@ async function tambahSinyalRunning(){
       };
       await simpanSinyalPrivatKeServer(g);
     }
-    toast(`🏃 Sinyal ${simbol.trim()} dicatat sebagai running`);
-    const s=document.getElementById('inpRunningSimbolSelect'); if(s) s.value='';
+    toast(`🏃 ${simbol.trim()} dicatat running${levelLabel?' — '+levelLabel:''}`);
+    if(levelEl) levelEl.value='';
     const sm=document.getElementById('inpRunningSimbolManual'); if(sm){ sm.value=''; sm.style.display='none'; }
+    const mslTp=document.getElementById('inpRunningManualSlTpWrap'); if(mslTp) mslTp.style.display='none';
+    ['inpRunningManualSl','inpRunningManualTp'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
     const b=document.getElementById('inpRunningBatch'); if(b) b.value='';
     const a=document.getElementById('inpRunningArah'); if(a) a.value='';
-    const hw=document.getElementById('inpRunningHargaWrap'); if(hw) hw.style.display='none';
+    const hw=document.getElementById('inpRunningHargaAdvWrap'); if(hw) hw.style.display='none';
     ['inpRunningHarga','inpRunningTp','inpRunningSl'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
     renderDaftarSinyal();
   }catch(e){
@@ -4520,7 +4615,7 @@ function renderDaftarRunning(){
         <div style="font-size:10px;color:#3A2E10;font-weight:700">${r.simbol||g}${r.batch?` <span style="color:#8A6B26;font-weight:400">— batch: ${r.batch}</span>`:''}</div>
         <span onclick="hapusSinyalRunning('${g}','${r.id}')" title="Hapus catatan (mis. salah channel/pair)" style="font-size:13px;cursor:pointer">🗑️</span>
       </div>
-      <div style="font-size:9px;color:#8A6B26;margin-bottom:6px">Dibuka: ${r.tanggal}</div>
+      <div style="font-size:9px;color:#8A6B26;margin-bottom:6px">Dibuka: ${r.tanggal}${(isFinite(r.slPips)||isFinite(r.tpPips))?` — SL ${isFinite(r.slPips)?Math.abs(r.slPips):'?'} / TP ${isFinite(r.tpPips)?r.tpPips:'?'} pips`:''}</div>
       <div style="display:flex;gap:6px">
         <button class="btn" onclick="tutupSinyalRunning('${g}','${r.id}','profit')" style="flex:1;padding:6px;font-size:9px;background:#1E4A14;border-color:#3E9142">🎯 Tutup — Profit</button>
         <button class="btn" onclick="tutupSinyalRunning('${g}','${r.id}','sl')" style="flex:1;padding:6px;font-size:9px;background:#4A1414;border-color:#D9534F">🛑 Tutup — Kena SL</button>
@@ -4534,9 +4629,21 @@ function renderDaftarRunning(){
 // gak ada, fallback pakai rata-rata VP win/loss historis simbol yang sama (atau channel ini
 // kalau simbolnya belum ada histori sama sekali). ──
 function estimasiPotensiVpSatuSinyal(g, item){
+  const {nilai:mult}=multiplierVpDariSimbol(item.simbol);
+  // Prioritas 1: SL/TP pips dari preset Level yang dipilih pas nyatet running — ini paling
+  // akurat & gak butuh harga sama sekali (SL/TP di sini publik, cuma angka pips level, bukan
+  // harga transaksi asli).
+  if(isFinite(item.slPips) || isFinite(item.tpPips)){
+    return {
+      potensiWinVp: isFinite(item.tpPips) ? item.tpPips*mult : null,
+      potensiLossVp: isFinite(item.slPips) ? -Math.abs(item.slPips)*mult : null,
+      potensiWinPips: isFinite(item.tpPips) ? item.tpPips : null,
+      potensiLossPips: isFinite(item.slPips) ? -Math.abs(item.slPips) : null,
+      pasti:true
+    };
+  }
   const privat=(cachedSinyalAnalisPrivat[g]||{})[item.id]||null;
   const factor=pipPriceFactorAnalis(item.simbol);
-  const {nilai:mult}=multiplierVpDariSimbol(item.simbol);
   if(privat && isFinite(privat.hargaEntry) && privat.arah && factor){
     const arahMult=privat.arah==='sell' ? -1 : 1;
     let potensiWinVp=null, potensiLossVp=null, potensiWinPips=null, potensiLossPips=null;
@@ -4666,6 +4773,7 @@ async function tutupSinyalRunning(g, id, jenis){
   const privat=(cachedSinyalAnalisPrivat[g]||{})[id]||null;
   const factor=pipPriceFactorAnalis(item.simbol);
   const {nilai:mult}=multiplierVpDariSimbol(item.simbol);
+  const punyaLevelPips = isFinite(item.slPips) || isFinite(item.tpPips); // dari preset Level pas nyatet running — paling akurat, gak perlu harga sama sekali
   const punyaDataHarga = privat && isFinite(privat.hargaEntry) && privat.arah && factor;
   const hitungPipsDariHarga = (hargaAcuan)=>{
     const arahMult = privat.arah==='sell' ? -1 : 1;
@@ -4674,9 +4782,13 @@ async function tutupSinyalRunning(g, id, jenis){
   let pips=null, vp=null, otomatisPenuh=false;
   if(jenis==='sl'){
     // Aturan: SL cuma boleh ditutup kalau BENERAN kena Stop Loss (gak ada "cut loss manual").
-    // Jadi kalau harga SL-nya udah tercatat, hasilnya PASTI = harga SL itu — gak perlu
-    // ditanya/dikonfirmasi lagi, langsung dihitung otomatis dari situ.
-    if(punyaDataHarga && isFinite(privat.hargaSl)){
+    // Jadi kalau SL-nya udah diketahui (dari preset Level ATAU harga tercatat), hasilnya
+    // PASTI = SL itu — gak perlu ditanya/dikonfirmasi lagi, langsung otomatis.
+    if(punyaLevelPips && isFinite(item.slPips)){
+      pips=-Math.abs(item.slPips);
+      vp=pips*mult;
+      otomatisPenuh=true;
+    } else if(punyaDataHarga && isFinite(privat.hargaSl)){
       pips=hitungPipsDariHarga(privat.hargaSl);
       vp=pips*mult;
       otomatisPenuh=true;
@@ -4689,17 +4801,18 @@ async function tutupSinyalRunning(g, id, jenis){
       vp=pips*mult;
     }
   } else {
-    // Tutup Profit bisa 2 macam: beneran kena TP (harga akhir = harga TP persis), atau cut
-    // manual lebih awal sebelum nyampe TP (harga akhirnya beda, harus diisi manual).
-    const kenaTpPersis = punyaDataHarga && isFinite(privat.hargaTp)
-      ? confirm(`${item.simbol||g} ditutup sebagai PROFIT.\n\nTap OK kalau BENERAN kena TP persis (pips/VP dihitung otomatis dari harga TP tercatat, gak perlu ketik ulang).\nTap Cancel kalau ini CUT MANUAL sebelum nyampe TP (perlu isi pips manual).`)
+    // Tutup Profit bisa 2 macam: beneran kena TP (pips/VP dari preset Level atau harga TP
+    // tercatat), atau cut manual lebih awal sebelum nyampe TP (harus diisi manual).
+    const tpPipsAcuan = punyaLevelPips && isFinite(item.tpPips) ? item.tpPips : (punyaDataHarga && isFinite(privat.hargaTp) ? hitungPipsDariHarga(privat.hargaTp) : null);
+    const kenaTpPersis = tpPipsAcuan!==null
+      ? confirm(`${item.simbol||g} ditutup sebagai PROFIT.\n\nTap OK kalau BENERAN kena TP persis — ${tpPipsAcuan.toFixed(1)} pips (dari ${punyaLevelPips?'preset level':'harga tercatat'}, gak perlu ketik ulang).\nTap Cancel kalau ini CUT MANUAL sebelum nyampe TP (perlu isi pips manual).`)
       : false;
     if(kenaTpPersis){
-      pips=hitungPipsDariHarga(privat.hargaTp);
+      pips=tpPipsAcuan;
       vp=pips*mult;
       otomatisPenuh=true;
     } else {
-      const saranPips = punyaDataHarga && isFinite(privat.hargaTp) ? hitungPipsDariHarga(privat.hargaTp).toFixed(1) : '30';
+      const saranPips = tpPipsAcuan!==null ? tpPipsAcuan.toFixed(1) : '30';
       const pipsStr=prompt(`Tutup ${item.simbol||g} sebagai PROFIT (cut manual)\n\nMasukkan Pips (isi plus):`, saranPips);
       if(pipsStr===null)return;
       pips=parseFloat(pipsStr);
