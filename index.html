@@ -4549,6 +4549,11 @@ function renderPreviewLevelRunning(){
   const vpJadiWin=totalVpBulanIni+vpWin, pipsJadiWin=totalPipsBulanIni+pipsWin;
   const masihAmanLos = vpJadiLos>=ambangVpBerlaku && pipsJadiLos>=0;
   const warnaLos = masihAmanLos ? '#3E9142' : '#D9534F';
+  // ── Buffer setelah WIN — kalau sinyal ini menang, sisa buffer di atas ambang jadi berapa,
+  // dan itu setara berapa kali lagi bisa nahan LOSS dari pair+level yang SAMA (persis yang
+  // diminta: "kalau win, otomatis tau buffer-nya tahan berapa kali loss lagi di level ini"). ──
+  const sisaBufferSetelahWin = vpJadiWin - ambangVpBerlaku;
+  const kaliLossTertahanSetelahWin = sisaBufferSetelahWin>0 ? Math.floor(sisaBufferSetelahWin/Math.abs(vpLos)) : 0;
   wrap.innerHTML=`<div style="background:var(--bg0);border:1.5px dashed ${warnaLos};border-radius:9px;padding:9px 11px;margin:8px 0">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🔎 Preview SEBELUM catat — ${pair} (SL ${sl}/TP ${tp})</div>
     <div style="font-size:9px;color:#3A2E10;line-height:1.6">Perolehan fix sekarang: <b>${totalVpBulanIni.toFixed(2)} VP / ${totalPipsBulanIni.toFixed(1)} pip</b></div>
@@ -4563,6 +4568,10 @@ function renderPreviewLevelRunning(){
         <div style="font-size:8px;color:#8A6B26;margin:2px 0">${vpLos.toFixed(2)} VP / ${pipsLos.toFixed(1)} pip</div>
         <div style="font-size:11px;font-weight:800;color:${warnaLos}">→ ${vpJadiLos.toFixed(2)} VP</div>
       </div>
+    </div>
+    <div style="background:#3E914215;border:1px dashed #3E9142;border-radius:7px;padding:7px 8px;margin-top:6px">
+      <div style="font-size:9px;color:#3E9142;font-weight:700">💪 BUFFER SETELAH WIN (di atas ambang ${ambangVpBerlaku.toFixed(2)})</div>
+      <div style="font-size:9px;color:#3A2E10;margin-top:2px">Sisa buffer: <b>+${sisaBufferSetelahWin.toFixed(2)} VP</b> → setara <b>${kaliLossTertahanSetelahWin}x loss ${pair} (${sl}/${tp})</b> lagi sebelum ambang jebol</div>
     </div>
     <div style="font-size:10px;font-weight:800;color:${warnaLos};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
       ${masihAmanLos ? '✅ Kalau kena SL pun masih di atas syarat — aman diambil' : '🛑 Kalau kena SL, syarat bulan ini bakal di bawah ambang — pikir-pikir dulu sebelum ambil sinyal ini'}
