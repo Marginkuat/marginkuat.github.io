@@ -1678,6 +1678,11 @@ function renderInvCalcDisclaimer(){
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📦 Ringkasan Net VP per Batch (channel ini)</div>
       <div id="ringkasanBatchWrap"></div>
     </div>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🧮 Kalkulator Rem Sinyal Analis</div>
+      <div id="kalkulatorRemSinyalWrap"></div>
+    </div>
   </div>
 </div>
 
@@ -4863,6 +4868,7 @@ function renderRingkasanBatch(){
   const closedList=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running');
   if(!closedList.length){
     wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Belum ada sinyal closed buat diringkas.</div>`;
+    renderKalkulatorRemSinyal(g);
     return;
   }
   const grup={};
@@ -4886,6 +4892,65 @@ function renderRingkasanBatch(){
       <div style="font-size:13px;font-weight:800;color:${warna};margin-top:2px">${d.vp>=0?'+':''}${d.vp.toFixed(2)} VP <span style="font-size:9px;font-weight:400;color:#8A6B26">(${d.pips>=0?'+':''}${d.pips.toFixed(1)} pip)</span></div>
     </div>`;
   }).join('');
+  renderKalkulatorRemSinyal(g);
+}
+// ── Kalkulator Rem Sinyal Analis — gaya kayak "Level Kalkulator Umum": nunjukin capaian
+// FIX sekarang vs syarat (✅/❌), terus skenario kalau SEMUA sinyal Running yang lagi
+// dipantau ini Loss semua — pips & VP berkurang berapa, dan apakah hasil akhirnya MASIH
+// di atas syarat atau udah jatuh di bawah (jadi rem: kapan harus berhenti kejar sinyal baru).
+function renderKalkulatorRemSinyal(g){
+  const wrap=document.getElementById('kalkulatorRemSinyalWrap');
+  if(!wrap)return;
+  const {totalVpBulanIni, totalPipsBulanIni, ambangVpBerlaku}=hitungBufferVpChannel(g);
+  const targetMedal=cachedTargetMedal[g]||{minVp:300, avgMonthlyVp:null};
+  const adaSyarat80 = targetMedal.avgMonthlyVp!=null && isFinite(targetMedal.avgMonthlyVp) && targetMedal.avgMonthlyVp*0.8>=300;
+  const runningList=(cachedSinyalAnalis[g]||[]).filter(r=>r.status==='running');
+  let totalLossVp=0, totalLossPips=0, totalWinVp=0, totalWinPips=0;
+  runningList.forEach(item=>{
+    const {potensiWinVp, potensiLossVp, potensiWinPips, potensiLossPips}=estimasiPotensiVpSatuSinyal(g, item);
+    if(potensiLossVp!==null){ totalLossVp+=potensiLossVp; totalLossPips+=(potensiLossPips||0); }
+    if(potensiWinVp!==null){ totalWinVp+=potensiWinVp; totalWinPips+=(potensiWinPips||0); }
+  });
+  const cek=(nilai, syarat)=> nilai>=syarat ? '✅' : '❌';
+  const baris1Html = `<div style="background:var(--bg0);border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:10px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📊 Perolehan Sekarang (Fix — bukan yang Running)</div>
+    <div style="font-size:11px;color:#3A2E10;line-height:2">
+      ${cek(totalPipsBulanIni,0)} Pips terkumpul: <b>${totalPipsBulanIni.toFixed(1)}</b> (syarat ≥ 0)<br>
+      ${cek(totalVpBulanIni,targetMedal.minVp)} VP terkumpul: <b>${totalVpBulanIni.toFixed(2)}</b> (syarat ≥ ${targetMedal.minVp})
+      ${adaSyarat80 ? `<br>${cek(totalVpBulanIni,ambangVpBerlaku)} VP vs 80% Avg Monthly: <b>${totalVpBulanIni.toFixed(2)}/${ambangVpBerlaku.toFixed(2)}</b>` : ''}
+    </div>
+  </div>`;
+  const dataRunningHtml = `<div style="background:var(--bg0);border:1px dashed var(--border);border-radius:8px;padding:9px 11px;margin-bottom:10px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">🏃 Data Running</div>
+    <div style="font-size:11px;color:#3A2E10">${runningList.length} sinyal lagi dipantau${runningList.length?' — daftar & tombol tutup ada di atas':''}</div>
+  </div>`;
+  let skenarioHtml='';
+  if(runningList.length){
+    const pipsKalauLos=totalPipsBulanIni+totalLossPips, vpKalauLos=totalVpBulanIni+totalLossVp;
+    const pipsKalauWin=totalPipsBulanIni+totalWinPips, vpKalauWin=totalVpBulanIni+totalWinVp;
+    const masihAmanLos = vpKalauLos>=ambangVpBerlaku && pipsKalauLos>=0;
+    const warnaLos = masihAmanLos ? '#3E9142' : '#D9534F';
+    skenarioHtml = `<div style="background:${warnaLos}15;border:1.5px solid ${warnaLos};border-radius:9px;padding:9px 11px;margin-bottom:10px">
+      <div style="font-size:9px;color:${warnaLos};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📉 Kalau SEMUA ${runningList.length} Running Ini LOSS</div>
+      <div style="font-size:11px;color:#3A2E10;line-height:1.8">
+        Pips berkurang: <b style="color:${warnaLos}">${totalLossPips.toFixed(1)}</b> → jadi: <b>${pipsKalauLos.toFixed(1)}</b> ${cek(pipsKalauLos,0)}<br>
+        VP berkurang: <b style="color:${warnaLos}">${totalLossVp.toFixed(2)}</b> → jadi: <b>${vpKalauLos.toFixed(2)}</b> ${cek(vpKalauLos,ambangVpBerlaku)}
+      </div>
+      <div style="font-size:12px;font-weight:800;color:${warnaLos};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+        ${masihAmanLos ? '✅ Masih di atas syarat walau semua Loss — aman lanjut, gak perlu buru-buru berhenti kejar sinyal baru' : '🛑 STOP kejar sinyal baru — kalau semua running ini Loss, syarat bulan ini bakal di bawah ambang'}
+      </div>
+    </div>
+    <div style="background:#3E914215;border:1px solid #3E9142;border-radius:9px;padding:9px 11px">
+      <div style="font-size:9px;color:#3E9142;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📈 Kalau SEMUA ${runningList.length} Running Ini WIN</div>
+      <div style="font-size:11px;color:#3A2E10;line-height:1.8">
+        Pips bertambah: <b style="color:#3E9142">+${totalWinPips.toFixed(1)}</b> → jadi: <b>${pipsKalauWin.toFixed(1)}</b><br>
+        VP bertambah: <b style="color:#3E9142">+${totalWinVp.toFixed(2)}</b> → jadi: <b>${vpKalauWin.toFixed(2)}</b>
+      </div>
+    </div>`;
+  } else {
+    skenarioHtml = `<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Gak ada sinyal running — gak ada yang perlu direm, capaian di atas udah final buat sekarang.</div>`;
+  }
+  wrap.innerHTML = baris1Html + dataRunningHtml + skenarioHtml;
 }
 async function toggleCocokSinyal(g, id){
   const item=(cachedSinyalAnalis[g]||[]).find(r=>r.id===id);
