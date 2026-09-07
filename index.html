@@ -4543,36 +4543,44 @@ function renderPreviewLevelRunning(){
   const {nilai:mult}=multiplierVpDariSimbol(pair);
   const g=daftarSinyalPairGroup||'XAUUSD';
   const {totalVpBulanIni, totalPipsBulanIni, ambangVpBerlaku}=hitungBufferVpChannel(g);
+  const targetMedal=cachedTargetMedal[g]||{minVp:300, avgMonthlyVp:null};
+  const adaSyarat80 = targetMedal.avgMonthlyVp!=null && isFinite(targetMedal.avgMonthlyVp) && targetMedal.avgMonthlyVp*0.8>=300;
   const pipsLos=-Math.abs(sl), vpLos=pipsLos*mult;
   const pipsWin=tp, vpWin=pipsWin*mult;
   const vpJadiLos=totalVpBulanIni+vpLos, pipsJadiLos=totalPipsBulanIni+pipsLos;
   const vpJadiWin=totalVpBulanIni+vpWin, pipsJadiWin=totalPipsBulanIni+pipsWin;
   const masihAmanLos = vpJadiLos>=ambangVpBerlaku && pipsJadiLos>=0;
   const warnaLos = masihAmanLos ? '#3E9142' : '#D9534F';
-  // ── Buffer setelah WIN — kalau sinyal ini menang, sisa buffer di atas ambang jadi berapa,
-  // dan itu setara berapa kali lagi bisa nahan LOSS dari pair+level yang SAMA (persis yang
-  // diminta: "kalau win, otomatis tau buffer-nya tahan berapa kali loss lagi di level ini"). ──
+  // ── Buffer "berapa X" — dihitung terhadap AMBANG YANG BERLAKU (yang lebih ketat antara
+  // syarat flat 300 dan 80% Avg Monthly, sesuai aturan medal channel ini), buat KEDUA skenario
+  // Win maupun Loss, biar kelihatan jelas tahan berapa kali loss lanjutan dari titik itu. ──
   const sisaBufferSetelahWin = vpJadiWin - ambangVpBerlaku;
-  const kaliLossTertahanSetelahWin = sisaBufferSetelahWin>0 ? Math.floor(sisaBufferSetelahWin/Math.abs(vpLos)) : 0;
+  const kaliTertahanSetelahWin = sisaBufferSetelahWin>0 ? Math.floor(sisaBufferSetelahWin/Math.abs(vpLos)) : 0;
+  const sisaBufferSetelahLos = vpJadiLos - ambangVpBerlaku; // bisa negatif kalau udah jebol
+  const kaliTertahanSetelahLos = sisaBufferSetelahLos>0 ? Math.floor(sisaBufferSetelahLos/Math.abs(vpLos)) : 0;
+  const targetInfoHtml = `<div style="font-size:8px;color:#8A6B26;line-height:1.7;margin:4px 0 2px;padding:6px 0;border-top:1px dashed var(--border);border-bottom:1px dashed var(--border)">
+    🎯 Target VP flat: <b>${targetMedal.minVp}</b>${adaSyarat80?` &nbsp;|&nbsp; Target 80% Avg Monthly VP (${targetMedal.avgMonthlyVp.toFixed(2)}) → ambang efektif: <b>${(targetMedal.avgMonthlyVp*0.8).toFixed(2)}</b>`:''}<br>
+    ✅ Ambang yang BERLAKU sekarang (lebih ketat): <b>${ambangVpBerlaku.toFixed(2)} VP</b>
+  </div>`;
   wrap.innerHTML=`<div style="background:var(--bg0);border:1.5px dashed ${warnaLos};border-radius:9px;padding:9px 11px;margin:8px 0">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🔎 Preview SEBELUM catat — ${pair} (SL ${sl}/TP ${tp})</div>
     <div style="font-size:9px;color:#3A2E10;line-height:1.6">Perolehan fix sekarang: <b>${totalVpBulanIni.toFixed(2)} VP / ${totalPipsBulanIni.toFixed(1)} pip</b></div>
+    ${targetInfoHtml}
     <div style="display:flex;gap:8px;margin-top:6px">
       <div style="flex:1;background:#3E914215;border:1px solid #3E9142;border-radius:7px;padding:7px 8px">
         <div style="font-size:8px;color:#3E9142;font-weight:700">✅ KALAU KENA TP</div>
         <div style="font-size:8px;color:#8A6B26;margin:2px 0">+${vpWin.toFixed(2)} VP / +${pipsWin.toFixed(1)} pip</div>
         <div style="font-size:11px;font-weight:800;color:#3E9142">→ ${vpJadiWin.toFixed(2)} VP</div>
+        <div style="font-size:8px;color:#3E9142;margin-top:4px;padding-top:4px;border-top:1px solid #3E914255">💪 Buffer jadi tahan <b>${kaliTertahanSetelahWin}x loss</b> lagi</div>
       </div>
       <div style="flex:1;background:${warnaLos}15;border:1px solid ${warnaLos};border-radius:7px;padding:7px 8px">
         <div style="font-size:8px;color:${warnaLos};font-weight:700">${masihAmanLos?'⚠️':'🛑'} KALAU KENA SL</div>
         <div style="font-size:8px;color:#8A6B26;margin:2px 0">${vpLos.toFixed(2)} VP / ${pipsLos.toFixed(1)} pip</div>
         <div style="font-size:11px;font-weight:800;color:${warnaLos}">→ ${vpJadiLos.toFixed(2)} VP</div>
+        <div style="font-size:8px;color:${warnaLos};margin-top:4px;padding-top:4px;border-top:1px solid ${warnaLos}55">${sisaBufferSetelahLos>=0 ? `💪 Buffer masih tahan <b>${kaliTertahanSetelahLos}x loss</b> lagi` : `❌ Udah minus ${Math.abs(sisaBufferSetelahLos).toFixed(2)} VP dari ambang`}</div>
       </div>
     </div>
-    <div style="background:#3E914215;border:1px dashed #3E9142;border-radius:7px;padding:7px 8px;margin-top:6px">
-      <div style="font-size:9px;color:#3E9142;font-weight:700">💪 BUFFER SETELAH WIN (di atas ambang ${ambangVpBerlaku.toFixed(2)})</div>
-      <div style="font-size:9px;color:#3A2E10;margin-top:2px">Sisa buffer: <b>+${sisaBufferSetelahWin.toFixed(2)} VP</b> → setara <b>${kaliLossTertahanSetelahWin}x loss ${pair} (${sl}/${tp})</b> lagi sebelum ambang jebol</div>
-    </div>
+    <div style="font-size:8px;color:#7A5D1F;margin-top:6px">ℹ️ Ini simulasi doang — belum nambah data apapun. Angka running beneran baru berubah pas kamu tap "Catat Sinyal Running" di bawah.</div>
     <div style="font-size:10px;font-weight:800;color:${warnaLos};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
       ${masihAmanLos ? '✅ Kalau kena SL pun masih di atas syarat — aman diambil' : '🛑 Kalau kena SL, syarat bulan ini bakal di bawah ambang — pikir-pikir dulu sebelum ambil sinyal ini'}
     </div>
