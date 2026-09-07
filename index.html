@@ -1639,10 +1639,11 @@ function renderInvCalcDisclaimer(){
       </div>
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🏃 Sinyal Sedang Running</div>
       <label class="lbl">Pair + Level + RR (pilih 1x, SL/TP otomatis kepasang)</label>
-      <select class="inp" id="inpRunningLevelSelect" onchange="document.getElementById('inpRunningSimbolManual').style.display = this.value==='__LAINNYA__' ? 'block' : 'none'; document.getElementById('inpRunningManualSlTpWrap').style.display = this.value==='__LAINNYA__' ? 'block' : 'none'">
+      <select class="inp" id="inpRunningLevelSelect" onchange="document.getElementById('inpRunningSimbolManual').style.display = this.value==='__LAINNYA__' ? 'block' : 'none'; document.getElementById('inpRunningManualSlTpWrap').style.display = this.value==='__LAINNYA__' ? 'block' : 'none'; renderPreviewLevelRunning();">
         <option value="">— Pilih pair + level —</option>
         <option value="__LAINNYA__">Lainnya (pair/SL/TP custom)…</option>
       </select>
+      <div id="previewLevelRunningWrap"></div>
       <input class="inp" type="text" id="inpRunningSimbolManual" placeholder="Nama pair, mis. BTCUSD" style="display:none;margin-top:6px">
       <div id="inpRunningManualSlTpWrap" style="display:none">
         <div style="display:flex;gap:8px">
@@ -4527,6 +4528,47 @@ function renderDaftarSinyal(){
 // final). ATURAN: gak boleh di-cut rugi manual, cuma boleh ditutup kalau (a) lagi profit
 // (cut profit lebih awal) atau (b) beneran udah kena Stop Loss. Makanya cuma ada 2 tombol
 // tutup di bawah — TIDAK ADA tombol "cut loss manual". ──
+// ── Preview SEBELUM catat sinyal — begitu pilih Pair+Level di dropdown, langsung kelihatan
+// "kalau sinyal ini dibuat dan kena SL, VP/pips fix sekarang berkurang jadi berapa, masih di
+// atas syarat atau enggak" — biar bisa mikir dulu SEBELUM beneran ambil sinyalnya, bukan
+// sesudah dicatat/running. ──
+function renderPreviewLevelRunning(){
+  const wrap=document.getElementById('previewLevelRunningWrap');
+  if(!wrap)return;
+  const levelEl=document.getElementById('inpRunningLevelSelect');
+  const levelVal=(levelEl||{}).value||'';
+  if(!levelVal || levelVal==='__LAINNYA__'){ wrap.innerHTML=''; return; }
+  const [pair, slStr, tpStr]=levelVal.split('|');
+  const sl=parseFloat(slStr), tp=parseFloat(tpStr);
+  const {nilai:mult}=multiplierVpDariSimbol(pair);
+  const g=daftarSinyalPairGroup||'XAUUSD';
+  const {totalVpBulanIni, totalPipsBulanIni, ambangVpBerlaku}=hitungBufferVpChannel(g);
+  const pipsLos=-Math.abs(sl), vpLos=pipsLos*mult;
+  const pipsWin=tp, vpWin=pipsWin*mult;
+  const vpJadiLos=totalVpBulanIni+vpLos, pipsJadiLos=totalPipsBulanIni+pipsLos;
+  const vpJadiWin=totalVpBulanIni+vpWin, pipsJadiWin=totalPipsBulanIni+pipsWin;
+  const masihAmanLos = vpJadiLos>=ambangVpBerlaku && pipsJadiLos>=0;
+  const warnaLos = masihAmanLos ? '#3E9142' : '#D9534F';
+  wrap.innerHTML=`<div style="background:var(--bg0);border:1.5px dashed ${warnaLos};border-radius:9px;padding:9px 11px;margin:8px 0">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🔎 Preview SEBELUM catat — ${pair} (SL ${sl}/TP ${tp})</div>
+    <div style="font-size:9px;color:#3A2E10;line-height:1.6">Perolehan fix sekarang: <b>${totalVpBulanIni.toFixed(2)} VP / ${totalPipsBulanIni.toFixed(1)} pip</b></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <div style="flex:1;background:#3E914215;border:1px solid #3E9142;border-radius:7px;padding:7px 8px">
+        <div style="font-size:8px;color:#3E9142;font-weight:700">✅ KALAU KENA TP</div>
+        <div style="font-size:8px;color:#8A6B26;margin:2px 0">+${vpWin.toFixed(2)} VP / +${pipsWin.toFixed(1)} pip</div>
+        <div style="font-size:11px;font-weight:800;color:#3E9142">→ ${vpJadiWin.toFixed(2)} VP</div>
+      </div>
+      <div style="flex:1;background:${warnaLos}15;border:1px solid ${warnaLos};border-radius:7px;padding:7px 8px">
+        <div style="font-size:8px;color:${warnaLos};font-weight:700">${masihAmanLos?'⚠️':'🛑'} KALAU KENA SL</div>
+        <div style="font-size:8px;color:#8A6B26;margin:2px 0">${vpLos.toFixed(2)} VP / ${pipsLos.toFixed(1)} pip</div>
+        <div style="font-size:11px;font-weight:800;color:${warnaLos}">→ ${vpJadiLos.toFixed(2)} VP</div>
+      </div>
+    </div>
+    <div style="font-size:10px;font-weight:800;color:${warnaLos};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+      ${masihAmanLos ? '✅ Kalau kena SL pun masih di atas syarat — aman diambil' : '🛑 Kalau kena SL, syarat bulan ini bakal di bawah ambang — pikir-pikir dulu sebelum ambil sinyal ini'}
+    </div>
+  </div>`;
+}
 async function tambahSinyalRunning(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
   const g=daftarSinyalPairGroup||'XAUUSD';
