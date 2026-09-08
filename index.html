@@ -3349,6 +3349,7 @@ async function loadAll(){
   await loadTargetResmiAsli();
   await loadTargetMedal();
   await loadInstrumenAktif();
+  await loadSubsOverride();
   const selLevelRunning=document.getElementById('inpRunningLevelSelect');
   if(selLevelRunning){
     selLevelRunning.innerHTML = `<option value="">— Pilih pair + level —</option>${OPSI_LEVEL_RUNNING_HTML}<option value="__LAINNYA__">Lainnya (pair/SL/TP custom)…</option>`;
@@ -3888,6 +3889,46 @@ function infoLevelDariMedal(jumlahMedal){
   return {levelSaatIni, levelBerikutnya, kurangMedal, jumlahMedal:n};
 }
 let cachedInvestorCountForScore=0;
+// Override manual jumlah Subscriber per channel — dipakai kalau angka Subs asli di TF App
+// (real subscriber berbayar) beda dari jumlah investor yang tercatat di Investor Dashboard
+// situs ini (dua hal beda: TF App itung subscriber channel, situs ini itung investor modal).
+let cachedSubsOverride={XAUUSD:null, FOREX:null};
+async function loadSubsOverride(){
+  for(const g of ['XAUUSD','FOREX']){
+    try{
+      const rows=await api('app_settings?select=value&key=eq.subs_override_'+g);
+      if(rows && rows.length && rows[0].value!==null && rows[0].value!==''){
+        const n=parseInt(rows[0].value,10);
+        if(isFinite(n) && n>=0) cachedSubsOverride[g]=n;
+      }
+    }catch(e){ console.error('Gagal load subs_override_'+g, e); }
+  }
+}
+async function simpanSubsOverrideKeServer(g){
+  const key='subs_override_'+g;
+  const payload = cachedSubsOverride[g]===null ? '' : String(cachedSubsOverride[g]);
+  const existing=await api('app_settings?select=key&key=eq.'+key);
+  if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:payload}); }
+  else{ await api('app_settings','POST',{key,value:payload}); }
+}
+async function editSubsOverride(g){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah Subscriber');return;}
+  const cur=cachedSubsOverride[g];
+  const inputStr=prompt(`Jumlah Subscriber channel ini (angka asli dari TF App, boleh beda dari jumlah Investor di Dashboard situs ini).\n\nKosongkan lalu OK buat hapus override (balik pakai jumlah Investor otomatis).`, cur!==null?String(cur):'');
+  if(inputStr===null)return;
+  if(inputStr.trim()===''){
+    cachedSubsOverride[g]=null;
+  } else {
+    const n=parseInt(inputStr.trim(),10);
+    if(!isFinite(n) || n<0){toast('❌ Angka gak valid');return;}
+    cachedSubsOverride[g]=n;
+  }
+  try{
+    await simpanSubsOverrideKeServer(g);
+    toast('✅ Jumlah Subscriber diperbarui');
+    renderScoreCard();
+  }catch(e){ toast('❌ Gagal simpan: '+(e.message||'').slice(0,120)); }
+}
 // ── Target TF Medal (Minimal Signal, Minimal VP, & Avg Monthly VP) per bulan — ANGKA INI SERING
 // BERUBAH tiap bulan di TF (user bilang bakal dilaporkan tiap kali beda), makanya disimpan
 // editable di sini, BUKAN di-hardcode. Default 5 sinyal & 300 VP kalau belum pernah diisi admin.
@@ -4166,6 +4207,35 @@ async function editTargetMedal(g){
   }catch(e){
     console.error(e);
     toast('❌ Gagal simpan target Medal: '+(e.message||'').slice(0,120));
+  }
+}
+// ── Update KHUSUS Avg Monthly VP — beda dari editTargetMedal(g) yang juga nanya ulang
+// Minimal Signal & Minimal VP (yang paten/gak berubah tiap bulan). Avg Monthly VP itu SATU-
+// SATUNYA yang emang berubah tiap bulan (tergantung performa bulan-bulan sebelumnya di
+// halaman TF Reward asli), jadi disediakan jalan pintas biar gampang di-update tiap bulan
+// baru tanpa harus ngetik ulang 2 angka lain yang udah paten. ──
+async function editAvgMonthlyVpSaja(g){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah Avg Monthly VP');return;}
+  const cur=cachedTargetMedal[g]||{minSinyal:5, minVp:300, avgMonthlyVp:null};
+  const avgVpInput=prompt(`Avg. Monthly VP bulan ini (dari halaman TF Reward asli) — angka ini WAJAR berubah tiap bulan tergantung performa bulan-bulan sebelumnya. Kosongkan kalau channel ini gak ada syarat ini bulan ini:`, cur.avgMonthlyVp!=null?String(cur.avgMonthlyVp):'');
+  if(avgVpInput===null)return;
+  const avgVpTrim=avgVpInput.trim();
+  const avgVpNum = avgVpTrim==='' ? null : parseFloat(avgVpTrim);
+  if(avgVpTrim!=='' && !isFinite(avgVpNum)){toast('❌ Angka gak valid');return;}
+  const newVal={minSinyal:cur.minSinyal, minVp:cur.minVp, avgMonthlyVp:avgVpNum};
+  try{
+    const payload=JSON.stringify(newVal);
+    const key='target_medal_'+g;
+    const existing=await api('app_settings?select=key&key=eq.'+key);
+    if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:payload}); }
+    else{ await api('app_settings','POST',{key,value:payload}); }
+    cachedTargetMedal[g]=newVal;
+    toast(`✅ Avg Monthly VP bulan ini di-update`);
+    renderScoreCard();
+    renderPreviewLevelRunning();
+  }catch(e){
+    console.error(e);
+    toast('❌ Gagal simpan: '+(e.message||'').slice(0,120));
   }
 }
 // ── Target Skor Resmi ASLI (dari app resminya, misal Trading Family) — diisi manual oleh admin
@@ -4559,8 +4629,9 @@ function renderPreviewLevelRunning(){
   const sisaBufferSetelahLos = vpJadiLos - ambangVpBerlaku; // bisa negatif kalau udah jebol
   const kaliTertahanSetelahLos = sisaBufferSetelahLos>0 ? Math.floor(sisaBufferSetelahLos/Math.abs(vpLos)) : 0;
   const targetInfoHtml = `<div style="font-size:8px;color:#8A6B26;line-height:1.7;margin:4px 0 2px;padding:6px 0;border-top:1px dashed var(--border);border-bottom:1px dashed var(--border)">
-    🎯 Target VP flat: <b>${targetMedal.minVp}</b>${adaSyarat80?` &nbsp;|&nbsp; Target 80% Avg Monthly VP (${targetMedal.avgMonthlyVp.toFixed(2)}) → ambang efektif: <b>${(targetMedal.avgMonthlyVp*0.8).toFixed(2)}</b>`:''}<br>
+    🎯 Target VP flat (paten): <b>${targetMedal.minVp}</b>${adaSyarat80?` &nbsp;|&nbsp; Target 80% Avg Monthly VP (${targetMedal.avgMonthlyVp.toFixed(2)}) → ambang efektif: <b>${(targetMedal.avgMonthlyVp*0.8).toFixed(2)}</b>`:' | Belum ada syarat 80% bulan ini'}<br>
     ✅ Ambang yang BERLAKU sekarang (lebih ketat): <b>${ambangVpBerlaku.toFixed(2)} VP</b>
+    <span onclick="editAvgMonthlyVpSaja('${g}')" style="color:#C8A84B;text-decoration:underline;cursor:pointer;margin-left:6px">✏️ update Avg Monthly VP bulan ini</span>
   </div>`;
   wrap.innerHTML=`<div style="background:var(--bg0);border:1.5px dashed ${warnaLos};border-radius:9px;padding:9px 11px;margin:8px 0">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🔎 Preview SEBELUM catat — ${pair} (SL ${sl}/TP ${tp})</div>
@@ -5397,7 +5468,8 @@ function renderSatuChannelScore(g){
   const adaSinyal=adaSinyalBulanLalu(g);
   const sLevel=bandLevel(meta.level);
   const sKem=bandKemitraan(meta.kemitraan);
-  const sSubs=bandSubscriber(cachedInvestorCountForScore, adaSinyal);
+  const jumlahSubsDipakai = cachedSubsOverride[g]!==null ? cachedSubsOverride[g] : cachedInvestorCountForScore;
+  const sSubs=bandSubscriber(jumlahSubsDipakai, adaSinyal);
   const sPF=bandProfitFactor(m.profitFactor);
   const sMLR=bandMonthlyLossRatio(m.monthlyLossRatio);
   const sPM=bandProfitMonths(m.profitMonths);
@@ -5645,7 +5717,7 @@ function renderSatuChannelScore(g){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       ${kotak('Level', meta.level, sLevel, bobotPersenOf('level'))}
       ${kotak('Kemitraan', meta.kemitraan, sKem, bobotPersenOf('kemitraan'))}
-      ${kotak('Subscriber', cachedInvestorCountForScore+' Investor'+(adaSinyal?'':' (0 — bulan lalu tanpa sinyal settle)'), sSubs, bobotPersenOf('subscriber'))}
+      ${kotak('Subscriber', `${jumlahSubsDipakai} ${cachedSubsOverride[g]!==null?'<span style="color:#C8A84B">(manual)</span>':'Investor'}${adaSinyal?'':' (0 — bulan lalu tanpa sinyal settle)'}<br><span onclick="editSubsOverride('${g}')" style="font-size:8px;text-decoration:underline;cursor:pointer;color:#C8A84B">✏️ Ubah jumlah Subscriber</span>`, sSubs, bobotPersenOf('subscriber'))}
       ${kotak('Profit Factor', pfTeks, sPF, bobotPersenOf('profitFactor'))}
       ${kotak('Mthly. Loss Ratio', mlrTeks, sMLR, bobotPersenOf('monthlyLossRatio'))}
       ${kotak('Profit Months', m.profitMonths+' / 6 bulan', sPM, bobotPersenOf('profitMonths'))}
