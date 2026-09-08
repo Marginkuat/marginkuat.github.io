@@ -5434,18 +5434,7 @@ function renderStrategiRisikoHtml(g, bufferVp){
       bufferVp
     }));
   }
-  const ringkasanList=overrideList.length ? overrideList.map((p,i)=>`${i+1}. ${p.pair} (SL ${p.sl}/TP ${p.tp})`).join(', ') : '';
-  // Dropdown pilih pair + SL langsung dari daftar kalkulator yang udah ada (OPSI_PAIR_KALKULATOR_HTML),
-  // TP dihitung OTOMATIS pakai RR 1:2 tetap (SL×2) — gak perlu ngetik SL/TP manual lagi tiap nambah.
-  const daftarChip = overrideList.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${overrideList.map((p,i)=>`<span style="font-size:9px;background:var(--bg0);border:1px solid var(--border);border-radius:999px;padding:3px 8px;display:inline-flex;align-items:center;gap:5px">${p.pair} (${p.sl}:${p.tp})<span onclick="hapusSatuInstrumenAktif('${g}',${i})" style="cursor:pointer;color:#D9534F;font-weight:800">✕</span></span>`).join('')}</div>` : '';
-  const kontrolHtml=`<div style="border:1px dashed var(--border);border-radius:8px;padding:8px 10px;margin:2px 0 10px">
-    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚙️ Instrumen Aktif Channel Ini</div>
-    ${daftarChip}
-    <select id="selInstrumenKalkulator_${g}" class="inp" style="margin-bottom:6px">${OPSI_PAIR_KALKULATOR_HTML}</select>
-    <button class="btn" onclick="tambahInstrumenAktifDariKalkulator('${g}')" style="width:100%;padding:7px;font-size:9px">➕ Tambah (RR 1:2 otomatis: TP = SL×2)</button>
-    ${overrideList.length ? `<div onclick="hapusSemuaInstrumenAktif('${g}')" style="text-align:center;font-size:8px;color:#8A6B26;text-decoration:underline;cursor:pointer;margin-top:6px">Kosongkan semua, balik ke default otomatis</div>` : ''}
-  </div>`;
-  return kontrolHtml + kartuKartu.map(k=>k.html).join('');
+  return kartuKartu.map(k=>k.html).join('');
 }
 function renderSatuChannelScore(g){
   const meta=cachedScoreMeta[g]||{level:'Newbie', kemitraan:'Basic Channel', namaChannel:g};
