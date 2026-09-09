@@ -1686,6 +1686,21 @@ function renderInvCalcDisclaimer(){
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🧮 Kalkulator Rem Sinyal Analis</div>
       <div id="kalkulatorRemSinyalWrap"></div>
     </div>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🎯 Target Untung Subscriber (channel ini)</div>
+      <div id="daftarSubscriberWrap" style="margin-bottom:10px"></div>
+      <label class="lbl">Nama Subscriber (opsional)</label>
+      <input class="inp" type="text" id="inpSubBaruNama" placeholder="mis. Investor A">
+      <div style="display:flex;gap:8px">
+        <div style="flex:1"><label class="lbl">Tanggal Join</label><input class="inp" type="date" id="inpSubBaruTgl"></div>
+        <div style="flex:1"><label class="lbl">Jam Join</label><input class="inp" type="time" id="inpSubBaruJam"></div>
+      </div>
+      <label class="lbl">Target Pips buat "untung" (default 250 — cukup nutup biaya salin + untung)</label>
+      <input class="inp" type="number" step="1" id="inpSubBaruTarget" placeholder="250" value="250">
+      <button class="btn" onclick="tambahSubscriber()" style="margin-top:8px">➕ Tambah Subscriber</button>
+      <div style="font-size:8px;color:#7A5D1F;margin-top:6px">ℹ️ Net pips dihitung otomatis dari SEMUA sinyal closed yang waktu tutupnya (tanggal+jam) ≥ waktu join subscriber — persis logika yang kita pakai buat cek "sinyal mana yang kecopy".</div>
+    </div>
   </div>
 </div>
 
@@ -3352,6 +3367,7 @@ async function loadAll(){
   await loadTargetMedal();
   await loadInstrumenAktif();
   await loadSubsOverride();
+  await loadSubscriberList();
   const selLevelRunning=document.getElementById('inpRunningLevelSelect');
   if(selLevelRunning){
     selLevelRunning.innerHTML = `<option value="">— Pilih pair + level —</option>${OPSI_LEVEL_RUNNING_HTML}<option value="__LAINNYA__">Lainnya (pair/SL/TP custom)…</option>`;
@@ -5084,6 +5100,103 @@ function renderKalkulatorRemSinyal(g){
     skenarioHtml = `<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Gak ada sinyal running — gak ada yang perlu direm, capaian di atas udah final buat sekarang.</div>`;
   }
   wrap.innerHTML = baris1Html + dataRunningHtml + skenarioHtml;
+  renderDaftarSubscriber(g);
+}
+// ── Target Untung Subscriber — hitung net pips/VP dari semua sinyal CLOSED yang waktunya
+// (tanggal+jam TERCATAT di sistem ini) terjadi SETELAH subscriber join, lalu bandingin ke
+// target (default 250 pips: cukup nutup biaya salin + ada untungnya). Prinsip yang sama
+// kayak kita hitung manual buat kasus subscriber 8 Sep kemarin. ──
+let cachedSubscriberList={XAUUSD:[], FOREX:[]};
+async function loadSubscriberList(){
+  for(const g of ['XAUUSD','FOREX']){
+    try{
+      const rows=await api('app_settings?select=value&key=eq.subscriber_list_'+g);
+      if(rows && rows.length && rows[0].value){
+        const parsed=JSON.parse(rows[0].value);
+        if(Array.isArray(parsed)) cachedSubscriberList[g]=parsed;
+      }
+    }catch(e){ console.error('Gagal load subscriber_list_'+g, e); }
+  }
+}
+async function simpanSubscriberListKeServer(g){
+  const payload=JSON.stringify(cachedSubscriberList[g]);
+  const key='subscriber_list_'+g;
+  const existing=await api('app_settings?select=key&key=eq.'+key);
+  if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:payload}); }
+  else{ await api('app_settings','POST',{key,value:payload}); }
+}
+async function tambahSubscriber(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
+  const g=daftarSinyalPairGroup||'XAUUSD';
+  const nama=(document.getElementById('inpSubBaruNama')||{}).value||'';
+  const tgl=(document.getElementById('inpSubBaruTgl')||{}).value||'';
+  const jam=(document.getElementById('inpSubBaruJam')||{}).value||'00:00';
+  const targetStr=(document.getElementById('inpSubBaruTarget')||{}).value||'250';
+  const target=parseFloat(targetStr);
+  if(!tgl){toast('❌ Isi tanggal join dulu');return;}
+  if(!isFinite(target) || target<=0){toast('❌ Target pips gak valid');return;}
+  try{
+    cachedSubscriberList[g].push({id:buatIdSinyal(), nama:nama.trim()||'(tanpa nama)', joinTanggal:tgl, joinJam:jam, targetPips:target});
+    await simpanSubscriberListKeServer(g);
+    toast('✅ Subscriber ditambahkan');
+    const n=document.getElementById('inpSubBaruNama'); if(n) n.value='';
+    const t=document.getElementById('inpSubBaruTgl'); if(t) t.value='';
+    const j=document.getElementById('inpSubBaruJam'); if(j) j.value='';
+    renderDaftarSubscriber(g);
+  }catch(e){ toast('❌ Gagal simpan: '+(e.message||'').slice(0,120)); }
+}
+async function hapusSubscriber(g, id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  if(!confirm('Hapus subscriber ini dari daftar?'))return;
+  try{
+    cachedSubscriberList[g]=cachedSubscriberList[g].filter(s=>s.id!==id);
+    await simpanSubscriberListKeServer(g);
+    toast('✅ Subscriber dihapus');
+    renderDaftarSubscriber(g);
+  }catch(e){ toast('❌ Gagal hapus'); }
+}
+function hitungPerformaSubscriber(g, sub){
+  const joinMs=new Date(sub.joinTanggal+'T'+(sub.joinJam||'00:00')).getTime();
+  const sinyalIkut=(cachedSinyalAnalis[g]||[]).filter(r=>{
+    if(r.status==='running')return false;
+    const ms=new Date(r.tanggal+'T'+(r.jam||'00:00')).getTime();
+    return isFinite(ms) && ms>=joinMs;
+  });
+  const totalPips=sinyalIkut.reduce((a,r)=>a+parseFloat(r.pips||0),0);
+  const totalVp=sinyalIkut.reduce((a,r)=>a+parseFloat(r.vp||0),0);
+  return {totalPips, totalVp, jumlahSinyal:sinyalIkut.length};
+}
+function renderDaftarSubscriber(g){
+  const wrap=document.getElementById('daftarSubscriberWrap');
+  if(!wrap)return;
+  const list=cachedSubscriberList[g]||[];
+  if(!list.length){
+    wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Belum ada subscriber dicatat.</div>`;
+    return;
+  }
+  wrap.innerHTML=list.map(sub=>{
+    const {totalPips, totalVp, jumlahSinyal}=hitungPerformaSubscriber(g, sub);
+    const sudahUntung = totalPips>=sub.targetPips;
+    const warna = totalPips<0 ? '#D9534F' : (sudahUntung ? '#3E9142' : '#C8A84B');
+    const progresPct = Math.max(0, Math.min(100, (totalPips/sub.targetPips)*100));
+    const statusTeks = totalPips<0
+      ? `❌ Rugi — net masih minus ${Math.abs(totalPips).toFixed(1)} pips sejak join`
+      : (sudahUntung
+        ? `✅ Sudah profit dari biaya salin (target ${sub.targetPips} pips tercapai)`
+        : `⚠️ Belum capai target — kurang ${(sub.targetPips-totalPips).toFixed(1)} pips lagi`);
+    return `<div style="background:var(--bg0);border:1.5px solid ${warna};border-radius:9px;padding:9px 11px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div style="font-size:10px;font-weight:700;color:#3A2E10">${sub.nama}</div>
+        <span onclick="hapusSubscriber('${g}','${sub.id}')" style="font-size:12px;cursor:pointer">🗑️</span>
+      </div>
+      <div style="font-size:8px;color:#8A6B26;margin-bottom:5px">Join: ${sub.joinTanggal} ${sub.joinJam} · ${jumlahSinyal} sinyal diikuti · target ${sub.targetPips} pips</div>
+      <div style="background:var(--border);border-radius:999px;height:6px;overflow:hidden;margin-bottom:5px">
+        <div style="background:${warna};height:100%;width:${progresPct}%"></div>
+      </div>
+      <div style="font-size:13px;font-weight:800;color:${warna}">${totalPips>=0?'+':''}${totalPips.toFixed(1)} pips <span style="font-size:9px;font-weight:400;color:#8A6B26">(${totalVp>=0?'+':''}${totalVp.toFixed(2)} VP)</span></div>
+      <div style="font-size:9px;font-weight:700;color:${warna};margin-top:4px">${statusTeks}</div>
+    </div>`;
+  }).join('');
 }
 async function toggleCocokSinyal(g, id){
   const item=(cachedSinyalAnalis[g]||[]).find(r=>r.id===id);
