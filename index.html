@@ -3368,6 +3368,7 @@ async function loadAll(){
   await loadInstrumenAktif();
   await loadSubsOverride();
   await loadSubscriberList();
+  await loadTargetInvestorBulanan();
   const selLevelRunning=document.getElementById('inpRunningLevelSelect');
   if(selLevelRunning){
     selLevelRunning.innerHTML = `<option value="">— Pilih pair + level —</option>${OPSI_LEVEL_RUNNING_HTML}<option value="__LAINNYA__">Lainnya (pair/SL/TP custom)…</option>`;
@@ -3956,6 +3957,40 @@ async function editSubsOverride(g){
 // tampilan "Avg. Monthly VP" di halaman TF Reward. Kalau dikosongkan (null), syarat ke-4 gak
 // ditampilkan (dianggap belum berlaku/gak relevan buat channel itu). ──
 let cachedTargetMedal={XAUUSD:{minSinyal:5, minVp:300, avgMonthlyVp:null}, FOREX:{minSinyal:5, minVp:300, avgMonthlyVp:null}};
+// Target Investor Bulanan (pips) — beda dari syarat TF Medal, ini murni target internal buat
+// "rem" pengambilan sinyal supaya value ke investor/subscriber cukup (default 600 pips/bulan).
+let cachedTargetInvestorBulanan={XAUUSD:600, FOREX:600};
+async function loadTargetInvestorBulanan(){
+  for(const g of ['XAUUSD','FOREX']){
+    try{
+      const rows=await api('app_settings?select=value&key=eq.target_investor_bulanan_'+g);
+      if(rows && rows.length && rows[0].value!==null && rows[0].value!==''){
+        const n=parseFloat(rows[0].value);
+        if(isFinite(n) && n>0) cachedTargetInvestorBulanan[g]=n;
+      }
+    }catch(e){ console.error('Gagal load target_investor_bulanan_'+g, e); }
+  }
+}
+async function simpanTargetInvestorBulananKeServer(g){
+  const key='target_investor_bulanan_'+g;
+  const payload=String(cachedTargetInvestorBulanan[g]);
+  const existing=await api('app_settings?select=key&key=eq.'+key);
+  if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:payload}); }
+  else{ await api('app_settings','POST',{key,value:payload}); }
+}
+async function editTargetInvestorBulanan(g){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const inputStr=prompt('Target pips investor per bulan (default 600):', String(cachedTargetInvestorBulanan[g]));
+  if(inputStr===null)return;
+  const n=parseFloat(inputStr);
+  if(!isFinite(n) || n<=0){toast('❌ Angka gak valid');return;}
+  cachedTargetInvestorBulanan[g]=n;
+  try{
+    await simpanTargetInvestorBulananKeServer(g);
+    toast('✅ Target investor bulanan diperbarui');
+    renderKalkulatorRemSinyal(g);
+  }catch(e){ toast('❌ Gagal simpan'); }
+}
 // ── Override "Instrumen Aktif" — buat kasus kayak channel Datuk EURUSD yang tadinya isinya
 // gold murni (progresif 200:400→400:500), tapi sinyal gold-nya di-STOP dan diganti pair forex
 // lain (mis. CADJPY) yang tetap jalan di channel yang sama. Tanpa override ini, kartu Strategi
@@ -5099,7 +5134,43 @@ function renderKalkulatorRemSinyal(g){
   } else {
     skenarioHtml = `<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Gak ada sinyal running — gak ada yang perlu direm, capaian di atas udah final buat sekarang.</div>`;
   }
-  wrap.innerHTML = baris1Html + dataRunningHtml + skenarioHtml;
+  // ── Rem Investor — Target Bulanan (default 600 pips) — beda dari syarat TF Medal,
+  // ini murni buat jaga value ke investor/subscriber cukup. Begitu target ini TERCAPAI,
+  // kasih PERINGATAN eksplisit biar admin gak asal terus nambah sinyal/resiko baru. ──
+  const targetInvestor=cachedTargetInvestorBulanan[g]||600;
+  const pipsKalauLosRem = totalPipsBulanIni + totalLossPips;
+  const pipsKalauWinRem = totalPipsBulanIni + totalWinPips;
+  const sudahTercapaiFix = totalPipsBulanIni>=targetInvestor;
+  const tetapTercapaiKalauLos = pipsKalauLosRem>=targetInvestor;
+  let remWarna, remJudul, remIsi;
+  if(sudahTercapaiFix){
+    remWarna='#3E9142';
+    remJudul='🚨 PERINGATAN: TARGET INVESTOR TERCAPAI';
+    remIsi=`Pips fix sekarang (<b>${totalPipsBulanIni.toFixed(1)}</b>) udah lewat target ${targetInvestor} pips/bulan. <b>Pertimbangkan REM</b> — kurangi frekuensi/resiko sinyal baru, gak perlu ngoyo nambah lagi bulan ini demi value investor, fokus jaga yang udah ada.`;
+  } else if(runningList.length && tetapTercapaiKalauLos){
+    remWarna='#3E9142';
+    remJudul='✅ Target investor aman tercapai';
+    remIsi=`Bahkan kalau semua ${runningList.length} sinyal running Loss, pips masih jadi ${pipsKalauLosRem.toFixed(1)} — tetap lewat target ${targetInvestor}. Boleh mulai rem, gak perlu maksa nambah sinyal.`;
+  } else if(runningList.length && pipsKalauWinRem>=targetInvestor){
+    remWarna='#C8A84B';
+    remJudul='⚠️ Tunggu hasil running dulu';
+    remIsi=`Kalau semua running Win, target ${targetInvestor} pips tercapai (jadi ${pipsKalauWinRem.toFixed(1)}). Kalau Loss, masih kurang. Belum waktunya rem — pantau hasil running dulu.`;
+  } else {
+    remWarna='#D9534F';
+    remJudul='🎯 Masih perlu kejar';
+    const kurang=targetInvestor-Math.max(totalPipsBulanIni, runningList.length?pipsKalauWinRem:totalPipsBulanIni);
+    remIsi=`Kurang ±${Math.max(0,kurang).toFixed(1)} pips lagi buat capai target ${targetInvestor} pips/bulan investor. Lanjut cari setup, belum waktunya rem.`;
+  }
+  const remInvestorHtml=`<div style="background:${remWarna}18;border:1.5px solid ${remWarna};border-radius:9px;padding:9px 11px;margin-top:10px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+      <div style="font-size:9px;color:${remWarna};font-weight:800;text-transform:uppercase;letter-spacing:.5px">🎯 Rem Investor — Target Bulanan</div>
+      <span onclick="editTargetInvestorBulanan('${g}')" style="font-size:8px;color:#8A6B26;text-decoration:underline;cursor:pointer">✏️ ubah target</span>
+    </div>
+    <div style="font-size:9px;color:#3A2E10;margin-bottom:5px">Target: <b>${targetInvestor} pips/bulan</b> · Pips fix sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b></div>
+    <div style="font-size:11px;font-weight:800;color:${remWarna}">${remJudul}</div>
+    <div style="font-size:9px;color:#3A2E10;margin-top:3px;line-height:1.5">${remIsi}</div>
+  </div>`;
+  wrap.innerHTML = baris1Html + dataRunningHtml + skenarioHtml + remInvestorHtml;
   renderDaftarSubscriber(g);
 }
 // ── Target Untung Subscriber — hitung net pips/VP dari semua sinyal CLOSED yang waktunya
