@@ -5155,6 +5155,34 @@ async function hapusSubscriber(g, id){
     renderDaftarSubscriber(g);
   }catch(e){ toast('❌ Gagal hapus'); }
 }
+// Edit langsung (bukan hapus+tambah ulang) — buat kasus kayak koreksi jam join yang meleset
+// dari data resmi TF App (mis. "Subscribe Date" asli beda dari perkiraan awal admin).
+async function editSubscriber(g, id){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const sub=(cachedSubscriberList[g]||[]).find(s=>s.id===id);
+  if(!sub)return;
+  const namaBaru=prompt('Nama subscriber:', sub.nama);
+  if(namaBaru===null)return;
+  const tglBaru=prompt('Tanggal Join (YYYY-MM-DD) — cocokkan sama "Subscribe Date" asli di TF App:', sub.joinTanggal);
+  if(tglBaru===null)return;
+  const jamBaru=prompt('Jam Join (HH:MM, 24 jam) — cocokkan sama "Subscribe Date" asli di TF App:', sub.joinJam);
+  if(jamBaru===null)return;
+  const targetStr=prompt('Target Pips:', String(sub.targetPips));
+  if(targetStr===null)return;
+  const target=parseFloat(targetStr);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(tglBaru.trim())){toast('❌ Format tanggal harus YYYY-MM-DD');return;}
+  if(!/^\d{1,2}:\d{2}$/.test(jamBaru.trim())){toast('❌ Format jam harus HH:MM');return;}
+  if(!isFinite(target) || target<=0){toast('❌ Target pips gak valid');return;}
+  try{
+    sub.nama=namaBaru.trim()||'(tanpa nama)';
+    sub.joinTanggal=tglBaru.trim();
+    sub.joinJam=jamBaru.trim();
+    sub.targetPips=target;
+    await simpanSubscriberListKeServer(g);
+    toast('✅ Data subscriber diperbarui');
+    renderDaftarSubscriber(g);
+  }catch(e){ toast('❌ Gagal simpan: '+(e.message||'').slice(0,120)); }
+}
 function hitungPerformaSubscriber(g, sub){
   const joinMs=new Date(sub.joinTanggal+'T'+(sub.joinJam||'00:00')).getTime();
   const sinyalIkut=(cachedSinyalAnalis[g]||[]).filter(r=>{
@@ -5241,7 +5269,10 @@ function renderDaftarSubscriber(g){
     return `<div style="background:var(--bg0);border:1.5px solid ${warna};border-radius:9px;padding:9px 11px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <div style="font-size:10px;font-weight:700;color:#3A2E10">${sub.nama}</div>
-        <span onclick="hapusSubscriber('${g}','${sub.id}')" style="font-size:12px;cursor:pointer">🗑️</span>
+        <span>
+          <span onclick="editSubscriber('${g}','${sub.id}')" style="font-size:12px;cursor:pointer;margin-right:8px">✏️</span>
+          <span onclick="hapusSubscriber('${g}','${sub.id}')" style="font-size:12px;cursor:pointer">🗑️</span>
+        </span>
       </div>
       <div style="font-size:8px;color:#8A6B26;margin-bottom:5px">Join: ${sub.joinTanggal} ${sub.joinJam} · ${jumlahSinyal} sinyal diikuti · target ${sub.targetPips} pips</div>
       <div style="background:var(--border);border-radius:999px;height:6px;overflow:hidden;margin-bottom:5px">
