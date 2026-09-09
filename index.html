@@ -5164,7 +5164,20 @@ function hitungPerformaSubscriber(g, sub){
   });
   const totalPips=sinyalIkut.reduce((a,r)=>a+parseFloat(r.pips||0),0);
   const totalVp=sinyalIkut.reduce((a,r)=>a+parseFloat(r.vp||0),0);
-  return {totalPips, totalVp, jumlahSinyal:sinyalIkut.length};
+  // ── Sinyal RUNNING yang ikut kecopy subscriber ini juga — dipakai buat PROYEKSI, belum
+  // masuk hitungan "totalPips" fix di atas (karena belum closed/belum pasti hasilnya). ──
+  const runningIkut=(cachedSinyalAnalis[g]||[]).filter(r=>{
+    if(r.status!=='running')return false;
+    const ms=new Date(r.tanggal+'T'+(r.jam||'00:00')).getTime(); // tanggal dibuka (belum di-overwrite karena masih running)
+    return isFinite(ms) && ms>=joinMs;
+  });
+  let potensiWinPips=0, potensiWinVp=0, potensiLossPips=0, potensiLossVp=0;
+  runningIkut.forEach(item=>{
+    const {potensiWinVp:pw, potensiLossVp:pl, potensiWinPips:pwp, potensiLossPips:plp}=estimasiPotensiVpSatuSinyal(g, item);
+    if(pw!==null){ potensiWinVp+=pw; potensiWinPips+=(pwp||0); }
+    if(pl!==null){ potensiLossVp+=pl; potensiLossPips+=(plp||0); }
+  });
+  return {totalPips, totalVp, jumlahSinyal:sinyalIkut.length, runningIkutCount:runningIkut.length, potensiWinPips, potensiWinVp, potensiLossPips, potensiLossVp};
 }
 function renderDaftarSubscriber(g){
   const wrap=document.getElementById('daftarSubscriberWrap');
@@ -5175,7 +5188,7 @@ function renderDaftarSubscriber(g){
     return;
   }
   wrap.innerHTML=list.map(sub=>{
-    const {totalPips, totalVp, jumlahSinyal}=hitungPerformaSubscriber(g, sub);
+    const {totalPips, totalVp, jumlahSinyal, runningIkutCount, potensiWinPips, potensiWinVp, potensiLossPips, potensiLossVp}=hitungPerformaSubscriber(g, sub);
     const sudahUntung = totalPips>=sub.targetPips;
     const warna = totalPips<0 ? '#D9534F' : (sudahUntung ? '#3E9142' : '#C8A84B');
     const progresPct = Math.max(0, Math.min(100, (totalPips/sub.targetPips)*100));
@@ -5184,6 +5197,47 @@ function renderDaftarSubscriber(g){
       : (sudahUntung
         ? `✅ Sudah profit dari biaya salin (target ${sub.targetPips} pips tercapai)`
         : `⚠️ Belum capai target — kurang ${(sub.targetPips-totalPips).toFixed(1)} pips lagi`);
+    // ── Proyeksi dari sinyal Running yang ikut kecopy subscriber ini, plus verdict
+    // "santai" atau "kejar" — biar tau kapan perlu nambah sinyal buat subscriber ini
+    // spesifik, terpisah dari kalkulasi buffer VP syarat TF (itu urusan channel, ini
+    // urusan value buat subscriber). ──
+    let proyeksiHtml='', verdictHtml='';
+    if(runningIkutCount>0){
+      const pipsJadiWin=totalPips+potensiWinPips, vpJadiWin=totalVp+potensiWinVp;
+      const pipsJadiLos=totalPips+potensiLossPips, vpJadiLos=totalVp+potensiLossVp;
+      const winCapaiTarget=pipsJadiWin>=sub.targetPips;
+      const losCapaiTarget=pipsJadiLos>=sub.targetPips;
+      proyeksiHtml=`<div style="display:flex;gap:6px;margin-top:6px">
+        <div style="flex:1;background:#3E914215;border:1px solid #3E9142;border-radius:6px;padding:5px 6px">
+          <div style="font-size:7px;color:#3E9142;font-weight:700">KALAU ${runningIkutCount} RUNNING WIN</div>
+          <div style="font-size:9px;font-weight:800;color:#3E9142">${pipsJadiWin>=0?'+':''}${pipsJadiWin.toFixed(1)} pips</div>
+        </div>
+        <div style="flex:1;background:#D9534F15;border:1px solid #D9534F;border-radius:6px;padding:5px 6px">
+          <div style="font-size:7px;color:#D9534F;font-weight:700">KALAU ${runningIkutCount} RUNNING LOSS</div>
+          <div style="font-size:9px;font-weight:800;color:#D9534F">${pipsJadiLos>=0?'+':''}${pipsJadiLos.toFixed(1)} pips</div>
+        </div>
+      </div>`;
+      let vTeks, vWarna;
+      if(sudahUntung){
+        vTeks='✅ SANTAI — target subscriber ini udah tercapai, hasil running cuma nambah bonus, gak perlu dikejar lagi';
+        vWarna='#3E9142';
+      } else if(losCapaiTarget){
+        vTeks='✅ SANTAI — bahkan kalau semua running ini Loss pun, target subscriber ini tetap tercapai';
+        vWarna='#3E9142';
+      } else if(winCapaiTarget){
+        vTeks='⚠️ TUNGGU HASIL — kalau running ini Win, target tercapai. Kalau Loss, masih perlu kejar sinyal tambahan buat subscriber ini';
+        vWarna='#C8A84B';
+      } else {
+        vTeks='🛑 PERLU KEJAR — bahkan skenario terbaik (semua running Win) masih belum cukup, subscriber ini butuh sinyal tambahan setelah ini kelar';
+        vWarna='#D9534F';
+      }
+      verdictHtml=`<div style="font-size:9px;font-weight:700;color:${vWarna};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">${vTeks}</div>`;
+    } else {
+      const vTeks = sudahUntung
+        ? '✅ SANTAI — target udah tercapai, gak ada sinyal running yang perlu dipantau buat subscriber ini'
+        : '🛑 PERLU KEJAR — belum ada sinyal running yang kecopy, dan target belum tercapai. Perlu sinyal baru buat subscriber ini.';
+      verdictHtml=`<div style="font-size:9px;font-weight:700;color:${sudahUntung?'#3E9142':'#D9534F'};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">${vTeks}</div>`;
+    }
     return `<div style="background:var(--bg0);border:1.5px solid ${warna};border-radius:9px;padding:9px 11px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <div style="font-size:10px;font-weight:700;color:#3A2E10">${sub.nama}</div>
@@ -5195,6 +5249,8 @@ function renderDaftarSubscriber(g){
       </div>
       <div style="font-size:13px;font-weight:800;color:${warna}">${totalPips>=0?'+':''}${totalPips.toFixed(1)} pips <span style="font-size:9px;font-weight:400;color:#8A6B26">(${totalVp>=0?'+':''}${totalVp.toFixed(2)} VP)</span></div>
       <div style="font-size:9px;font-weight:700;color:${warna};margin-top:4px">${statusTeks}</div>
+      ${proyeksiHtml}
+      ${verdictHtml}
     </div>`;
   }).join('');
 }
