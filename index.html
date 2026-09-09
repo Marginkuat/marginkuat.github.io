@@ -3966,8 +3966,10 @@ async function editSubsOverride(g){
 // ditampilkan (dianggap belum berlaku/gak relevan buat channel itu). ──
 let cachedTargetMedal={XAUUSD:{minSinyal:5, minVp:300, avgMonthlyVp:null}, FOREX:{minSinyal:5, minVp:300, avgMonthlyVp:null}};
 // Target Investor Bulanan (pips) — beda dari syarat TF Medal, ini murni target internal buat
-// "rem" pengambilan sinyal supaya value ke investor/subscriber cukup (default 600 pips/bulan).
-let cachedTargetInvestorBulanan={XAUUSD:600, FOREX:600};
+// "rem" pengambilan sinyal supaya value ke investor/subscriber cukup (default 1000 pips/bulan,
+// diperbarui dari 600 — ini sisi "WIN" dari target rem, dipakai buat semua channel/subscriber
+// tanpa perlu di-set ulang manual tiap ada subscriber baru).
+let cachedTargetInvestorBulanan={XAUUSD:1000, FOREX:1000};
 async function loadTargetInvestorBulanan(){
   for(const g of ['XAUUSD','FOREX']){
     try{
@@ -5473,7 +5475,7 @@ async function editTanggalMulaiChannel(g){
 // pips BULAN INI (bukan rolling 6 bulan seperti Score) — mirip REM lama tapi versi analis.
 // ══════════════════════════════════════════
 const PIP_VALUE_USD_PER_0_01_LOT = 0.10; // referensi tampilan aja: 100pip=$10=0,01 lot (forex & gold sama)
-let cachedRemPips={XAUUSD:2000, FOREX:1000}; // default sesuai kesepakatan: XAUUSD ±2000, Forex ±1000
+let cachedRemPips={XAUUSD:2000, FOREX:2000}; // default sesuai kesepakatan terbaru: XAUUSD & Forex sama-sama ±2000 (sisi "LOSS"/wajib stop dari target rem)
 async function loadRemPips(){
   for(const g of ['XAUUSD','FOREX']){
     try{
