@@ -1608,6 +1608,11 @@ function renderInvCalcDisclaimer(){
       <input class="inp" type="date" id="inpRingkasTgl">
       <label class="lbl">Jam ditutup (opsional — biar gampang dibedain kalau ada beberapa sinyal di tanggal sama)</label>
       <input class="inp" type="time" id="inpRingkasJam">
+      <div style="display:flex;gap:8px">
+        <div style="flex:1"><label class="lbl">Opened at (tanggal dibuka)</label><input class="inp" type="date" id="inpRingkasTglBuka"></div>
+        <div style="flex:1"><label class="lbl">Jam dibuka</label><input class="inp" type="time" id="inpRingkasJamBuka"></div>
+      </div>
+      <div style="font-size:8px;color:#7A5D1F;margin-top:-4px;margin-bottom:6px">⏱️ Isi ini kalau ada subscriber — dipakai buat ngecek "sinyal ini kecopy siapa aja" berdasarkan waktu dia join. Boleh dikosongin kalau gak perlu.</div>
       <label class="lbl">Batch / Grup (opsional — buat ngelompokin sinyal, mis. "Forex 4 Sep")</label>
       <input class="inp" type="text" id="inpRingkasBatch" placeholder="mis. Forex 4 Sep">
       <label class="lbl">Pips — isi minus kalau rugi, mis. -30</label>
@@ -1655,8 +1660,11 @@ function renderInvCalcDisclaimer(){
       </div>
       <label class="lbl">Batch / Grup (opsional)</label>
       <input class="inp" type="text" id="inpRunningBatch" placeholder="mis. Forex 4 Sep">
-      <label class="lbl">Tanggal dibuka</label>
-      <input class="inp" type="date" id="inpRunningTgl">
+      <div style="display:flex;gap:8px">
+        <div style="flex:1"><label class="lbl">Tanggal dibuka</label><input class="inp" type="date" id="inpRunningTgl"></div>
+        <div style="flex:1"><label class="lbl">Jam dibuka</label><input class="inp" type="time" id="inpRunningJamBuka"></div>
+      </div>
+      <div style="font-size:8px;color:#7A5D1F;margin-top:-4px;margin-bottom:6px">⏱️ Jam dibuka ini yang dipakai buat ngecek "sinyal ini kecopy subscriber mana" — beda dari jam TUTUP, dan gak akan ketimpa pas sinyal ini ditutup nanti.</div>
       <div onclick="const w=document.getElementById('inpRunningHargaAdvWrap'); w.style.display = w.style.display==='none' ? 'block' : 'none'" style="font-size:9px;color:#8A6B26;text-decoration:underline;cursor:pointer;margin:6px 0">⚙️ Opsional: isi harga Entry/TP/SL persis (kalau mau catatan lebih presisi dari sekadar pips level)</div>
       <div id="inpRunningHargaAdvWrap" style="display:none">
         <label class="lbl">Arah</label>
@@ -4521,6 +4529,8 @@ async function simpanDataHarianRingkas(){
   const g=inputSinyalPairGroup||'XAUUSD';
   const tgl=document.getElementById('inpRingkasTgl').value;
   const jam=(document.getElementById('inpRingkasJam')||{}).value||null;
+  const tglBuka=(document.getElementById('inpRingkasTglBuka')||{}).value||null;
+  const jamBuka=(document.getElementById('inpRingkasJamBuka')||{}).value||null;
   const pairSimbol=getSimbolSinyalTerpilih();
   const batchInput=(document.getElementById('inpRingkasBatch')||{}).value||'';
   const pipsInput=document.getElementById('inpRingkasPips').value;
@@ -4539,7 +4549,7 @@ async function simpanDataHarianRingkas(){
     // — gak perlu cek/gabung dengan sinyal lain, penjumlahan per hari/bulan dihitung on-the-fly.
     // 'jam' opsional, cuma buat tampilan & urutan yang lebih presisi kalau ada >1 sinyal di
     // tanggal yang sama (dipakai buat urutan kurva Recovery Factor juga).
-    cachedSinyalAnalis[g].push({id:buatIdSinyal(), tanggal:tgl, jam:jam||null, simbol:pairSimbol||null, batch:batchInput.trim()||null, status:'closed', pips, vp});
+    cachedSinyalAnalis[g].push({id:buatIdSinyal(), tanggal:tgl, jam:jam||null, tanggalBuka:tglBuka||tgl, jamBuka:jamBuka||null, simbol:pairSimbol||null, batch:batchInput.trim()||null, status:'closed', pips, vp});
     await simpanSinyalKeServer(g);
     statusEl.textContent=`✅ Tersimpan: ${pips>=0?'+':''}${pips} pip / ${vp>=0?'+':''}${vp} VP`;
     toast(`✅ Sinyal ${pairSimbol||g} tersimpan (khusus tool analis, gak nyentuh data MT4/kalkulator lain)`);
@@ -4548,6 +4558,8 @@ async function simpanDataHarianRingkas(){
     document.getElementById('inpRingkasPips').value='';
     document.getElementById('inpRingkasVp').value='';
     const batchEl0=document.getElementById('inpRingkasBatch'); if(batchEl0) batchEl0.value='';
+    const tglBukaEl0=document.getElementById('inpRingkasTglBuka'); if(tglBukaEl0) tglBukaEl0.value='';
+    const jamBukaEl0=document.getElementById('inpRingkasJamBuka'); if(jamBukaEl0) jamBukaEl0.value='';
     const ketEl0=document.getElementById('inpRingkasVpKeterangan'); if(ketEl0) ketEl0.textContent='';
     renderScoreCard();
     renderRemPipsCard();
@@ -4579,10 +4591,14 @@ async function editSinyal(g, id){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const item=(cachedSinyalAnalis[g]||[]).find(r=>r.id===id);
   if(!item)return;
-  const tglBaru=prompt('Tanggal (YYYY-MM-DD):', item.tanggal);
+  const tglBaru=prompt('Tanggal DITUTUP (YYYY-MM-DD):', item.tanggal);
   if(tglBaru===null)return;
-  const jamBaru=prompt('Jam (HH:MM, boleh kosong):', item.jam||'');
+  const jamBaru=prompt('Jam DITUTUP (HH:MM, boleh kosong):', item.jam||'');
   if(jamBaru===null)return;
+  const tglBukaBaru=prompt('Tanggal DIBUKA (YYYY-MM-DD, penting buat cek subscriber mana yang kecopy — cek "Opened at" di TF App):', item.tanggalBuka||item.tanggal);
+  if(tglBukaBaru===null)return;
+  const jamBukaBaru=prompt('Jam DIBUKA (HH:MM):', item.jamBuka||'');
+  if(jamBukaBaru===null)return;
   const simbolBaru=prompt('Nama pair sinyal (opsional):', item.simbol||'');
   if(simbolBaru===null)return;
   const batchBaru=prompt('Batch/Grup (opsional):', item.batch||'');
@@ -4594,7 +4610,9 @@ async function editSinyal(g, id){
   const pipsNum=parseFloat(pipsBaru), vpNum=parseFloat(vpBaru);
   if(!tglBaru || !isFinite(pipsNum) || !isFinite(vpNum)){toast('❌ Data gak valid, batal diedit');return;}
   try{
-    item.tanggal=tglBaru; item.jam=jamBaru.trim()||null; item.simbol=simbolBaru.trim()||null; item.batch=batchBaru.trim()||null; item.status='closed'; item.pips=pipsNum; item.vp=vpNum;
+    item.tanggal=tglBaru; item.jam=jamBaru.trim()||null;
+    item.tanggalBuka=tglBukaBaru.trim()||tglBaru; item.jamBuka=jamBukaBaru.trim()||null;
+    item.simbol=simbolBaru.trim()||null; item.batch=batchBaru.trim()||null; item.status='closed'; item.pips=pipsNum; item.vp=vpNum;
     await simpanSinyalKeServer(g);
     toast('✅ Sinyal diperbarui');
     renderScoreCard(); renderRemPipsCard(); renderDaftarSinyal();
@@ -4731,6 +4749,7 @@ async function tambahSinyalRunning(){
   }
   const batch=(document.getElementById('inpRunningBatch')||{}).value||'';
   const tgl=(document.getElementById('inpRunningTgl')||{}).value||new Date().toISOString().slice(0,10);
+  const jamBuka=(document.getElementById('inpRunningJamBuka')||{}).value||null;
   const arah=(document.getElementById('inpRunningArah')||{}).value||'';
   const hargaEntry=parseFloat((document.getElementById('inpRunningHarga')||{}).value);
   const hargaTp=parseFloat((document.getElementById('inpRunningTp')||{}).value);
@@ -4742,7 +4761,11 @@ async function tambahSinyalRunning(){
     // BUKAN harga transaksi asli — jadi aman ditampilkan, gak perlu masuk penyimpanan privat.
     // Ini yang bikin pas nutup sinyal nanti (Win/Loss) pips-nya udah otomatis diketahui, gak
     // perlu "mencocokkan" manual lagi ke harga TP/SL asli.
-    const data={id:idBaru, tanggal:tgl, jam:null, simbol:simbol.trim(), batch:batch.trim()||null, status:'running', pips:null, vp:null, slPips, tpPips, levelLabel};
+    // tanggalBuka/jamBuka DIPISAH dari tanggal/jam biasa — tanggal/jam bakal ketimpa jadi
+    // tanggal TUTUP begitu sinyal ini closed (buat keperluan hitung VP/pips bulanan), tapi
+    // tanggalBuka/jamBuka TETAP PERMANEN nyimpen kapan beneran dibuka — ini yang dipakai buat
+    // ngecek subscriber mana yang kecopy, biar akurat 100% kayak logika TF App yang asli.
+    const data={id:idBaru, tanggal:tgl, jam:null, tanggalBuka:tgl, jamBuka, simbol:simbol.trim(), batch:batch.trim()||null, status:'running', pips:null, vp:null, slPips, tpPips, levelLabel};
     cachedSinyalAnalis[g].push(data);
     await simpanSinyalKeServer(g);
     // Field privat (harga entry/TP/SL persis, opsional) tetap disimpan terpisah kalau diisi.
@@ -4761,6 +4784,7 @@ async function tambahSinyalRunning(){
     const mslTp=document.getElementById('inpRunningManualSlTpWrap'); if(mslTp) mslTp.style.display='none';
     ['inpRunningManualSl','inpRunningManualTp'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
     const b=document.getElementById('inpRunningBatch'); if(b) b.value='';
+    const jb=document.getElementById('inpRunningJamBuka'); if(jb) jb.value='';
     const a=document.getElementById('inpRunningArah'); if(a) a.value='';
     const hw=document.getElementById('inpRunningHargaAdvWrap'); if(hw) hw.style.display='none';
     ['inpRunningHarga','inpRunningTp','inpRunningSl'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
@@ -5256,18 +5280,25 @@ async function editSubscriber(g, id){
 }
 function hitungPerformaSubscriber(g, sub){
   const joinMs=new Date(sub.joinTanggal+'T'+(sub.joinJam||'00:00')).getTime();
+  // Prioritas: pakai tanggalBuka/jamBuka (waktu BENERAN dibuka, gak pernah ketimpa) kalau ada.
+  // Kalau sinyal lama belum punya field ini (dicatat sebelum fitur ini ada), fallback ke
+  // tanggal/jam (yang buat sinyal closed lama itu representasi waktu TUTUP, bukan buka —
+  // kurang akurat, tapi itu satu-satunya data yang ada).
+  const waktuBukaOf=r=> r.tanggalBuka ? new Date(r.tanggalBuka+'T'+(r.jamBuka||'00:00')).getTime() : new Date(r.tanggal+'T'+(r.jam||'00:00')).getTime();
   const sinyalIkut=(cachedSinyalAnalis[g]||[]).filter(r=>{
     if(r.status==='running')return false;
-    const ms=new Date(r.tanggal+'T'+(r.jam||'00:00')).getTime();
+    const ms=waktuBukaOf(r);
     return isFinite(ms) && ms>=joinMs;
   });
   const totalPips=sinyalIkut.reduce((a,r)=>a+parseFloat(r.pips||0),0);
   const totalVp=sinyalIkut.reduce((a,r)=>a+parseFloat(r.vp||0),0);
+  const adaDataAkurat=sinyalIkut.every(r=>!!r.tanggalBuka);
+  const adaDataFallback=sinyalIkut.some(r=>!r.tanggalBuka);
   // ── Sinyal RUNNING yang ikut kecopy subscriber ini juga — dipakai buat PROYEKSI, belum
   // masuk hitungan "totalPips" fix di atas (karena belum closed/belum pasti hasilnya). ──
   const runningIkut=(cachedSinyalAnalis[g]||[]).filter(r=>{
     if(r.status!=='running')return false;
-    const ms=new Date(r.tanggal+'T'+(r.jam||'00:00')).getTime(); // tanggal dibuka (belum di-overwrite karena masih running)
+    const ms=waktuBukaOf(r);
     return isFinite(ms) && ms>=joinMs;
   });
   let potensiWinPips=0, potensiWinVp=0, potensiLossPips=0, potensiLossVp=0;
@@ -5276,7 +5307,7 @@ function hitungPerformaSubscriber(g, sub){
     if(pw!==null){ potensiWinVp+=pw; potensiWinPips+=(pwp||0); }
     if(pl!==null){ potensiLossVp+=pl; potensiLossPips+=(plp||0); }
   });
-  return {totalPips, totalVp, jumlahSinyal:sinyalIkut.length, runningIkutCount:runningIkut.length, potensiWinPips, potensiWinVp, potensiLossPips, potensiLossVp};
+  return {totalPips, totalVp, jumlahSinyal:sinyalIkut.length, runningIkutCount:runningIkut.length, potensiWinPips, potensiWinVp, potensiLossPips, potensiLossVp, adaDataFallback};
 }
 function renderDaftarSubscriber(g){
   const wrap=document.getElementById('daftarSubscriberWrap');
@@ -5287,7 +5318,7 @@ function renderDaftarSubscriber(g){
     return;
   }
   wrap.innerHTML=list.map(sub=>{
-    const {totalPips, totalVp, jumlahSinyal, runningIkutCount, potensiWinPips, potensiWinVp, potensiLossPips, potensiLossVp}=hitungPerformaSubscriber(g, sub);
+    const {totalPips, totalVp, jumlahSinyal, runningIkutCount, potensiWinPips, potensiWinVp, potensiLossPips, potensiLossVp, adaDataFallback}=hitungPerformaSubscriber(g, sub);
     const sudahUntung = totalPips>=sub.targetPips;
     const warna = totalPips<0 ? '#D9534F' : (sudahUntung ? '#3E9142' : '#C8A84B');
     const progresPct = Math.max(0, Math.min(100, (totalPips/sub.targetPips)*100));
@@ -5346,6 +5377,7 @@ function renderDaftarSubscriber(g){
         </span>
       </div>
       <div style="font-size:8px;color:#8A6B26;margin-bottom:5px">Join: ${sub.joinTanggal} ${sub.joinJam} · ${jumlahSinyal} sinyal diikuti · target ${sub.targetPips} pips</div>
+      ${adaDataFallback ? `<div style="font-size:8px;color:#C8A84B;margin-bottom:5px">⚠️ Sebagian sinyal belum punya data "jam dibuka" tercatat (dicatat sebelum fitur ini ada) — pakai perkiraan jam tutup, kurang akurat. Edit sinyal lama itu buat isi jam bukanya biar presisi.</div>` : ''}
       <div style="background:var(--border);border-radius:999px;height:6px;overflow:hidden;margin-bottom:5px">
         <div style="background:${warna};height:100%;width:${progresPct}%"></div>
       </div>
