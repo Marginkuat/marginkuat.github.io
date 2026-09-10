@@ -5408,36 +5408,36 @@ function renderDaftarSubscriber(g){
     const detailListHtml=semuaSinyalTersalin.map(r=>{
       const waktuBuka = r.tanggalBuka ? `${r.tanggalBuka} ${r.jamBuka||'00:00'}` : `${r.tanggal} ${r.jam||'00:00'} (perkiraan)`;
       if(r._status==='running'){
-        return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:3px 0;border-bottom:1px dashed var(--border)">
-          <span style="color:#8A6B26">${r.pair||g} · dibuka ${waktuBuka}</span>
-          <span style="color:#C8A84B;font-weight:700">🟠 Running</span>
+        return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:3px 0;border-bottom:1px dashed #ffffff33">
+          <span style="color:#EDEDED">${r.pair||g} · dibuka ${waktuBuka}</span>
+          <span style="color:#FFC94D;font-weight:700">🟠 Running</span>
         </div>`;
       }
       const pipsVal=parseFloat(r.pips||0);
-      const warnaPips=pipsVal<0?'#D9534F':'#3E9142';
-      return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:3px 0;border-bottom:1px dashed var(--border)">
-        <span style="color:#8A6B26">${r.pair||g} · dibuka ${waktuBuka}</span>
+      const warnaPips=pipsVal<0?'#FF7A70':'#5FD584';
+      return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:3px 0;border-bottom:1px dashed #ffffff33">
+        <span style="color:#EDEDED">${r.pair||g} · dibuka ${waktuBuka}</span>
         <span style="color:${warnaPips};font-weight:700">${pipsVal>=0?'+':''}${pipsVal.toFixed(1)} pips</span>
       </div>`;
-    }).join('') || `<div style="font-size:8px;color:#8A6B26;padding:3px 0">Belum ada sinyal yang tersalin sejak join.</div>`;
+    }).join('') || `<div style="font-size:8px;color:#EDEDED;padding:3px 0">Belum ada sinyal yang tersalin sejak join.</div>`;
     const detailToggleHtml=`
-      <div style="font-size:8px;color:#7A5D1F;font-weight:700;margin-top:8px;padding-top:6px;border-top:1px solid var(--border)">📋 SINYAL YANG TERSALIN (${semuaSinyalTersalin.length}) <span onclick="const el=document.getElementById('${detailId}'); el.style.display = el.style.display==='none' ? 'block' : 'none';" style="text-decoration:underline;cursor:pointer;font-weight:400">(sembunyikan/tampilkan)</span></div>
-      <div id="${detailId}" style="display:block;margin-top:4px;background:var(--border)20;border-radius:6px;padding:4px 6px">${detailListHtml}</div>`;
+      <div style="font-size:8px;color:#FFFFFF;font-weight:700;margin-top:8px;padding-top:6px;border-top:1px solid #ffffff33">📋 SINYAL YANG TERSALIN (${semuaSinyalTersalin.length}) <span onclick="const el=document.getElementById('${detailId}'); el.style.display = el.style.display==='none' ? 'block' : 'none';" style="text-decoration:underline;cursor:pointer;font-weight:400">(sembunyikan/tampilkan)</span></div>
+      <div id="${detailId}" style="display:block;margin-top:4px;background:#ffffff0d;border-radius:6px;padding:4px 6px">${detailListHtml}</div>`;
     return `<div style="background:var(--bg0);border:1.5px solid ${warna};border-radius:9px;padding:9px 11px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <div style="font-size:10px;font-weight:700;color:#3A2E10">${sub.nama}</div>
+        <div style="font-size:10px;font-weight:700;color:#FFFFFF">${sub.nama}</div>
         <span>
           <span onclick="editSubscriber('${g}','${sub.id}')" style="font-size:12px;cursor:pointer;margin-right:8px">✏️</span>
           <span onclick="hapusSubscriber('${g}','${sub.id}')" style="font-size:12px;cursor:pointer">🗑️</span>
         </span>
       </div>
-      <div style="font-size:8px;color:#8A6B26;margin-bottom:5px">Join: ${sub.joinTanggal} ${sub.joinJam} · ${jumlahSinyal} sinyal diikuti · target ${sub.targetPips} pips win / ${targetLoss} pips rugi</div>
-      ${adaDataFallback ? `<div style="font-size:8px;color:#C8A84B;margin-bottom:5px">⚠️ Sebagian sinyal belum punya data "jam dibuka" tercatat (dicatat sebelum fitur ini ada) — pakai perkiraan jam tutup, kurang akurat. Edit sinyal lama itu buat isi jam bukanya biar presisi.</div>` : ''}
+      <div style="font-size:8px;color:#D8D8D8;margin-bottom:5px">Join: ${sub.joinTanggal} ${sub.joinJam} · ${jumlahSinyal} sinyal diikuti · target ${sub.targetPips} pips win / ${targetLoss} pips rugi</div>
+      ${adaDataFallback ? `<div style="font-size:8px;color:#FFC94D;margin-bottom:5px">⚠️ Sebagian sinyal belum punya data "jam dibuka" tercatat (dicatat sebelum fitur ini ada) — pakai perkiraan jam tutup, kurang akurat. Edit sinyal lama itu buat isi jam bukanya biar presisi.</div>` : ''}
       <div style="position:relative;background:linear-gradient(to right, #D9534F22 0%, #D9534F22 ${zeroPct}%, #3E914222 ${zeroPct}%, #3E914222 100%);border-radius:999px;height:8px;margin-bottom:2px">
-        <div style="position:absolute;left:${zeroPct}%;top:-2px;bottom:-2px;width:1px;background:var(--border)"></div>
+        <div style="position:absolute;left:${zeroPct}%;top:-2px;bottom:-2px;width:1px;background:#ffffff55"></div>
         <div style="position:absolute;left:${markerPct}%;top:-3px;width:3px;height:14px;border-radius:2px;background:${warna};transform:translateX(-1.5px)"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:7px;color:#8A6B26;margin-bottom:5px">
+      <div style="display:flex;justify-content:space-between;font-size:7px;color:#D8D8D8;margin-bottom:5px">
         <span>🛑 −${targetLoss}</span><span>0</span><span>🎯 +${sub.targetPips}</span>
       </div>
       <div style="font-size:13px;font-weight:800;color:${warna}">${totalPips>=0?'+':''}${totalPips.toFixed(1)} pips</div>
