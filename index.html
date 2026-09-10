@@ -4913,11 +4913,11 @@ function renderProyeksiBufferRunning(g, list){
   const kontrolWarna = kekuranganKejar>0 ? '#D9534F' : '#3E9142';
   const kontrolHtml = `<div style="background:${kontrolWarna}15;border:1.5px solid ${kontrolWarna};border-radius:9px;padding:9px 11px;margin-bottom:10px">
     <div style="font-size:9px;color:${kontrolWarna};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Kejar VP — Skenario Semua Running LOSS</div>
-    <div style="font-size:9px;color:#3A2E10;line-height:1.7">
+    <div style="font-size:9px;color:#FFFFFF;font-weight:700;line-height:1.7">
       VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> | Pips fix sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
       Ambang minimal bulan ini: <b>${ambangVpBerlaku.toFixed(2)} VP</b><br>
-      Potensi kalau ${list.length} sinyal running semua Loss: <b style="color:${kontrolWarna}">${totalLossVp.toFixed(2)} VP / ${totalLossPips.toFixed(1)} pips</b><br>
-      → VP fix jadi: <b style="color:${kontrolWarna}">${vpFixKalauSemuaLos.toFixed(2)}</b> | Pips fix jadi: <b style="color:${kontrolWarna}">${pipsFixKalauSemuaLos.toFixed(1)}</b>
+      Potensi kalau ${list.length} sinyal running semua Loss: <b style="color:#FF7A70">${totalLossVp.toFixed(2)} VP / ${totalLossPips.toFixed(1)} pips</b><br>
+      → VP fix jadi: <b style="color:#FFFFFF">${vpFixKalauSemuaLos.toFixed(2)}</b> | Pips fix jadi: <b style="color:#FFFFFF">${pipsFixKalauSemuaLos.toFixed(1)}</b>
     </div>
     <div style="font-size:12px;font-weight:800;color:${kontrolWarna};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
       ${kekuranganKejar>0
@@ -4929,30 +4929,30 @@ function renderProyeksiBufferRunning(g, list){
   const pipsFixKalauSemuaWin = totalPipsBulanIni + totalWinPips;
   const kontrolWinHtml = `<div style="background:${warnaWin}15;border:1.5px solid ${warnaWin};border-radius:9px;padding:9px 11px;margin-bottom:10px">
     <div style="font-size:9px;color:${warnaWin};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Total VP — Skenario Semua Running WIN</div>
-    <div style="font-size:9px;color:#3A2E10;line-height:1.7">
+    <div style="font-size:9px;color:#FFFFFF;font-weight:700;line-height:1.7">
       VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> | Pips fix sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
-      Potensi tambahan kalau ${list.length} sinyal running semua Win: <b style="color:${warnaWin}">+${totalWinVp.toFixed(2)} VP / +${totalWinPips.toFixed(1)} pips</b>
+      Potensi tambahan kalau ${list.length} sinyal running semua Win: <b style="color:#5FD584">+${totalWinVp.toFixed(2)} VP / +${totalWinPips.toFixed(1)} pips</b>
     </div>
     <div style="font-size:12px;font-weight:800;color:${warnaWin};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
       ✅ VP fix jadi: ${vpFixKalauSemuaWin.toFixed(2)} | Pips fix jadi: ${pipsFixKalauSemuaWin.toFixed(1)}
     </div>
   </div>`;
   return kontrolWinHtml + kontrolHtml + `<div style="background:var(--bg0);border:1.5px dashed var(--border);border-radius:9px;padding:9px 11px;margin-bottom:10px">
-    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📊 Proyeksi Buffer dari ${list.length} Sinyal Running</div>
-    <div style="font-size:9px;color:#3A2E10;margin-bottom:6px">Buffer sekarang: <b>${bufferVp>=0?'+':''}${bufferVp.toFixed(2)} VP</b></div>
+    <div style="font-size:9px;color:#FFFFFF;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📊 Proyeksi Buffer dari ${list.length} Sinyal Running</div>
+    <div style="font-size:9px;color:#FFFFFF;font-weight:700;margin-bottom:6px">Buffer sekarang: <b>${bufferVp>=0?'+':''}${bufferVp.toFixed(2)} VP</b></div>
     <div style="display:flex;gap:8px">
       <div style="flex:1;background:${warnaWin}15;border:1px solid ${warnaWin};border-radius:7px;padding:7px 8px">
         <div style="font-size:8px;color:${warnaWin};font-weight:700">✅ KALAU SEMUA WIN</div>
-        <div style="font-size:8px;color:#8A6B26;margin:2px 0">+${totalWinVp.toFixed(2)} VP / +${totalWinPips.toFixed(1)} pips</div>
+        <div style="font-size:8px;color:#FFFFFF;font-weight:700;margin:2px 0">+${totalWinVp.toFixed(2)} VP / +${totalWinPips.toFixed(1)} pips</div>
         <div style="font-size:12px;font-weight:800;color:${warnaWin}">→ ${bufferJikaSemuaWin>=0?'+':''}${bufferJikaSemuaWin.toFixed(2)}</div>
       </div>
       <div style="flex:1;background:${warnaLos}15;border:1px solid ${warnaLos};border-radius:7px;padding:7px 8px">
         <div style="font-size:8px;color:${warnaLos};font-weight:700">${bufferJikaSemuaLos<0?'🔴':'⚠️'} KALAU SEMUA LOSS</div>
-        <div style="font-size:8px;color:#8A6B26;margin:2px 0">${totalLossVp.toFixed(2)} VP / ${totalLossPips.toFixed(1)} pips</div>
+        <div style="font-size:8px;color:#FFFFFF;font-weight:700;margin:2px 0">${totalLossVp.toFixed(2)} VP / ${totalLossPips.toFixed(1)} pips</div>
         <div style="font-size:12px;font-weight:800;color:${warnaLos}">→ ${bufferJikaSemuaLos>=0?'+':''}${bufferJikaSemuaLos.toFixed(2)}</div>
       </div>
     </div>
-    <div style="font-size:8px;color:#8A6B26;margin-top:6px">${adaWinPasti||adaLossPasti?'Sebagian dihitung EKSAK dari harga Entry/TP/SL yang tercatat, sebagian pakai perkiraan rata-rata histori.':'Dihitung dari perkiraan rata-rata VP win/loss histori channel/simbol ini (belum ada data harga Entry/TP/SL tercatat).'}${(kurangDataWin||kurangDataLoss)?' Beberapa sinyal belum punya cukup data buat diestimasi, jadi belum ikut dihitung di atas.':''}</div>
+    <div style="font-size:8px;color:#D8D8D8;margin-top:6px">${adaWinPasti||adaLossPasti?'Sebagian dihitung EKSAK dari harga Entry/TP/SL yang tercatat, sebagian pakai perkiraan rata-rata histori.':'Dihitung dari perkiraan rata-rata VP win/loss histori channel/simbol ini (belum ada data harga Entry/TP/SL tercatat).'}${(kurangDataWin||kurangDataLoss)?' Beberapa sinyal belum punya cukup data buat diestimasi, jadi belum ikut dihitung di atas.':''}</div>
   </div>`;
 }
 // Faktor konversi pips->harga khusus tool analis (independen dari kalkulator lain di situs
@@ -5131,16 +5131,16 @@ function renderKalkulatorRemSinyal(g){
   });
   const cek=(nilai, syarat)=> nilai>=syarat ? '✅' : '❌';
   const baris1Html = `<div style="background:var(--bg0);border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:10px">
-    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📊 Perolehan Sekarang (Fix — bukan yang Running)</div>
-    <div style="font-size:11px;color:#3A2E10;line-height:2">
-      ${cek(totalPipsBulanIni,0)} Pips terkumpul: <b>${totalPipsBulanIni.toFixed(1)}</b> (syarat ≥ 0)<br>
-      ${cek(totalVpBulanIni,targetMedal.minVp)} VP terkumpul: <b>${totalVpBulanIni.toFixed(2)}</b> (syarat ≥ ${targetMedal.minVp})
-      ${adaSyarat80 ? `<br>${cek(totalVpBulanIni,ambangVpBerlaku)} VP vs 80% Avg Monthly: <b>${totalVpBulanIni.toFixed(2)}/${ambangVpBerlaku.toFixed(2)}</b>` : ''}
+    <div style="font-size:9px;color:#FFFFFF;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📊 Perolehan Sekarang (Fix — bukan yang Running)</div>
+    <div style="font-size:11px;color:#FFFFFF;font-weight:700;line-height:2">
+      ${cek(totalPipsBulanIni,0)} Pips terkumpul: <b style="color:${totalPipsBulanIni<0?'#FF7A70':'#5FD584'}">${totalPipsBulanIni.toFixed(1)}</b> (syarat ≥ 0)<br>
+      ${cek(totalVpBulanIni,targetMedal.minVp)} VP terkumpul: <b style="color:${totalVpBulanIni<targetMedal.minVp?'#FF7A70':'#5FD584'}">${totalVpBulanIni.toFixed(2)}</b> (syarat ≥ ${targetMedal.minVp})
+      ${adaSyarat80 ? `<br>${cek(totalVpBulanIni,ambangVpBerlaku)} VP vs 80% Avg Monthly: <b style="color:${totalVpBulanIni<ambangVpBerlaku?'#FF7A70':'#5FD584'}">${totalVpBulanIni.toFixed(2)}/${ambangVpBerlaku.toFixed(2)}</b>` : ''}
     </div>
   </div>`;
-  const dataRunningHtml = `<div style="background:var(--bg0);border:1px dashed var(--border);border-radius:8px;padding:9px 11px;margin-bottom:10px">
-    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">🏃 Data Running</div>
-    <div style="font-size:11px;color:#3A2E10">${runningList.length} sinyal lagi dipantau${runningList.length?' — daftar & tombol tutup ada di atas':''}</div>
+  const dataRunningHtml = `<div style="background:var(--bg0);border:1px dashed #FFC94D;border-radius:8px;padding:9px 11px;margin-bottom:10px">
+    <div style="font-size:9px;color:#FFC94D;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">🏃 Data Running</div>
+    <div style="font-size:11px;color:#FFFFFF;font-weight:700">${runningList.length} sinyal lagi dipantau${runningList.length?' — daftar & tombol tutup ada di atas':''}</div>
   </div>`;
   let skenarioHtml='';
   if(runningList.length){
@@ -5150,23 +5150,23 @@ function renderKalkulatorRemSinyal(g){
     const warnaLos = masihAmanLos ? '#3E9142' : '#D9534F';
     skenarioHtml = `<div style="background:${warnaLos}15;border:1.5px solid ${warnaLos};border-radius:9px;padding:9px 11px;margin-bottom:10px">
       <div style="font-size:9px;color:${warnaLos};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📉 Kalau SEMUA ${runningList.length} Running Ini LOSS</div>
-      <div style="font-size:11px;color:#3A2E10;line-height:1.8">
-        Pips berkurang: <b style="color:${warnaLos}">${totalLossPips.toFixed(1)}</b> → jadi: <b>${pipsKalauLos.toFixed(1)}</b> ${cek(pipsKalauLos,0)}<br>
-        VP berkurang: <b style="color:${warnaLos}">${totalLossVp.toFixed(2)}</b> → jadi: <b>${vpKalauLos.toFixed(2)}</b> ${cek(vpKalauLos,ambangVpBerlaku)}
+      <div style="font-size:11px;color:#FFFFFF;font-weight:700;line-height:1.8">
+        Pips berkurang: <b style="color:#FF7A70">${totalLossPips.toFixed(1)}</b> → jadi: <b style="color:#FFFFFF">${pipsKalauLos.toFixed(1)}</b> ${cek(pipsKalauLos,0)}<br>
+        VP berkurang: <b style="color:#FF7A70">${totalLossVp.toFixed(2)}</b> → jadi: <b style="color:#FFFFFF">${vpKalauLos.toFixed(2)}</b> ${cek(vpKalauLos,ambangVpBerlaku)}
       </div>
       <div style="font-size:12px;font-weight:800;color:${warnaLos};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
         ${masihAmanLos ? '✅ Masih di atas syarat walau semua Loss — aman lanjut, gak perlu buru-buru berhenti kejar sinyal baru' : '🛑 STOP kejar sinyal baru — kalau semua running ini Loss, syarat bulan ini bakal di bawah ambang'}
       </div>
     </div>
     <div style="background:#3E914215;border:1px solid #3E9142;border-radius:9px;padding:9px 11px">
-      <div style="font-size:9px;color:#3E9142;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📈 Kalau SEMUA ${runningList.length} Running Ini WIN</div>
-      <div style="font-size:11px;color:#3A2E10;line-height:1.8">
-        Pips bertambah: <b style="color:#3E9142">+${totalWinPips.toFixed(1)}</b> → jadi: <b>${pipsKalauWin.toFixed(1)}</b><br>
-        VP bertambah: <b style="color:#3E9142">+${totalWinVp.toFixed(2)}</b> → jadi: <b>${vpKalauWin.toFixed(2)}</b>
+      <div style="font-size:9px;color:#5FD584;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📈 Kalau SEMUA ${runningList.length} Running Ini WIN</div>
+      <div style="font-size:11px;color:#FFFFFF;font-weight:700;line-height:1.8">
+        Pips bertambah: <b style="color:#5FD584">+${totalWinPips.toFixed(1)}</b> → jadi: <b style="color:#FFFFFF">${pipsKalauWin.toFixed(1)}</b><br>
+        VP bertambah: <b style="color:#5FD584">+${totalWinVp.toFixed(2)}</b> → jadi: <b style="color:#FFFFFF">${vpKalauWin.toFixed(2)}</b>
       </div>
     </div>`;
   } else {
-    skenarioHtml = `<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Gak ada sinyal running — gak ada yang perlu direm, capaian di atas udah final buat sekarang.</div>`;
+    skenarioHtml = `<div style="font-size:9px;color:#FFFFFF;font-weight:700;text-align:center;padding:6px">Gak ada sinyal running — gak ada yang perlu direm, capaian di atas udah final buat sekarang.</div>`;
   }
   // ── Rem Investor — Target Bulanan (default 600 pips) — beda dari syarat TF Medal,
   // ini murni buat jaga value ke investor/subscriber cukup. Begitu target ini TERCAPAI,
@@ -5198,11 +5198,11 @@ function renderKalkulatorRemSinyal(g){
   const remInvestorHtml=`<div style="background:${remWarna}18;border:1.5px solid ${remWarna};border-radius:9px;padding:9px 11px;margin-top:10px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
       <div style="font-size:9px;color:${remWarna};font-weight:800;text-transform:uppercase;letter-spacing:.5px">🎯 Rem Investor — Target Bulanan</div>
-      <span onclick="editTargetInvestorBulanan('${g}')" style="font-size:8px;color:#8A6B26;text-decoration:underline;cursor:pointer">✏️ ubah target</span>
+      <span onclick="editTargetInvestorBulanan('${g}')" style="font-size:8px;color:#FFFFFF;font-weight:700;text-decoration:underline;cursor:pointer">✏️ ubah target</span>
     </div>
-    <div style="font-size:9px;color:#3A2E10;margin-bottom:5px">Target: <b>${targetInvestor} pips/bulan</b> · Pips fix sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b></div>
+    <div style="font-size:9px;color:#FFFFFF;font-weight:700;margin-bottom:5px">Target: <b>${targetInvestor} pips/bulan</b> · Pips fix sekarang: <b style="color:${totalPipsBulanIni<0?'#FF7A70':'#5FD584'}">${totalPipsBulanIni.toFixed(1)}</b></div>
     <div style="font-size:11px;font-weight:800;color:${remWarna}">${remJudul}</div>
-    <div style="font-size:9px;color:#3A2E10;margin-top:3px;line-height:1.5">${remIsi}</div>
+    <div style="font-size:9px;color:#FFFFFF;font-weight:700;margin-top:3px;line-height:1.5">${remIsi}</div>
   </div>`;
   wrap.innerHTML = baris1Html + dataRunningHtml + skenarioHtml + remInvestorHtml;
   renderDaftarSubscriber(g);
