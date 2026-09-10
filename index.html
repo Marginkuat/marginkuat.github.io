@@ -5341,7 +5341,11 @@ function renderDaftarSubscriber(g){
     const sudahUntung = totalPips>=sub.targetPips;
     const kenaRem = totalPips<=-targetLoss;
     const warna = kenaRem ? '#D9534F' : (totalPips<0 ? '#D9534F' : (sudahUntung ? '#3E9142' : '#C8A84B'));
-    const progresPct = Math.max(0, Math.min(100, (totalPips/sub.targetPips)*100));
+    // Bar dua-arah: rentang penuh dari -targetLoss (kiri) sampai +sub.targetPips (kanan), titik nol
+    // ada di posisi zeroPct. Posisi pips sekarang dipetakan ke markerPct di sepanjang rentang itu.
+    const rentangFull = targetLoss + sub.targetPips;
+    const zeroPct = (targetLoss/rentangFull)*100;
+    const markerPct = Math.max(0, Math.min(100, ((totalPips+targetLoss)/rentangFull)*100));
     const statusTeks = kenaRem
       ? `🛑 KENA REM — rugi sudah capai batas ${targetLoss} pips (net ${totalPips.toFixed(1)}), wajib stop kirim sinyal baru ke subscriber ini`
       : (totalPips<0
@@ -5429,10 +5433,14 @@ function renderDaftarSubscriber(g){
       </div>
       <div style="font-size:8px;color:#8A6B26;margin-bottom:5px">Join: ${sub.joinTanggal} ${sub.joinJam} · ${jumlahSinyal} sinyal diikuti · target ${sub.targetPips} pips win / ${targetLoss} pips rugi</div>
       ${adaDataFallback ? `<div style="font-size:8px;color:#C8A84B;margin-bottom:5px">⚠️ Sebagian sinyal belum punya data "jam dibuka" tercatat (dicatat sebelum fitur ini ada) — pakai perkiraan jam tutup, kurang akurat. Edit sinyal lama itu buat isi jam bukanya biar presisi.</div>` : ''}
-      <div style="background:var(--border);border-radius:999px;height:6px;overflow:hidden;margin-bottom:5px">
-        <div style="background:${warna};height:100%;width:${progresPct}%"></div>
+      <div style="position:relative;background:linear-gradient(to right, #D9534F22 0%, #D9534F22 ${zeroPct}%, #3E914222 ${zeroPct}%, #3E914222 100%);border-radius:999px;height:8px;margin-bottom:2px">
+        <div style="position:absolute;left:${zeroPct}%;top:-2px;bottom:-2px;width:1px;background:var(--border)"></div>
+        <div style="position:absolute;left:${markerPct}%;top:-3px;width:3px;height:14px;border-radius:2px;background:${warna};transform:translateX(-1.5px)"></div>
       </div>
-      <div style="font-size:13px;font-weight:800;color:${warna}">${totalPips>=0?'+':''}${totalPips.toFixed(1)} pips <span style="font-size:9px;font-weight:400;color:#8A6B26">(${totalVp>=0?'+':''}${totalVp.toFixed(2)} VP)</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:7px;color:#8A6B26;margin-bottom:5px">
+        <span>🛑 −${targetLoss}</span><span>0</span><span>🎯 +${sub.targetPips}</span>
+      </div>
+      <div style="font-size:13px;font-weight:800;color:${warna}">${totalPips>=0?'+':''}${totalPips.toFixed(1)} pips</div>
       <div style="font-size:9px;font-weight:700;color:${warna};margin-top:4px">${statusTeks}</div>
       ${proyeksiHtml}
       ${verdictHtml}
