@@ -1704,8 +1704,16 @@ function renderInvCalcDisclaimer(){
         <div style="flex:1"><label class="lbl">Tanggal Join</label><input class="inp" type="date" id="inpSubBaruTgl"></div>
         <div style="flex:1"><label class="lbl">Jam Join</label><input class="inp" type="time" id="inpSubBaruJam"></div>
       </div>
-      <label class="lbl">Target Pips buat "untung" (default 250 — cukup nutup biaya salin + untung)</label>
-      <input class="inp" type="number" step="1" id="inpSubBaruTarget" placeholder="250" value="250">
+      <div style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label class="lbl">Target Pips "WIN" (rem boleh santai)</label>
+          <input class="inp" type="number" step="1" id="inpSubBaruTarget" placeholder="1000" value="1000">
+        </div>
+        <div style="flex:1">
+          <label class="lbl">Target Pips "RUGI" (rem wajib stop)</label>
+          <input class="inp" type="number" step="1" id="inpSubBaruTargetLoss" placeholder="2000" value="2000">
+        </div>
+      </div>
       <button class="btn" onclick="tambahSubscriber()" style="margin-top:8px">➕ Tambah Subscriber</button>
       <div style="font-size:8px;color:#7A5D1F;margin-top:6px">ℹ️ Net pips dihitung otomatis dari SEMUA sinyal closed yang waktu tutupnya (tanggal+jam) ≥ waktu join subscriber — persis logika yang kita pakai buat cek "sinyal mana yang kecopy".</div>
     </div>
@@ -5228,12 +5236,15 @@ async function tambahSubscriber(){
   const nama=(document.getElementById('inpSubBaruNama')||{}).value||'';
   const tgl=(document.getElementById('inpSubBaruTgl')||{}).value||'';
   const jam=(document.getElementById('inpSubBaruJam')||{}).value||'00:00';
-  const targetStr=(document.getElementById('inpSubBaruTarget')||{}).value||'250';
+  const targetStr=(document.getElementById('inpSubBaruTarget')||{}).value||'1000';
   const target=parseFloat(targetStr);
+  const targetLossStr=(document.getElementById('inpSubBaruTargetLoss')||{}).value||'2000';
+  const targetLoss=parseFloat(targetLossStr);
   if(!tgl){toast('❌ Isi tanggal join dulu');return;}
-  if(!isFinite(target) || target<=0){toast('❌ Target pips gak valid');return;}
+  if(!isFinite(target) || target<=0){toast('❌ Target pips WIN gak valid');return;}
+  if(!isFinite(targetLoss) || targetLoss<=0){toast('❌ Target pips RUGI gak valid');return;}
   try{
-    cachedSubscriberList[g].push({id:buatIdSinyal(), nama:nama.trim()||'(tanpa nama)', joinTanggal:tgl, joinJam:jam, targetPips:target});
+    cachedSubscriberList[g].push({id:buatIdSinyal(), nama:nama.trim()||'(tanpa nama)', joinTanggal:tgl, joinJam:jam, targetPips:target, targetPipsLoss:targetLoss});
     await simpanSubscriberListKeServer(g);
     toast('✅ Subscriber ditambahkan');
     const n=document.getElementById('inpSubBaruNama'); if(n) n.value='';
@@ -5264,17 +5275,22 @@ async function editSubscriber(g, id){
   if(tglBaru===null)return;
   const jamBaru=prompt('Jam Join (HH:MM, 24 jam) — cocokkan sama "Subscribe Date" asli di TF App:', sub.joinJam);
   if(jamBaru===null)return;
-  const targetStr=prompt('Target Pips:', String(sub.targetPips));
+  const targetStr=prompt('Target Pips WIN (rem boleh santai):', String(sub.targetPips));
   if(targetStr===null)return;
   const target=parseFloat(targetStr);
+  const targetLossStr=prompt('Target Pips RUGI (rem wajib stop):', String(sub.targetPipsLoss||2000));
+  if(targetLossStr===null)return;
+  const targetLoss=parseFloat(targetLossStr);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(tglBaru.trim())){toast('❌ Format tanggal harus YYYY-MM-DD');return;}
   if(!/^\d{1,2}:\d{2}$/.test(jamBaru.trim())){toast('❌ Format jam harus HH:MM');return;}
-  if(!isFinite(target) || target<=0){toast('❌ Target pips gak valid');return;}
+  if(!isFinite(target) || target<=0){toast('❌ Target pips WIN gak valid');return;}
+  if(!isFinite(targetLoss) || targetLoss<=0){toast('❌ Target pips RUGI gak valid');return;}
   try{
     sub.nama=namaBaru.trim()||'(tanpa nama)';
     sub.joinTanggal=tglBaru.trim();
     sub.joinJam=jamBaru.trim();
     sub.targetPips=target;
+    sub.targetPipsLoss=targetLoss;
     await simpanSubscriberListKeServer(g);
     toast('✅ Data subscriber diperbarui');
     renderDaftarSubscriber(g);
@@ -5309,7 +5325,7 @@ function hitungPerformaSubscriber(g, sub){
     if(pw!==null){ potensiWinVp+=pw; potensiWinPips+=(pwp||0); }
     if(pl!==null){ potensiLossVp+=pl; potensiLossPips+=(plp||0); }
   });
-  return {totalPips, totalVp, jumlahSinyal:sinyalIkut.length, runningIkutCount:runningIkut.length, potensiWinPips, potensiWinVp, potensiLossPips, potensiLossVp, adaDataFallback};
+  return {totalPips, totalVp, jumlahSinyal:sinyalIkut.length, runningIkutCount:runningIkut.length, potensiWinPips, potensiWinVp, potensiLossPips, potensiLossVp, adaDataFallback, sinyalIkut, runningIkut};
 }
 function renderDaftarSubscriber(g){
   const wrap=document.getElementById('daftarSubscriberWrap');
@@ -5320,21 +5336,27 @@ function renderDaftarSubscriber(g){
     return;
   }
   wrap.innerHTML=list.map(sub=>{
-    const {totalPips, totalVp, jumlahSinyal, runningIkutCount, potensiWinPips, potensiWinVp, potensiLossPips, potensiLossVp, adaDataFallback}=hitungPerformaSubscriber(g, sub);
+    const {totalPips, totalVp, jumlahSinyal, runningIkutCount, potensiWinPips, potensiWinVp, potensiLossPips, potensiLossVp, adaDataFallback, sinyalIkut, runningIkut}=hitungPerformaSubscriber(g, sub);
+    const targetLoss=sub.targetPipsLoss||2000; // fallback buat subscriber lama yang belum punya field ini
     const sudahUntung = totalPips>=sub.targetPips;
-    const warna = totalPips<0 ? '#D9534F' : (sudahUntung ? '#3E9142' : '#C8A84B');
+    const kenaRem = totalPips<=-targetLoss;
+    const warna = kenaRem ? '#D9534F' : (totalPips<0 ? '#D9534F' : (sudahUntung ? '#3E9142' : '#C8A84B'));
     const progresPct = Math.max(0, Math.min(100, (totalPips/sub.targetPips)*100));
-    const statusTeks = totalPips<0
-      ? `❌ Rugi — net masih minus ${Math.abs(totalPips).toFixed(1)} pips sejak join`
-      : (sudahUntung
-        ? `✅ Sudah profit dari biaya salin (target ${sub.targetPips} pips tercapai)`
-        : `⚠️ Belum capai target — kurang ${(sub.targetPips-totalPips).toFixed(1)} pips lagi`);
+    const statusTeks = kenaRem
+      ? `🛑 KENA REM — rugi sudah capai batas ${targetLoss} pips (net ${totalPips.toFixed(1)}), wajib stop kirim sinyal baru ke subscriber ini`
+      : (totalPips<0
+        ? `❌ Rugi — net masih minus ${Math.abs(totalPips).toFixed(1)} pips sejak join (batas rem rugi: ${targetLoss} pips)`
+        : (sudahUntung
+          ? `✅ Sudah profit dari biaya salin (target ${sub.targetPips} pips tercapai)`
+          : `⚠️ Belum capai target — kurang ${(sub.targetPips-totalPips).toFixed(1)} pips lagi`));
     // ── Proyeksi dari sinyal Running yang ikut kecopy subscriber ini, plus verdict
     // "santai" atau "kejar" — biar tau kapan perlu nambah sinyal buat subscriber ini
     // spesifik, terpisah dari kalkulasi buffer VP syarat TF (itu urusan channel, ini
     // urusan value buat subscriber). ──
     let proyeksiHtml='', verdictHtml='';
-    if(runningIkutCount>0){
+    if(kenaRem){
+      verdictHtml=`<div style="font-size:9px;font-weight:700;color:#D9534F;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">🛑 STOP — subscriber ini sudah lewat batas rem rugi (${targetLoss} pips), jangan tambah sinyal baru buat dia dulu sampai kondisi membaik</div>`;
+    } else if(runningIkutCount>0){
       const pipsJadiWin=totalPips+potensiWinPips, vpJadiWin=totalVp+potensiWinVp;
       const pipsJadiLos=totalPips+potensiLossPips, vpJadiLos=totalVp+potensiLossVp;
       const winCapaiTarget=pipsJadiWin>=sub.targetPips;
@@ -5370,6 +5392,33 @@ function renderDaftarSubscriber(g){
         : '🛑 PERLU KEJAR — belum ada sinyal running yang kecopy, dan target belum tercapai. Perlu sinyal baru buat subscriber ini.';
       verdictHtml=`<div style="font-size:9px;font-weight:700;color:${sudahUntung?'#3E9142':'#D9534F'};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">${vTeks}</div>`;
     }
+    // ── Daftar bukti sinyal yang tersalin (closed yang masuk hitungan pips, + running yang
+    // masih diproyeksikan) — di-collapse defaultnya, biar admin bisa cek manual kalau ragu
+    // apakah suatu sinyal "seharusnya" kehitung buat subscriber ini atau nggak. ──
+    const semuaSinyalTersalin=[...sinyalIkut.map(r=>({...r,_status:'closed'})), ...runningIkut.map(r=>({...r,_status:'running'}))]
+      .sort((a,b)=>{
+        const wa=r=>r.tanggalBuka?new Date(r.tanggalBuka+'T'+(r.jamBuka||'00:00')).getTime():new Date(r.tanggal+'T'+(r.jam||'00:00')).getTime();
+        return wa(a)-wa(b);
+      });
+    const detailId=`detailSinyalSub_${sub.id}`;
+    const detailListHtml=semuaSinyalTersalin.map(r=>{
+      const waktuBuka = r.tanggalBuka ? `${r.tanggalBuka} ${r.jamBuka||'00:00'}` : `${r.tanggal} ${r.jam||'00:00'} (perkiraan)`;
+      if(r._status==='running'){
+        return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:3px 0;border-bottom:1px dashed var(--border)">
+          <span style="color:#8A6B26">${r.pair||g} · dibuka ${waktuBuka}</span>
+          <span style="color:#C8A84B;font-weight:700">🟠 Running</span>
+        </div>`;
+      }
+      const pipsVal=parseFloat(r.pips||0);
+      const warnaPips=pipsVal<0?'#D9534F':'#3E9142';
+      return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:3px 0;border-bottom:1px dashed var(--border)">
+        <span style="color:#8A6B26">${r.pair||g} · dibuka ${waktuBuka}</span>
+        <span style="color:${warnaPips};font-weight:700">${pipsVal>=0?'+':''}${pipsVal.toFixed(1)} pips</span>
+      </div>`;
+    }).join('') || `<div style="font-size:8px;color:#8A6B26;padding:3px 0">Belum ada sinyal yang tersalin sejak join.</div>`;
+    const detailToggleHtml=`
+      <div style="font-size:8px;color:#7A5D1F;font-weight:700;margin-top:8px;padding-top:6px;border-top:1px solid var(--border)">📋 SINYAL YANG TERSALIN (${semuaSinyalTersalin.length}) <span onclick="const el=document.getElementById('${detailId}'); el.style.display = el.style.display==='none' ? 'block' : 'none';" style="text-decoration:underline;cursor:pointer;font-weight:400">(sembunyikan/tampilkan)</span></div>
+      <div id="${detailId}" style="display:block;margin-top:4px;background:var(--border)20;border-radius:6px;padding:4px 6px">${detailListHtml}</div>`;
     return `<div style="background:var(--bg0);border:1.5px solid ${warna};border-radius:9px;padding:9px 11px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <div style="font-size:10px;font-weight:700;color:#3A2E10">${sub.nama}</div>
@@ -5378,7 +5427,7 @@ function renderDaftarSubscriber(g){
           <span onclick="hapusSubscriber('${g}','${sub.id}')" style="font-size:12px;cursor:pointer">🗑️</span>
         </span>
       </div>
-      <div style="font-size:8px;color:#8A6B26;margin-bottom:5px">Join: ${sub.joinTanggal} ${sub.joinJam} · ${jumlahSinyal} sinyal diikuti · target ${sub.targetPips} pips</div>
+      <div style="font-size:8px;color:#8A6B26;margin-bottom:5px">Join: ${sub.joinTanggal} ${sub.joinJam} · ${jumlahSinyal} sinyal diikuti · target ${sub.targetPips} pips win / ${targetLoss} pips rugi</div>
       ${adaDataFallback ? `<div style="font-size:8px;color:#C8A84B;margin-bottom:5px">⚠️ Sebagian sinyal belum punya data "jam dibuka" tercatat (dicatat sebelum fitur ini ada) — pakai perkiraan jam tutup, kurang akurat. Edit sinyal lama itu buat isi jam bukanya biar presisi.</div>` : ''}
       <div style="background:var(--border);border-radius:999px;height:6px;overflow:hidden;margin-bottom:5px">
         <div style="background:${warna};height:100%;width:${progresPct}%"></div>
@@ -5387,6 +5436,7 @@ function renderDaftarSubscriber(g){
       <div style="font-size:9px;font-weight:700;color:${warna};margin-top:4px">${statusTeks}</div>
       ${proyeksiHtml}
       ${verdictHtml}
+      ${detailToggleHtml}
     </div>`;
   }).join('');
 }
