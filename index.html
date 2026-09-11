@@ -1697,9 +1697,15 @@ function renderInvCalcDisclaimer(){
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🎯 Target Untung Subscriber (channel ini)</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <button class="cal-nav-btn" onclick="subExportPrev()">‹</button>
+        <div id="subExportMonthLabel" style="font-size:13px;font-weight:700;color:#D4AF37">-</div>
+        <button class="cal-nav-btn" onclick="subExportNext()">›</button>
+      </div>
+      <div style="font-size:9px;color:#7A5D1F;text-align:center;margin-bottom:8px">Download hasil pips tiap subscriber khusus bulan yang dipilih di atas</div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button class="btn btn-ghost" style="margin-bottom:0" onclick="exportSubscriberCSV(daftarSinyalPairGroup||'XAUUSD')">⬇️ CSV Laporan Subscriber</button>
-        <button class="btn btn-ghost" style="margin-bottom:0" onclick="exportSubscriberPDF(daftarSinyalPairGroup||'XAUUSD')">⬇️ PDF Laporan Subscriber</button>
+        <button class="btn btn-ghost" style="margin-bottom:0" onclick="exportSubscriberCSV(daftarSinyalPairGroup||'XAUUSD')">⬇️ CSV Hasil Bulan Ini</button>
+        <button class="btn btn-ghost" style="margin-bottom:0" onclick="exportSubscriberPDF(daftarSinyalPairGroup||'XAUUSD')">⬇️ PDF Hasil Bulan Ini</button>
       </div>
       <div id="daftarSubscriberWrap" style="margin-bottom:10px"></div>
       <label class="lbl">Nama Subscriber (opsional)</label>
@@ -5370,38 +5376,53 @@ function hitungPerformaSubscriber(g, sub){
   });
   return {totalPips, totalVp, jumlahSinyal:sinyalIkut.length, runningIkutCount:runningIkut.length, potensiWinPips, potensiWinVp, potensiLossPips, potensiLossVp, adaDataFallback, sinyalIkut, runningIkut};
 }
+// ── Versi per-bulan dari hitungPerformaSubscriber — cuma hitung sinyal closed yang
+// tanggalBuka-nya jatuh di bulan+tahun tertentu (dan tetap harus setelah subscriber join,
+// buat jaga-jaga kalau join-nya baru terjadi di tengah bulan itu). Dipakai khusus buat
+// laporan ringkas "hasil per bulan" yang bisa didownload. ──
+function hitungPerformaSubscriberBulan(g, sub, bulan, tahun){
+  const joinMs=new Date(sub.joinTanggal+'T'+(sub.joinJam||'00:00')).getTime();
+  const waktuBukaOf=r=> r.tanggalBuka ? new Date(r.tanggalBuka+'T'+(r.jamBuka||'00:00')).getTime() : new Date(r.tanggal+'T'+(r.jam||'00:00')).getTime();
+  const sinyalBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>{
+    if(r.status==='running')return false;
+    const ms=waktuBukaOf(r);
+    if(!isFinite(ms) || ms<joinMs) return false;
+    const d=new Date(ms);
+    return d.getMonth()===bulan && d.getFullYear()===tahun;
+  });
+  const totalPipsBulanIni=sinyalBulanIni.reduce((a,r)=>a+parseFloat(r.pips||0),0);
+  return {totalPipsBulanIni, jumlahSinyalBulanIni:sinyalBulanIni.length};
+}
 // ── Download laporan subscriber (CSV & PDF) — biar admin bisa kasih bukti/laporan yang
 // bisa didownload siapa aja (investor, subscriber sendiri, atau buat arsip pribadi). Satu
 // baris CSV = satu sinyal yang tersalin ke subscriber tsb, jadi bisa difilter/dikelompokkan
 // per nama subscriber di Excel. PDF-nya ringkasan per-subscriber + daftar sinyalnya. ──
+let subExportYear=new Date().getFullYear(), subExportMonth=new Date().getMonth();
+function renderSubExportLabel(){
+  const el=document.getElementById('subExportMonthLabel');
+  if(el) el.textContent=`${bulanNamaFull[subExportMonth]} ${subExportYear}`;
+}
+function subExportPrev(){subExportMonth--;if(subExportMonth<0){subExportMonth=11;subExportYear--;}renderSubExportLabel();}
+function subExportNext(){subExportMonth++;if(subExportMonth>11){subExportMonth=0;subExportYear++;}renderSubExportLabel();}
 async function exportSubscriberCSV(g){
   const list=cachedSubscriberList[g]||[];
   if(!list.length){toast('❌ Belum ada subscriber buat channel ini');return;}
-  const header=['nama_subscriber','join_tanggal','join_jam','end_tanggal','end_jam','target_win_pips','target_rugi_pips','total_pips_sekarang','status','sinyal_pair','sinyal_dibuka','sinyal_status','sinyal_pips'];
+  const namaBulan=bulanNamaFull[subExportMonth]+' '+subExportYear;
+  const header=['nama_subscriber','join_tanggal','join_jam','end_tanggal','end_jam','target_win_pips','target_rugi_pips','bulan','pips_bulan_ini','sinyal_bulan_ini','status_bulan_ini'];
   let csv=header.join(',')+'\n';
   const esc=v=>{ v=String(v==null?'':v).replace(/"/g,'""'); return (v.includes(',')||v.includes('"')||v.includes('\n')) ? `"${v}"` : v; };
   list.forEach(sub=>{
-    const {totalPips, sinyalIkut, runningIkut}=hitungPerformaSubscriber(g, sub);
-    const targetLoss=sub.targetPipsLoss||2000;
-    const status = totalPips<=-targetLoss ? 'KENA REM (wajib stop)' : (totalPips>=sub.targetPips ? 'Untung (target tercapai)' : (totalPips<0 ? 'Rugi (belum kena rem)' : 'Belum capai target'));
-    const semua=[...sinyalIkut.map(r=>({...r,_status:'Closed'})), ...runningIkut.map(r=>({...r,_status:'Running'}))];
-    const baseRow=[sub.nama, sub.joinTanggal, sub.joinJam, sub.endTanggal||'', sub.endJam||'', sub.targetPips, targetLoss, totalPips.toFixed(1), status];
-    if(!semua.length){
-      csv += [...baseRow,'','','',''].map(esc).join(',')+'\n';
-    } else {
-      semua.forEach(r=>{
-        const waktuBuka = r.tanggalBuka ? `${r.tanggalBuka} ${r.jamBuka||'00:00'}` : `${r.tanggal} ${r.jam||'00:00'} (perkiraan)`;
-        const pipsTxt = r._status==='Running' ? '' : parseFloat(r.pips||0).toFixed(1);
-        csv += [...baseRow, r.pair||g, waktuBuka, r._status, pipsTxt].map(esc).join(',')+'\n';
-      });
-    }
+    const {totalPipsBulanIni, jumlahSinyalBulanIni}=hitungPerformaSubscriberBulan(g, sub, subExportMonth, subExportYear);
+    const status = totalPipsBulanIni>0 ? 'Untung bulan ini' : (totalPipsBulanIni<0 ? 'Rugi bulan ini' : 'Belum ada sinyal closed bulan ini');
+    const row=[sub.nama, sub.joinTanggal, sub.joinJam, sub.endTanggal||'', sub.endJam||'', sub.targetPips, sub.targetPipsLoss||2000, namaBulan, totalPipsBulanIni.toFixed(1), jumlahSinyalBulanIni, status];
+    csv += row.map(esc).join(',')+'\n';
   });
-  const filename=`Laporan_Subscriber_${g}_${new Date().toISOString().slice(0,10)}.csv`;
+  const filename=`Hasil_Subscriber_${g}_${bulanNamaFull[subExportMonth]}_${subExportYear}.csv`;
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast('⬇️ CSV Laporan Subscriber berhasil didownload');
+  toast('⬇️ CSV Hasil Subscriber berhasil didownload');
 }
 async function exportSubscriberPDF(g){
   const list=cachedSubscriberList[g]||[];
@@ -5411,50 +5432,36 @@ async function exportSubscriberPDF(g){
     const { jsPDF }=window.jspdf;
     const doc=new jsPDF();
     let y=20;
+    const namaBulan=bulanNamaFull[subExportMonth]+' '+subExportYear;
     doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(20);
-    doc.text(`Laporan Subscriber — ${g}`, 14, y); y+=7;
+    doc.text(`Hasil Subscriber — ${g}`, 14, y); y+=7;
     doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(100);
-    doc.text('Marginkuat — Laporan Performa Subscriber (Rem 1000/2000)', 14, y); y+=6;
-    doc.text('Digenerate: '+new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}), 14, y); y+=10;
-    list.forEach((sub,idx)=>{
-      const {totalPips, sinyalIkut, runningIkut}=hitungPerformaSubscriber(g, sub);
-      const targetLoss=sub.targetPipsLoss||2000;
-      const kenaRem = totalPips<=-targetLoss;
-      const untung = totalPips>=sub.targetPips;
-      const statusTxt = kenaRem ? 'KENA REM (wajib stop)' : (untung ? 'Untung (target tercapai)' : (totalPips<0 ? 'Rugi (belum kena rem)' : 'Belum capai target'));
-      const statusColor = kenaRem ? [217,83,79] : (totalPips<0 ? [217,83,79] : (untung ? [62,145,66] : [200,168,75]));
-      if(y>260){ doc.addPage(); y=20; }
-      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(20);
-      doc.text(`${idx+1}. ${sub.nama}`, 14, y); y+=6;
-      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(90);
-      doc.text(`Join: ${sub.joinTanggal} ${sub.joinJam}   Berakhir: ${sub.endTanggal||'-'} ${sub.endJam||''}`, 14, y); y+=5;
-      doc.text(`Target Win: ${sub.targetPips} pips   Target Rugi: ${targetLoss} pips`, 14, y); y+=5;
-      doc.setFont('helvetica','bold');
-      doc.setTextColor(statusColor[0],statusColor[1],statusColor[2]);
-      doc.text(`Total: ${totalPips>=0?'+':''}${totalPips.toFixed(1)} pips — ${statusTxt}`, 14, y); y+=7;
-      const semua=[...sinyalIkut.map(r=>({...r,_status:'Closed'})), ...runningIkut.map(r=>({...r,_status:'Running'}))];
-      if(semua.length){
-        doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(90);
-        doc.text('Pair', 16, y); doc.text('Dibuka', 50, y); doc.text('Status', 110, y); doc.text('Pips', 140, y); y+=4;
-        doc.setFont('helvetica','normal');
-        semua.forEach(r=>{
-          if(y>280){ doc.addPage(); y=20; }
-          const waktuBuka = r.tanggalBuka ? `${r.tanggalBuka} ${r.jamBuka||'00:00'}` : `${r.tanggal} ${r.jam||'00:00'} (perkiraan)`;
-          const pipsVal = r._status==='Running' ? null : parseFloat(r.pips||0);
-          doc.setTextColor(60);
-          doc.text(String(r.pair||g), 16, y);
-          doc.text(waktuBuka, 50, y);
-          doc.text(r._status, 110, y);
-          if(pipsVal===null){ doc.setTextColor(200,168,75); doc.text('Running', 140, y); }
-          else{ doc.setTextColor(pipsVal<0?217:62, pipsVal<0?83:145, pipsVal<0?79:66); doc.text((pipsVal>=0?'+':'')+pipsVal.toFixed(1), 140, y); }
-          y+=4.5;
-        });
-      }
+    doc.text('Marginkuat — Laporan Hasil Bulanan Subscriber', 14, y); y+=6;
+    doc.text('Periode: '+namaBulan, 14, y); y+=10;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(90);
+    doc.text('Nama', 14, y); doc.text('Join', 60, y); doc.text('Target W/R', 100, y); doc.text('Pips Bulan Ini', 135, y); doc.text('Status', 170, y); y+=6;
+    doc.setDrawColor(200); doc.line(14,y-3,196,y-3);
+    doc.setFont('helvetica','normal');
+    list.forEach(sub=>{
+      const {totalPipsBulanIni, jumlahSinyalBulanIni}=hitungPerformaSubscriberBulan(g, sub, subExportMonth, subExportYear);
+      const status = totalPipsBulanIni>0 ? 'Untung' : (totalPipsBulanIni<0 ? 'Rugi' : 'Belum ada sinyal');
+      const warna = totalPipsBulanIni>0 ? [62,145,66] : (totalPipsBulanIni<0 ? [217,83,79] : [140,140,140]);
+      if(y>270){ doc.addPage(); y=20; }
+      doc.setTextColor(20);
+      doc.text(String(sub.nama).slice(0,20), 14, y);
+      doc.text(sub.joinTanggal, 60, y);
+      doc.text(`${sub.targetPips}/${sub.targetPipsLoss||2000}`, 100, y);
+      doc.setTextColor(warna[0],warna[1],warna[2]);
+      doc.text((totalPipsBulanIni>=0?'+':'')+totalPipsBulanIni.toFixed(1)+' ('+jumlahSinyalBulanIni+' sinyal)', 135, y);
+      doc.text(status, 170, y);
       y+=6;
     });
-    const filename=`Laporan_Subscriber_${g}_${new Date().toISOString().slice(0,10)}.pdf`;
+    y+=6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150);
+    doc.text('Digenerate otomatis oleh Marginkuat pada '+new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}), 14, 285);
+    const filename=`Hasil_Subscriber_${g}_${bulanNamaFull[subExportMonth]}_${subExportYear}.pdf`;
     doc.save(filename);
-    toast('⬇️ PDF Laporan Subscriber berhasil didownload');
+    toast('⬇️ PDF Hasil Subscriber berhasil didownload');
   }catch(e){
     console.error(e);
     toast('❌ Gagal bikin PDF: '+(e.message||'').slice(0,120));
@@ -14555,6 +14562,7 @@ async function exportLaporanTahunanExcel(){
 }
 
 renderExportLabel();
+renderSubExportLabel();
 renderTahunanLabel();
 loadTahunanPengelolaProfil();
 </script>
