@@ -5555,6 +5555,39 @@ function renderDaftarSubscriber(g){
         const wa=r=>r.tanggalBuka?new Date(r.tanggalBuka+'T'+(r.jamBuka||'00:00')).getTime():new Date(r.tanggal+'T'+(r.jam||'00:00')).getTime();
         return wa(a)-wa(b);
       });
+    // ── Mini equity curve khusus subscriber ini — dibangun dari kumulatif pips sinyal CLOSED
+    // yang tersalin (urut waktu buka), pakai gaya SVG yang sama kayak panel "Equity Curve"
+    // utama (garis hijau + zona drawdown merah), biar gampang dibaca sekilas tanpa perlu
+    // buka daftar mentahnya satu-satu. ──
+    const sinyalClosedUrut=semuaSinyalTersalin.filter(r=>r._status==='closed');
+    let miniEquityHtml='';
+    if(sinyalClosedUrut.length>1){
+      let cum=0, peak=0;
+      const pts=sinyalClosedUrut.map(r=>{ cum+=parseFloat(r.pips||0); if(cum>peak)peak=cum; return cum; });
+      const peakPts=[]; let pk=0; pts.forEach(v=>{ if(v>pk)pk=v; peakPts.push(pk); });
+      const W=300,H=70,padX=4,padY=6;
+      const minV=Math.min(...pts,0), maxV=Math.max(...pts,0);
+      const range=(maxV-minV)||1;
+      const stepX=(W-padX*2)/(pts.length-1);
+      const xFor=i=>padX+i*stepX;
+      const yFor=v=>H-padY-((v-minV)/range)*(H-padY*2);
+      let linePath=''; pts.forEach((v,i)=>{ const x=xFor(i),y=yFor(v); linePath+= i===0?`M ${x.toFixed(1)} ${y.toFixed(1)}`:` L ${x.toFixed(1)} ${y.toFixed(1)}`; });
+      const areaPath=linePath+` L ${xFor(pts.length-1).toFixed(1)} ${H} L ${xFor(0).toFixed(1)} ${H} Z`;
+      const forward=pts.map((v,i)=>`${i===0?'M':'L'} ${xFor(i).toFixed(1)} ${yFor(v).toFixed(1)}`).join(' ');
+      const backward=peakPts.map((v,i)=>`L ${xFor(pts.length-1-i).toFixed(1)} ${yFor(peakPts[pts.length-1-i]).toFixed(1)}`).join(' ');
+      const ddZonePath=forward+' '+backward+' Z';
+      miniEquityHtml=`<div style="margin-top:8px">
+        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:70px;display:block">
+          <path d="${areaPath}" fill="rgba(74,222,128,0.14)" stroke="none"></path>
+          <path d="${ddZonePath}" fill="rgba(248,113,113,0.28)" stroke="none"></path>
+          <path d="${linePath}" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+        </svg>
+        <div style="display:flex;justify-content:center;gap:12px;margin-top:3px;font-size:7px;color:#D8D8D8">
+          <span><span style="color:#4ADE80">●</span> Pips Kumulatif</span>
+          <span><span style="color:#F87171">■</span> Zona Drawdown</span>
+        </div>
+      </div>`;
+    }
     const detailId=`detailSinyalSub_${sub.id}`;
     const detailListHtml=semuaSinyalTersalin.map(r=>{
       const waktuBuka = r.tanggalBuka ? `${r.tanggalBuka} ${r.jamBuka||'00:00'}` : `${r.tanggal} ${r.jam||'00:00'} (perkiraan)`;
@@ -5572,7 +5605,11 @@ function renderDaftarSubscriber(g){
       </div>`;
     }).join('') || `<div style="font-size:8px;color:#EDEDED;padding:3px 0">Belum ada sinyal yang tersalin sejak join.</div>`;
     const detailToggleHtml=`
-      <div style="font-size:8px;color:#FFFFFF;font-weight:700;margin-top:8px;padding-top:6px;border-top:1px solid #ffffff33">📋 SINYAL YANG TERSALIN (${semuaSinyalTersalin.length}) <span onclick="const el=document.getElementById('${detailId}'); el.style.display = el.style.display==='none' ? 'block' : 'none';" style="text-decoration:underline;cursor:pointer;font-weight:400">(sembunyikan/tampilkan)</span></div>
+      ${miniEquityHtml}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid #ffffff33">
+        <div style="font-size:8px;color:#FFFFFF;font-weight:700">📋 SINYAL YANG TERSALIN (${semuaSinyalTersalin.length})</div>
+        <span onclick="const el=document.getElementById('${detailId}'); const btn=document.getElementById('${detailId}_btn'); const buka=el.style.display==='none'; el.style.display = buka ? 'block' : 'none'; if(btn) btn.textContent = buka ? 'Sembunyikan ▲' : 'Tampilkan ▼';" id="${detailId}_btn" style="font-size:8px;color:#3A2E10;font-weight:700;background:#FFFFFF;border-radius:5px;padding:2px 7px;cursor:pointer">Sembunyikan ▲</span>
+      </div>
       <div id="${detailId}" style="display:block;margin-top:4px;background:#ffffff0d;border-radius:6px;padding:4px 6px">${detailListHtml}</div>`;
     return `<div style="background:var(--bg0);border:1.5px solid ${warna};border-radius:9px;padding:9px 11px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
