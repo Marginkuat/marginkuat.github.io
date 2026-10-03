@@ -5186,12 +5186,18 @@ function renderRekapPair(){
     const warna=d.vp>0?'#3E9142':(d.vp<0?'#D9534F':'#8A6B26');
     const ikon=d.vp>0?'🟢':(d.vp<0?'🔴':'⚪');
     const wr=d.total?Math.round(d.win/d.total*100):0;
+    // Label STOP hanya untuk bulan berjalan (bulan lama sudah selesai, label tidak relevan)
+    const labelStop = (rekapPairBulanDipilih===bulanIni)
+      ? (d.vp>0 ? `<div style="display:inline-block;margin-top:5px;padding:2px 8px;border-radius:20px;background:#3A0E0E;border:1px solid #D9534F;color:#F87171;font-size:9px;font-weight:800;letter-spacing:.4px">🛑 STOP TRADING — sudah profit</div>`
+        : (d.vp<0 ? `<div style="display:inline-block;margin-top:5px;padding:2px 8px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);color:#B8924A;font-size:9px;font-weight:700">⏳ Belum profit — masih boleh lanjut</div>` : ''))
+      : '';
     return `<div style="background:var(--bg0);border:1px dashed var(--border);border-left:3px solid ${warna};border-radius:9px;padding:8px 10px;margin-bottom:6px">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <div style="font-size:11px;font-weight:800;color:#3A2E10">${ikon} ${key}</div>
         <div style="font-size:8px;color:#8A6B26">${d.total} sinyal (${d.win}W/${d.loss}L) · WR ${wr}%</div>
       </div>
       <div style="font-size:13px;font-weight:800;color:${warna};margin-top:2px">${d.vp>=0?'+':''}${d.vp.toFixed(2)} VP <span style="font-size:9px;font-weight:400;color:#8A6B26">(${d.pips>=0?'+':''}${d.pips.toFixed(1)} pip)</span></div>
+      ${labelStop}
     </div>`;
   };
   const judul=(txt,warna)=>`<div style="font-size:9px;font-weight:800;color:${warna};text-transform:uppercase;letter-spacing:.6px;margin:10px 0 6px">${txt}</div>`;
@@ -5205,6 +5211,7 @@ function renderRekapPair(){
       <div style="flex:1;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:6px;text-align:center">
         <div style="font-size:14px;font-weight:800;color:${warnaNet}">${netVp>=0?'+':''}${netVp.toFixed(2)}</div><div style="font-size:8px;color:#8A6B26">NET VP</div></div>
     </div>
+    ${(rekapPairBulanDipilih===bulanIni && profitKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🛑 STOP TRADING bulan ini:</div><div style="font-size:11px;font-weight:800;color:#F0B8B8;margin-top:2px">${profitKeys.join(' · ')}</div><div style="font-size:8px;color:#F0B8B8;margin-top:3px">Sudah profit — amankan cuan, jangan buka sinyal baru di pair ini sampai bulan depan.</div></div>`:''}
     ${profitKeys.length?judul('✅ Pair Profit','#3E9142')+profitKeys.map(kartu).join(''):''}
     ${lossKeys.length?judul('❌ Pair Loss','#D9534F')+lossKeys.slice().reverse().map(kartu).join(''):''}
     ${keys.filter(k=>grup[k].vp===0).length?judul('⚪ Impas','#8A6B26')+keys.filter(k=>grup[k].vp===0).map(kartu).join(''):''}${catatanNonForex}`;
