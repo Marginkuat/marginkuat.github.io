@@ -1561,7 +1561,7 @@ function renderInvCalcDisclaimer(){
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
       <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">🚦 REM Pips</div>
-      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Batas bulanan tiap channel, satuan PIPS. Simetris: kena +batas boleh berhenti karena udah cuan, kena -batas WAJIB stop trading channel itu bulan ini.</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Batas bulanan tiap channel, satuan PIPS. Batas rugi (wajib stop) dan target untung (boleh stop lalu wajib stop) diatur terpisah lewat Ubah Batas.</div>
       <div id="remPipsWrap"><div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div></div>
     </div>
 
@@ -5180,6 +5180,10 @@ function renderRekapPair(){
   const keys=Object.keys(grup).sort((a,b)=>grup[b].vp-grup[a].vp);
   const profitKeys=keys.filter(k=>grup[k].vp>0);
   const lossKeys=keys.filter(k=>grup[k].vp<0);
+  // ── ATURAN KUNCI PAIR (bulan berjalan): ada WIN = stop; rugi 2x tanpa win = terkunci/stop; rugi 1x = peringatan ──
+  const winKeys=keys.filter(k=>grup[k].win>=1);
+  const lockKeys=keys.filter(k=>grup[k].win===0 && grup[k].loss>=2);
+  const warnKeys=keys.filter(k=>grup[k].win===0 && grup[k].loss===1);
   const netVp=keys.reduce((s,k)=>s+grup[k].vp,0);
   const netPip=keys.reduce((s,k)=>s+grup[k].pips,0);
   const kartu=key=>{
@@ -5188,10 +5192,14 @@ function renderRekapPair(){
     const ikon=d.vp>0?'🟢':(d.vp<0?'🔴':'⚪');
     const wr=d.total?Math.round(d.win/d.total*100):0;
     // Label STOP hanya untuk bulan berjalan (bulan lama sudah selesai, label tidak relevan)
-    const labelStop = (rekapPairBulanDipilih===bulanIni)
-      ? (d.vp>0 ? `<div style="display:inline-block;margin-top:5px;padding:2px 8px;border-radius:20px;background:#3A0E0E;border:1px solid #D9534F;color:#F87171;font-size:9px;font-weight:800;letter-spacing:.4px">🛑 STOP TRADING — sudah profit</div>`
-        : (d.vp<0 ? `<div style="display:inline-block;margin-top:5px;padding:2px 8px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);color:#B8924A;font-size:9px;font-weight:700">⏳ Belum profit — masih boleh lanjut</div>` : ''))
-      : '';
+    const pill=(bg,bd,tc,teks)=>`<div style="display:inline-block;margin-top:5px;padding:2px 8px;border-radius:20px;background:${bg};border:1px solid ${bd};color:${tc};font-size:9px;font-weight:800;letter-spacing:.3px">${teks}</div>`;
+    let labelStop='';
+    if(rekapPairBulanDipilih===bulanIni){
+      if(d.win>=1) labelStop=pill('#3A0E0E','#D9534F','#F87171','🛑 STOP — sudah WIN');
+      else if(d.loss>=3) labelStop=pill('#3A0E0E','#D9534F','#F87171','🔒 TERKUNCI — rugi '+d.loss+'x (MELEBIHI aturan 2x!)');
+      else if(d.loss===2) labelStop=pill('#3A0E0E','#D9534F','#F87171','🔒 TERKUNCI — rugi 2x, STOP');
+      else if(d.loss===1) labelStop=pill('#2A2410','#C99A2E','#E0B84B','⚠️ Rugi 1x — tinggal 1 kesempatan');
+    }
     return `<div style="background:var(--bg0);border:1px dashed var(--border);border-left:3px solid ${warna};border-radius:9px;padding:8px 10px;margin-bottom:6px">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <div style="font-size:11px;font-weight:800;color:#3A2E10">${ikon} ${key}</div>
@@ -5212,7 +5220,9 @@ function renderRekapPair(){
       <div style="flex:1;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:6px;text-align:center">
         <div style="font-size:14px;font-weight:800;color:${warnaNet}">${netVp>=0?'+':''}${netVp.toFixed(2)}</div><div style="font-size:8px;color:#8A6B26">NET VP</div><div style="font-size:11px;font-weight:800;color:${warnaNet};margin-top:3px;padding-top:3px;border-top:1px dashed var(--border)">${netPip>=0?'+':''}${netPip.toFixed(1)} pip</div></div>
     </div>
-    ${(rekapPairBulanDipilih===bulanIni && profitKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🛑 STOP TRADING bulan ini:</div><div style="font-size:11px;font-weight:800;color:#F0B8B8;margin-top:2px">${profitKeys.join(' · ')}</div><div style="font-size:8px;color:#F0B8B8;margin-top:3px">Sudah profit — amankan cuan, jangan buka sinyal baru di pair ini sampai bulan depan.</div></div>`:''}
+    ${(rekapPairBulanDipilih===bulanIni && lockKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🔒 TERKUNCI — rugi 2x, JANGAN trading:</div><div style="font-size:11px;font-weight:800;color:#F0B8B8;margin-top:2px">${lockKeys.join(' · ')}</div><div style="font-size:8px;color:#F0B8B8;margin-top:3px">Pair ini sudah kena batas rugi. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
+    ${(rekapPairBulanDipilih===bulanIni && winKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🛑 STOP — sudah WIN, amankan cuan:</div><div style="font-size:11px;font-weight:800;color:#F0B8B8;margin-top:2px">${winKeys.join(' · ')}</div><div style="font-size:8px;color:#F0B8B8;margin-top:3px">Pair ini sudah menang. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
+    ${(rekapPairBulanDipilih===bulanIni && warnKeys.length)?`<div style="background:#241E0B;border:1.5px solid #C99A2E;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#E0B84B">⚠️ HATI-HATI — sudah rugi 1x (tinggal 1 kesempatan):</div><div style="font-size:11px;font-weight:800;color:#F0DFA0;margin-top:2px">${warnKeys.join(' · ')}</div></div>`:''}
     ${profitKeys.length?judul('✅ Pair Profit','#3E9142')+profitKeys.map(kartu).join(''):''}
     ${lossKeys.length?judul('❌ Pair Loss','#D9534F')+lossKeys.slice().reverse().map(kartu).join(''):''}
     ${keys.filter(k=>grup[k].vp===0).length?judul('⚪ Impas','#8A6B26')+keys.filter(k=>grup[k].vp===0).map(kartu).join(''):''}${catatanNonForex}`;
@@ -5841,33 +5851,41 @@ async function editTanggalMulaiChannel(g){
 // pips BULAN INI (bukan rolling 6 bulan seperti Score) — mirip REM lama tapi versi analis.
 // ══════════════════════════════════════════
 const PIP_VALUE_USD_PER_0_01_LOT = 0.10; // referensi tampilan aja: 100pip=$10=0,01 lot (forex & gold sama)
-let cachedRemPips={XAUUSD:2000, FOREX:2000}; // default sesuai kesepakatan terbaru: XAUUSD & Forex sama-sama ±2000 (sisi "LOSS"/wajib stop dari target rem)
+// REM Pips ASIMETRIS: batas RUGI (wajib stop) terpisah dari target UNTUNG (boleh stop mulai MIN, wajib stop di MAX).
+let cachedRemPips={XAUUSD:1000, FOREX:1000};      // batas rugi bulanan (pips) — kena = WAJIB stop
+let cachedTargetMin={XAUUSD:1000, FOREX:1000};    // untung >= ini = BOLEH berhenti
+let cachedTargetMax={XAUUSD:2000, FOREX:2000};    // untung >= ini = WAJIB berhenti (maksimal)
 async function loadRemPips(){
   for(const g of ['XAUUSD','FOREX']){
     try{
       const rows=await api('app_settings?select=value&key=eq.rem_pips_'+g);
-      if(rows && rows.length && rows[0].value){
-        const v=parseFloat(rows[0].value);
-        if(isFinite(v) && v>0) cachedRemPips[g]=v;
-      }
+      if(rows && rows.length && rows[0].value){ const v=parseFloat(rows[0].value); if(isFinite(v) && v>0) cachedRemPips[g]=v; }
+      const rMin=await api('app_settings?select=value&key=eq.rem_pips_min_'+g);
+      if(rMin && rMin.length && rMin[0].value){ const v=parseFloat(rMin[0].value); if(isFinite(v) && v>0) cachedTargetMin[g]=v; }
+      const rMax=await api('app_settings?select=value&key=eq.rem_pips_max_'+g);
+      if(rMax && rMax.length && rMax[0].value){ const v=parseFloat(rMax[0].value); if(isFinite(v) && v>0) cachedTargetMax[g]=v; }
     }catch(e){ console.error('Gagal load rem_pips_'+g, e); }
   }
+}
+async function simpanSettingRem(key,val){
+  const existing=await api('app_settings?select=key&key=eq.'+key);
+  if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:String(val)}); }
+  else{ await api('app_settings','POST',{key,value:String(val)}); }
 }
 async function editRemPips(g){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah REM Pips');return;}
   const labelGrup=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||(g==='FOREX'?'Forex':g);
-  const input=prompt(`[${labelGrup}] Batas REM (simetris, dalam PIPS). Kena +batas = boleh berhenti karena udah cuan, kena -batas = WAJIB stop.\n\nContoh: "2000" artinya ±2000 pips.`, String(cachedRemPips[g]));
+  const cur=cachedRemPips[g]+','+cachedTargetMin[g]+','+cachedTargetMax[g];
+  const input=prompt(`[${labelGrup}] Isi 3 angka (PIPS) dipisah koma:\nBATAS RUGI, TARGET BOLEH STOP, TARGET MAKSIMAL\n\nContoh: 1000,1000,2000\n= rugi 1000 pip WAJIB stop; untung 1000 pip boleh stop; untung 2000 pip wajib stop.`, cur);
   if(input===null)return;
-  const v=parseFloat(input);
-  if(!isFinite(v)||v<=0){toast('❌ Angka gak valid');return;}
+  const p=input.split(',').map(x=>parseFloat(x.trim()));
+  if(p.length!==3 || p.some(v=>!isFinite(v)||v<=0) || p[1]>p[2]){toast('❌ Format: rugi,min,max — contoh 1000,1000,2000 (min tidak boleh > max)');return;}
   try{
-    const payload=String(v);
-    const key='rem_pips_'+g;
-    const existing=await api('app_settings?select=key&key=eq.'+key);
-    if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:payload}); }
-    else{ await api('app_settings','POST',{key,value:payload}); }
-    cachedRemPips[g]=v;
-    toast(`✅ REM ${labelGrup} diset ±${v} pips`);
+    await simpanSettingRem('rem_pips_'+g,p[0]);
+    await simpanSettingRem('rem_pips_min_'+g,p[1]);
+    await simpanSettingRem('rem_pips_max_'+g,p[2]);
+    cachedRemPips[g]=p[0]; cachedTargetMin[g]=p[1]; cachedTargetMax[g]=p[2];
+    toast(`✅ ${labelGrup}: rugi -${p[0]} · stop boleh +${p[1]} · wajib +${p[2]} pips`);
     renderRemPipsCard();
   }catch(e){
     console.error(e);
@@ -5879,22 +5897,28 @@ function renderRemPipsCard(){
   if(!wrap)return;
   const potongan=['XAUUSD','FOREX'].map(g=>{
     const labelGrup=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
-    const batas=cachedRemPips[g]||0;
+    const batasRugi=cachedRemPips[g]||0, tMin=cachedTargetMin[g]||0, tMax=cachedTargetMax[g]||0;
     const now=new Date();
     const rowsBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>{
       const d=new Date(r.tanggal);
       return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
     });
-    const totalPipsBulanIni=rowsBulanIni.reduce((s,r)=>s+parseFloat(r.pips||0),0);
-    const pct=batas>0 ? Math.max(-100,Math.min(100, totalPipsBulanIni/batas*100)) : 0;
-    const kenaAtas = batas>0 && totalPipsBulanIni>=batas;
-    const kenaBawah = batas>0 && totalPipsBulanIni<=-batas;
-    const warnaBar = kenaBawah ? '#D9534F' : kenaAtas ? '#3E9142' : '#C99A2E';
-    const pctPos=(pct+100)/2;
-    let statusTeks='Masih dalam batas normal';
+    const total=rowsBulanIni.reduce((s,r)=>s+parseFloat(r.pips||0),0);
+    const kenaRugi = batasRugi>0 && total<=-batasRugi;
+    const kenaMax = tMax>0 && total>=tMax;
+    const kenaMin = tMin>0 && total>=tMin && !kenaMax;
+    const warnaBar = kenaRugi ? '#D9534F' : (kenaMax||kenaMin) ? '#3E9142' : '#C99A2E';
+    const span=batasRugi+tMax;
+    const posNol = span>0 ? batasRugi/span*100 : 50;
+    const clamp=Math.max(-batasRugi,Math.min(tMax,total));
+    const posNow = span>0 ? (clamp+batasRugi)/span*100 : 50;
+    const kiri=Math.min(posNol,posNow), lebar=Math.abs(posNow-posNol);
+    const posMin = span>0 ? (batasRugi+tMin)/span*100 : 100;
+    let statusTeks=`Masih jalan — sisa ${Math.max(0,tMin-total).toFixed(0)} pip menuju target boleh-stop`;
     let statusWarna='#8A6B26';
-    if(kenaBawah){ statusTeks='🔴 KENA REM — batas rugi bulanan tercapai, disiplin STOP dulu bulan ini'; statusWarna='#D9534F'; }
-    else if(kenaAtas){ statusTeks='🎉 Target tercapai — boleh berhenti, udah cuan sesuai batas'; statusWarna='#3E9142'; }
+    if(kenaRugi){ statusTeks='🔴 KENA BATAS RUGI — WAJIB STOP trading bulan ini'; statusWarna='#D9534F'; }
+    else if(kenaMax){ statusTeks='🛑 TARGET MAKSIMAL tercapai — WAJIB STOP, amankan cuan bulan ini'; statusWarna='#3E9142'; }
+    else if(kenaMin){ statusTeks='🎉 Target tercapai — BOLEH berhenti (maks sampai +'+tMax+' pip)'; statusWarna='#3E9142'; }
     return `
     <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:${g==='XAUUSD'?'10px':'0'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -5902,17 +5926,17 @@ function renderRemPipsCard(){
         <span onclick="editRemPips('${g}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah Batas</span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:9px;color:#8A6B26;margin-bottom:4px">
-        <span>-${batas} pip</span>
+        <span style="color:#D9534F">-${batasRugi} (stop)</span>
         <span>0</span>
-        <span>+${batas} pip</span>
+        <span style="color:#3E9142">+${tMin} boleh · +${tMax} wajib</span>
       </div>
       <div style="position:relative;height:8px;background:var(--bg0);border-radius:6px;overflow:hidden">
-        <div style="position:absolute;left:${Math.min(50,pctPos)}%;right:${Math.max(0,50-pctPos)}%;top:0;bottom:0;background:${warnaBar};display:${pctPos>=50?'block':'none'}"></div>
-        <div style="position:absolute;right:${Math.min(50,100-pctPos)}%;left:${Math.max(0,pctPos-50)}%;top:0;bottom:0;background:${warnaBar};display:${pctPos<50?'block':'none'}"></div>
-        <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border)"></div>
+        <div style="position:absolute;left:${kiri}%;width:${lebar}%;top:0;bottom:0;background:${warnaBar}"></div>
+        <div style="position:absolute;left:${posNol}%;top:0;bottom:0;width:1px;background:var(--border)"></div>
+        <div style="position:absolute;left:${posMin}%;top:0;bottom:0;width:1px;background:#3E9142;opacity:.7"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:9px;color:#7A5D1F;margin-top:4px">
-        <span>${totalPipsBulanIni>=0?'+':''}${totalPipsBulanIni.toFixed(1)} pip bulan ini</span>
+        <span>${total>=0?'+':''}${total.toFixed(1)} pip bulan ini</span>
         <span>${rowsBulanIni.length} sinyal</span>
       </div>
       <div style="text-align:center;font-size:10px;color:${statusWarna};margin-top:8px;font-weight:700">${statusTeks}</div>
