@@ -1615,7 +1615,7 @@ function renderInvCalcDisclaimer(){
         <div style="flex:1"><label class="lbl">Jam dibuka</label><input class="inp" type="time" id="inpRingkasJamBuka"></div>
       </div>
       <div style="font-size:8px;color:#7A5D1F;margin-top:-4px;margin-bottom:6px">⏱️ Isi ini kalau ada subscriber — dipakai buat ngecek "sinyal ini kecopy siapa aja" berdasarkan waktu dia join. Boleh dikosongin kalau gak perlu.</div>
-      <label class="lbl">Batch / Grup (opsional — buat ngelompokin sinyal, mis. "Forex 4 Sep")</label>
+      <label class="lbl">Batch / Grup (OPSIONAL — kosongin aja, otomatis dikelompokkan per tanggal)</label>
       <input class="inp" type="text" id="inpRingkasBatch" placeholder="mis. Forex 4 Sep">
       <label class="lbl">Pips — isi minus kalau rugi, mis. -30</label>
       <input class="inp" type="number" step="0.1" id="inpRingkasPips" placeholder="-30" oninput="autoHitungVpRingkas()">
@@ -1688,7 +1688,14 @@ function renderInvCalcDisclaimer(){
     </div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📦 Ringkasan Net VP per Batch (channel ini)</div>
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">💱 Rekap per Pair / Mata Uang (channel ini)</div>
+      <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Sinyal closed dikelompokkan per pair — langsung kelihatan pair mana yang PROFIT dan mana yang LOSS.</div>
+      <select class="inp" id="rekapPairBulan" onchange="rekapPairBulanDipilih=this.value;renderRekapPair()" style="margin-bottom:10px"></select>
+      <div id="rekapPairWrap"></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📦 Ringkasan Net VP per Hari/Batch (otomatis — ikut bulan terpilih di atas)</div>
       <div id="ringkasanBatchWrap"></div>
     </div>
 
@@ -4615,6 +4622,14 @@ async function simpanDataHarianRingkas(){
 }
 // ── Edit & Hapus sinyal — jaga-jaga kalau salah input ──
 let daftarSinyalExpanded=false;
+let daftarSinyalBulanBuka={};
+function toggleBulanRiwayat(k){
+  const sekarang=new Date();
+  const kini=sekarang.getFullYear()+'-'+String(sekarang.getMonth()+1).padStart(2,'0');
+  const terbuka=(k in daftarSinyalBulanBuka)?daftarSinyalBulanBuka[k]:(k===kini);
+  daftarSinyalBulanBuka[k]=!terbuka;
+  renderDaftarSinyal();
+}
 async function hapusSinyal(g, id){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const item=(cachedSinyalAnalis[g]||[]).find(r=>r.id===id);
@@ -4682,9 +4697,7 @@ function renderDaftarSinyal(){
   }
   const jumlahTercocok=list.filter(r=>r.cocok).length;
   const ringkasanCocokHtml=`<div style="font-size:9px;color:#8A6B26;text-align:right;margin-bottom:4px">✅ Dicocokkan: ${jumlahTercocok}/${list.length}</div>`;
-  const BATAS_TAMPIL=4;
-  const tampil = daftarSinyalExpanded ? list : list.slice(0,BATAS_TAMPIL);
-  const baris = tampil.map(r=>{
+  const barisHtml=r=>{
     const warnaPip = r.pips>=0 ? '#3E9142' : '#D9534F';
     const cocok=!!r.cocok;
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);${cocok?'opacity:0.55':''}">
@@ -4700,12 +4713,31 @@ function renderDaftarSinyal(){
         <span onclick="hapusSinyal('${g}','${r.id}')" style="font-size:14px;cursor:pointer">🗑️</span>
       </div>
     </div>`;
+  };
+  // ── Dikelompokkan PER BULAN. Bulan berjalan terbuka otomatis; bulan lama dilipat (tap untuk buka).
+  // Data tetap tersimpan utuh — ini cuma cara tampilnya. ──
+  const nmBln=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const nowD=new Date();
+  const bulanSekarang=nowD.getFullYear()+'-'+String(nowD.getMonth()+1).padStart(2,'0');
+  const perBulan={};
+  list.forEach(r=>{ const k=bulanKeyOf(r.tanggal); (perBulan[k]=perBulan[k]||[]).push(r); });
+  const urutBulan=Object.keys(perBulan).sort().reverse();
+  const baris=urutBulan.map(k=>{
+    const arr=perBulan[k];
+    const totVp=arr.reduce((t,r)=>t+parseFloat(r.vp||0),0);
+    const totPip=arr.reduce((t,r)=>t+parseFloat(r.pips||0),0);
+    const buka = (k in daftarSinyalBulanBuka) ? daftarSinyalBulanBuka[k] : (k===bulanSekarang);
+    const warna=totVp>=0?'#3E9142':'#D9534F';
+    const label=nmBln[parseInt(k.slice(5),10)-1]+' '+k.slice(0,4)+(k===bulanSekarang?' (bulan ini)':'');
+    return `<div style="margin-bottom:10px">
+      <div onclick="toggleBulanRiwayat('${k}')" style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:8px 10px;cursor:pointer">
+        <div style="font-size:11px;font-weight:800;color:#C8A84B">${buka?'▼':'▶'} 📅 ${label}</div>
+        <div style="text-align:right"><div style="font-size:10px;font-weight:800;color:${warna}">${totVp>=0?'+':''}${totVp.toFixed(2)} VP</div><div style="font-size:8px;color:#8A6B26">${arr.length} sinyal · ${totPip>=0?'+':''}${totPip.toFixed(1)} pip</div></div>
+      </div>
+      ${buka?arr.map(barisHtml).join(''):''}
+    </div>`;
   }).join('');
-  const sisaJumlah=list.length-BATAS_TAMPIL;
-  const tombolToggle = list.length>BATAS_TAMPIL
-    ? `<div onclick="toggleDaftarSinyal()" style="text-align:center;font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline;padding-top:8px">${daftarSinyalExpanded?'Sembunyikan':'Tampilkan '+sisaJumlah+' lainnya'}</div>`
-    : '';
-  wrap.innerHTML=ringkasanCocokHtml+baris+tombolToggle;
+  wrap.innerHTML=ringkasanCocokHtml+baris;
   renderDaftarRunning();
   renderRingkasanBatch();
 }
@@ -5112,26 +5144,98 @@ async function tutupSinyalRunning(g, id, jenis){
 // ── Ringkasan Net VP per Batch — kelompokkan sinyal CLOSED (bukan yang masih running)
 // berdasarkan label batch, biar kelihatan mana batch yang net-nya nambah buffer VP dan mana
 // yang justru gerus. Sinyal tanpa batch label dikumpulkan jadi satu grup "(tanpa batch)". ──
+let rekapPairBulanDipilih=null;
+function renderRekapPair(){
+  const wrap=document.getElementById('rekapPairWrap');
+  if(!wrap)return;
+  const g=daftarSinyalPairGroup||'XAUUSD';
+  const semuaClosed=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running');
+  const nm=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const labelBulan=k=>k==='ALL'?'Semua bulan':nm[parseInt(k.slice(5),10)-1]+' '+k.slice(0,4);
+  const now=new Date();
+  const bulanIni=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const setBulan=new Set([bulanIni]);
+  semuaClosed.forEach(r=>setBulan.add(bulanKeyOf(r.tanggal)));
+  const daftarBulan=[...setBulan].sort().reverse();
+  if(!rekapPairBulanDipilih || (rekapPairBulanDipilih!=='ALL' && !setBulan.has(rekapPairBulanDipilih))) rekapPairBulanDipilih=bulanIni;
+  const sel=document.getElementById('rekapPairBulan');
+  if(sel){
+    sel.innerHTML=daftarBulan.map(k=>`<option value="${k}">${labelBulan(k)}${k===bulanIni?' (bulan ini)':''}</option>`).join('')+'<option value="ALL">Semua bulan</option>';
+    sel.value=rekapPairBulanDipilih;
+  }
+  const closedList=rekapPairBulanDipilih==='ALL'?semuaClosed:semuaClosed.filter(r=>bulanKeyOf(r.tanggal)===rekapPairBulanDipilih);
+  const catatanNonForex='';
+  if(!closedList.length){
+    wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Belum ada sinyal closed di ${labelBulan(rekapPairBulanDipilih)}.</div>`;
+    return;
+  }
+  const grup={};
+  closedList.forEach(r=>{
+    const key=(r.simbol||g).toString().toUpperCase();
+    if(!grup[key]) grup[key]={pips:0, vp:0, win:0, loss:0, total:0};
+    const p=parseFloat(r.pips||0), v=parseFloat(r.vp||0);
+    grup[key].pips+=p; grup[key].vp+=v; grup[key].total+=1;
+    if(p>0) grup[key].win+=1; else if(p<0) grup[key].loss+=1;
+  });
+  const keys=Object.keys(grup).sort((a,b)=>grup[b].vp-grup[a].vp);
+  const profitKeys=keys.filter(k=>grup[k].vp>0);
+  const lossKeys=keys.filter(k=>grup[k].vp<0);
+  const netVp=keys.reduce((s,k)=>s+grup[k].vp,0);
+  const kartu=key=>{
+    const d=grup[key];
+    const warna=d.vp>0?'#3E9142':(d.vp<0?'#D9534F':'#8A6B26');
+    const ikon=d.vp>0?'🟢':(d.vp<0?'🔴':'⚪');
+    const wr=d.total?Math.round(d.win/d.total*100):0;
+    return `<div style="background:var(--bg0);border:1px dashed var(--border);border-left:3px solid ${warna};border-radius:9px;padding:8px 10px;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div style="font-size:11px;font-weight:800;color:#3A2E10">${ikon} ${key}</div>
+        <div style="font-size:8px;color:#8A6B26">${d.total} sinyal (${d.win}W/${d.loss}L) · WR ${wr}%</div>
+      </div>
+      <div style="font-size:13px;font-weight:800;color:${warna};margin-top:2px">${d.vp>=0?'+':''}${d.vp.toFixed(2)} VP <span style="font-size:9px;font-weight:400;color:#8A6B26">(${d.pips>=0?'+':''}${d.pips.toFixed(1)} pip)</span></div>
+    </div>`;
+  };
+  const judul=(txt,warna)=>`<div style="font-size:9px;font-weight:800;color:${warna};text-transform:uppercase;letter-spacing:.6px;margin:10px 0 6px">${txt}</div>`;
+  const warnaNet=netVp>=0?'#3E9142':'#D9534F';
+  wrap.innerHTML=`
+    <div style="display:flex;gap:6px;margin-bottom:4px">
+      <div style="flex:1;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:6px;text-align:center">
+        <div style="font-size:14px;font-weight:800;color:#3E9142">${profitKeys.length}</div><div style="font-size:8px;color:#8A6B26">PAIR PROFIT</div></div>
+      <div style="flex:1;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:6px;text-align:center">
+        <div style="font-size:14px;font-weight:800;color:#D9534F">${lossKeys.length}</div><div style="font-size:8px;color:#8A6B26">PAIR LOSS</div></div>
+      <div style="flex:1;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:6px;text-align:center">
+        <div style="font-size:14px;font-weight:800;color:${warnaNet}">${netVp>=0?'+':''}${netVp.toFixed(2)}</div><div style="font-size:8px;color:#8A6B26">NET VP</div></div>
+    </div>
+    ${profitKeys.length?judul('✅ Pair Profit','#3E9142')+profitKeys.map(kartu).join(''):''}
+    ${lossKeys.length?judul('❌ Pair Loss','#D9534F')+lossKeys.slice().reverse().map(kartu).join(''):''}
+    ${keys.filter(k=>grup[k].vp===0).length?judul('⚪ Impas','#8A6B26')+keys.filter(k=>grup[k].vp===0).map(kartu).join(''):''}${catatanNonForex}`;
+}
 function renderRingkasanBatch(){
   const wrap=document.getElementById('ringkasanBatchWrap');
   if(!wrap)return;
   const g=daftarSinyalPairGroup||'XAUUSD';
-  const closedList=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running');
+  if(typeof renderRekapPair==='function') renderRekapPair(); // pastikan bulan terpilih sudah ke-set
+  const closedAll=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running');
+  const closedList=(!rekapPairBulanDipilih||rekapPairBulanDipilih==='ALL')?closedAll:closedAll.filter(r=>bulanKeyOf(r.tanggal)===rekapPairBulanDipilih);
   if(!closedList.length){
-    wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Belum ada sinyal closed buat diringkas.</div>`;
+    wrap.innerHTML=`<div style="font-size:9px;color:#8A6B26;text-align:center;padding:6px">Belum ada sinyal closed di bulan ini.</div>`;
     renderKalkulatorRemSinyal(g);
     return;
   }
   const grup={};
   closedList.forEach(r=>{
-    const key=r.batch||'(tanpa batch)';
-    if(!grup[key]) grup[key]={pips:0, vp:0, win:0, loss:0, total:0};
+    // Otomatis: kalau batch dikosongin, dikelompokkan per TANGGAL sinyal ditutup (mis. "3 Okt 2026")
+    const bln=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const dt=new Date(r.tanggal);
+    const keyOtomatis=isNaN(dt)?'(tanpa tanggal)':dt.getDate()+' '+bln[dt.getMonth()]+' '+dt.getFullYear();
+    const key=(r.batch&&String(r.batch).trim())||keyOtomatis;
+    if(!grup[key]) grup[key]={pips:0, vp:0, win:0, loss:0, total:0, last:''};
+    if((r.tanggal||'')>grup[key].last) grup[key].last=r.tanggal||'';
     grup[key].pips+=parseFloat(r.pips||0);
     grup[key].vp+=parseFloat(r.vp||0);
     grup[key].total+=1;
     if(parseFloat(r.pips||0)>0) grup[key].win+=1; else if(parseFloat(r.pips||0)<0) grup[key].loss+=1;
   });
-  const keys=Object.keys(grup).sort((a,b)=>grup[b].vp-grup[a].vp);
+  const keys=Object.keys(grup).sort((a,b)=>(grup[b].last>grup[a].last?1:grup[b].last<grup[a].last?-1:0));
   wrap.innerHTML=keys.map(key=>{
     const d=grup[key];
     const warna = d.vp>=0 ? '#3E9142' : '#D9534F';
