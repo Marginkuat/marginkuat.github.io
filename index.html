@@ -5181,6 +5181,7 @@ function renderRekapPair(){
   const profitKeys=keys.filter(k=>grup[k].vp>0);
   const lossKeys=keys.filter(k=>grup[k].vp<0);
   const netVp=keys.reduce((s,k)=>s+grup[k].vp,0);
+  const netPip=keys.reduce((s,k)=>s+grup[k].pips,0);
   const kartu=key=>{
     const d=grup[key];
     const warna=d.vp>0?'#3E9142':(d.vp<0?'#D9534F':'#8A6B26');
@@ -5209,7 +5210,7 @@ function renderRekapPair(){
       <div style="flex:1;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:6px;text-align:center">
         <div style="font-size:14px;font-weight:800;color:#D9534F">${lossKeys.length}</div><div style="font-size:8px;color:#8A6B26">PAIR LOSS</div></div>
       <div style="flex:1;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:6px;text-align:center">
-        <div style="font-size:14px;font-weight:800;color:${warnaNet}">${netVp>=0?'+':''}${netVp.toFixed(2)}</div><div style="font-size:8px;color:#8A6B26">NET VP</div></div>
+        <div style="font-size:14px;font-weight:800;color:${warnaNet}">${netVp>=0?'+':''}${netVp.toFixed(2)}</div><div style="font-size:8px;color:#8A6B26">NET VP</div><div style="font-size:11px;font-weight:800;color:${warnaNet};margin-top:3px;padding-top:3px;border-top:1px dashed var(--border)">${netPip>=0?'+':''}${netPip.toFixed(1)} pip</div></div>
     </div>
     ${(rekapPairBulanDipilih===bulanIni && profitKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🛑 STOP TRADING bulan ini:</div><div style="font-size:11px;font-weight:800;color:#F0B8B8;margin-top:2px">${profitKeys.join(' · ')}</div><div style="font-size:8px;color:#F0B8B8;margin-top:3px">Sudah profit — amankan cuan, jangan buka sinyal baru di pair ini sampai bulan depan.</div></div>`:''}
     ${profitKeys.length?judul('✅ Pair Profit','#3E9142')+profitKeys.map(kartu).join(''):''}
