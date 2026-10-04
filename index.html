@@ -5181,9 +5181,11 @@ function renderRekapPair(){
   const profitKeys=keys.filter(k=>grup[k].vp>0);
   const lossKeys=keys.filter(k=>grup[k].vp<0);
   // ── ATURAN KUNCI PAIR (bulan berjalan): ada WIN = stop; rugi 2x tanpa win = terkunci/stop; rugi 1x = peringatan ──
-  const winKeys=keys.filter(k=>grup[k].win>=1);
-  const lockKeys=keys.filter(k=>grup[k].win===0 && grup[k].loss>=2);
-  const warnKeys=keys.filter(k=>grup[k].win===0 && grup[k].loss===1);
+  // ATURAN: pair STOP kalau TOTAL pair itu sudah untung; TERKUNCI kalau rugi MAKS_LOSS_PAIR kali (belum untung).
+  const MAKS_LOSS_PAIR=4;
+  const winKeys=keys.filter(k=>grup[k].pips>0);
+  const lockKeys=keys.filter(k=>!(grup[k].pips>0) && grup[k].loss>=MAKS_LOSS_PAIR);
+  const warnKeys=keys.filter(k=>!(grup[k].pips>0) && grup[k].loss===MAKS_LOSS_PAIR-1);
   const netVp=keys.reduce((s,k)=>s+grup[k].vp,0);
   const netPip=keys.reduce((s,k)=>s+grup[k].pips,0);
   const kartu=key=>{
@@ -5195,10 +5197,11 @@ function renderRekapPair(){
     const pill=(bg,bd,tc,teks)=>`<div style="display:inline-block;margin-top:5px;padding:2px 8px;border-radius:20px;background:${bg};border:1px solid ${bd};color:${tc};font-size:9px;font-weight:800;letter-spacing:.3px">${teks}</div>`;
     let labelStop='';
     if(rekapPairBulanDipilih===bulanIni){
-      if(d.win>=1) labelStop=pill('#3A0E0E','#D9534F','#F87171','🛑 STOP — sudah WIN');
-      else if(d.loss>=3) labelStop=pill('#3A0E0E','#D9534F','#F87171','🔒 TERKUNCI — rugi '+d.loss+'x (MELEBIHI aturan 2x!)');
-      else if(d.loss===2) labelStop=pill('#3A0E0E','#D9534F','#F87171','🔒 TERKUNCI — rugi 2x, STOP');
-      else if(d.loss===1) labelStop=pill('#2A2410','#C99A2E','#E0B84B','⚠️ Rugi 1x — tinggal 1 kesempatan');
+      if(d.pips>0) labelStop=pill('#3A0E0E','#D9534F','#F87171','🛑 STOP — total pair sudah untung');
+      else if(d.loss>MAKS_LOSS_PAIR) labelStop=pill('#3A0E0E','#D9534F','#F87171','🔒 TERKUNCI — rugi '+d.loss+'x (MELEBIHI aturan '+MAKS_LOSS_PAIR+'x!)');
+      else if(d.loss===MAKS_LOSS_PAIR) labelStop=pill('#3A0E0E','#D9534F','#F87171','🔒 TERKUNCI — rugi '+MAKS_LOSS_PAIR+'x, STOP');
+      else if(d.loss===MAKS_LOSS_PAIR-1) labelStop=pill('#2A2410','#C99A2E','#E0B84B','⚠️ Rugi '+d.loss+'x — tinggal 1 kesempatan');
+      else if(d.loss>=1) labelStop=pill('#1F1B0E','#7A5D1F','#C8A84B','🔁 Lanjut — rugi '+d.loss+'x, total belum untung');
     }
     return `<div style="background:var(--bg0);border:1px dashed var(--border);border-left:3px solid ${warna};border-radius:9px;padding:8px 10px;margin-bottom:6px">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
@@ -5220,9 +5223,9 @@ function renderRekapPair(){
       <div style="flex:1;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:6px;text-align:center">
         <div style="font-size:14px;font-weight:800;color:${warnaNet}">${netVp>=0?'+':''}${netVp.toFixed(2)}</div><div style="font-size:8px;color:#8A6B26">NET VP</div><div style="font-size:11px;font-weight:800;color:${warnaNet};margin-top:3px;padding-top:3px;border-top:1px dashed var(--border)">${netPip>=0?'+':''}${netPip.toFixed(1)} pip</div></div>
     </div>
-    ${(rekapPairBulanDipilih===bulanIni && lockKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🔒 TERKUNCI — rugi 2x, JANGAN trading:</div><div style="font-size:11px;font-weight:800;color:#F0B8B8;margin-top:2px">${lockKeys.join(' · ')}</div><div style="font-size:8px;color:#F0B8B8;margin-top:3px">Pair ini sudah kena batas rugi. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
-    ${(rekapPairBulanDipilih===bulanIni && winKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🛑 STOP — sudah WIN, amankan cuan:</div><div style="font-size:11px;font-weight:800;color:#F0B8B8;margin-top:2px">${winKeys.join(' · ')}</div><div style="font-size:8px;color:#F0B8B8;margin-top:3px">Pair ini sudah menang. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
-    ${(rekapPairBulanDipilih===bulanIni && warnKeys.length)?`<div style="background:#241E0B;border:1.5px solid #C99A2E;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#E0B84B">⚠️ HATI-HATI — sudah rugi 1x (tinggal 1 kesempatan):</div><div style="font-size:11px;font-weight:800;color:#F0DFA0;margin-top:2px">${warnKeys.join(' · ')}</div></div>`:''}
+    ${(rekapPairBulanDipilih===bulanIni && lockKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🔒 TERKUNCI — rugi 4x, JANGAN trading:</div><div style="font-size:11px;font-weight:800;color:#F0B8B8;margin-top:2px">${lockKeys.join(' · ')}</div><div style="font-size:8px;color:#F0B8B8;margin-top:3px">Pair ini sudah kena batas rugi. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
+    ${(rekapPairBulanDipilih===bulanIni && winKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🛑 STOP — total pair sudah untung, amankan cuan:</div><div style="font-size:11px;font-weight:800;color:#F0B8B8;margin-top:2px">${winKeys.join(' · ')}</div><div style="font-size:8px;color:#F0B8B8;margin-top:3px">Total pair ini sudah untung. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
+    ${(rekapPairBulanDipilih===bulanIni && warnKeys.length)?`<div style="background:#241E0B;border:1.5px solid #C99A2E;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#E0B84B">⚠️ HATI-HATI — sudah rugi 3x (tinggal 1 kesempatan):</div><div style="font-size:11px;font-weight:800;color:#F0DFA0;margin-top:2px">${warnKeys.join(' · ')}</div></div>`:''}
     ${profitKeys.length?judul('✅ Pair Profit','#3E9142')+profitKeys.map(kartu).join(''):''}
     ${lossKeys.length?judul('❌ Pair Loss','#D9534F')+lossKeys.slice().reverse().map(kartu).join(''):''}
     ${keys.filter(k=>grup[k].vp===0).length?judul('⚪ Impas','#8A6B26')+keys.filter(k=>grup[k].vp===0).map(kartu).join(''):''}${catatanNonForex}`;
