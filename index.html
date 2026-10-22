@@ -1570,6 +1570,16 @@ function renderInvCalcDisclaimer(){
       <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Modal acuan TETAP (minimal $2000), TIDAK memakai saldo akun/sen di situs ini. Otomatis dari sinyal closed yang di-input di bawah. Dihitung dalam $ (pips × nilai pip lot acuan), drawdown (DD) diukur dari PUNCAK bersih bulan itu. Loss dihitung berdasarkan tanggal <b>Closed at</b>. Investor & admin sama-sama bisa cek; hanya admin yang bisa ubah batas.</div>
       <select class="inp" id="batasDDBulan" onchange="batasDDBulanDipilih=this.value;renderBatasDDCard()" style="margin-bottom:10px"></select>
       <div id="batasDDWrap"><div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div></div>
+
+      <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-top:12px">
+        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🧮 Simulasi Modal Anda</div>
+        <div style="font-size:9px;color:#5C4818;margin-bottom:8px;line-height:1.5">Isi modal & lot Anda sendiri. Hanya simulasi di layar Anda, tidak disimpan ke server dan tidak mengubah batas analis ($2000).</div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1"><label class="lbl">Modal Anda ($)</label><input class="inp" type="number" step="any" id="batasDDModalInv" placeholder="mis. 1000" oninput="renderBatasDDSim()"></div>
+          <div style="flex:1"><label class="lbl">Lot Anda</label><input class="inp" type="number" step="0.01" id="batasDDLotInv" placeholder="0.01" oninput="renderBatasDDSim()"></div>
+        </div>
+        <div id="batasDDSimWrap" style="margin-top:8px"></div>
+      </div>
     </div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
@@ -14920,6 +14930,39 @@ function renderBatasDDCard(){
   renderRemPipsCard=function(){ _origRender.apply(this,arguments); try{ renderBatasDDCard(); }catch(e){ console.error('renderBatasDDCard', e); } };
   const _origLoad=loadRemPips;
   loadRemPips=async function(){ await _origLoad.apply(this,arguments); await loadBatasDD(); };
+})();
+
+function renderBatasDDSim(){
+  const wrap=document.getElementById('batasDDSimWrap'); if(!wrap) return;
+  const mEl=document.getElementById('batasDDModalInv'), lEl=document.getElementById('batasDDLotInv');
+  try{ if(mEl && mEl.dataset.init!=='1'){ mEl.dataset.init='1'; const sm=localStorage.getItem('bdd_modal_inv'), sl=localStorage.getItem('bdd_lot_inv'); if(sm&&!mEl.value) mEl.value=sm; if(sl&&lEl&&!lEl.value) lEl.value=sl; } }catch(e){}
+  const modal=parseFloat(mEl&&mEl.value), lot=parseFloat(lEl&&lEl.value)||0.01;
+  try{ if(isFinite(modal)&&modal>0){ localStorage.setItem('bdd_modal_inv',String(modal)); localStorage.setItem('bdd_lot_inv',String(lot)); } }catch(e){}
+  if(!isFinite(modal)||modal<=0){ wrap.innerHTML='<div style="font-size:10px;color:#7A5D1F;text-align:center">Isi modal Anda untuk melihat risikonya.</div>'; return; }
+  if(lot<=0){ wrap.innerHTML='<div style="font-size:10px;color:#D9534F">Lot tidak valid.</div>'; return; }
+  const bulanKey=batasDDBulanDipilih;
+  const nilai=(pct)=> pct<=5?['#3E9142','konservatif']:pct<=10?['#C99A2E','sedang-agresif']:pct<=15?['#D9534F','tinggi']:['#D9534F','sangat berat'];
+  const rows=['XAUUSD','FOREX'].map(g=>{
+    const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+    const h=hitungBatasDD(g,bulanKey), c=h.cfg, k=lot/c.lot;
+    const stop=c.stopUsd*k, loss1=c.riskLossUsd*k, ddNow=h.curDD*k, ddMax=h.maxDD*k, cum=h.cum*k;
+    const pStop=stop/modal*100, pLoss=loss1/modal*100, pNow=ddNow/modal*100, pMax=ddMax/modal*100;
+    const [wr,tx]=nilai(pStop);
+    return `<div style="background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:6px">
+      <div style="font-size:10px;font-weight:800;color:#3A2E10;margin-bottom:3px">${label}</div>
+      <div style="font-size:10px;color:#3A2E10;line-height:1.7">
+        Hasil bersih bulan ini: <b style="color:${cum<0?'#D9534F':'#3E9142'}">${cum>=0?'+':''}${_bdFmt(cum)}</b> (${(cum/modal*100).toFixed(1)}%)<br>
+        DD sekarang <b>${_bdFmt(-ddNow)}</b> (${pNow.toFixed(1)}%) · DD terdalam <b>${_bdFmt(-ddMax)}</b> (${pMax.toFixed(1)}%)<br>
+        1 loss = ${_bdFmt(-loss1)} (${pLoss.toFixed(2)}%) · batas stop ${_bdFmt(-stop)} = <b style="color:${wr}">${pStop.toFixed(1)}% modal (${tx})</b>
+      </div></div>`;
+  }).join('');
+  const lotSama=modal/2000*0.01;
+  const lotTxt = lotSama>=0.01 ? `Supaya persen risikonya sama dengan acuan $2000, lot ≈ <b>${(Math.floor(lotSama*100+1e-9)/100).toFixed(2)}</b>.` : `Lot terkecil 0,01 sudah lebih besar dari proporsi acuan $2000 untuk modal ini, jadi risikonya otomatis lebih berat dari yang dicontohkan analis.`;
+  wrap.innerHTML=rows+`<div style="font-size:9px;color:#7A5D1F;line-height:1.5">${lotTxt} Skala: ≤5% konservatif, ≤10% sedang-agresif, >10% tinggi. Hasil masa lalu bukan jaminan.</div>`;
+}
+(function(){
+  const _r=renderBatasDDCard;
+  renderBatasDDCard=function(){ _r.apply(this,arguments); try{ renderBatasDDSim(); }catch(e){ console.error('renderBatasDDSim', e); } };
 })();
 </script>
 </body>
