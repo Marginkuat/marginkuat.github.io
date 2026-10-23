@@ -1582,6 +1582,7 @@ function renderInvCalcDisclaimer(){
       <div id="batasDDWrap"><div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div></div>
       <div id="batasDDLossKotorEmasWrap" style="margin-top:10px"></div>
       <div id="batasDDLossKotorWrap" style="margin-top:10px"></div>
+      <div id="batasDDRekonWrap" style="margin-top:10px"></div>
 
     </div>
 
@@ -14843,7 +14844,7 @@ function hitungBatasDD(g, bulanKey){
     const usd=_bdUsd(parseFloat(r.pips||0), cfg);
     cum+=usd;
     if(usd>0) win++; else if(usd<0){ loss++; perHariLoss[r.tanggal]=(perHariLoss[r.tanggal]||0)+1; }
-    if(cum>peak) peak=cum;
+    if(!cfg.basisNet && cum>peak) peak=cum;   // basisNet: batas = rugi bersih bulan ini (puncak tetap 0)
     const dd=peak-cum;
     if(dd>maxDD) maxDD=dd;
     if(kenaIdx<0 && dd>=cfg.stopUsd-1e-9) kenaIdx=i;
@@ -14975,8 +14976,13 @@ function renderBatasDDSim(){
 // Admin memilih metode yang dipakai tiap bulan; investor otomatis melihatnya, dan batas rugi
 // di kartu Cek Batas Kerugian mengikuti metode itu. Disimpan di app_settings 'metode_bulan_XAUUSD'.
 const METODE_DEF={
-  H4:{label:'H4', sl:500, tp:500, rr:'1:1', risk:50, jatah:5}
+  'CAMPUR':{label:'Bulan peralihan (RR campur)', sl:500, tp:500, rr:'campur 1:1 / 1:2 / 1:3', risk:50, jatah:0, hitung:'net', campur:true, stopPips:2500},
+  'H4-200':{label:'H4', sl:200, tp:400, rr:'1:2', risk:20, jatah:10, hitung:'loss'},
+  'H4-500':{label:'H4', sl:500, tp:500, rr:'1:1', risk:50, jatah:5, hitung:'order'}
 };
+// Bawaan: sampai Okt 2026 = bulan peralihan (RR campur, stop rugi bersih 2500 pips); mulai Nov 2026 = H4 SL500/TP500. Admin bisa mengubah per bulan.
+function metodeDefaultKey(bk){ return (bk && bk<'2026-11') ? 'CAMPUR' : 'H4-500'; }
+function metodeKeyBulan(bk){ const v=cachedMetodeBulan.XAUUSD[bk]; return METODE_DEF[v]?v:metodeDefaultKey(bk); }
 let cachedMetodeBulan={XAUUSD:{}};
 async function loadMetodeBulan(){
   try{
@@ -14986,16 +14992,17 @@ async function loadMetodeBulan(){
 }
 function metodeEfektif(g,bulanKey){
   if(g!=='XAUUSD') return null;
-  const key=METODE_DEF[cachedMetodeBulan.XAUUSD[bulanKey]]?cachedMetodeBulan.XAUUSD[bulanKey]:'H4';
+  const key=metodeKeyBulan(bulanKey);
   const m=METODE_DEF[key]; if(!m) return null;
   const k=(cachedBatasDD[g].lot||0.01)/0.01;
   const risk=m.risk*k;
-  return Object.assign({key, diatur:!!cachedMetodeBulan.XAUUSD[bulanKey]}, m, {riskUsd:risk, stopUsd:risk*m.jatah, warnUsd:risk*m.jatah/2});
+  const stop=m.stopPips?m.stopPips*PIP_VALUE_USD_PER_0_01_LOT*k:risk*m.jatah;
+  return Object.assign({key, diatur:!!METODE_DEF[cachedMetodeBulan.XAUUSD[bulanKey]]}, m, {riskUsd:risk, stopUsd:stop, warnUsd:stop/2, basisNet:!!m.campur, k});
 }
 async function editMetodeBulan(g){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah metode');return;}
   const bk=batasDDBulanDipilih;
-  const cur=cachedMetodeBulan.XAUUSD[bk]||'H4';
+  const cur=metodeKeyBulan(bk);
   const v=prompt(`Metode trading bulan ${bk} (khusus emas):\n`+Object.keys(METODE_DEF).map(k=>`${k} = SL${METODE_DEF[k].sl}/TP${METODE_DEF[k].tp}, jatah ${METODE_DEF[k].jatah}`).join('\n')+`\n\nKetik: ${Object.keys(METODE_DEF).join(' / ')}`, cur);
   if(v===null) return;
   const key=v.trim().toUpperCase();
@@ -15017,24 +15024,34 @@ function renderBatasDDMetode(){
   const h=hitungBatasDD(g,bk);
   const sisa=m.jatah-h.loss;
   let st, warna;
-  const sisaOrder=m.jatah-h.n;
-  const info=`Order: <b>${h.n}</b> dari ${m.jatah} · Loss: <b>${h.loss}</b> dari ${m.jatah}`;
+  const byLoss=(m.hitung==='loss');
+  const pakai=byLoss?h.loss:Math.max(h.n,h.loss);   // H4 200: hitung LOSS saja; H4 500: ORDER atau LOSS, mana yang duluan
+  const sisaJ=m.jatah-pakai;
+  const info=byLoss?`Loss: <b>${h.loss}</b> dari ${m.jatah} (win tidak mengurangi jatah)`:`Order: <b>${h.n}</b> dari ${m.jatah} · Loss: <b>${h.loss}</b> dari ${m.jatah}`;
+  const pipUsdM=PIP_VALUE_USD_PER_0_01_LOT*m.k;
+  const rugiPips=Math.max(0,-h.cum/pipUsdM), batasPipsM=m.stopUsd/pipUsdM, sisaPipsM=Math.max(0,batasPipsM-rugiPips);
+  if(m.campur){
+    const pc=rugiPips/batasPipsM*100;
+    if(h.n===0){ st='Belum ada sinyal closed bulan ini'; warna='#8A6B26'; }
+    else if(rugiPips>=batasPipsM){ st=`🛑 Batas tercapai — stop sampai bulan depan<br><span style="font-size:10px;font-weight:600">Rugi bersih ${rugiPips.toFixed(1)} dari ${batasPipsM.toFixed(0)} pips</span>`; warna='#D9534F'; }
+    else { st=`${pc>=50?'⚠️ Peringatan':'✅ Aman'} — rugi bersih <b>${rugiPips.toFixed(1)}</b> dari ${batasPipsM.toFixed(0)} pips (${pc.toFixed(0)}%)<br><span style="font-size:10px;font-weight:600">Sisa ruang ${sisaPipsM.toFixed(1)} pips ($${(sisaPipsM*pipUsdM).toFixed(2).replace(/\.00$/,'')})</span>`; warna=pc>=75?'#D9534F':pc>=50?'#C99A2E':'#3E9142'; }
+  } else
   if(h.n===0){ st='Belum ada sinyal closed bulan ini'; warna='#8A6B26'; }
-  else if(h.n>m.jatah || h.loss>m.jatah){ st='❌ Melewati jatah — '+info; warna='#D9534F'; }
-  else if(h.n>=m.jatah || h.loss>=m.jatah){ st='🛑 Jatah habis — stop sampai bulan depan<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#D9534F'; }
-  else { st=`✅ Jatah masih ada<br><span style="font-size:10px;font-weight:600">${info} (sisa ${Math.min(sisaOrder,sisa)})</span>`; warna=Math.min(sisaOrder,sisa)<=1?'#C99A2E':'#3E9142'; }
+  else if(pakai>m.jatah){ st='❌ Melewati jatah<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#D9534F'; }
+  else if(pakai===m.jatah){ st='🛑 Jatah habis — stop sampai bulan depan<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#D9534F'; }
+  else { st=`✅ Jatah masih ada<br><span style="font-size:10px;font-weight:600">${info} (sisa ${sisaJ})</span>`; warna=sisaJ<=1?'#C99A2E':'#3E9142'; }
   const nm=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   const fmtBulan=k=>{ const [y,mm]=k.split('-'); return nm[parseInt(mm,10)-1]+' '+y; };
-  const riwayat=Object.keys(cachedMetodeBulan.XAUUSD).sort().reverse().slice(0,6).map(k=>`${fmtBulan(k)}: <b>${METODE_DEF[cachedMetodeBulan.XAUUSD[k]]?cachedMetodeBulan.XAUUSD[k]:'H4'}</b>`).join(' · ');
+  const riwayat=Object.keys(cachedMetodeBulan.XAUUSD).sort().reverse().slice(0,6).map(k=>`${fmtBulan(k)}: <b>${METODE_DEF[metodeKeyBulan(k)].campur?'Campur':METODE_DEF[metodeKeyBulan(k)].label+' '+METODE_DEF[metodeKeyBulan(k)].sl+'/'+METODE_DEF[metodeKeyBulan(k)].tp}</b>`).join(' · ');
   wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid #C8A84B;border-radius:10px;padding:10px 12px;margin-bottom:10px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
       <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800">📌 Metode Trading ${fmtBulan(bk)} — ${label}</div>
       ${Object.keys(METODE_DEF).length>1?`<span onclick="editMetodeBulan('XAUUSD')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah metode</span>`:''}
     </div>
-    <div style="font-size:15px;font-weight:800;color:#3A2E10">${m.label} — SL ${m.sl} / TP ${m.tp} pips (RR ${m.rr})</div>
-    <div style="font-size:10px;color:#3A2E10;line-height:1.7;margin-top:3px">Risiko per loss $${m.riskUsd} (${(m.riskUsd/modal*100).toFixed(1)}%) · jatah <b>${m.jatah} loss</b> · batas rugi maksimal <b>$${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b></div>
+    <div style="font-size:15px;font-weight:800;color:#3A2E10">${m.campur?`${m.label} — RR ${m.rr}`:`${m.label} — SL ${m.sl} / TP ${m.tp} pips (RR ${m.rr})`}</div>
+    <div style="font-size:10px;color:#3A2E10;line-height:1.7;margin-top:3px">${m.campur?`SL & TP maksimal 500 pips per order · batas: <b>rugi bersih bulan ini ${batasPipsM.toFixed(0)} pips = $${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b>, begitu tercapai stop sampai bulan depan. Tidak ada jatah order.`:`Risiko per loss $${m.riskUsd} (${(m.riskUsd/modal*100).toFixed(1)}%) · jatah <b>${m.jatah} loss</b> · batas rugi maksimal <b>$${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b>`}</div>
     <div style="font-size:11px;font-weight:800;color:${warna};margin-top:4px">${st}</div>
-    <div style="font-size:9px;color:#7A5D1F;margin-top:6px;line-height:1.5">${m.diatur?'':'Metode belum diatur admin untuk bulan ini, ditampilkan H4 (bawaan). '}Metode berlaku untuk semua sinyal channel ini di bulan tersebut. Jatah habis kalau jumlah ORDER atau jumlah LOSS mencapai batas jatah, mana yang duluan.${riwayat?'<br>Riwayat metode: '+riwayat:''}</div>
+    <div style="font-size:9px;color:#7A5D1F;margin-top:6px;line-height:1.5">${m.diatur?'':'Metode belum diatur admin untuk bulan ini, memakai metode bawaan bulan tersebut. '}Metode berlaku untuk semua sinyal channel ini di bulan tersebut. ${m.campur?'Aturan baru dibuat bulan ini, jadi Oktober memakai batas rugi bersih (win ikut mengurangi rugi). Mulai bulan depan memakai metode H4 tetap.':(byLoss?'Jatah dihitung dari jumlah LOSS (win tidak mengurangi jatah).':'Jatah habis kalau jumlah ORDER atau jumlah LOSS mencapai batas jatah, mana yang duluan.')}${riwayat?'<br>Riwayat metode: '+riwayat:''}</div>
   </div>`;
 }
 (function(){
@@ -15044,7 +15061,7 @@ function renderBatasDDMetode(){
     const m=metodeEfektif(g,bulanKey);
     if(!m) return _hit.apply(this,arguments);
     const base=cachedBatasDD[g];
-    cachedBatasDD[g]=Object.assign({},base,{stopUsd:m.stopUsd, warnUsd:m.warnUsd, riskLossUsd:m.riskUsd});
+    cachedBatasDD[g]=Object.assign({},base,{stopUsd:m.stopUsd, warnUsd:m.warnUsd, riskLossUsd:m.riskUsd, basisNet:!!m.basisNet});
     try{ return _hit.apply(this,arguments); } finally{ cachedBatasDD[g]=base; }
   };
   const _rc=renderBatasDDCard;
@@ -15085,11 +15102,12 @@ function renderLossKotor(g, wrapId){
     const hr=new Date(r.tanggal).getDate();
     return `<span title="${r.tanggal} ${r.simbol||''} ${pp>=0?'+':''}${fmt0(pp)} pips" style="display:inline-block;min-width:34px;text-align:center;background:${w[0]}22;border:1px solid ${w[0]};color:${w[0]};border-radius:6px;padding:2px 4px;margin:2px;font-size:9px;font-weight:800;line-height:1.3">${w[1]}<br><span style="font-weight:600;font-size:8px">${hr}/${parseInt(r.tanggal.slice(5,7),10)}</span></span>`;
   }).join('');
-  const sisa=Math.max(0,batasPips-totLossPips), pct=Math.min(100,totLossPips/batasPips*100);
+  const terpakai=cfg.basisNet?Math.max(0,-totNet):totLossPips, lblT=cfg.basisNet?'Rugi bersih':'Loss kotor';
+  const sisa=Math.max(0,batasPips-terpakai), pct=Math.min(100,terpakai/batasPips*100);
   let warna='#3E9142', st='✅ AMAN';
   if(rows.length===0){ warna='#8A6B26'; st='Belum ada sinyal closed bulan ini'; }
-  else if(totLossPips>=batasPips){ warna='#D9534F'; st='🛑 BATAS LOSS TERCAPAI — stop sampai bulan depan'; }
-  else if(totLossPips>=batasPips/2){ warna='#C99A2E'; st='⚠️ PERINGATAN — loss sudah lewat separuh batas'; }
+  else if(terpakai>=batasPips){ warna='#D9534F'; st='🛑 BATAS TERCAPAI — stop sampai bulan depan'; }
+  else if(terpakai>=batasPips/2){ warna='#C99A2E'; st='⚠️ PERINGATAN — loss sudah lewat separuh batas'; }
   const fmt=v=>(Math.round(v*10)/10).toString();
   const nm=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   const [yy,mm]=bk.split('-');
@@ -15097,11 +15115,11 @@ function renderLossKotor(g, wrapId){
       <span style="font-weight:700">${x.nama}</span><span>${x.loss}x</span><span style="color:#D9534F;font-weight:700">${x.lossPips?'-'+fmt(x.lossPips):'0'}</span><span>${x.win}x</span><span style="color:${x.net<0?'#D9534F':'#3E9142'}">${x.net>=0?'+':''}${fmt(x.net)}</span></div>`).join('');
   wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">📉 Loss Kotor per Pair — ${label} · ${nm[parseInt(mm,10)-1]} ${yy}</div>
-    <div style="font-size:9px;color:#7A5D1F;margin-bottom:8px;line-height:1.5">Yang dipantau: pips yang HILANG dari order kena SL, per pair. Win tidak mengurangi angka ini. Batas bulanan <b>${fmt(batasPips)} pips ($${cfg.stopUsd})</b> · SL acuan ${fmt(slPips)} pips ($${cfg.riskLossUsd}).</div>
+    <div style="font-size:9px;color:#7A5D1F;margin-bottom:8px;line-height:1.5">${cfg.basisNet?'Bulan peralihan: batas dihitung dari RUGI BERSIH (loss dikurangi win). Tabel di bawah tetap merinci loss per pair.':'Yang dipantau: pips yang HILANG dari order kena SL, per pair. Win tidak mengurangi angka ini.'} Batas bulanan <b>${fmt(batasPips)} pips ($${cfg.stopUsd})</b> · SL acuan ${fmt(slPips)} pips ($${cfg.riskLossUsd}).</div>
     <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:6px">${st}</div>
-    <div style="display:flex;justify-content:space-between;font-size:11px;color:#3A2E10;margin-bottom:3px"><span>Loss kotor: <b style="color:#D9534F">-${fmt(totLossPips)} pips</b> ($${(totLossPips*pipUsd).toFixed(2).replace(/\.00$/,'')})</span><span>${pct.toFixed(0)}% batas</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#3A2E10;margin-bottom:3px"><span>${lblT}: <b style="color:#D9534F">-${fmt(terpakai)} pips</b> ($${(terpakai*pipUsd).toFixed(2).replace(/\.00$/,'')})</span><span>${pct.toFixed(0)}% batas</span></div>
     <div style="height:8px;background:var(--bg0);border-radius:6px;overflow:hidden;margin-bottom:3px"><div style="width:${pct}%;height:100%;background:${warna}"></div></div>
-    <div style="font-size:10px;color:#3A2E10;margin-bottom:8px">Sisa ruang: <b>${fmt(sisa)} pips</b> ≈ <b>${Math.floor(sisa/slPips+1e-9)} loss lagi</b> (SL ${fmt(slPips)}) · ${totLoss} loss total</div>
+    <div style="font-size:10px;color:#3A2E10;margin-bottom:8px">Sisa ruang: <b>${fmt(sisa)} pips</b> ≈ <b>${Math.floor(sisa/slPips+1e-9)} loss lagi</b> (SL ${fmt(slPips)}${cfg.basisNet?' maks':''}) · ${totLoss} loss total</div>
     ${urut.length?`<div style="background:var(--bg0);border-radius:8px;padding:8px 10px;margin-bottom:10px">
       <div style="font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Total hasil bulan ini (loss + win)</div>
       <div style="font-size:16px;font-weight:800;color:${totNet<0?'#D9534F':'#3E9142'}">${totNet>=0?'+':''}${fmt(totNet)} pips <span style="font-size:11px">(${totNet>=0?'+':'-'}$${Math.abs(totNet*pipUsd).toFixed(2).replace(/\.00$/,'')})</span></div>
@@ -15122,6 +15140,104 @@ function renderLossKotorForex(){
 (function(){
   const _r2=renderBatasDDCard;
   renderBatasDDCard=function(){ _r2.apply(this,arguments); try{ renderLossKotorForex(); }catch(e){ console.error('renderLossKotorForex', e); } };
+})();
+
+// ══ REKONSILIASI: TF vs MT4 vs SITUS — menampilkan selisih/kesalahan input ══
+// Admin mengisi total resmi dari aplikasi TF (dan opsional MT4) per bulan; situs membandingkan dengan
+// data yang sudah di-input di sini. Disimpan di app_settings 'rekon_<XAUUSD|FOREX>' (JSON per bulan).
+let cachedRekon={XAUUSD:{}, FOREX:{}};
+async function loadRekon(){
+  for(const g of ['XAUUSD','FOREX']){
+    try{
+      const rows=await api('app_settings?select=value&key=eq.rekon_'+g);
+      if(rows && rows.length && rows[0].value){ const p=JSON.parse(rows[0].value); if(p && typeof p==='object') cachedRekon[g]=p; }
+    }catch(e){ console.error('Gagal load rekon_'+g, e); }
+  }
+}
+async function editRekon(g){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk isi data TF/MT4');return;}
+  const bk=batasDDBulanDipilih; if(!bk) return;
+  const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+  const c=cachedRekon[g][bk]||{};
+  const cur=[c.tfN??'',c.tfPips??'',c.mtN??'',c.mtUsd??''].join(',');
+  const v=prompt(`[${label}] Bulan ${bk}\nIsi 4 angka dipisah koma:\nTF jumlah sinyal, TF pips bulanan, MT4 jumlah order, MT4 hasil ($)\n\nContoh: 57,-1906.1,20,-190\nMT4 boleh dikosongkan: 57,-1906.1,,`, cur);
+  if(v===null) return;
+  const p=v.split(',').map(x=>x.trim());
+  const num=x=>x===''||x===undefined?null:parseFloat(x);
+  const tfN=num(p[0]), tfPips=num(p[1]), mtN=num(p[2]), mtUsd=num(p[3]);
+  if(tfN===null||tfPips===null||!isFinite(tfN)||!isFinite(tfPips)){toast('❌ Isi minimal 2 angka pertama (TF sinyal & TF pips)');return;}
+  if((mtN!==null&&!isFinite(mtN))||(mtUsd!==null&&!isFinite(mtUsd))){toast('❌ Angka MT4 tidak valid');return;}
+  try{
+    const baru=Object.assign({},cachedRekon[g],{[bk]:{tfN,tfPips,mtN,mtUsd}});
+    await simpanSettingRem('rekon_'+g, JSON.stringify(baru));
+    cachedRekon[g]=baru; toast('✅ Data TF/MT4 tersimpan'); renderRekonCard();
+  }catch(e){ console.error(e); toast('❌ Gagal simpan: '+(e.message||'').slice(0,120)); }
+}
+function renderRekonCard(){
+  const wrap=document.getElementById('batasDDRekonWrap'); if(!wrap) return;
+  const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
+  const fmt=v=>(Math.round(v*10)/10).toString();
+  const sg=v=>(v>0?'+':'')+fmt(v);
+  const html=['XAUUSD','FOREX'].map((g,idx)=>{
+    const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+    const cfg=hitungBatasDD(g,bk).cfg;
+    const pipUsd=PIP_VALUE_USD_PER_0_01_LOT*(cfg.lot/0.01);
+    const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk);
+    const sN=rows.length, sPips=rows.reduce((t,r)=>t+parseFloat(r.pips||0),0);
+    const rk=(cachedRekon[g]||{})[bk];
+    // cek internal data situs
+    const cnt={}; rows.forEach(r=>{ const k=r.tanggal+'|'+(r.simbol||'')+'|'+parseFloat(r.pips||0); cnt[k]=(cnt[k]||0)+1; });
+    const ganda=Object.keys(cnt).filter(k=>cnt[k]>1).map(k=>{ const [t,sy,pp]=k.split('|'); return `${t.slice(5)} ${sy||'(tanpa nama)'} ${pp>0?'+':''}${pp} (${cnt[k]}x)`; });
+    const tanpaNama=rows.filter(r=>!r.simbol).length, nol=rows.filter(r=>parseFloat(r.pips||0)===0).length;
+    let masalah=[];
+    if(ganda.length) masalah.push(`Kemungkinan input ganda (tanggal, pair, pips sama): ${ganda.join(', ')}`);
+    if(tanpaNama) masalah.push(`${tanpaNama} sinyal tanpa nama pair`);
+    if(nol) masalah.push(`${nol} sinyal dengan pips 0`);
+    let body='';
+    let warna='#8A6B26', judul='Belum ada data TF untuk bulan ini';
+    if(rk){
+      const dN=sN-rk.tfN, dP=sPips-rk.tfPips;
+      const cocok=(dN===0 && Math.abs(dP)<=1);
+      warna=cocok?'#3E9142':'#D9534F';
+      judul=cocok?'✅ Situs COCOK dengan TF':'⚠️ ADA SELISIH antara situs dan TF';
+      const mtPips=(rk.mtUsd!==null&&rk.mtUsd!==undefined)?rk.mtUsd/pipUsd:null;
+      const baris=(nama,n,pp,bold)=>`<div style="display:grid;grid-template-columns:1.1fr .8fr 1.2fr;gap:4px;font-size:10px;color:#3A2E10;padding:4px 0;border-top:1px solid var(--border)${bold?';font-weight:800':''}"><span>${nama}</span><span>${n===null?'-':n}</span><span style="color:${pp===null?'#7A5D1F':(pp<0?'#D9534F':'#3E9142')}">${pp===null?'-':sg(pp)+' pips'}</span></div>`;
+      let sebab=[];
+      if(dN<0) sebab.push(`Situs kurang <b>${Math.abs(dN)}</b> sinyal dibanding TF — kemungkinan belum diinput, atau tanggal Closed at masuk bulan lain.`);
+      if(dN>0) sebab.push(`Situs kelebihan <b>${dN}</b> sinyal — kemungkinan input ganda atau salah channel.`);
+      if(Math.abs(dP)>1) sebab.push(`Selisih pips <b>${sg(dP)}</b> (≈ ${dP>=0?'+':'-'}$${Math.abs(dP*pipUsd).toFixed(2).replace(/\.00$/,'')})${dN===0?' padahal jumlah sinyal sama — cek angka pips yang salah ketik atau tanda minus.':'.'}`);
+      let mtInfo='';
+      if(mtPips!==null){
+        const dM=mtPips-rk.tfPips;
+        mtInfo=`<div style="font-size:9px;color:#7A5D1F;margin-top:6px;line-height:1.5">MT4 vs TF: selisih <b>${sg(dM)} pips</b>${rk.mtN!=null?` dan ${rk.mtN-rk.tfN>0?'+':''}${rk.mtN-rk.tfN} order`:''}. Selisih ini wajar kalau karena eksekusi (spread, slippage, entry telat, order tidak semua diikuti), bukan kesalahan input situs.</div>`;
+      }
+      body=`<div style="display:grid;grid-template-columns:1.1fr .8fr 1.2fr;gap:4px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.4px"><span>Sumber</span><span>Order</span><span>Hasil bersih</span></div>
+        ${baris('TF (resmi)',rk.tfN,rk.tfPips)}
+        ${rk.mtN!=null||mtPips!==null?baris('MT4',rk.mtN??null,mtPips):''}
+        ${baris('Situs (input)',sN,sPips)}
+        ${baris('Selisih situs−TF',sg(dN),dP,true)}
+        ${sebab.length?`<div style="font-size:10px;color:#3A2E10;line-height:1.6;margin-top:6px">${sebab.map(x=>'• '+x).join('<br>')}</div>`:''}
+        ${mtInfo}`;
+    } else {
+      body=`<div style="font-size:10px;color:#7A5D1F;line-height:1.5">Situs saat ini: <b>${sN}</b> sinyal, <b>${sg(sPips)} pips</b>. Isi total dari aplikasi TF (dan MT4) lewat "Isi data TF/MT4" supaya selisihnya terlihat.</div>`;
+    }
+    const cek=masalah.length?`<div style="background:var(--bg0);border-radius:8px;padding:7px 9px;margin-top:8px;font-size:10px;color:#D9534F;line-height:1.6"><b>Pemeriksaan otomatis data situs:</b><br>${masalah.map(x=>'• '+x).join('<br>')}</div>`:`<div style="font-size:9px;color:#3E9142;margin-top:8px">✅ Pemeriksaan otomatis data situs: tidak ditemukan input ganda, pair kosong, atau pips 0.</div>`;
+    return `<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px;margin-bottom:${idx===0?'10px':'0'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800">🔎 Cek Selisih TF · MT4 · Situs — ${label}</div>
+        <span onclick="editRekon('${g}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Isi data TF/MT4</span>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:6px">${judul}</div>
+      ${body}${cek}
+    </div>`;
+  }).join('');
+  wrap.innerHTML=html;
+}
+(function(){
+  const _r3=renderBatasDDCard;
+  renderBatasDDCard=function(){ _r3.apply(this,arguments); try{ renderRekonCard(); }catch(e){ console.error('renderRekonCard', e); } };
+  const _lb2=loadBatasDD;
+  loadBatasDD=async function(){ await _lb2.apply(this,arguments); await loadRekon(); };
 })();
 </script>
 </body>
