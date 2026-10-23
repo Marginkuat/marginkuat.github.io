@@ -14975,9 +14975,7 @@ function renderBatasDDSim(){
 // Admin memilih metode yang dipakai tiap bulan; investor otomatis melihatnya, dan batas rugi
 // di kartu Cek Batas Kerugian mengikuti metode itu. Disimpan di app_settings 'metode_bulan_XAUUSD'.
 const METODE_DEF={
-  H4:{label:'H4', sl:200, tp:400, rr:'1:2', risk:20, jatah:10},
-  D1:{label:'D1', sl:500, tp:500, rr:'1:1', risk:50, jatah:5},
-  W1:{label:'W1', sl:500, tp:500, rr:'1:1', risk:50, jatah:5}
+  H4:{label:'H4', sl:500, tp:500, rr:'1:1', risk:50, jatah:5}
 };
 let cachedMetodeBulan={XAUUSD:{}};
 async function loadMetodeBulan(){
@@ -14988,7 +14986,7 @@ async function loadMetodeBulan(){
 }
 function metodeEfektif(g,bulanKey){
   if(g!=='XAUUSD') return null;
-  const key=cachedMetodeBulan.XAUUSD[bulanKey]||'H4';
+  const key=METODE_DEF[cachedMetodeBulan.XAUUSD[bulanKey]]?cachedMetodeBulan.XAUUSD[bulanKey]:'H4';
   const m=METODE_DEF[key]; if(!m) return null;
   const k=(cachedBatasDD[g].lot||0.01)/0.01;
   const risk=m.risk*k;
@@ -14998,10 +14996,10 @@ async function editMetodeBulan(g){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah metode');return;}
   const bk=batasDDBulanDipilih;
   const cur=cachedMetodeBulan.XAUUSD[bk]||'H4';
-  const v=prompt(`Metode trading bulan ${bk} (khusus emas):\nH4 = SL200/TP400, jatah 10 loss\nD1 = SL500/TP500, jatah 5 loss\nW1 = SL500/TP500, jatah 5 loss\n\nKetik H4, D1, atau W1:`, cur);
+  const v=prompt(`Metode trading bulan ${bk} (khusus emas):\n`+Object.keys(METODE_DEF).map(k=>`${k} = SL${METODE_DEF[k].sl}/TP${METODE_DEF[k].tp}, jatah ${METODE_DEF[k].jatah}`).join('\n')+`\n\nKetik: ${Object.keys(METODE_DEF).join(' / ')}`, cur);
   if(v===null) return;
   const key=v.trim().toUpperCase();
-  if(!METODE_DEF[key]){toast('❌ Pilih salah satu: H4, D1, atau W1');return;}
+  if(!METODE_DEF[key]){toast('❌ Pilih salah satu: '+Object.keys(METODE_DEF).join(', '));return;}
   try{
     const baru=Object.assign({},cachedMetodeBulan.XAUUSD,{[bk]:key});
     await simpanSettingRem('metode_bulan_XAUUSD', JSON.stringify(baru));
@@ -15019,22 +15017,24 @@ function renderBatasDDMetode(){
   const h=hitungBatasDD(g,bk);
   const sisa=m.jatah-h.loss;
   let st, warna;
+  const sisaOrder=m.jatah-h.n;
+  const info=`Order: <b>${h.n}</b> dari ${m.jatah} · Loss: <b>${h.loss}</b> dari ${m.jatah}`;
   if(h.n===0){ st='Belum ada sinyal closed bulan ini'; warna='#8A6B26'; }
-  else if(h.loss>m.jatah){ st=`❌ Melewati jatah (${h.loss} loss dari ${m.jatah})`; warna='#D9534F'; }
-  else if(h.loss===m.jatah){ st=`🛑 Jatah habis (${h.loss} dari ${m.jatah} loss) — stop sampai bulan depan`; warna='#D9534F'; }
-  else { st=`✅ Jatah loss: ${h.loss} dari ${m.jatah} terpakai (sisa ${sisa})`; warna=sisa<=1?'#C99A2E':'#3E9142'; }
+  else if(h.n>m.jatah || h.loss>m.jatah){ st='❌ Melewati jatah — '+info; warna='#D9534F'; }
+  else if(h.n>=m.jatah || h.loss>=m.jatah){ st='🛑 Jatah habis — stop sampai bulan depan<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#D9534F'; }
+  else { st=`✅ Jatah masih ada<br><span style="font-size:10px;font-weight:600">${info} (sisa ${Math.min(sisaOrder,sisa)})</span>`; warna=Math.min(sisaOrder,sisa)<=1?'#C99A2E':'#3E9142'; }
   const nm=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   const fmtBulan=k=>{ const [y,mm]=k.split('-'); return nm[parseInt(mm,10)-1]+' '+y; };
-  const riwayat=Object.keys(cachedMetodeBulan.XAUUSD).sort().reverse().slice(0,6).map(k=>`${fmtBulan(k)}: <b>${cachedMetodeBulan.XAUUSD[k]}</b>`).join(' · ');
+  const riwayat=Object.keys(cachedMetodeBulan.XAUUSD).sort().reverse().slice(0,6).map(k=>`${fmtBulan(k)}: <b>${METODE_DEF[cachedMetodeBulan.XAUUSD[k]]?cachedMetodeBulan.XAUUSD[k]:'H4'}</b>`).join(' · ');
   wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid #C8A84B;border-radius:10px;padding:10px 12px;margin-bottom:10px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
       <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800">📌 Metode Trading ${fmtBulan(bk)} — ${label}</div>
-      <span onclick="editMetodeBulan('XAUUSD')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah metode</span>
+      ${Object.keys(METODE_DEF).length>1?`<span onclick="editMetodeBulan('XAUUSD')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah metode</span>`:''}
     </div>
     <div style="font-size:15px;font-weight:800;color:#3A2E10">${m.label} — SL ${m.sl} / TP ${m.tp} pips (RR ${m.rr})</div>
     <div style="font-size:10px;color:#3A2E10;line-height:1.7;margin-top:3px">Risiko per loss $${m.riskUsd} (${(m.riskUsd/modal*100).toFixed(1)}%) · jatah <b>${m.jatah} loss</b> · batas rugi maksimal <b>$${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b></div>
     <div style="font-size:11px;font-weight:800;color:${warna};margin-top:4px">${st}</div>
-    <div style="font-size:9px;color:#7A5D1F;margin-top:6px;line-height:1.5">${m.diatur?'':'Metode belum diatur admin untuk bulan ini, ditampilkan H4 (bawaan). '}Metode berlaku untuk semua sinyal channel ini di bulan tersebut. Jatah dihitung dari jumlah LOSS (win tidak mengurangi jatah).${riwayat?'<br>Riwayat metode: '+riwayat:''}</div>
+    <div style="font-size:9px;color:#7A5D1F;margin-top:6px;line-height:1.5">${m.diatur?'':'Metode belum diatur admin untuk bulan ini, ditampilkan H4 (bawaan). '}Metode berlaku untuk semua sinyal channel ini di bulan tersebut. Jatah habis kalau jumlah ORDER atau jumlah LOSS mencapai batas jatah, mana yang duluan.${riwayat?'<br>Riwayat metode: '+riwayat:''}</div>
   </div>`;
 }
 (function(){
