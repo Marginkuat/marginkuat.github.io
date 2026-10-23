@@ -14787,7 +14787,7 @@ loadTahunanPengelolaProfil();
 // ══════════════════════════════════════════════════════════════════════
 const BATAS_DD_DEFAULT={
   XAUUSD:{modal:2000, lot:0.01, stopUsd:200, warnUsd:100, riskLossUsd:20, maxLossPerHari:1},
-  FOREX: {modal:2000, lot:0.01, stopUsd:160, warnUsd:80,  riskLossUsd:6,  maxLossPerHari:1}
+  FOREX: {modal:2000, lot:0.01, stopUsd:145, warnUsd:72.5, riskLossUsd:5.5, maxLossPerHari:1}
 };
 let cachedBatasDD={XAUUSD:Object.assign({},BATAS_DD_DEFAULT.XAUUSD), FOREX:Object.assign({},BATAS_DD_DEFAULT.FOREX)};
 let batasDDBulanDipilih=null;
@@ -14808,7 +14808,7 @@ async function editBatasDD(g){
   const c=cachedBatasDD[g];
   const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
   const cur=[c.modal,c.lot,c.stopUsd,c.warnUsd,c.riskLossUsd,c.maxLossPerHari].join(',');
-  const input=prompt(`[${label}] Isi 6 angka dipisah koma:\nMODAL ACUAN ($, minimal 2000 — bukan saldo akun), LOT ACUAN, BATAS STOP DD ($), PERINGATAN DD ($), RISIKO PER LOSS ($), MAKS LOSS PER HARI\n\nContoh emas: 2000,0.01,200,100,20,1\nContoh forex: 2000,0.01,160,80,6,1`, cur);
+  const input=prompt(`[${label}] Isi 6 angka dipisah koma:\nMODAL ACUAN ($, minimal 2000 — bukan saldo akun), LOT ACUAN, BATAS STOP DD ($), PERINGATAN DD ($), RISIKO PER LOSS ($), MAKS LOSS PER HARI\n\nContoh emas: 2000,0.01,200,100,20,1\nContoh forex: 2000,0.01,145,72.5,5.5,1`, cur);
   if(input===null)return;
   const p=input.split(',').map(x=>parseFloat(x.trim()));
   if(p.length!==6 || p.some(v=>!isFinite(v)||v<=0) || p[3]>p[2]){toast('❌ Format salah / peringatan tidak boleh lebih besar dari batas stop');return;}
@@ -15446,22 +15446,34 @@ function renderDaftarPair(){
   renderDaftarSinyal=function(){ _rd.apply(this,arguments); try{ renderDaftarPair(); }catch(e){ console.error('renderDaftarPair', e); } };
 })();
 
-// ══ REM & TARGET FOREX — strategi sama di dua channel: 8 pair, SL 60 / TP 180 (RR 1:3), jatah 3 order per pair per bulan ══
-// Datuk Crypto 89 = semua sinyalnya. Datuk EURUSD = hanya bagian forex (selain XAUUSD); emas punya aturan sendiri.
-const FOREX_REM={ slPips:60, tpPips:180, jatahPair:3, jumlahPair:8, maxLossHari:1, targetMinVP:300, targetVP:938.67, mulai:'2026-11',
-  // Rem per channel: pair × 3 order × 66 pips (SL 60 + slippage) dibulatkan ke atas. Peringatan = separuh batas.
-  kanal:{ XAUUSD:{jumlahPair:6, stopPips:1200}, FOREX:{jumlahPair:8, stopPips:1600} } };  // aturan baru berlaku mulai bulan ini; sebelum itu = uji coba
+// ══ REM & TARGET FOREX — RR 1:3, jatah 3 order per pair per bulan. SL BERBEDA PER PAIR (TP = 3 × SL) ══
+// SL per pair mengikuti pengali VP/pip TF supaya risiko VP seimbang: 2 VP/pip → SL 30, 1,5 VP/pip → SL 45, 1 VP/pip → SL 60.
+// Terkonfirmasi dari data: USDCHF/AUDUSD/NZDUSD = 30, EURUSD/AUDJPY/CADJPY = 45, GBPJPY/USDJPY = 60. Pair lain = perkiraan dari pola VP.
+// Datuk EURUSD = hanya bagian forex (selain XAUUSD); emas punya aturan sendiri. Datuk Crypto 89 = semua sinyalnya.
+const FOREX_SL_PAIR={AUDUSD:30,EURGBP:30,NZDUSD:30,USDCHF:30, AUDJPY:45,CADJPY:45,EURUSD:45,GBPUSD:45,NZDJPY:45,USDCAD:45, CHFJPY:60,EURJPY:60,EURNZD:60,GBPJPY:60,USDJPY:60};
+const FOREX_REM={ rr:3, jatahPair:3, maxLossHari:1, targetMinVP:300, targetVP:938.67, mulai:'2026-11', slippage:1.10,
+  kanal:{ XAUUSD:{pairs:['AUDUSD','USDCHF','NZDUSD','EURUSD','AUDJPY','CADJPY']},
+          FOREX: {pairs:['GBPUSD','NZDJPY','USDCAD','CHFJPY','EURJPY','EURNZD','GBPJPY','USDJPY']} } };
+function slPair(nm){ return FOREX_SL_PAIR[nm]||60; }
+// Batas stop = jatah × SL tiap pair, +10% untuk slippage, dibulatkan ke atas per 50 pips. Peringatan = separuh.
+function remForexBatas(g){
+  const R=FOREX_REM, K=R.kanal[g];
+  const maksLoss=K.pairs.reduce((t,nm)=>t+R.jatahPair*slPair(nm),0);
+  const stop=Math.ceil(maksLoss*R.slippage/50)*50;
+  return {maksLoss, stop, warn:stop/2, maksOrder:R.jatahPair*K.pairs.length, maksUntung:K.pairs.reduce((t,nm)=>t+R.jatahPair*slPair(nm)*R.rr,0)};
+}
 function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const wrap=document.getElementById(wrapId); if(!wrap) return;
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
-  const R=FOREX_REM, cfg=cachedBatasDD.FOREX, K=R.kanal[g];    // batas stop per channel (K.stopPips), peringatan = separuhnya
+  const R=FOREX_REM, cfg=cachedBatasDD.FOREX, K=R.kanal[g], B=remForexBatas(g);
   const pipUsd=PIP_VALUE_USD_PER_0_01_LOT*(cfg.lot/0.01);
-  const stopPips=K.stopPips, warnPips=K.stopPips/2;
+  const stopPips=B.stop, warnPips=B.warn;
   const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
   const fmt=v=>(Math.round(v*10)/10).toString(), sg=v=>(v>0?'+':'')+fmt(v);
   const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk && (!sebagaiForexSaja || (r.simbol||'').toUpperCase()!=='XAUUSD'));
   const n=rows.length;
   let lossKotor=0, net=0, vp=0; const per={}, lossHari={};
+  K.pairs.forEach(nm=>{ per[nm]={n:0,l:0,w:0,net:0}; });          // semua pair channel tampil, walau belum ada order
   rows.forEach(r=>{
     const pp=parseFloat(r.pips||0), v=parseFloat(r.vp||0), nm=(r.simbol||'(tanpa nama)').toUpperCase();
     net+=pp; vp+=isFinite(v)?v:0; if(pp<0){ lossKotor+=-pp; lossHari[r.tanggal]=(lossHari[r.tanggal]||0)+1; }
@@ -15470,7 +15482,8 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const hariLanggar=Object.keys(lossHari).filter(t=>lossHari[t]>R.maxLossHari).sort();
   const now=new Date(); const hariIni=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
   const lossHariIni=lossHari[hariIni]||0;
-  const pairList=Object.keys(per).sort((a,b)=>per[b].n-per[a].n || a.localeCompare(b));
+  const pairList=Object.keys(per).sort((a,b)=>per[b].n-per[a].n || slPair(a)-slPair(b) || a.localeCompare(b));
+  const pairAda=pairList.filter(k=>per[k].n>0);
   const pairPenuh=pairList.filter(k=>per[k].n>=R.jatahPair);
   const pairLewat=pairList.filter(k=>per[k].n>R.jatahPair);
   const pairSisa1=pairList.filter(k=>per[k].n===R.jatahPair-1);
@@ -15483,30 +15496,30 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   else if(lossHariIni>=R.maxLossHari){ warna='#C99A2E'; st='⏸️ Sudah '+lossHariIni+' loss hari ini — stop sampai besok'; }
   else if(lossKotor>=warnPips || pairSisa1.length){ warna='#C99A2E'; st='⚠️ PERINGATAN — '+(pairSisa1.length?'pair tinggal 1 order: '+pairSisa1.join(', '):'loss kotor lewat separuh batas'); }
   const statusPair=o=> uji ? [`${o.n} order (info)`,'#7A5D1F'] : o.n>R.jatahPair ? [`❌ lewat ${o.n}/${R.jatahPair}`,'#D9534F'] : o.n===R.jatahPair ? [`🛑 STOP ${o.n}/${R.jatahPair}`,'#D9534F'] : o.n===R.jatahPair-1 ? [`⚠️ sisa 1 (${o.n}/${R.jatahPair})`,'#C99A2E'] : [`✅ sisa ${R.jatahPair-o.n} (${o.n}/${R.jatahPair})`,'#3E9142'];
-  const tabel=pairList.map(k=>{ const o=per[k], [t,c]=statusPair(o);
-    return `<div style="display:grid;grid-template-columns:1.2fr .6fr .6fr 1fr 1.3fr;gap:4px;font-size:10px;color:#3A2E10;padding:4px 0;border-top:1px solid var(--border)"><b>${k}</b><span>${o.n}x</span><span>${o.l}L/${o.w}W</span><span style="color:${o.net<0?'#D9534F':'#3E9142'}">${sg(o.net)}</span><span style="color:${c};font-weight:700">${t}</span></div>`; }).join('');
+  const tabel=pairList.map(k=>{ const o=per[k], [t,c]=statusPair(o), sl=slPair(k);
+    return `<div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:10px;color:#3A2E10;padding:4px 0;border-top:1px solid var(--border);align-items:center"><span><b>${k}</b><br><span style="font-size:8px;color:#7A5D1F">SL ${sl} / TP ${sl*R.rr} · $${(sl*pipUsd).toFixed(2).replace(/\.?0+$/,'')}</span></span><span>${o.n}x</span><span>${o.l}L/${o.w}W</span><span style="color:${o.net<0?'#D9534F':'#3E9142'}">${sg(o.net)}</span><span style="color:${c};font-weight:700">${t}</span></div>`; }).join('');
   const bar=(nilai,maks,warnaB)=>`<div style="height:8px;background:var(--bg0);border-radius:6px;overflow:hidden;margin:3px 0"><div style="width:${Math.max(0,Math.min(100,nilai/maks*100))}%;height:100%;background:${warnaB}"></div></div>`;
-  const maksOrder=R.jatahPair*K.jumlahPair;
   const target=sebagaiForexSaja?'':`<div style="background:var(--bg0);border-radius:8px;padding:8px 10px;margin:8px 0">
       <div style="font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">🎯 Target bulan ini (dari TF)</div>
       <div style="font-size:10px;color:#3A2E10;line-height:1.7">VP bulan ini: <b style="color:${vp<0?'#D9534F':'#3E9142'}">${fmt(vp)}</b><br>
       ${vp>=R.targetMinVP?'✅':'⬜'} Syarat medal: minimal ${R.targetMinVP} VP${bar(vp,R.targetMinVP,'#3E9142')}
       ${net>=0?'✅':'⬜'} Pips bulanan minimal 0 (sekarang <b>${sg(net)}</b>)<br>
       ${vp>=R.targetVP?'✅':'⬜'} Target penuh: ${R.targetVP} VP${bar(vp,R.targetVP,'#C8A84B')}
-      <span style="font-size:9px;color:#7A5D1F">RR 1:3 → 1 win = +${R.tpPips} pips, 1 loss = -${R.slPips} pips, titik impas win rate 25%. Dengan maksimal ${maksOrder} order (${K.jumlahPair} pair × ${R.jatahPair}): syarat medal (±+253 pips) butuh ±8 win (±33%), target penuh (±+790 pips) butuh ±10 win (±42%).</span></div>
+      <span style="font-size:9px;color:#7A5D1F">RR 1:3: 1 win ≈ +180 sampai +202,5 VP, 1 loss ≈ -60 sampai -67,5 VP (SL tiap pair sudah menyeimbangkan VP). Titik impas win rate 25%. Dari maksimal ${B.maksOrder} order (${K.pairs.length} pair × ${R.jatahPair}): syarat medal butuh ±8 win (±33%), target penuh butuh ±10 win (±42%).</span></div>
     </div>`;
   wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🚦 Rem Forex${sebagaiForexSaja?' (bagian forex)':' & Target'} — ${label}</div>
-    <div style="font-size:10px;color:#3A2E10;line-height:1.7;margin-bottom:6px"><b>Strategi:</b> ${K.jumlahPair} pair, SL ${R.slPips} / TP ${R.tpPips} pips (<b>RR 1:3</b>) · risiko $${cfg.riskLossUsd} per order · <b>jatah ${R.jatahPair} order per pair per bulan</b> (untung atau rugi, begitu penuh pair itu stop) · maks ${R.maxLossHari} loss per hari · stop gabungan loss kotor <b>${fmt(stopPips)} pips</b> (peringatan ${fmt(warnPips)}).${sebagaiForexSaja?' Emas punya aturan sendiri di kartu di atas.':''}</div>
+    <div style="font-size:10px;color:#3A2E10;line-height:1.7;margin-bottom:6px"><b>Strategi:</b> ${K.pairs.length} pair, <b>SL beda per pair</b> (30 / 45 / 60 pips = $3 / $4,5 / $6), TP = 3× SL (<b>RR 1:3</b>) · <b>jatah ${R.jatahPair} order per pair per bulan</b> (untung atau rugi, begitu penuh pair itu stop) · maks ${R.maxLossHari} loss per hari · loss maksimal ${fmt(B.maksLoss)} pips ($${(B.maksLoss*pipUsd).toFixed(1).replace(/\.0$/,'')}) → <b>stop gabungan loss kotor ${fmt(stopPips)} pips</b> (peringatan ${fmt(warnPips)}).${sebagaiForexSaja?' Emas punya aturan sendiri di kartu di atas.':''}</div>
     <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:8px;line-height:1.5">${st}</div>
-    <div style="font-size:10px;color:#3A2E10">Order terpakai: <b>${n}</b> · pair penuh: <b>${pairPenuh.length}</b>/${pairList.length} pair yang sudah ada order</div>
+    <div style="font-size:10px;color:#3A2E10">Order terpakai: <b>${n}</b> dari maks ${B.maksOrder} · pair penuh: <b>${pairPenuh.length}</b>/${K.pairs.length}</div>
     <div style="font-size:10px;color:#3A2E10;margin-top:4px">Loss kotor: <b style="color:#D9534F">-${fmt(lossKotor)} pips</b> dari ${fmt(stopPips)} ($${(lossKotor*pipUsd).toFixed(2).replace(/\.00$/,'')})${bar(lossKotor,stopPips,lossKotor>=stopPips?'#D9534F':(lossKotor>=warnPips?'#C99A2E':'#3E9142'))}</div>
     ${target}
     <div style="font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin:6px 0 2px">Jatah per pair (${R.jatahPair} order per bulan)</div>
-    <div style="display:grid;grid-template-columns:1.2fr .6fr .6fr 1fr 1.3fr;gap:4px;font-size:8px;color:#8A6B26;text-transform:uppercase"><span>Pair</span><span>Order</span><span>L/W</span><span>Bersih</span><span>Status</span></div>
-    ${tabel||'<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:8px">Belum ada data.</div>'}
+    <div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:8px;color:#8A6B26;text-transform:uppercase"><span>Pair / SL</span><span>Order</span><span>L/W</span><span>Bersih</span><span>Status</span></div>
+    ${tabel}
     ${hariLanggar.length?`<div style="font-size:10px;color:${uji?'#7A5D1F':'#D9534F'};line-height:1.6;margin-top:8px">${uji?'ℹ️':'❌'} Loss lebih dari ${R.maxLossHari}x per hari di tanggal: ${hariLanggar.map(t=>t.slice(8)+'/'+t.slice(5,7)+' ('+lossHari[t]+'x)').join(', ')}</div>`:(n?`<div style="font-size:10px;color:#3E9142;margin-top:8px">✅ Aturan ${R.maxLossHari} loss per hari terjaga</div>`:'')}
     ${pairLewat.length?`<div style="font-size:10px;color:${uji?'#7A5D1F':'#D9534F'};line-height:1.6;margin-top:4px">${uji?'ℹ️ Di atas jatah baru':'❌ Melewati jatah '+R.jatahPair+' order'} (${R.jatahPair} order per pair): ${pairLewat.map(k=>k+' ('+per[k].n+'x)').join(', ')}</div>`:''}
+    <div style="font-size:8px;color:#7A5D1F;margin-top:6px;line-height:1.5">SL per pair mengikuti pengali VP TF (2 VP/pip → 30, 1,5 → 45, 1 → 60). Pair di luar daftar channel memakai SL 60.</div>
   </div>`;
 }
 function renderRemForex(){
