@@ -15420,8 +15420,11 @@ function renderDaftarPair(){
       return `<details ${bdDetailBuka[kunciP]?'open':''} ontoggle="bdToggleOpen('${kunciP}',this.open)" style="border-top:1px solid var(--border);padding:4px 0"><summary style="cursor:pointer;font-size:10px;color:#3A2E10;line-height:1.5"><b>${k}</b> — ${arr.length} order · ${w}W / ${l}L · <b style="color:${net<0?'#D9534F':'#3E9142'}">${sg(net)} pips</b> · ✅ ${cocok}/${arr.length}</summary>${baris}</details>`;
     }).join('');
     const tot=rows.reduce((t,r)=>t+parseFloat(r.pips||0),0);
+    const hariList=Object.keys(perTgl);
+    const hariOk=hariList.filter(t=>Object.keys(perTgl[t]).every(k=>perTgl[t][k].every(r=>r.cocok))).length;
+    const sinyalOk=rows.filter(r=>r.cocok).length;
     return `<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:#3A2E10;margin-bottom:2px">${label}</div>
-      <div style="font-size:9px;color:#7A5D1F;margin-bottom:6px">${rows.length} sinyal · ${namaList.length} pair · total ${sg(tot)} pips</div>
+      <div style="font-size:9px;color:#7A5D1F;margin-bottom:6px">${rows.length} sinyal · ${namaList.length} pair · total ${sg(tot)} pips<br><b style="color:${hariOk===hariList.length&&hariList.length?'#3E9142':'#C8A84B'}">Progres cek: ${hariOk}/${hariList.length} hari selesai · ${sinyalOk}/${rows.length} sinyal dicentang</b></div>
       <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">🗓️ Rekap harian per pair (tap tanggal untuk rincian)</div>
       ${harian}
       <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 2px">📑 Daftar sinyal per pair</div>
