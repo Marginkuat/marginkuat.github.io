@@ -15113,6 +15113,25 @@ function renderLossKotor(g, wrapId){
   const [yy,mm]=bk.split('-');
   const baris=list.map(x=>`<div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:10px;color:#3A2E10;padding:4px 0;border-top:1px solid var(--border)">
       <span style="font-weight:700">${x.nama}</span><span>${x.loss}x</span><span style="color:#D9534F;font-weight:700">${x.lossPips?'-'+fmt(x.lossPips):'0'}</span><span>${x.win}x</span><span style="color:${x.net<0?'#D9534F':'#3E9142'}">${x.net>=0?'+':''}${fmt(x.net)}</span></div>`).join('');
+  // ── Cek silang per pair: tiap pair → per tanggal tutup → urutan W/L dan pips ──
+  const sg2=v=>(v>0?'+':'')+fmt(v);
+  const grup={};
+  urut.forEach(r=>{
+    const nm=(r.simbol||'(tanpa nama)').toUpperCase(), pp=parseFloat(r.pips||0);
+    const G=grup[nm]||(grup[nm]={n:0,w:0,l:0,net:0,tgl:{}});
+    G.n++; G.net+=pp; if(pp>0)G.w++; else if(pp<0)G.l++;
+    (G.tgl[r.tanggal]||(G.tgl[r.tanggal]=[])).push(pp);
+  });
+  const namaList=Object.keys(grup).sort((x,y)=>grup[y].n-grup[x].n);
+  const detailPair=namaList.length?`<div style="margin-top:10px"><div style="font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Cek silang per pair — cocokkan dengan catatan buku / riwayat TF</div>${namaList.map(nm=>{
+      const G=grup[nm];
+      const garis=Object.keys(G.tgl).sort().map(t=>{
+        const a=G.tgl[t], jum=a.reduce((x,y)=>x+y,0);
+        const ulang=a.some((v,i)=>a.indexOf(v)!==i);
+        return `<div style="font-size:10px;color:#3A2E10;padding:3px 0;line-height:1.5;border-top:1px dashed var(--border)"><b>${t.slice(8)}/${t.slice(5,7)}</b> · ${a.length}x ${ulang?'🔁':''} · <span style="letter-spacing:1px">${a.map(v=>v>0?'W':v<0?'L':'BE').join(' ')}</span><br><span style="color:#7A5D1F">${a.map(sg2).join(', ')}</span> = <b style="color:${jum<0?'#D9534F':'#3E9142'}">${sg2(jum)}</b></div>`;
+      }).join('');
+      return `<details style="border-top:1px solid var(--border);padding:5px 0"><summary style="cursor:pointer;font-size:10px;color:#3A2E10"><b>${nm}</b> — ${G.n} order · ${G.w}W / ${G.l}L · <b style="color:${G.net<0?'#D9534F':'#3E9142'}">${sg2(G.net)} pips</b></summary>${garis}</details>`;
+    }).join('')}<div style="font-size:8px;color:#7A5D1F;margin-top:3px;line-height:1.5">🔁 = ada nilai pips yang sama berulang di tanggal & pair yang sama. Bisa wajar (SL sama), tapi cek apakah ada input ganda.</div></div>`:'';
   wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">📉 Loss Kotor per Pair — ${label} · ${nm[parseInt(mm,10)-1]} ${yy}</div>
     <div style="font-size:9px;color:#7A5D1F;margin-bottom:8px;line-height:1.5">${cfg.basisNet?'Bulan peralihan: batas dihitung dari RUGI BERSIH (loss dikurangi win). Tabel di bawah tetap merinci loss per pair.':'Yang dipantau: pips yang HILANG dari order kena SL, per pair. Win tidak mengurangi angka ini.'} Batas bulanan <b>${fmt(batasPips)} pips ($${cfg.stopUsd})</b> · SL acuan ${fmt(slPips)} pips ($${cfg.riskLossUsd}).</div>
@@ -15130,6 +15149,7 @@ function renderLossKotor(g, wrapId){
     <div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.4px"><span>Pair</span><span>Loss</span><span>Pips hilang</span><span>Win</span><span>Bersih</span></div>
     ${baris||'<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:8px 0">Belum ada data.</div>'}
     ${list.length?`<div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:10px;font-weight:800;color:#3A2E10;padding:5px 0 0;border-top:2px solid var(--border)"><span>TOTAL</span><span>${totLoss}x</span><span style="color:#D9534F">-${fmt(totLossPips)}</span><span>${totWin}x</span><span style="color:${totNet<0?'#D9534F':'#3E9142'}">${totNet>=0?'+':''}${fmt(totNet)}</span></div>`:''}
+    ${detailPair}
     <div style="font-size:8px;color:#7A5D1F;margin-top:6px;line-height:1.5">Kolom "Bersih" (loss + win) ditampilkan sebagai pelengkap supaya hasil sebenarnya tetap transparan. Pair JPY/non-USD nilai pipnya bisa sedikit berbeda dari $0,10.</div>
   </div>`;
 }
@@ -15222,13 +15242,16 @@ function renderRekonCard(){
       body=`<div style="font-size:10px;color:#7A5D1F;line-height:1.5">Situs saat ini: <b>${sN}</b> sinyal, <b>${sg(sPips)} pips</b>. Isi total dari aplikasi TF (dan MT4) lewat "Isi data TF/MT4" supaya selisihnya terlihat.</div>`;
     }
     const cek=masalah.length?`<div style="background:var(--bg0);border-radius:8px;padding:7px 9px;margin-top:8px;font-size:10px;color:#D9534F;line-height:1.6"><b>Pemeriksaan otomatis data situs:</b><br>${masalah.map(x=>'• '+x).join('<br>')}</div>`:`<div style="font-size:9px;color:#3E9142;margin-top:8px">✅ Pemeriksaan otomatis data situs: tidak ditemukan input ganda, pair kosong, atau pips 0.</div>`;
+    const perTgl={}; rows.forEach(r=>{ const o=perTgl[r.tanggal]||(perTgl[r.tanggal]={n:0,pips:0}); o.n++; o.pips+=parseFloat(r.pips||0); });
+    const tglList=Object.keys(perTgl).sort();
+    const rinci=tglList.length?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:10px;color:#C8A84B">Rincian per tanggal tutup (${tglList.length} hari)</summary>${tglList.map(t=>`<div style="display:grid;grid-template-columns:1fr .6fr 1fr;gap:4px;font-size:10px;padding:3px 0;border-top:1px solid var(--border);color:${perTgl[t].n>6?'#D9534F':'#3A2E10'}"><span>${t.slice(5)}${perTgl[t].n>6?' ⚠️':''}</span><span>${perTgl[t].n}x</span><span>${sg(perTgl[t].pips)} pips</span></div>`).join('')}<div style="font-size:8px;color:#7A5D1F;margin-top:4px;line-height:1.5">⚠️ = lebih dari 6 sinyal dalam satu hari. Bandingkan hari-hari ini dengan riwayat sinyal di aplikasi TF.</div></details>`:'';
     return `<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px;margin-bottom:${idx===0?'10px':'0'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800">🔎 Cek Selisih TF · MT4 · Situs — ${label}</div>
         <span onclick="editRekon('${g}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Isi data TF/MT4</span>
       </div>
       <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:6px">${judul}</div>
-      ${body}${cek}
+      ${body}${cek}${rinci}
     </div>`;
   }).join('');
   wrap.innerHTML=html;
