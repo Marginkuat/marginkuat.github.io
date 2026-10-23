@@ -1583,6 +1583,7 @@ function renderInvCalcDisclaimer(){
       <div id="batasDDLossKotorEmasWrap" style="margin-top:10px"></div>
       <div id="batasDDLossKotorWrap" style="margin-top:10px"></div>
       <div id="batasDDRekonWrap" style="margin-top:10px"></div>
+      <div id="batasDDPairListWrap" style="margin-top:10px"></div>
 
     </div>
 
@@ -15072,6 +15073,17 @@ function renderBatasDDMetode(){
 
 // ══ FOREX: LOSS KOTOR PER PAIR (khusus channel forex / Datuk Crypto 89) ══
 // Fokus pada pips yang HILANG (order kena SL), per pair, vs batas bulanan. Win tidak mengurangi angka ini.
+function bdTgl(t){ return t? String(t).slice(8)+'/'+String(t).slice(5,7) : '-'; }
+function bdWaktu(r){
+  const buka=bdTgl(r.tanggalBuka||r.tanggal)+' '+(r.jamBuka||'--:--');
+  const tutup=bdTgl(r.tanggal)+' '+(r.jam||'--:--');
+  return `Buka ${buka} → Tutup ${tutup}`;
+}
+function bdBarisSinyal(r, tandai){
+  const pp=parseFloat(r.pips||0), vp=parseFloat(r.vp||0);
+  const w=pp>0?'W':pp<0?'L':'BE', warna=pp<0?'#D9534F':pp>0?'#3E9142':'#8A6B26';
+  return `<div style="font-size:9px;color:#5C4818;padding:1px 0 1px 8px;line-height:1.5"><b style="color:${warna}">${w} ${pp>0?'+':''}${Math.round(pp*10)/10} pips</b>${isFinite(vp)&&r.vp!=null?' ('+(vp>0?'+':'')+Math.round(vp*100)/100+' VP)':''} · ${bdWaktu(r)}${tandai?' <b style="color:#D9534F">🔁 sama persis</b>':''}</div>`;
+}
 function renderLossKotor(g, wrapId){
   const wrap=document.getElementById(wrapId); if(!wrap) return;
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
@@ -15120,18 +15132,21 @@ function renderLossKotor(g, wrapId){
     const nm=(r.simbol||'(tanpa nama)').toUpperCase(), pp=parseFloat(r.pips||0);
     const G=grup[nm]||(grup[nm]={n:0,w:0,l:0,net:0,tgl:{}});
     G.n++; G.net+=pp; if(pp>0)G.w++; else if(pp<0)G.l++;
-    (G.tgl[r.tanggal]||(G.tgl[r.tanggal]=[])).push(pp);
+    (G.tgl[r.tanggal]||(G.tgl[r.tanggal]=[])).push(r);
   });
   const namaList=Object.keys(grup).sort((x,y)=>grup[y].n-grup[x].n);
   const detailPair=namaList.length?`<div style="margin-top:10px"><div style="font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Cek silang per pair — cocokkan dengan catatan buku / riwayat TF</div>${namaList.map(nm=>{
       const G=grup[nm];
       const garis=Object.keys(G.tgl).sort().map(t=>{
-        const a=G.tgl[t], jum=a.reduce((x,y)=>x+y,0);
-        const ulang=a.some((v,i)=>a.indexOf(v)!==i);
-        return `<div style="font-size:10px;color:#3A2E10;padding:3px 0;line-height:1.5;border-top:1px dashed var(--border)"><b>${t.slice(8)}/${t.slice(5,7)}</b> · ${a.length}x ${ulang?'🔁':''} · <span style="letter-spacing:1px">${a.map(v=>v>0?'W':v<0?'L':'BE').join(' ')}</span><br><span style="color:#7A5D1F">${a.map(sg2).join(', ')}</span> = <b style="color:${jum<0?'#D9534F':'#3E9142'}">${sg2(jum)}</b></div>`;
+        const lst=G.tgl[t], a=lst.map(r=>parseFloat(r.pips||0)), jum=a.reduce((x,y)=>x+y,0);
+        const kunci=r=>[r.tanggalBuka||'',r.jamBuka||'',r.jam||'',parseFloat(r.pips||0)].join('|');
+        const hit={}; lst.forEach(r=>{ hit[kunci(r)]=(hit[kunci(r)]||0)+1; });
+        const ulang=Object.keys(hit).some(k=>hit[k]>1);
+        const urutWaktu=lst.slice().sort((x,y)=>String(x.jam||'').localeCompare(String(y.jam||'')));
+        return `<div style="font-size:10px;color:#3A2E10;padding:3px 0;line-height:1.5;border-top:1px dashed var(--border)"><b>${t.slice(8)}/${t.slice(5,7)}</b> · ${a.length}x ${ulang?'🔁':''} · <span style="letter-spacing:1px">${a.map(v=>v>0?'W':v<0?'L':'BE').join(' ')}</span> = <b style="color:${jum<0?'#D9534F':'#3E9142'}">${sg2(jum)}</b>${urutWaktu.map(r=>bdBarisSinyal(r, hit[kunci(r)]>1)).join('')}</div>`;
       }).join('');
       return `<details style="border-top:1px solid var(--border);padding:5px 0"><summary style="cursor:pointer;font-size:10px;color:#3A2E10"><b>${nm}</b> — ${G.n} order · ${G.w}W / ${G.l}L · <b style="color:${G.net<0?'#D9534F':'#3E9142'}">${sg2(G.net)} pips</b></summary>${garis}</details>`;
-    }).join('')}<div style="font-size:8px;color:#7A5D1F;margin-top:3px;line-height:1.5">🔁 = ada nilai pips yang sama berulang di tanggal & pair yang sama. Bisa wajar (SL sama), tapi cek apakah ada input ganda.</div></div>`:'';
+    }).join('')}<div style="font-size:8px;color:#7A5D1F;margin-top:3px;line-height:1.5">🔁 = ada sinyal dengan jam buka, jam tutup, dan pips yang persis sama (kemungkinan input ganda). Tiap baris memuat waktu Buka dan Tutup seperti di TF.</div></div>`:'';
   wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">📉 Loss Kotor per Pair — ${label} · ${nm[parseInt(mm,10)-1]} ${yy}</div>
     <div style="font-size:9px;color:#7A5D1F;margin-bottom:8px;line-height:1.5">${cfg.basisNet?'Bulan peralihan: batas dihitung dari RUGI BERSIH (loss dikurangi win). Tabel di bawah tetap merinci loss per pair.':'Yang dipantau: pips yang HILANG dari order kena SL, per pair. Win tidak mengurangi angka ini.'} Batas bulanan <b>${fmt(batasPips)} pips ($${cfg.stopUsd})</b> · SL acuan ${fmt(slPips)} pips ($${cfg.riskLossUsd}).</div>
@@ -15210,7 +15225,17 @@ function renderRekonCard(){
     const ganda=Object.keys(cnt).filter(k=>cnt[k]>1).map(k=>{ const [t,sy,pp]=k.split('|'); return `${t.slice(5)} ${sy||'(tanpa nama)'} ${pp>0?'+':''}${pp} (${cnt[k]}x)`; });
     const tanpaNama=rows.filter(r=>!r.simbol).length, nol=rows.filter(r=>parseFloat(r.pips||0)===0).length;
     let masalah=[];
-    if(ganda.length) masalah.push(`Kemungkinan input ganda (tanggal, pair, pips sama): ${ganda.join(', ')}`);
+    if(ganda.length){
+      const kel={}; rows.forEach(r=>{ const k=r.tanggal+'|'+(r.simbol||'')+'|'+parseFloat(r.pips||0); (kel[k]=kel[k]||[]).push(r); });
+      const det=Object.keys(kel).filter(k=>kel[k].length>1).sort().map(k=>{
+        const arr=kel[k], r0=arr[0];
+        const kw=r=>[r.tanggalBuka||'',r.jamBuka||'',r.jam||''].join('|');
+        const hit={}; arr.forEach(r=>{ hit[kw(r)]=(hit[kw(r)]||0)+1; });
+        const nKembar=arr.filter(r=>hit[kw(r)]>1).length;
+        return `<div style="padding:4px 0;border-top:1px dashed var(--border)"><b>${r0.simbol||'(tanpa nama)'}</b> · Tutup ${bdTgl(r0.tanggal)} · ${arr.length}x ${nKembar?`<b>🔁 ${nKembar} baris waktu buka & tutup sama persis (kemungkinan ganda)</b>`:'<span style="color:#C99A2E">waktu berbeda semua (kemungkinan order terpisah)</span>'}${arr.map(r=>bdBarisSinyal(r,hit[kw(r)]>1)).join('')}</div>`;
+      }).join('');
+      masalah.push(`<details><summary style="cursor:pointer">Kemungkinan input ganda: ${ganda.length} kelompok (tap untuk lihat detail)</summary>${det}</details>`);
+    }
     if(tanpaNama) masalah.push(`${tanpaNama} sinyal tanpa nama pair`);
     if(nol) masalah.push(`${nol} sinyal dengan pips 0`);
     let body='';
@@ -15304,6 +15329,117 @@ async function hapusDuplikat(g){
     try{ renderRemPipsCard(); renderDaftarSinyal(); }catch(_){}
   }
 }
+
+// ══ DAFTAR SINYAL PER PAIR + REKAP HARIAN PER PAIR — untuk cek silang dengan TF ══
+// (1) Rekap harian: tiap tanggal sampai akhir bulan, berisi jumlah sinyal per pair (mis. XAUUSD 5x, EURUSD 1x).
+// (2) Daftar per pair: format sama seperti Riwayat Sinyal, dikelompokkan per pair.
+let bdDetailBuka={};
+function bdToggleOpen(k,o){ if(o) bdDetailBuka[k]=true; else delete bdDetailBuka[k]; }
+async function toggleCocokHari(g, tanggal){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const items=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && r.tanggal===tanggal);
+  if(!items.length) return;
+  const semua=items.every(r=>r.cocok), baru=!semua;
+  const lama=items.map(r=>!!r.cocok);
+  items.forEach(r=>{ r.cocok=baru; });
+  renderDaftarSinyal();   // tampilan langsung berubah (daftar per hari ikut ter-render)
+  try{
+    await simpanSinyalKeServer(g);
+    toast(baru?`✅ ${items.length} sinyal tanggal ${tanggal} ditandai cocok`:`↩️ Centang tanggal ${tanggal} dibatalkan`);
+  }catch(e){
+    console.error(e);
+    items.forEach((r,i)=>{ r.cocok=lama[i]; });
+    renderDaftarSinyal();
+    toast('❌ Gagal simpan centang: '+(e.message||'').slice(0,100));
+  }
+}
+function renderDaftarPair(){
+  const wrap=document.getElementById('batasDDPairListWrap'); if(!wrap) return;
+  const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
+  const fmt=v=>(Math.round(v*100)/100).toString();
+  const sg=v=>(v>0?'+':'')+fmt(v);
+  const waktu=r=>new Date(r.tanggal+'T'+(r.jam||'00:00'));
+  const nm=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const hr=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const [yy,mm]=bk.split('-'); const bln=parseInt(mm,10);
+  const hariAkhir=new Date(parseInt(yy,10),bln,0).getDate();
+  const urutPair=(a,b)=> a==='XAUUSD'?-1 : b==='XAUUSD'?1 : a.localeCompare(b);
+  const namaPair=r=>(r.simbol||'(tanpa nama)').toUpperCase();
+  const blok=['XAUUSD','FOREX'].map(g=>{
+    const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+    const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk);
+    // ── (1) Rekap harian per pair ──
+    const perTgl={};
+    rows.forEach(r=>{ const o=(perTgl[r.tanggal]=perTgl[r.tanggal]||{}); (o[namaPair(r)]=o[namaPair(r)]||[]).push(r); });
+    let harian='';
+    for(let d=1; d<=hariAkhir; d++){
+      const t=`${yy}-${mm}-${String(d).padStart(2,'0')}`;
+      const lbl=`${String(d).padStart(2,'0')} ${nm[bln-1]} (${hr[new Date(t+'T00:00:00').getDay()]})`;
+      const o=perTgl[t];
+      if(!o){ harian+=`<div style="font-size:10px;color:#8A6B26;padding:5px 0;border-top:1px solid var(--border);opacity:.6">${lbl} — tidak ada sinyal</div>`; continue; }
+      const pairs=Object.keys(o).sort(urutPair);
+      const total=pairs.reduce((x,k)=>x+o[k].length,0);
+      const netHari=pairs.reduce((x,k)=>x+o[k].reduce((y,r)=>y+parseFloat(r.pips||0),0),0);
+      const ring=pairs.map(k=>`${k} ${o[k].length}x`).join(', ');
+      const semuaHari=pairs.reduce((x,k)=>x.concat(o[k]),[]);
+      const nCocok=semuaHari.filter(r=>r.cocok).length;
+      const ikon=nCocok===total?'✅':(nCocok>0?'◐':'⬜');
+      const detail=pairs.map(k=>{
+        const arr=o[k].slice().sort((x,y)=>String(x.jam||'').localeCompare(String(y.jam||'')));
+        const net=arr.reduce((x,r)=>x+parseFloat(r.pips||0),0);
+        const barisS=arr.map(r=>{
+          const pp=parseFloat(r.pips||0), wr=pp<0?'#D9534F':'#3E9142';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;${r.cocok?'opacity:.55':''}"><div style="display:flex;align-items:center;gap:8px"><span onclick="toggleCocokSinyal('${g}','${r.id}')" style="font-size:15px;cursor:pointer" title="Tandai sudah dicocokkan dengan buku/TF">${r.cocok?'✅':'⬜'}</span><span style="font-size:10px;color:${wr}"><span style="${r.cocok?'text-decoration:line-through':''}">${r.jam||'--:--'} ${pp>0?'W':pp<0?'L':'BE'} ${sg(pp)} pips</span><span style="color:#7A5D1F"> · buka ${bdTgl(r.tanggalBuka||r.tanggal)} ${r.jamBuka||'--:--'}</span></span></div><div style="display:flex;gap:8px"><span onclick="editSinyal('${g}','${r.id}')" style="font-size:13px;cursor:pointer">✏️</span><span onclick="hapusSinyal('${g}','${r.id}')" style="font-size:13px;cursor:pointer">🗑️</span></div></div>`;
+        }).join('');
+        return `<div style="padding:3px 0 3px 4px;border-top:1px dashed var(--border)"><div style="font-size:10px;color:#3A2E10;font-weight:700">${k} ${arr.length}x <span style="color:${net<0?'#D9534F':'#3E9142'}">= ${sg(net)} pips</span></div>${barisS}</div>`;
+      }).join('');
+      const kunciH='h|'+g+'|'+t;
+      harian+=`<details ${bdDetailBuka[kunciH]?'open':''} ontoggle="bdToggleOpen('${kunciH}',this.open)" style="border-top:1px solid var(--border);padding:4px 0"><summary style="cursor:pointer;font-size:10px;color:#3A2E10;line-height:1.5"><b>${lbl}</b> — ${total} sinyal · <b style="color:${netHari<0?'#D9534F':'#3E9142'}">${sg(netHari)} pips</b> · ${ikon} ${nCocok}/${total}<br><span style="color:#5C4818">${ring}</span></summary><div onclick="toggleCocokHari('${g}','${t}')" style="font-size:10px;color:#C8A84B;text-decoration:underline;cursor:pointer;padding:4px 0">${nCocok===total?'↩️ Batalkan centang semua hari ini':'☑️ Centang semua sinyal hari ini (sudah cocok dengan buku)'}</div>${detail}</details>`;
+    }
+    // ── (2) Daftar per pair ──
+    const per={};
+    rows.forEach(r=>{ const k=namaPair(r); (per[k]=per[k]||[]).push(r); });
+    const namaList=Object.keys(per).sort(urutPair);
+    const grupHtml=namaList.map(k=>{
+      const arr=per[k].slice().sort((x,y)=>waktu(y)-waktu(x));      // terbaru di atas, seperti Riwayat Sinyal
+      let net=0,w=0,l=0,cocok=0;
+      const baris=arr.map(r=>{
+        const pp=parseFloat(r.pips||0), vp=parseFloat(r.vp||0);
+        net+=pp; if(pp>0)w++; else if(pp<0)l++; if(r.cocok)cocok++;
+        const warna=pp>=0?'#3E9142':'#D9534F';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);${r.cocok?'opacity:.55':''}">
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <span onclick="toggleCocokSinyal('${g}','${r.id}')" style="font-size:16px;cursor:pointer;line-height:1.2;flex-shrink:0" title="Tandai sudah dicocokkan ke aplikasi TF">${r.cocok?'✅':'⬜'}</span>
+            <div style="font-size:10px;color:#3A2E10;line-height:1.5"><b style="${r.cocok?'text-decoration:line-through':''}">${k}</b> <span style="color:#8A6B26">— ${r.tanggal}${r.jam?' '+r.jam:''}</span><br>
+              <span style="color:${warna}">${pp>=0?'+':''}${fmt(pp)} pip</span> / <span style="color:${warna}">${vp>=0?'+':''}${fmt(vp)} VP</span><span style="color:#7A5D1F"> · buka ${bdTgl(r.tanggalBuka||r.tanggal)} ${r.jamBuka||'--:--'}</span></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0"><span onclick="editSinyal('${g}','${r.id}')" style="font-size:14px;cursor:pointer">✏️</span><span onclick="hapusSinyal('${g}','${r.id}')" style="font-size:14px;cursor:pointer">🗑️</span></div>
+        </div>`;
+      }).join('');
+      const kunciP='p|'+g+'|'+k;
+      return `<details ${bdDetailBuka[kunciP]?'open':''} ontoggle="bdToggleOpen('${kunciP}',this.open)" style="border-top:1px solid var(--border);padding:4px 0"><summary style="cursor:pointer;font-size:10px;color:#3A2E10;line-height:1.5"><b>${k}</b> — ${arr.length} order · ${w}W / ${l}L · <b style="color:${net<0?'#D9534F':'#3E9142'}">${sg(net)} pips</b> · ✅ ${cocok}/${arr.length}</summary>${baris}</details>`;
+    }).join('');
+    const tot=rows.reduce((t,r)=>t+parseFloat(r.pips||0),0);
+    return `<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:#3A2E10;margin-bottom:2px">${label}</div>
+      <div style="font-size:9px;color:#7A5D1F;margin-bottom:6px">${rows.length} sinyal · ${namaList.length} pair · total ${sg(tot)} pips</div>
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">🗓️ Rekap harian per pair (tap tanggal untuk rincian)</div>
+      ${harian}
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 2px">📑 Daftar sinyal per pair</div>
+      ${grupHtml||'<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:8px">Belum ada sinyal closed bulan ini.</div>'}</div>`;
+  }).join('');
+  wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">📑 Rekap Sinyal per Tanggal & Pair — ${nm[bln-1]} ${yy}</div>
+    <div style="font-size:9px;color:#5C4818;margin-bottom:8px;line-height:1.5">Contoh baca: "01 Okt — XAUUSD 5x, AUDJPY 1x, EURUSD 1x ..." artinya pada tanggal tutup 01 Oktober ada 5 sinyal XAUUSD dan 1 sinyal tiap pair lainnya. Daftar berjalan sampai akhir bulan. Di daftar per pair: ⬜ tandai sudah dicocokkan, ✏️ edit, 🗑️ hapus.</div>
+    ${blok}
+  </div>`;
+}
+(function(){
+  const _r4=renderBatasDDCard;
+  renderBatasDDCard=function(){ _r4.apply(this,arguments); try{ renderDaftarPair(); }catch(e){ console.error('renderDaftarPair', e); } };
+  // supaya tanda ✅ / edit / hapus dari Riwayat Sinyal juga langsung terlihat di daftar per pair
+  const _rd=renderDaftarSinyal;
+  renderDaftarSinyal=function(){ _rd.apply(this,arguments); try{ renderDaftarPair(); }catch(e){ console.error('renderDaftarPair', e); } };
+})();
 </script>
 </body>
 </html>
