@@ -1578,6 +1578,7 @@ function renderInvCalcDisclaimer(){
         <div id="batasDDSimWrap" style="margin-top:8px"></div>
       </div>
       <select class="inp" id="batasDDBulan" onchange="batasDDBulanDipilih=this.value;renderBatasDDCard()" style="margin-bottom:10px"></select>
+      <div id="batasDDMetodeWrap"></div>
       <div id="batasDDWrap"><div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div></div>
 
     </div>
@@ -14966,6 +14967,88 @@ function renderBatasDDSim(){
 (function(){
   const _r=renderBatasDDCard;
   renderBatasDDCard=function(){ _r.apply(this,arguments); try{ renderBatasDDSim(); }catch(e){ console.error('renderBatasDDSim', e); } };
+})();
+
+// ══ METODE TRADING PER BULAN (H4 / D1 / W1) — khusus channel emas (Datuk EURUSD) ══
+// Admin memilih metode yang dipakai tiap bulan; investor otomatis melihatnya, dan batas rugi
+// di kartu Cek Batas Kerugian mengikuti metode itu. Disimpan di app_settings 'metode_bulan_XAUUSD'.
+const METODE_DEF={
+  H4:{label:'H4', sl:200, tp:400, rr:'1:2', risk:20, jatah:10},
+  D1:{label:'D1', sl:500, tp:500, rr:'1:1', risk:50, jatah:5},
+  W1:{label:'W1', sl:500, tp:500, rr:'1:1', risk:50, jatah:5}
+};
+let cachedMetodeBulan={XAUUSD:{}};
+async function loadMetodeBulan(){
+  try{
+    const rows=await api('app_settings?select=value&key=eq.metode_bulan_XAUUSD');
+    if(rows && rows.length && rows[0].value){ const p=JSON.parse(rows[0].value); if(p && typeof p==='object') cachedMetodeBulan.XAUUSD=p; }
+  }catch(e){ console.error('Gagal load metode_bulan', e); }
+}
+function metodeEfektif(g,bulanKey){
+  if(g!=='XAUUSD') return null;
+  const key=cachedMetodeBulan.XAUUSD[bulanKey]||'H4';
+  const m=METODE_DEF[key]; if(!m) return null;
+  const k=(cachedBatasDD[g].lot||0.01)/0.01;
+  const risk=m.risk*k;
+  return Object.assign({key, diatur:!!cachedMetodeBulan.XAUUSD[bulanKey]}, m, {riskUsd:risk, stopUsd:risk*m.jatah, warnUsd:risk*m.jatah/2});
+}
+async function editMetodeBulan(g){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah metode');return;}
+  const bk=batasDDBulanDipilih;
+  const cur=cachedMetodeBulan.XAUUSD[bk]||'H4';
+  const v=prompt(`Metode trading bulan ${bk} (khusus emas):\nH4 = SL200/TP400, jatah 10 loss\nD1 = SL500/TP500, jatah 5 loss\nW1 = SL500/TP500, jatah 5 loss\n\nKetik H4, D1, atau W1:`, cur);
+  if(v===null) return;
+  const key=v.trim().toUpperCase();
+  if(!METODE_DEF[key]){toast('❌ Pilih salah satu: H4, D1, atau W1');return;}
+  try{
+    const baru=Object.assign({},cachedMetodeBulan.XAUUSD,{[bk]:key});
+    await simpanSettingRem('metode_bulan_XAUUSD', JSON.stringify(baru));
+    cachedMetodeBulan.XAUUSD=baru;
+    toast(`✅ Metode ${bk}: ${key}`);
+    renderBatasDDCard();
+  }catch(e){ console.error(e); toast('❌ Gagal simpan: '+(e.message||'').slice(0,120)); }
+}
+function renderBatasDDMetode(){
+  const wrap=document.getElementById('batasDDMetodeWrap'); if(!wrap) return;
+  const g='XAUUSD', bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
+  const m=metodeEfektif(g,bk); if(!m){ wrap.innerHTML=''; return; }
+  const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+  const modal=cachedBatasDD[g].modal;
+  const h=hitungBatasDD(g,bk);
+  const sisa=m.jatah-h.loss;
+  let st, warna;
+  if(h.n===0){ st='Belum ada sinyal closed bulan ini'; warna='#8A6B26'; }
+  else if(h.loss>m.jatah){ st=`❌ Melewati jatah (${h.loss} loss dari ${m.jatah})`; warna='#D9534F'; }
+  else if(h.loss===m.jatah){ st=`🛑 Jatah habis (${h.loss} dari ${m.jatah} loss) — stop sampai bulan depan`; warna='#D9534F'; }
+  else { st=`✅ Jatah loss: ${h.loss} dari ${m.jatah} terpakai (sisa ${sisa})`; warna=sisa<=1?'#C99A2E':'#3E9142'; }
+  const nm=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const fmtBulan=k=>{ const [y,mm]=k.split('-'); return nm[parseInt(mm,10)-1]+' '+y; };
+  const riwayat=Object.keys(cachedMetodeBulan.XAUUSD).sort().reverse().slice(0,6).map(k=>`${fmtBulan(k)}: <b>${cachedMetodeBulan.XAUUSD[k]}</b>`).join(' · ');
+  wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid #C8A84B;border-radius:10px;padding:10px 12px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800">📌 Metode Trading ${fmtBulan(bk)} — ${label}</div>
+      <span onclick="editMetodeBulan('XAUUSD')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Ubah metode</span>
+    </div>
+    <div style="font-size:15px;font-weight:800;color:#3A2E10">${m.label} — SL ${m.sl} / TP ${m.tp} pips (RR ${m.rr})</div>
+    <div style="font-size:10px;color:#3A2E10;line-height:1.7;margin-top:3px">Risiko per loss $${m.riskUsd} (${(m.riskUsd/modal*100).toFixed(1)}%) · jatah <b>${m.jatah} loss</b> · batas rugi maksimal <b>$${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b></div>
+    <div style="font-size:11px;font-weight:800;color:${warna};margin-top:4px">${st}</div>
+    <div style="font-size:9px;color:#7A5D1F;margin-top:6px;line-height:1.5">${m.diatur?'':'Metode belum diatur admin untuk bulan ini, ditampilkan H4 (bawaan). '}Metode berlaku untuk semua sinyal channel ini di bulan tersebut. Jatah dihitung dari jumlah LOSS (win tidak mengurangi jatah).${riwayat?'<br>Riwayat metode: '+riwayat:''}</div>
+  </div>`;
+}
+(function(){
+  // batas rugi emas mengikuti metode bulan yang dipilih (tanpa mengubah fungsi asli)
+  const _hit=hitungBatasDD;
+  hitungBatasDD=function(g,bulanKey){
+    const m=metodeEfektif(g,bulanKey);
+    if(!m) return _hit.apply(this,arguments);
+    const base=cachedBatasDD[g];
+    cachedBatasDD[g]=Object.assign({},base,{stopUsd:m.stopUsd, warnUsd:m.warnUsd, riskLossUsd:m.riskUsd});
+    try{ return _hit.apply(this,arguments); } finally{ cachedBatasDD[g]=base; }
+  };
+  const _rc=renderBatasDDCard;
+  renderBatasDDCard=function(){ _rc.apply(this,arguments); try{ renderBatasDDMetode(); }catch(e){ console.error('renderBatasDDMetode', e); } };
+  const _lb=loadBatasDD;
+  loadBatasDD=async function(){ await _lb.apply(this,arguments); await loadMetodeBulan(); };
 })();
 </script>
 </body>
