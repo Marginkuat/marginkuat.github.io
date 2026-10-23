@@ -1580,6 +1580,7 @@ function renderInvCalcDisclaimer(){
       <select class="inp" id="batasDDBulan" onchange="batasDDBulanDipilih=this.value;renderBatasDDCard()" style="margin-bottom:10px"></select>
       <div id="batasDDMetodeWrap"></div>
       <div id="batasDDWrap"><div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div></div>
+      <div id="batasDDLossKotorWrap" style="margin-top:10px"></div>
 
     </div>
 
@@ -15049,6 +15050,55 @@ function renderBatasDDMetode(){
   renderBatasDDCard=function(){ _rc.apply(this,arguments); try{ renderBatasDDMetode(); }catch(e){ console.error('renderBatasDDMetode', e); } };
   const _lb=loadBatasDD;
   loadBatasDD=async function(){ await _lb.apply(this,arguments); await loadMetodeBulan(); };
+})();
+
+// ══ FOREX: LOSS KOTOR PER PAIR (khusus channel forex / Datuk Crypto 89) ══
+// Fokus pada pips yang HILANG (order kena SL), per pair, vs batas bulanan. Win tidak mengurangi angka ini.
+function renderLossKotorForex(){
+  const wrap=document.getElementById('batasDDLossKotorWrap'); if(!wrap) return;
+  const g='FOREX', bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
+  const cfg=cachedBatasDD[g];
+  const pipUsd=PIP_VALUE_USD_PER_0_01_LOT*(cfg.lot/0.01);
+  const batasPips=cfg.stopUsd/pipUsd, slPips=cfg.riskLossUsd/pipUsd;
+  const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+  const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk);
+  const per={};
+  rows.forEach(r=>{
+    const nama=(r.simbol||'(tanpa nama)').toUpperCase();
+    const o=per[nama]||(per[nama]={loss:0,lossPips:0,win:0,net:0});
+    const pp=parseFloat(r.pips||0);
+    o.net+=pp;
+    if(pp<0){ o.loss++; o.lossPips+=Math.abs(pp); } else if(pp>0){ o.win++; }
+  });
+  const list=Object.keys(per).map(k=>Object.assign({nama:k},per[k])).sort((a,b)=>b.lossPips-a.lossPips);
+  const totLossPips=list.reduce((t,x)=>t+x.lossPips,0), totLoss=list.reduce((t,x)=>t+x.loss,0);
+  const totWin=list.reduce((t,x)=>t+x.win,0), totNet=list.reduce((t,x)=>t+x.net,0);
+  const sisa=Math.max(0,batasPips-totLossPips), pct=Math.min(100,totLossPips/batasPips*100);
+  let warna='#3E9142', st='✅ AMAN';
+  if(rows.length===0){ warna='#8A6B26'; st='Belum ada sinyal closed bulan ini'; }
+  else if(totLossPips>=batasPips){ warna='#D9534F'; st='🛑 BATAS LOSS TERCAPAI — stop sampai bulan depan'; }
+  else if(totLossPips>=batasPips/2){ warna='#C99A2E'; st='⚠️ PERINGATAN — loss sudah lewat separuh batas'; }
+  const fmt=v=>(Math.round(v*10)/10).toString();
+  const nm=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const [yy,mm]=bk.split('-');
+  const baris=list.map(x=>`<div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:10px;color:#3A2E10;padding:4px 0;border-top:1px solid var(--border)">
+      <span style="font-weight:700">${x.nama}</span><span>${x.loss}x</span><span style="color:#D9534F;font-weight:700">${x.lossPips?'-'+fmt(x.lossPips):'0'}</span><span>${x.win}x</span><span style="color:${x.net<0?'#D9534F':'#3E9142'}">${x.net>=0?'+':''}${fmt(x.net)}</span></div>`).join('');
+  wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">📉 Loss Kotor per Pair — ${label} · ${nm[parseInt(mm,10)-1]} ${yy}</div>
+    <div style="font-size:9px;color:#7A5D1F;margin-bottom:8px;line-height:1.5">Yang dipantau: pips yang HILANG dari order kena SL, per pair. Win tidak mengurangi angka ini. Batas bulanan <b>${fmt(batasPips)} pips ($${cfg.stopUsd})</b> · SL acuan ${fmt(slPips)} pips ($${cfg.riskLossUsd}).</div>
+    <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:6px">${st}</div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#3A2E10;margin-bottom:3px"><span>Loss kotor: <b style="color:#D9534F">-${fmt(totLossPips)} pips</b> ($${(totLossPips*pipUsd).toFixed(2).replace(/\.00$/,'')})</span><span>${pct.toFixed(0)}% batas</span></div>
+    <div style="height:8px;background:var(--bg0);border-radius:6px;overflow:hidden;margin-bottom:3px"><div style="width:${pct}%;height:100%;background:${warna}"></div></div>
+    <div style="font-size:10px;color:#3A2E10;margin-bottom:8px">Sisa ruang: <b>${fmt(sisa)} pips</b> ≈ <b>${Math.floor(sisa/slPips+1e-9)} loss lagi</b> (SL ${fmt(slPips)}) · ${totLoss} loss total</div>
+    <div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.4px"><span>Pair</span><span>Loss</span><span>Pips hilang</span><span>Win</span><span>Bersih</span></div>
+    ${baris||'<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:8px 0">Belum ada data.</div>'}
+    ${list.length?`<div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:10px;font-weight:800;color:#3A2E10;padding:5px 0 0;border-top:2px solid var(--border)"><span>TOTAL</span><span>${totLoss}x</span><span style="color:#D9534F">-${fmt(totLossPips)}</span><span>${totWin}x</span><span style="color:${totNet<0?'#D9534F':'#3E9142'}">${totNet>=0?'+':''}${fmt(totNet)}</span></div>`:''}
+    <div style="font-size:8px;color:#7A5D1F;margin-top:6px;line-height:1.5">Kolom "Bersih" (loss + win) ditampilkan sebagai pelengkap supaya hasil sebenarnya tetap transparan. Pair JPY/non-USD nilai pipnya bisa sedikit berbeda dari $0,10.</div>
+  </div>`;
+}
+(function(){
+  const _r2=renderBatasDDCard;
+  renderBatasDDCard=function(){ _r2.apply(this,arguments); try{ renderLossKotorForex(); }catch(e){ console.error('renderLossKotorForex', e); } };
 })();
 </script>
 </body>
