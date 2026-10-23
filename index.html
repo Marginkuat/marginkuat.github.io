@@ -1580,6 +1580,7 @@ function renderInvCalcDisclaimer(){
       <select class="inp" id="batasDDBulan" onchange="batasDDBulanDipilih=this.value;renderBatasDDCard()" style="margin-bottom:10px"></select>
       <div id="batasDDMetodeWrap"></div>
       <div id="batasDDWrap"><div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div></div>
+      <div id="batasDDLossKotorEmasWrap" style="margin-top:10px"></div>
       <div id="batasDDLossKotorWrap" style="margin-top:10px"></div>
 
     </div>
@@ -15054,10 +15055,10 @@ function renderBatasDDMetode(){
 
 // ══ FOREX: LOSS KOTOR PER PAIR (khusus channel forex / Datuk Crypto 89) ══
 // Fokus pada pips yang HILANG (order kena SL), per pair, vs batas bulanan. Win tidak mengurangi angka ini.
-function renderLossKotorForex(){
-  const wrap=document.getElementById('batasDDLossKotorWrap'); if(!wrap) return;
-  const g='FOREX', bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
-  const cfg=cachedBatasDD[g];
+function renderLossKotor(g, wrapId){
+  const wrap=document.getElementById(wrapId); if(!wrap) return;
+  const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
+  const cfg=hitungBatasDD(g,bk).cfg; // untuk emas ikut metode bulan (H4/D1/W1)
   const pipUsd=PIP_VALUE_USD_PER_0_01_LOT*(cfg.lot/0.01);
   const batasPips=cfg.stopUsd/pipUsd, slPips=cfg.riskLossUsd/pipUsd;
   const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
@@ -15113,6 +15114,10 @@ function renderLossKotorForex(){
     ${list.length?`<div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:10px;font-weight:800;color:#3A2E10;padding:5px 0 0;border-top:2px solid var(--border)"><span>TOTAL</span><span>${totLoss}x</span><span style="color:#D9534F">-${fmt(totLossPips)}</span><span>${totWin}x</span><span style="color:${totNet<0?'#D9534F':'#3E9142'}">${totNet>=0?'+':''}${fmt(totNet)}</span></div>`:''}
     <div style="font-size:8px;color:#7A5D1F;margin-top:6px;line-height:1.5">Kolom "Bersih" (loss + win) ditampilkan sebagai pelengkap supaya hasil sebenarnya tetap transparan. Pair JPY/non-USD nilai pipnya bisa sedikit berbeda dari $0,10.</div>
   </div>`;
+}
+function renderLossKotorForex(){
+  renderLossKotor('XAUUSD','batasDDLossKotorEmasWrap');
+  renderLossKotor('FOREX','batasDDLossKotorWrap');
 }
 (function(){
   const _r2=renderBatasDDCard;
