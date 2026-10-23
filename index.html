@@ -14781,7 +14781,7 @@ loadTahunanPengelolaProfil();
 // ══════════════════════════════════════════════════════════════════════
 const BATAS_DD_DEFAULT={
   XAUUSD:{modal:2000, lot:0.01, stopUsd:200, warnUsd:100, riskLossUsd:20, maxLossPerHari:1},
-  FOREX: {modal:2000, lot:0.01, stopUsd:150, warnUsd:75,  riskLossUsd:5,  maxLossPerHari:1}
+  FOREX: {modal:2000, lot:0.01, stopUsd:150, warnUsd:75,  riskLossUsd:6,  maxLossPerHari:1}
 };
 let cachedBatasDD={XAUUSD:Object.assign({},BATAS_DD_DEFAULT.XAUUSD), FOREX:Object.assign({},BATAS_DD_DEFAULT.FOREX)};
 let batasDDBulanDipilih=null;
@@ -14802,7 +14802,7 @@ async function editBatasDD(g){
   const c=cachedBatasDD[g];
   const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
   const cur=[c.modal,c.lot,c.stopUsd,c.warnUsd,c.riskLossUsd,c.maxLossPerHari].join(',');
-  const input=prompt(`[${label}] Isi 6 angka dipisah koma:\nMODAL ACUAN ($, minimal 2000 — bukan saldo akun), LOT ACUAN, BATAS STOP DD ($), PERINGATAN DD ($), RISIKO PER LOSS ($), MAKS LOSS PER HARI\n\nContoh emas: 2000,0.01,200,100,20,1\nContoh forex: 2000,0.01,150,75,5,1`, cur);
+  const input=prompt(`[${label}] Isi 6 angka dipisah koma:\nMODAL ACUAN ($, minimal 2000 — bukan saldo akun), LOT ACUAN, BATAS STOP DD ($), PERINGATAN DD ($), RISIKO PER LOSS ($), MAKS LOSS PER HARI\n\nContoh emas: 2000,0.01,200,100,20,1\nContoh forex: 2000,0.01,150,75,6,1`, cur);
   if(input===null)return;
   const p=input.split(',').map(x=>parseFloat(x.trim()));
   if(p.length!==6 || p.some(v=>!isFinite(v)||v<=0) || p[3]>p[2]){toast('❌ Format salah / peringatan tidak boleh lebih besar dari batas stop');return;}
