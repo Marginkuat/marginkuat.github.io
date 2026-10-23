@@ -15248,7 +15248,7 @@ function renderRekonCard(){
     return `<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px;margin-bottom:${idx===0?'10px':'0'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800">🔎 Cek Selisih TF · MT4 · Situs — ${label}</div>
-        <span onclick="editRekon('${g}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Isi data TF/MT4</span>
+        <span style="display:flex;gap:10px"><span onclick="hapusDuplikat('${g}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Hapus duplikat</span><span onclick="editRekon('${g}')" style="font-size:9px;color:#C8A84B;cursor:pointer;text-decoration:underline">Isi data TF/MT4</span></span>
       </div>
       <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:6px">${judul}</div>
       ${body}${cek}${rinci}
@@ -15262,6 +15262,48 @@ function renderRekonCard(){
   const _lb2=loadBatasDD;
   loadBatasDD=async function(){ await _lb2.apply(this,arguments); await loadRekon(); };
 })();
+
+// ══ HAPUS DUPLIKAT — hanya yang PERSIS SAMA (tanggal, jam, pair, pips, VP) di bulan yang dipilih ══
+// Menampilkan daftar dulu dan minta konfirmasi. Dipertahankan 1 baris tiap kelompok. Khusus admin.
+async function hapusDuplikat(g){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk hapus');return;}
+  const bk=batasDDBulanDipilih; if(!bk) return;
+  const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+  const semua=cachedSinyalAnalis[g]||[];
+  const rows=semua.filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk);
+  const grup={}, tanpaJam={};
+  rows.forEach(r=>{
+    const sy=(r.simbol||'').toUpperCase(), pp=parseFloat(r.pips||0), vp=parseFloat(r.vp||0);
+    if(r.jam){ const k=[r.tanggal,r.jam,sy,pp,vp].join('|'); (grup[k]=grup[k]||[]).push(r); }
+    else { const k=[r.tanggal,sy,pp,vp].join('|'); (tanpaJam[k]=tanpaJam[k]||[]).push(r); }
+  });
+  const kembar=Object.keys(grup).filter(k=>grup[k].length>1);
+  const ragu=Object.keys(tanpaJam).filter(k=>tanpaJam[k].length>1);
+  if(!kembar.length){
+    alert(`[${label}] ${bk}\nTidak ada duplikat yang PERSIS sama (tanggal, jam, pair, pips, VP).`+(ragu.length?`\n\nCatatan: ada ${ragu.length} kelompok sinyal tanpa jam dengan tanggal, pair, dan pips sama. Tidak bisa dipastikan ganda atau bukan, jadi tidak dihapus otomatis. Cek manual di Riwayat Sinyal.`:''));
+    return;
+  }
+  const idHapus=new Set(); const baris=[];
+  kembar.forEach(k=>{
+    const arr=grup[k]; arr.slice(1).forEach(r=>idHapus.add(r.id));
+    const r0=arr[0]; baris.push(`• ${r0.tanggal} ${r0.jam} ${r0.simbol||'(tanpa nama)'} ${parseFloat(r0.pips)>0?'+':''}${r0.pips} pips — ${arr.length}x → hapus ${arr.length-1}`);
+  });
+  const tampil=baris.slice(0,15).join('\n')+(baris.length>15?`\n... dan ${baris.length-15} kelompok lain`:'');
+  const pesan=`[${label}] ${bk}\nDitemukan ${kembar.length} kelompok duplikat persis. Akan dihapus ${idHapus.size} baris (1 baris tiap kelompok dipertahankan):\n\n${tampil}\n\nIni tidak bisa dibatalkan. Lanjut hapus?`+(ragu.length?`\n\n(${ragu.length} kelompok tanpa jam tidak ikut dihapus, cek manual.)`:'');
+  if(!confirm(pesan)) return;
+  const cadangan=semua.slice();
+  try{
+    cachedSinyalAnalis[g]=semua.filter(r=>!idHapus.has(r.id));
+    await simpanSinyalKeServer(g);
+    toast(`✅ ${idHapus.size} duplikat dihapus`);
+    renderScoreCard(); renderRemPipsCard(); renderDaftarSinyal();
+  }catch(e){
+    console.error(e);
+    cachedSinyalAnalis[g]=cadangan;
+    toast('❌ Gagal hapus, data dikembalikan: '+(e.message||'').slice(0,100));
+    try{ renderRemPipsCard(); renderDaftarSinyal(); }catch(_){}
+  }
+}
 </script>
 </body>
 </html>
