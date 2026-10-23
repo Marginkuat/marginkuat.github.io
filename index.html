@@ -1582,6 +1582,7 @@ function renderInvCalcDisclaimer(){
       <div id="batasDDWrap"><div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div></div>
       <div id="batasDDLossKotorEmasWrap" style="margin-top:10px"></div>
       <div id="batasDDLossKotorWrap" style="margin-top:10px"></div>
+      <div id="batasDDRemForexWrap" style="margin-top:10px"></div>
       <div id="batasDDRekonWrap" style="margin-top:10px"></div>
       <div id="batasDDPairListWrap" style="margin-top:10px"></div>
 
@@ -14785,7 +14786,7 @@ loadTahunanPengelolaProfil();
 // ══════════════════════════════════════════════════════════════════════
 const BATAS_DD_DEFAULT={
   XAUUSD:{modal:2000, lot:0.01, stopUsd:200, warnUsd:100, riskLossUsd:20, maxLossPerHari:1},
-  FOREX: {modal:2000, lot:0.01, stopUsd:150, warnUsd:75,  riskLossUsd:6,  maxLossPerHari:1}
+  FOREX: {modal:2000, lot:0.01, stopUsd:200, warnUsd:100, riskLossUsd:6,  maxLossPerHari:1}
 };
 let cachedBatasDD={XAUUSD:Object.assign({},BATAS_DD_DEFAULT.XAUUSD), FOREX:Object.assign({},BATAS_DD_DEFAULT.FOREX)};
 let batasDDBulanDipilih=null;
@@ -14806,7 +14807,7 @@ async function editBatasDD(g){
   const c=cachedBatasDD[g];
   const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
   const cur=[c.modal,c.lot,c.stopUsd,c.warnUsd,c.riskLossUsd,c.maxLossPerHari].join(',');
-  const input=prompt(`[${label}] Isi 6 angka dipisah koma:\nMODAL ACUAN ($, minimal 2000 — bukan saldo akun), LOT ACUAN, BATAS STOP DD ($), PERINGATAN DD ($), RISIKO PER LOSS ($), MAKS LOSS PER HARI\n\nContoh emas: 2000,0.01,200,100,20,1\nContoh forex: 2000,0.01,150,75,6,1`, cur);
+  const input=prompt(`[${label}] Isi 6 angka dipisah koma:\nMODAL ACUAN ($, minimal 2000 — bukan saldo akun), LOT ACUAN, BATAS STOP DD ($), PERINGATAN DD ($), RISIKO PER LOSS ($), MAKS LOSS PER HARI\n\nContoh emas: 2000,0.01,200,100,20,1\nContoh forex: 2000,0.01,200,100,6,1`, cur);
   if(input===null)return;
   const p=input.split(',').map(x=>parseFloat(x.trim()));
   if(p.length!==6 || p.some(v=>!isFinite(v)||v<=0) || p[3]>p[2]){toast('❌ Format salah / peringatan tidak boleh lebih besar dari batas stop');return;}
@@ -15442,6 +15443,66 @@ function renderDaftarPair(){
   // supaya tanda ✅ / edit / hapus dari Riwayat Sinyal juga langsung terlihat di daftar per pair
   const _rd=renderDaftarSinyal;
   renderDaftarSinyal=function(){ _rd.apply(this,arguments); try{ renderDaftarPair(); }catch(e){ console.error('renderDaftarPair', e); } };
+})();
+
+// ══ REM & TARGET FOREX (Datuk Crypto 89) — 8 pair, SL 60 / TP 60 (RR 1:1) ══
+const FOREX_REM={ slPips:60, tpPips:60, jatahOrder:30, maxLossPair:4, maxRugiBersihPair:-250, maxLossHari:1, targetMinVP:300, targetVP:938.67 };
+function renderRemForex(){
+  const wrap=document.getElementById('batasDDRemForexWrap'); if(!wrap) return;
+  const g='FOREX', bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
+  const R=FOREX_REM, cfg=cachedBatasDD[g];
+  const pipUsd=PIP_VALUE_USD_PER_0_01_LOT*(cfg.lot/0.01);
+  const stopPips=cfg.stopUsd/pipUsd, warnPips=cfg.warnUsd/pipUsd;
+  const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+  const fmt=v=>(Math.round(v*10)/10).toString(), sg=v=>(v>0?'+':'')+fmt(v);
+  const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk);
+  const n=rows.length;
+  let lossKotor=0, net=0, vp=0; const per={}, lossHari={};
+  rows.forEach(r=>{
+    const pp=parseFloat(r.pips||0), v=parseFloat(r.vp||0), nm=(r.simbol||'(tanpa nama)').toUpperCase();
+    net+=pp; vp+=isFinite(v)?v:0; if(pp<0){ lossKotor+=-pp; lossHari[r.tanggal]=(lossHari[r.tanggal]||0)+1; }
+    const o=per[nm]||(per[nm]={n:0,l:0,w:0,net:0}); o.n++; o.net+=pp; if(pp<0)o.l++; else if(pp>0)o.w++;
+  });
+  const hariLanggar=Object.keys(lossHari).filter(t=>lossHari[t]>R.maxLossHari).sort();
+  const now=new Date(); const hariIni=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const lossHariIni=lossHari[hariIni]||0;
+  const pairList=Object.keys(per).sort((a,b)=>per[b].l-per[a].l || a.localeCompare(b));
+  const statusPair=o=> (o.l>=R.maxLossPair || o.net<=R.maxRugiBersihPair) ? ['🛑 istirahat','#D9534F'] : (o.l>=R.maxLossPair-1 ? ['⚠️ 1 loss lagi','#C99A2E'] : ['✅ jalan','#3E9142']);
+  const pairStop=pairList.filter(k=>statusPair(per[k])[0].startsWith('🛑'));
+  let warna='#3E9142', st='✅ AMAN — rem belum tersentuh';
+  if(n===0){ warna='#8A6B26'; st='Belum ada sinyal closed bulan ini'; }
+  else if(lossKotor>=stopPips){ warna='#D9534F'; st='🛑 STOP SEMUA PAIR — loss kotor mencapai batas, stop sampai bulan depan'; }
+  else if(n>=R.jatahOrder){ warna='#D9534F'; st='🛑 JATAH ORDER HABIS — stop sampai bulan depan'; }
+  else if(pairStop.length){ warna='#D9534F'; st='🛑 PAIR ISTIRAHAT: '+pairStop.join(', ')+' (pair lain boleh lanjut)'; }
+  else if(lossHariIni>=R.maxLossHari){ warna='#C99A2E'; st='⏸️ Sudah '+lossHariIni+' loss hari ini — stop sampai besok'; }
+  else if(lossKotor>=warnPips || n>=R.jatahOrder*0.8){ warna='#C99A2E'; st='⚠️ PERINGATAN — pilih entry paling jelas saja'; }
+  const tabel=pairList.map(k=>{ const o=per[k], [t,c]=statusPair(o);
+    return `<div style="display:grid;grid-template-columns:1.2fr .6fr .6fr 1fr 1.1fr;gap:4px;font-size:10px;color:#3A2E10;padding:4px 0;border-top:1px solid var(--border)"><b>${k}</b><span>${o.n}x</span><span>${o.l}L/${o.w}W</span><span style="color:${o.net<0?'#D9534F':'#3E9142'}">${sg(o.net)}</span><span style="color:${c};font-weight:700">${t}</span></div>`; }).join('');
+  const bar=(nilai,maks,warnaB)=>`<div style="height:8px;background:var(--bg0);border-radius:6px;overflow:hidden;margin:3px 0"><div style="width:${Math.max(0,Math.min(100,nilai/maks*100))}%;height:100%;background:${warnaB}"></div></div>`;
+  const syaratPips=net>=0;
+  wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🚦 Rem & Target Forex — ${label}</div>
+    <div style="font-size:10px;color:#3A2E10;line-height:1.7;margin-bottom:6px"><b>Metode:</b> 8 pair, SL ${R.slPips} / TP ${R.tpPips} pips (RR 1:1) · risiko $${cfg.riskLossUsd} per order · jatah <b>${R.jatahOrder} order</b> per bulan (untung atau rugi) · maks <b>${R.maxLossHari} loss per hari</b> (gabungan) · per pair maks <b>${R.maxLossPair} loss</b> atau rugi bersih ${R.maxRugiBersihPair} pips · stop gabungan loss kotor <b>${fmt(stopPips)} pips</b> (peringatan ${fmt(warnPips)}).</div>
+    <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:8px">${st}</div>
+    <div style="font-size:10px;color:#3A2E10">Jatah order: <b>${n}/${R.jatahOrder}</b>${bar(n,R.jatahOrder,n>=R.jatahOrder?'#D9534F':'#C8A84B')}</div>
+    <div style="font-size:10px;color:#3A2E10">Loss kotor: <b style="color:#D9534F">-${fmt(lossKotor)} pips</b> dari ${fmt(stopPips)} ($${(lossKotor*pipUsd).toFixed(2).replace(/\.00$/,'')})${bar(lossKotor,stopPips,lossKotor>=stopPips?'#D9534F':(lossKotor>=warnPips?'#C99A2E':'#3E9142'))}</div>
+    <div style="background:var(--bg0);border-radius:8px;padding:8px 10px;margin:8px 0">
+      <div style="font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">🎯 Target bulan ini (dari TF)</div>
+      <div style="font-size:10px;color:#3A2E10;line-height:1.7">VP bulan ini: <b style="color:${vp<0?'#D9534F':'#3E9142'}">${fmt(vp)}</b><br>
+      ${vp>=R.targetMinVP?'✅':'⬜'} Syarat medal: minimal ${R.targetMinVP} VP${bar(vp,R.targetMinVP,'#3E9142')}
+      ${syaratPips?'✅':'⬜'} Pips bulanan minimal 0 (sekarang <b>${sg(net)}</b>)<br>
+      ${vp>=R.targetVP?'✅':'⬜'} Target penuh: ${R.targetVP} VP${bar(vp,R.targetVP,'#C8A84B')}
+      <span style="font-size:9px;color:#7A5D1F">RR 1:1 butuh win rate di atas 50%. Target penuh ±790 pips setara ±22 win dari 30 order (±72%), jadi berat; target realistis awal adalah syarat medal (±+253 pips, ±18 win dari 30 order).</span></div>
+    </div>
+    <div style="font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Rem per pair</div>
+    <div style="display:grid;grid-template-columns:1.2fr .6fr .6fr 1fr 1.1fr;gap:4px;font-size:8px;color:#8A6B26;text-transform:uppercase"><span>Pair</span><span>Order</span><span>L/W</span><span>Bersih</span><span>Status</span></div>
+    ${tabel||'<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:8px">Belum ada data.</div>'}
+    ${hariLanggar.length?`<div style="font-size:10px;color:#D9534F;line-height:1.6;margin-top:8px">❌ Loss lebih dari ${R.maxLossHari}x per hari di tanggal: ${hariLanggar.map(t=>t.slice(8)+'/'+t.slice(5,7)+' ('+lossHari[t]+'x)').join(', ')}</div>`:(n?`<div style="font-size:10px;color:#3E9142;margin-top:8px">✅ Aturan ${R.maxLossHari} loss per hari terjaga</div>`:'')}
+  </div>`;
+}
+(function(){
+  const _r5=renderBatasDDCard;
+  renderBatasDDCard=function(){ _r5.apply(this,arguments); try{ renderRemForex(); }catch(e){ console.error('renderRemForex', e); } };
 })();
 </script>
 </body>
