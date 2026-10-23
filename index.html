@@ -15070,9 +15070,20 @@ function renderLossKotorForex(){
     o.net+=pp;
     if(pp<0){ o.loss++; o.lossPips+=Math.abs(pp); } else if(pp>0){ o.win++; }
   });
+  const fmt0=v=>(Math.round(v*10)/10).toString();
   const list=Object.keys(per).map(k=>Object.assign({nama:k},per[k])).sort((a,b)=>b.lossPips-a.lossPips);
   const totLossPips=list.reduce((t,x)=>t+x.lossPips,0), totLoss=list.reduce((t,x)=>t+x.loss,0);
   const totWin=list.reduce((t,x)=>t+x.win,0), totNet=list.reduce((t,x)=>t+x.net,0);
+  const urut=rows.slice().sort((x,y)=>{
+    const tx=new Date(x.tanggal+'T'+(x.jam||'00:00')), ty=new Date(y.tanggal+'T'+(y.jam||'00:00'));
+    return (tx-ty)||String(x.id||'').localeCompare(String(y.id||''));
+  });
+  let kum=0, chips=urut.map(r=>{
+    const pp=parseFloat(r.pips||0); kum+=pp;
+    const w=pp>0?['#3E9142','W']:pp<0?['#D9534F','L']:['#8A6B26','BE'];
+    const hr=new Date(r.tanggal).getDate();
+    return `<span title="${r.tanggal} ${r.simbol||''} ${pp>=0?'+':''}${fmt0(pp)} pips" style="display:inline-block;min-width:34px;text-align:center;background:${w[0]}22;border:1px solid ${w[0]};color:${w[0]};border-radius:6px;padding:2px 4px;margin:2px;font-size:9px;font-weight:800;line-height:1.3">${w[1]}<br><span style="font-weight:600;font-size:8px">${hr}/${parseInt(r.tanggal.slice(5,7),10)}</span></span>`;
+  }).join('');
   const sisa=Math.max(0,batasPips-totLossPips), pct=Math.min(100,totLossPips/batasPips*100);
   let warna='#3E9142', st='✅ AMAN';
   if(rows.length===0){ warna='#8A6B26'; st='Belum ada sinyal closed bulan ini'; }
@@ -15090,6 +15101,13 @@ function renderLossKotorForex(){
     <div style="display:flex;justify-content:space-between;font-size:11px;color:#3A2E10;margin-bottom:3px"><span>Loss kotor: <b style="color:#D9534F">-${fmt(totLossPips)} pips</b> ($${(totLossPips*pipUsd).toFixed(2).replace(/\.00$/,'')})</span><span>${pct.toFixed(0)}% batas</span></div>
     <div style="height:8px;background:var(--bg0);border-radius:6px;overflow:hidden;margin-bottom:3px"><div style="width:${pct}%;height:100%;background:${warna}"></div></div>
     <div style="font-size:10px;color:#3A2E10;margin-bottom:8px">Sisa ruang: <b>${fmt(sisa)} pips</b> ≈ <b>${Math.floor(sisa/slPips+1e-9)} loss lagi</b> (SL ${fmt(slPips)}) · ${totLoss} loss total</div>
+    ${urut.length?`<div style="background:var(--bg0);border-radius:8px;padding:8px 10px;margin-bottom:10px">
+      <div style="font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Total hasil bulan ini (loss + win)</div>
+      <div style="font-size:16px;font-weight:800;color:${totNet<0?'#D9534F':'#3E9142'}">${totNet>=0?'+':''}${fmt(totNet)} pips <span style="font-size:11px">(${totNet>=0?'+':'-'}$${Math.abs(totNet*pipUsd).toFixed(2).replace(/\.00$/,'')})</span></div>
+      <div style="font-size:10px;color:#3A2E10;margin:2px 0 6px">${totLoss} loss · ${totWin} win · ${urut.length} order · ${(urut.length?totWin/urut.length*100:0).toFixed(0)}% win rate</div>
+      <div style="font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Urutan hasil (tanggal tutup)</div>
+      <div style="line-height:1.1">${chips}</div>
+    </div>`:''}
     <div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:8px;color:#8A6B26;text-transform:uppercase;letter-spacing:.4px"><span>Pair</span><span>Loss</span><span>Pips hilang</span><span>Win</span><span>Bersih</span></div>
     ${baris||'<div style="font-size:10px;color:#7A5D1F;text-align:center;padding:8px 0">Belum ada data.</div>'}
     ${list.length?`<div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:10px;font-weight:800;color:#3A2E10;padding:5px 0 0;border-top:2px solid var(--border)"><span>TOTAL</span><span>${totLoss}x</span><span style="color:#D9534F">-${fmt(totLossPips)}</span><span>${totWin}x</span><span style="color:${totNet<0?'#D9534F':'#3E9142'}">${totNet>=0?'+':''}${fmt(totNet)}</span></div>`:''}
