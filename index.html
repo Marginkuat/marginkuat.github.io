@@ -633,6 +633,27 @@ function toggleKamusGrup(btn){
         <option value="60|120">GBPJPY Hard (60/120, RR 1:2)</option>
         <option value="60|120">USDJPY Hard (60/120, RR 1:2)</option>
       </optgroup>
+      <optgroup label="Forex Hard 2 (SL 60 pips)">
+        <option value="60|180">AUDUSD Hard 2 (60/180, RR 1:3)</option>
+        <option value="60|180">EURGBP Hard 2 (60/180, RR 1:3)</option>
+        <option value="60|180">NZDUSD Hard 2 (60/180, RR 1:3)</option>
+        <option value="60|180">USDCHF Hard 2 (60/180, RR 1:3)</option>
+      </optgroup>
+      <optgroup label="Forex Hard 2 (SL 90 pips)">
+        <option value="90|270">AUDJPY Hard 2 (90/270, RR 1:3)</option>
+        <option value="90|270">CADJPY Hard 2 (90/270, RR 1:3)</option>
+        <option value="90|270">EURUSD Hard 2 (90/270, RR 1:3)</option>
+        <option value="90|270">GBPUSD Hard 2 (90/270, RR 1:3)</option>
+        <option value="90|270">NZDJPY Hard 2 (90/270, RR 1:3)</option>
+        <option value="90|270">USDCAD Hard 2 (90/270, RR 1:3)</option>
+      </optgroup>
+      <optgroup label="Forex Hard 2 (SL 120 pips)">
+        <option value="120|360">CHFJPY Hard 2 (120/360, RR 1:3)</option>
+        <option value="120|360">EURJPY Hard 2 (120/360, RR 1:3)</option>
+        <option value="120|360">EURNZD Hard 2 (120/360, RR 1:3)</option>
+        <option value="120|360">GBPJPY Hard 2 (120/360, RR 1:3)</option>
+        <option value="120|360">USDJPY Hard 2 (120/360, RR 1:3)</option>
+      </optgroup>
     </select>
 
     <div class="calc-row" style="margin-top:12px">
@@ -948,6 +969,27 @@ function toggleRingkasRows(uid){
         <option value="60|120">GBPJPY Hard (60/120, RR 1:2)</option>
         <option value="60|120">USDJPY Hard (60/120, RR 1:2)</option>
       </optgroup>
+      <optgroup label="Forex Hard 2 (SL 60 pips)">
+        <option value="60|180">AUDUSD Hard 2 (60/180, RR 1:3)</option>
+        <option value="60|180">EURGBP Hard 2 (60/180, RR 1:3)</option>
+        <option value="60|180">NZDUSD Hard 2 (60/180, RR 1:3)</option>
+        <option value="60|180">USDCHF Hard 2 (60/180, RR 1:3)</option>
+      </optgroup>
+      <optgroup label="Forex Hard 2 (SL 90 pips)">
+        <option value="90|270">AUDJPY Hard 2 (90/270, RR 1:3)</option>
+        <option value="90|270">CADJPY Hard 2 (90/270, RR 1:3)</option>
+        <option value="90|270">EURUSD Hard 2 (90/270, RR 1:3)</option>
+        <option value="90|270">GBPUSD Hard 2 (90/270, RR 1:3)</option>
+        <option value="90|270">NZDJPY Hard 2 (90/270, RR 1:3)</option>
+        <option value="90|270">USDCAD Hard 2 (90/270, RR 1:3)</option>
+      </optgroup>
+      <optgroup label="Forex Hard 2 (SL 120 pips)">
+        <option value="120|360">CHFJPY Hard 2 (120/360, RR 1:3)</option>
+        <option value="120|360">EURJPY Hard 2 (120/360, RR 1:3)</option>
+        <option value="120|360">EURNZD Hard 2 (120/360, RR 1:3)</option>
+        <option value="120|360">GBPJPY Hard 2 (120/360, RR 1:3)</option>
+        <option value="120|360">USDJPY Hard 2 (120/360, RR 1:3)</option>
+      </optgroup>
     </select>
 
     <div class="calc-row" style="margin-top:12px">
@@ -1120,7 +1162,7 @@ function toggleRingkasRows(uid){
     // Forex: semua level (Standar/Medium/Hard) selalu tampil RR 1:1, 1:2.
     const tpList = pairName==='XAUUSD'
       ? (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2])
-      : [slPips*1, slPips*2];
+      : (/Hard 2/.test((pairSelectEl.options[pairSelectEl.selectedIndex]||{}).textContent||'') ? [slPips*1, slPips*2, slPips*3] : [slPips*1, slPips*2]);   // Hard 2 = tambah TP RR 1:3
 
     tpList.forEach(tpPips=>{
       const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
@@ -1422,7 +1464,7 @@ function initEntryPriceCalcGeneric(suffix){
     const CUSTOM_TP_SETS = { 200: [200, 400], 250: [250, 500], 500: [500] };
     const tpList = pairName==='XAUUSD'
       ? (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2])
-      : [slPips*1, slPips*2];
+      : (/Hard 2/.test((pairSelectEl.options[pairSelectEl.selectedIndex]||{}).textContent||'') ? [slPips*1, slPips*2, slPips*3] : [slPips*1, slPips*2]);   // Hard 2 = tambah TP RR 1:3
 
     tpList.forEach(tpPips=>{
       const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
