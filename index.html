@@ -1578,6 +1578,7 @@ function renderInvCalcDisclaimer(){
         <div id="batasDDStrategiWrap" style="margin-top:8px"></div>
         <div id="batasDDSimWrap" style="margin-top:8px"></div>
       </div>
+      <div id="batasDDAturanWrap" style="margin-bottom:12px"></div>
       <select class="inp" id="batasDDBulan" onchange="batasDDBulanDipilih=this.value;renderBatasDDCard()" style="margin-bottom:10px"></select>
       <div id="batasDDMetodeWrap"></div>
       <div id="batasDDWrap"><div style="font-size:11px;color:#8A6B26;text-align:center;padding:6px">Memuat...</div></div>
@@ -14985,13 +14986,11 @@ function renderBatasDDSim(){
 // Admin memilih metode yang dipakai tiap bulan; investor otomatis melihatnya, dan batas rugi
 // di kartu Cek Batas Kerugian mengikuti metode itu. Disimpan di app_settings 'metode_bulan_XAUUSD'.
 const METODE_DEF={
-  'CAMPUR':{label:'Bulan peralihan (RR campur)', sl:500, tp:500, rr:'campur 1:1 / 1:2 / 1:3', risk:50, jatah:0, hitung:'net', campur:true, stopPips:2500},
-  'H4-200':{label:'H4', sl:200, tp:400, rr:'1:2', risk:20, jatah:10, hitung:'loss'},
   'H4-500':{label:'H4', sl:500, tp:500, rr:'1:1', risk:50, jatah:5, hitung:'order'}
 };
-// Bawaan: sampai Okt 2026 = bulan peralihan (RR campur, stop rugi bersih 2500 pips); mulai Nov 2026 = H4 SL500/TP500. Admin bisa mengubah per bulan.
-function metodeDefaultKey(bk){ return (bk && bk<'2026-11') ? 'CAMPUR' : 'H4-500'; }
-function metodeKeyBulan(bk){ const v=cachedMetodeBulan.XAUUSD[bk]; return METODE_DEF[v]?v:metodeDefaultKey(bk); }
+// ATURAN RESMI v1 (ditetapkan & berlaku sejak 24 Okt 2026): satu metode emas untuk semua data, tanpa pilihan per bulan.
+function metodeDefaultKey(bk){ return 'H4-500'; }
+function metodeKeyBulan(bk){ return 'H4-500'; }
 let cachedMetodeBulan={XAUUSD:{}};
 async function loadMetodeBulan(){
   try{
@@ -15060,7 +15059,7 @@ function renderBatasDDMetode(){
     <div style="font-size:15px;font-weight:800;color:#3A2E10">${m.campur?`${m.label} — RR ${m.rr}`:`${m.label} — SL ${m.sl} / TP ${m.tp} pips (RR ${m.rr})`}</div>
     <div style="font-size:10px;color:#3A2E10;line-height:1.7;margin-top:3px">${m.campur?`SL & TP maksimal 500 pips per order · batas: <b>rugi bersih bulan ini ${batasPipsM.toFixed(0)} pips = $${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b>, begitu tercapai stop sampai bulan depan. Tidak ada jatah order.`:`Risiko per loss $${m.riskUsd} (${(m.riskUsd/modal*100).toFixed(1)}%) · jatah <b>${m.jatah} ${m.hitung==='order'?'order per bulan (untung atau rugi)':'loss'}</b> · batas rugi maksimal <b>$${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b>`}</div>
     <div style="font-size:11px;font-weight:800;color:${warna};margin-top:4px">${st}</div>
-    <div style="font-size:9px;color:#7A5D1F;margin-top:6px;line-height:1.5">${m.diatur?'':'Metode belum diatur admin untuk bulan ini, memakai metode bawaan bulan tersebut. '}Metode berlaku untuk semua sinyal channel ini di bulan tersebut. ${m.campur?'Aturan baru dibuat bulan ini, jadi Oktober memakai batas rugi bersih (win ikut mengurangi rugi). Mulai bulan depan memakai metode H4 tetap.':(byLoss?'Jatah dihitung dari jumlah LOSS (win tidak mengurangi jatah).':'Jatah habis kalau jumlah ORDER atau jumlah LOSS mencapai batas jatah, mana yang duluan.')}${riwayat?'<br>Riwayat metode: '+riwayat:''}</div>
+    <div style="font-size:9px;color:#7A5D1F;margin-top:6px;line-height:1.5">Aturan Resmi v1 (ditetapkan 24 Okt 2026) berlaku untuk semua bulan; data sebelum tanggal itu dinilai retroaktif. Metode berlaku untuk semua sinyal channel ini di bulan tersebut. ${m.campur?'Aturan baru dibuat bulan ini, jadi Oktober memakai batas rugi bersih (win ikut mengurangi rugi). Mulai bulan depan memakai metode H4 tetap.':(byLoss?'Jatah dihitung dari jumlah LOSS (win tidak mengurangi jatah).':'Jatah habis kalau jumlah ORDER atau jumlah LOSS mencapai batas jatah, mana yang duluan.')}${riwayat?'<br>Riwayat metode: '+riwayat:''}</div>
   </div>`;
 }
 (function(){
@@ -15457,7 +15456,7 @@ function renderDaftarPair(){
 // Terkonfirmasi dari data: USDCHF/AUDUSD/NZDUSD = 30, EURUSD/AUDJPY/CADJPY = 45, GBPJPY/USDJPY = 60. Pair lain = perkiraan dari pola VP.
 // Datuk EURUSD = hanya bagian forex (selain XAUUSD); emas punya aturan sendiri. Datuk Crypto 89 = semua sinyalnya.
 const FOREX_SL_PAIR={AUDUSD:30,EURGBP:30,NZDUSD:30,USDCHF:30, AUDJPY:45,CADJPY:45,EURUSD:45,GBPUSD:45,NZDJPY:45,USDCAD:45, CHFJPY:60,EURJPY:60,EURNZD:60,GBPJPY:60,USDJPY:60};
-const FOREX_REM={ rr:3, jatahPair:3, maxLossHari:1, targetMinVP:300, targetVP:938.67, mulai:'2026-11', slippage:1.10,
+const FOREX_REM={ rr:3, jatahPair:3, maxLossHari:1, targetMinVP:300, targetVP:938.67, mulai:'2026-10-24', slippage:1.10,
   kanal:{ XAUUSD:{pairs:['AUDUSD','USDCHF','NZDUSD','EURUSD','AUDJPY','CADJPY']},
           FOREX: {pairs:['GBPUSD','NZDJPY','USDCAD','CHFJPY','EURJPY','EURNZD','GBPJPY','USDJPY']} } };
 function slPair(nm){ return FOREX_SL_PAIR[nm]||60; }
@@ -15493,7 +15492,7 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const pairPenuh=pairList.filter(k=>per[k].n>=R.jatahPair);
   const pairLewat=pairList.filter(k=>per[k].n>R.jatahPair);
   const pairSisa1=pairList.filter(k=>per[k].n===R.jatahPair-1);
-  const uji=bk<R.mulai;   // bulan uji coba: aturan baru belum berlaku, angka hanya informasi
+  const uji=false;   // Aturan Resmi v1 berlaku untuk semua data (retroaktif); penandaan sebelum/sesudah 24 Okt 2026 ada di kartu Audit
   let warna='#3E9142', st='✅ AMAN — belum ada pair yang penuh';
   if(uji){ warna='#8A6B26'; st='🧪 BULAN UJI COBA — aturan baru (RR 1:3, jatah '+R.jatahPair+' order per pair) mulai berlaku '+R.mulai.slice(5)+'/'+R.mulai.slice(0,4)+'. Angka di bawah hanya informasi, belum ada stop.'; }
   else if(n===0){ warna='#8A6B26'; st='Belum ada sinyal closed bulan ini'; }
@@ -15539,7 +15538,7 @@ function renderRemForex(){
 
 // ══ STRATEGI & TINGKAT KERUGIAN UNTUK CALON INVESTOR (berlaku Nov 2026 – Jan 2027) ══
 // Tidak bergantung data bulan berjalan: dihitung dari aturan yang sudah disepakati, lalu diskalakan ke modal & lot investor.
-const STRATEGI_PERIODE={mulai:'2026-11', akhir:'2027-01', teks:'Nov 2026 – Jan 2027 (3 bulan uji, lalu dievaluasi)'};
+const STRATEGI_PERIODE={mulai:'2026-10-24', akhir:'2027-01-24', teks:'24 Okt 2026 – 24 Jan 2027 (3 bulan uji, lalu dievaluasi)'};
 function renderStrategiInvestor(){
   const wrap=document.getElementById('batasDDStrategiWrap'); if(!wrap) return;
   const mEl=document.getElementById('batasDDModalInv'), lEl=document.getElementById('batasDDLotInv');
@@ -15597,6 +15596,7 @@ function renderStrategiInvestor(){
 // forex SL per pair, TP 3×SL (RR 1:3), jatah 3 order/pair/bulan, maks 1 loss/hari, stop gabungan.
 // Tingkat bukti: PASTI (rencana SL/TP tercatat / hitungan jatah), KUAT (hasil identik dengan RR yang salah), INDIKASI (perlu konfirmasi).
 const AUDIT_ATURAN={ emas:{sl:500,tp:500,rr:1,jatah:5}, forexRR:3, jatahPair:3 };
+const ATURAN_EFEKTIF='2026-10-24';   // tanggal aturan resmi v1 ditetapkan & mulai berlaku
 function auditWaktu(tgl,jam){ return new Date((tgl||'1970-01-01')+'T'+(jam||'00:00')); }
 function auditWaktuInput(id){ // id sinyal = 's' + Date.now() base36 + 5 acak → waktu pencatatan di situs
   if(!id||id[0]!=='s'||id.length<9) return null; const t=parseInt(id.slice(1,-5),36); return (isFinite(t)&&t>1.5e12&&t<4e12)?new Date(t):null; }
@@ -15605,14 +15605,14 @@ function aturanUntuk(g,nm){
   const sl=slPair(nm); return {jenis:'forex', sl, tp:sl*AUDIT_ATURAN.forexRR, rr:AUDIT_ATURAN.forexRR, rrTeks:'1:3', rrSalah:1, masukChannel:FOREX_REM.kanal[g].pairs.includes(nm)};
 }
 function auditChannel(g,bk){
-  const R=FOREX_REM, hasil={flags:[], n:0, rencana:0, belakangan:[], diaudit:bk>=R.mulai};
+  const R=FOREX_REM, hasil={flags:[], n:0, rencana:0, belakangan:[], diaudit:true};
   const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk);
   hasil.n=rows.length; if(!hasil.diaudit) return hasil;
   const info=r=>({r, nm:(r.simbol||'(tanpa nama)').toUpperCase()});
   const L=rows.map(info);
   const buka=x=>auditWaktu(x.r.tanggalBuka||x.r.tanggal, x.r.jamBuka||x.r.jam);
   const tutup=x=>auditWaktu(x.r.tanggal, x.r.jam);
-  const tambah=(x,sev,aturan,detail)=>{ let f=hasil.flags.find(z=>z.r===x.r); if(!f){ f={r:x.r,nm:x.nm,sev:'indikasi',masalah:[]}; hasil.flags.push(f); } const rank={indikasi:1,kuat:2,pasti:3}; if(rank[sev]>rank[f.sev]) f.sev=sev; f.masalah.push({sev,aturan,detail}); };
+  const tambah=(x,sev,aturan,detail)=>{ let f=hasil.flags.find(z=>z.r===x.r); if(!f){ f={r:x.r,nm:x.nm,sev:'indikasi',masalah:[],pra:String(x.r.tanggalBuka||x.r.tanggal)<ATURAN_EFEKTIF}; hasil.flags.push(f); } const rank={indikasi:1,kuat:2,pasti:3}; if(rank[sev]>rank[f.sev]) f.sev=sev; f.masalah.push({sev,aturan,detail}); };
   const fmtP=v=>(v>0?'+':'')+(Math.round(v*10)/10);
   L.forEach(x=>{
     const r=x.r, pp=parseFloat(r.pips||0), A=aturanUntuk(g,x.nm);
@@ -15662,36 +15662,156 @@ function auditChannel(g,bk){
 function renderAudit(){
   const wrap=document.getElementById('batasDDAuditWrap'); if(!wrap) return;
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
-  const R=FOREX_REM, ikon={pasti:'❌ PASTI',kuat:'❌ KUAT',indikasi:'⚠️ INDIKASI'}, warnaSev={pasti:'#D9534F',kuat:'#D9534F',indikasi:'#C99A2E'};
+  const ikon={pasti:'❌ PASTI',kuat:'❌ KUAT',indikasi:'⚠️ INDIKASI'}, warnaSev={pasti:'#D9534F',kuat:'#D9534F',indikasi:'#C99A2E'};
   const fmtT=(t,j)=>t?`${t.slice(8)}/${t.slice(5,7)}${j?' '+j:''}`:'-';
+  const efektifTeks='24 Okt 2026';
+  const itemHtml=f=>{ const r=f.r, pp=parseFloat(r.pips||0);
+    return `<div style="border-top:1px solid var(--border);padding:6px 0"><div style="font-size:10px;color:#3A2E10;line-height:1.5"><b>${f.nm}</b> · buka ${fmtT(r.tanggalBuka||r.tanggal,r.jamBuka)} → tutup ${fmtT(r.tanggal,r.jam)} · <b style="color:${pp<0?'#D9534F':'#3E9142'}">${pp>0?'+':''}${Math.round(pp*10)/10} pips</b>${r.slPips!=null?` · rencana SL ${r.slPips}/TP ${r.tpPips}`:''}${f.pra?` <span style="color:#7A5D1F">🕰️ sebelum ${efektifTeks}</span>`:''}</div>${f.masalah.map(m=>`<div style="font-size:10px;line-height:1.5;padding-left:8px"><b style="color:${warnaSev[m.sev]}">${ikon[m.sev]}</b> ${m.aturan}<br><span style="color:#5C4818">${m.detail}</span></div>`).join('')}</div>`; };
   const blok=['XAUUSD','FOREX'].map(g=>{
     const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g, h=auditChannel(g,bk);
-    if(!h.diaudit) return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px"><b style="font-size:11px">${label}</b><div style="font-size:10px;color:#7A5D1F;margin-top:3px">🧪 Bulan uji coba (${h.n} sinyal) — aturan baru berlaku mulai ${R.mulai.slice(5)}/${R.mulai.slice(0,4)}, belum diaudit.</div></div>`;
-    const pelanggaran=h.flags.filter(f=>f.sev!=='indikasi').length, indikasi=h.flags.length-pelanggaran;
-    const warna=h.n===0?'#8A6B26':pelanggaran?'#D9534F':indikasi?'#C99A2E':'#3E9142';
-    const judul=h.n===0?'Belum ada sinyal closed bulan ini':pelanggaran?`❌ ${pelanggaran} sinyal MENYALAHI ATURAN${indikasi?` + ${indikasi} indikasi`:''}`:indikasi?`⚠️ ${indikasi} indikasi perlu dikonfirmasi`:`✅ ${h.n} sinyal sesuai aturan, tidak ditemukan pelanggaran`;
-    const daftar=h.flags.map(f=>{ const r=f.r, pp=parseFloat(r.pips||0);
-      return `<div style="border-top:1px solid var(--border);padding:6px 0"><div style="font-size:10px;color:#3A2E10;line-height:1.5"><b>${f.nm}</b> · buka ${fmtT(r.tanggalBuka||r.tanggal,r.jamBuka)} → tutup ${fmtT(r.tanggal,r.jam)} · <b style="color:${pp<0?'#D9534F':'#3E9142'}">${pp>0?'+':''}${Math.round(pp*10)/10} pips</b>${r.slPips!=null?` · rencana SL ${r.slPips}/TP ${r.tpPips}`:''}</div>${f.masalah.map(m=>`<div style="font-size:10px;line-height:1.5;padding-left:8px"><b style="color:${warnaSev[m.sev]}">${ikon[m.sev]}</b> ${m.aturan}<br><span style="color:#5C4818">${m.detail}</span></div>`).join('')}</div>`; }).join('');
+    const baru=h.flags.filter(f=>!f.pra), retro=h.flags.filter(f=>f.pra);
+    const pelBaru=baru.filter(f=>f.sev!=='indikasi').length, indBaru=baru.length-pelBaru;
+    const pelRetro=retro.filter(f=>f.sev!=='indikasi').length, indRetro=retro.length-pelRetro;
+    const warna=h.n===0?'#8A6B26':pelBaru?'#D9534F':(indBaru||retro.length)?'#C99A2E':'#3E9142';
+    let judul;
+    if(h.n===0) judul='Belum ada sinyal closed bulan ini';
+    else if(!h.flags.length) judul=`✅ ${h.n} sinyal sesuai aturan, tidak ditemukan penyimpangan`;
+    else judul=(baru.length?(pelBaru?`❌ ${pelBaru} pelanggaran sejak ${efektifTeks}`:`✅ tidak ada pelanggaran pasti sejak ${efektifTeks}`)+(indBaru?` · ⚠️ ${indBaru} indikasi`:''):`✅ tidak ada penyimpangan sejak ${efektifTeks}`)+
+      (retro.length?`<br><span style="font-size:11px;color:#7A5D1F">🕰️ ${retro.length} dari ${h.n} sinyal menyimpang dari aturan tetapi dibuka SEBELUM ${efektifTeks} (aturan belum ada): ${pelRetro} jelas · ${indRetro} indikasi. Dicatat terbuka sebagai catatan retroaktif.</span>`:'');
     const rencanaPct=h.n?Math.round(h.rencana/h.n*100):0;
     const lagMax=h.belakangan.length?Math.max(...h.belakangan.map(b=>b.lag)):0;
     return `<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:10px 12px;margin-bottom:10px">
       <div style="font-size:12px;font-weight:800;color:#3A2E10">${label}</div>
       <div style="font-size:12px;font-weight:800;color:${warna};margin:4px 0 6px;line-height:1.5">${judul}</div>
-      ${daftar||''}
+      ${baru.map(itemHtml).join('')}
+      ${retro.length?`<details style="margin-top:4px"><summary style="cursor:pointer;font-size:10px;color:#C8A84B">🕰️ Lihat ${retro.length} catatan retroaktif (sebelum ${efektifTeks})</summary>${retro.map(itemHtml).join('')}</details>`:''}
       ${h.n===0?'':`<div style="font-size:9px;color:#7A5D1F;line-height:1.6;margin-top:6px;border-top:1px dashed var(--border);padding-top:6px">
         <b>Kualitas bukti:</b> rencana SL/TP tercatat di ${h.rencana} dari ${h.n} sinyal (${rencanaPct}%). ${rencanaPct<100?'Sinyal tanpa rencana hanya bisa diperiksa dari hasilnya, jadi RR yang salah di order yang kena SL tidak terdeteksi.':'Semua sinyal punya rencana SL/TP tercatat.'}<br>
         <b>Waktu pencatatan:</b> ${h.belakangan.length?`${h.belakangan.length} dari ${h.n} sinyal dicatat lebih dari 1 hari setelah ditutup (terlama ${Math.round(lagMax*10)/10} hari). Ini bukan pelanggaran, tapi auditor perlu tahu data diinput belakangan.`:'tidak ada sinyal yang dicatat belakangan (lebih dari 1 hari).'}
       </div>`}</div>`;
   }).join('');
   wrap.innerHTML=`<div style="background:var(--bg0);border:1.5px solid #C8A84B;border-radius:10px;padding:12px">
-    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🔍 Audit Kepatuhan Aturan — untuk pihak ketiga</div>
-    <div style="font-size:9px;color:#5C4818;line-height:1.5;margin-bottom:8px">Situs memeriksa otomatis tiap sinyal dengan aturan yang berlaku: emas SL 500 / TP 500 (RR 1:1) jatah 5 order per bulan; forex SL per pair, TP 3× SL (RR 1:3), jatah 3 order per pair, maksimal 1 loss per hari, dan stop gabungan. <b>❌ PASTI</b> = data tercatat jelas melanggar. <b>❌ KUAT</b> = hasilnya sama dengan RR yang salah. <b>⚠️ INDIKASI</b> = janggal, perlu dikonfirmasi. Yang bisa diaudit hanya data yang diinput; cocokkan juga dengan riwayat TF.</div>
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🔍 Audit Kepatuhan Aturan — untuk investor & pihak ketiga</div>
+    <div style="font-size:9px;color:#5C4818;line-height:1.5;margin-bottom:8px">Setiap sinyal, di semua bulan, diperiksa otomatis dengan <b>Aturan Resmi v1</b> (ditetapkan ${efektifTeks}): emas SL 500 / TP 500 (RR 1:1) jatah 5 order per bulan; forex SL per pair, TP 3× SL (RR 1:3), jatah 3 order per pair, maksimal 1 loss per hari, dan stop gabungan. Sinyal yang dibuka <b>sebelum ${efektifTeks}</b> tetap ditampilkan dan dinilai, diberi tanda 🕰️ karena aturan belum ada saat itu. <b>❌ PASTI</b> = data tercatat jelas melanggar. <b>❌ KUAT</b> = hasilnya sama dengan RR yang salah. <b>⚠️ INDIKASI</b> = janggal, perlu dikonfirmasi. Yang bisa diaudit hanya data yang diinput; cocokkan juga dengan riwayat TF.</div>
     ${blok}
   </div>`;
 }
 (function(){
   const _r6=renderBatasDDCard;
   renderBatasDDCard=function(){ _r6.apply(this,arguments); try{ renderAudit(); }catch(e){ console.error('renderAudit', e); } };
+})();
+
+// ══ ATURAN RESMI v1 — dipatenkan 24 Okt 2026 ══
+function stabilStr(o){ if(Array.isArray(o)) return '['+o.map(stabilStr).join(',')+']'; if(o&&typeof o==='object') return '{'+Object.keys(o).sort().map(k=>JSON.stringify(k)+':'+stabilStr(o[k])).join(',')+'}'; return JSON.stringify(o); }
+function aturanResmiV1(){
+  const E=METODE_DEF['H4-500'], R=FOREX_REM;
+  return { versi:'v1', ditetapkan:ATURAN_EFEKTIF, berlakuSejak:ATURAN_EFEKTIF, modalAcuanUsd:2000, lotAcuan:0.01, nilaiPipUsd:0.1,
+    emas:{pair:'XAUUSD', timeframe:'H4', slPips:E.sl, tpPips:E.tp, rr:'1:1', jatahOrderPerBulan:E.jatah, hitungJatah:'order (untung atau rugi)', rugiMaksUsd:E.risk*E.jatah},
+    forex:{rr:'1:'+R.rr, tpKaliSl:R.rr, jatahOrderPerPairPerBulan:R.jatahPair, maksLossPerHari:R.maxLossHari, slippage:R.slippage, slPipsPerPair:FOREX_SL_PAIR,
+      channel:{ datukEURUSD:{pairs:R.kanal.XAUUSD.pairs, stopGabunganPips:remForexBatas('XAUUSD').stop}, datukCrypto89:{pairs:R.kanal.FOREX.pairs, stopGabunganPips:remForexBatas('FOREX').stop} }},
+    targetTF:{minVP:R.targetMinVP, penuhVP:R.targetVP} };
+}
+let bdSidikJari=null;
+async function hitungSidikJariAturan(){
+  const teks=stabilStr(aturanResmiV1());
+  if(!(globalThis.crypto&&crypto.subtle)) return null;
+  const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(teks));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function renderAturanResmi(){
+  const wrap=document.getElementById('batasDDAturanWrap'); if(!wrap) return;
+  const A=aturanResmiV1(), BX=remForexBatas('XAUUSD'), BF=remForexBatas('FOREX'), R=FOREX_REM;
+  const nmX=(cachedScoreMeta.XAUUSD&&cachedScoreMeta.XAUUSD.namaChannel)||'Datuk EURUSD', nmF=(cachedScoreMeta.FOREX&&cachedScoreMeta.FOREX.namaChannel)||'Datuk Crypto 89';
+  const b=t=>`<div style="font-size:10px;color:#3A2E10;line-height:1.7">${t}</div>`;
+  wrap.innerHTML=`<div style="background:var(--bg0);border:2px solid #C8A84B;border-radius:10px;padding:12px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:2px">📜 Aturan Resmi v1</div>
+    <div style="font-size:12px;font-weight:800;color:#3A2E10;margin-bottom:6px">Ditetapkan & berlaku sejak 24 Oktober 2026</div>
+    ${b(`<b>${nmX} — Emas (XAUUSD, H4):</b> SL ${A.emas.slPips} / TP ${A.emas.tpPips} pips (RR 1:1) · jatah ${A.emas.jatahOrderPerBulan} order per bulan, untung atau rugi · rugi maksimal $${A.emas.rugiMaksUsd} (lot 0,01)`)}
+    ${b(`<b>${nmX} — Forex (${R.kanal.XAUUSD.pairs.length} pair):</b> SL 30/45 pips sesuai pair, TP 3× SL (RR 1:3) · jatah ${A.forex.jatahOrderPerPairPerBulan} order per pair per bulan · maks ${A.forex.maksLossPerHari} loss per hari · stop gabungan ${BX.stop} pips`)}
+    ${b(`<b>${nmF} — Forex (${R.kanal.FOREX.pairs.length} pair):</b> SL 45/60 pips sesuai pair, TP 3× SL (RR 1:3) · jatah ${A.forex.jatahOrderPerPairPerBulan} order per pair per bulan · maks ${A.forex.maksLossPerHari} loss per hari · stop gabungan ${BF.stop} pips`)}
+    ${b(`<b>SL per pair:</b> 30 pips = AUDUSD, EURGBP, NZDUSD, USDCHF · 45 pips = AUDJPY, CADJPY, EURUSD, GBPUSD, NZDJPY, USDCAD · 60 pips = CHFJPY, EURJPY, EURNZD, GBPJPY, USDJPY`)}
+    <div style="font-size:9px;color:#5C4818;line-height:1.6;margin-top:6px;border-top:1px dashed var(--border);padding-top:6px"><b>Komitmen keterbukaan:</b> semua data yang sudah diinput, termasuk bulan-bulan sebelum 24 Oktober 2026, dinilai dengan aturan ini dan penyimpangannya ditampilkan di kartu Audit. Penyimpangan sebelum tanggal berlaku diberi tanda 🕰️ (aturan belum ada saat itu), bukan disembunyikan.</div>
+    <div style="font-size:9px;color:#5C4818;line-height:1.6;margin-top:6px"><b>Sidik jari aturan (SHA-256):</b> <span id="bdSidikJari" style="font-family:monospace;word-break:break-all;color:#3A2E10">${bdSidikJari||'menghitung...'}</span><br>Kode ini dihitung dari seluruh angka aturan di atas. Kalau satu angka aturan diubah, kodenya ikut berubah. Bukti waktu yang tidak bisa diubah sendiri oleh situs adalah <b>riwayat commit di GitHub</b>; catat kode ini dan tanggalnya, dan beri tag rilis di GitHub.</div>
+  </div>`;
+  if(!bdSidikJari){ hitungSidikJariAturan().then(h=>{ bdSidikJari=h||'tidak tersedia di browser ini'; const el=document.getElementById('bdSidikJari'); if(el) el.textContent=bdSidikJari; }).catch(()=>{ bdSidikJari='tidak tersedia di browser ini'; const el=document.getElementById('bdSidikJari'); if(el) el.textContent=bdSidikJari; }); }
+}
+(function(){
+  const _r7=renderBatasDDCard;
+  renderBatasDDCard=function(){ _r7.apply(this,arguments); try{ renderAturanResmi(); }catch(e){ console.error('renderAturanResmi', e); } };
+})();
+
+// ══ KUNCI ATURAN RESMI DI SERVER + DETEKSI PERUBAHAN + REKAP SEMUA BULAN ══
+// Melengkapi "Aturan Resmi v1": (1) dicatat di server sebagai riwayat versi, (2) kalau aturan di situs berbeda dari yang dikunci
+// langsung ditandai, (3) batas lama tidak bisa diubah diam-diam dari layar, (4) REM Pips lama dicek sama dengan aturan,
+// (5) rekap kepatuhan semua bulan di kartu Audit.
+let cachedAturanKunci={riwayat:[]};
+async function loadAturanKunci(){
+  try{ const rows=await api('app_settings?select=value&key=eq.aturan_terkunci'); if(rows&&rows.length&&rows[0].value){ const p=JSON.parse(rows[0].value); if(p&&Array.isArray(p.riwayat)) cachedAturanKunci=p; } }
+  catch(e){ console.error('Gagal load aturan_terkunci', e); }
+}
+async function kunciAturanResmi(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk mengunci aturan');return;}
+  const A=aturanResmiV1();
+  if(cachedAturanKunci.riwayat.some(x=>x.versi===A.versi)){ toast('🔒 Versi '+A.versi+' sudah terkunci. Perubahan aturan harus lewat versi baru.'); return; }
+  const hash=await hitungSidikJariAturan();
+  if(!hash){ toast('❌ Browser ini tidak mendukung SHA-256 (perlu HTTPS). Kunci dibatalkan.'); return; }
+  const alasan=prompt(`Kunci Aturan Resmi ${A.versi}\nDitetapkan ${A.ditetapkan}.\nSidik jari: ${hash}\n\nTulis keterangan (boleh kosong), lalu OK untuk mengunci. Setelah terkunci tidak bisa dihapus dari layar situs:`, 'Aturan awal strategi analis');
+  if(alasan===null) return;
+  const lama=cachedAturanKunci;
+  const baru={ versi:A.versi, ditetapkan:A.ditetapkan, hash, dikunciPada:new Date().toISOString(), alasan:(alasan||'').trim(), aturan:A };
+  try{ const gabung={riwayat:lama.riwayat.concat([baru])}; await simpanSettingRem('aturan_terkunci', JSON.stringify(gabung)); cachedAturanKunci=gabung; toast('🔒 Aturan '+A.versi+' terkunci'); renderBatasDDCard(); }
+  catch(e){ console.error(e); cachedAturanKunci=lama; toast('❌ Gagal mengunci: '+(e.message||'').slice(0,100)); }
+}
+function remPipsAturan(){ const E=METODE_DEF['H4-500']; return { XAUUSD:E.sl*E.jatah+remForexBatas('XAUUSD').stop, FOREX:remForexBatas('FOREX').stop }; }
+async function samakanRemPips(){
+  if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
+  const t=remPipsAturan();
+  try{ for(const g of ['XAUUSD','FOREX']){ await simpanSettingRem('rem_pips_'+g, t[g]); cachedRemPips[g]=t[g]; } toast('✅ REM Pips disamakan dengan aturan'); renderRemPipsCard(); }
+  catch(e){ console.error(e); toast('❌ Gagal menyimpan REM Pips: '+(e.message||'').slice(0,100)); }
+}
+editBatasDD=async function(){ toast('🔒 Aturan Resmi v1 terkunci. Batas tidak bisa diubah dari layar; perubahan harus lewat versi baru yang tercatat di riwayat.'); };
+editMetodeBulan=async function(){ toast('🔒 Metode emas terkunci (Aturan Resmi v1).'); };
+async function perbaruiStatusKunci(){
+  const el=document.getElementById('bdKunciStatus'); if(!el) return;
+  const A=aturanResmiV1(); if(!bdSidikJari){ try{ bdSidikJari=await hitungSidikJariAturan(); }catch(e){} }
+  const hash=bdSidikJari, rw=cachedAturanKunci.riwayat||[], catat=rw.find(x=>x.versi===A.versi);
+  const wkt=t=>new Date(t).toLocaleString('id-ID');
+  let status;
+  if(!hash) status='<b style="color:#C99A2E">⚠️ Sidik jari tidak bisa dihitung di browser ini (perlu HTTPS).</b>';
+  else if(!catat) status=`<b style="color:#C99A2E">❗ Belum dikunci di server.</b> ${isAdmin?`<span onclick="kunciAturanResmi()" style="color:#C8A84B;cursor:pointer;text-decoration:underline;font-weight:700">🔒 Kunci Aturan Resmi ${A.versi} sekarang</span>`:'Menunggu admin mengunci.'}`;
+  else if(catat.hash!==hash) status=`<b style="color:#D9534F">❌ ATURAN DI SITUS BERBEDA DARI YANG DIKUNCI (sidik jari tidak cocok). Aturan diubah setelah dikunci pada ${wkt(catat.dikunciPada)}.</b>`;
+  else status=`<b style="color:#3E9142">✅ Terkunci di server pada ${wkt(catat.dikunciPada)}; sidik jari cocok dengan aturan yang berjalan.</b>`;
+  const t=remPipsAturan(), rp=['XAUUSD','FOREX'].map(g=>({g, nm:(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g, lama:cachedRemPips[g], aturan:t[g]}));
+  const beda=rp.filter(x=>Math.abs(x.lama-x.aturan)>0.5);
+  const riwayat=rw.length?rw.slice().reverse().map(x=>`<div style="font-size:9px;color:#5C4818;line-height:1.5;padding:3px 0;border-top:1px dashed var(--border)"><b>${x.versi}</b> · ditetapkan ${x.ditetapkan} · dikunci ${wkt(x.dikunciPada)}<br>sidik jari <span style="word-break:break-all;font-family:monospace">${x.hash}</span>${x.alasan?'<br>Keterangan: '+x.alasan:''}</div>`).join(''):'<div style="font-size:9px;color:#7A5D1F">Belum ada versi yang dikunci.</div>';
+  el.innerHTML=`<div style="font-size:10px;line-height:1.6;margin-top:8px;border-top:1px dashed var(--border);padding-top:6px">${status}</div>
+    ${beda.length?`<div style="font-size:10px;color:#D9534F;line-height:1.6;margin-top:6px">⚠️ REM Pips lama tidak sama dengan aturan: ${beda.map(x=>`${x.nm} -${x.lama} (aturan -${x.aturan})`).join(' · ')} ${isAdmin?`<span onclick="samakanRemPips()" style="color:#C8A84B;cursor:pointer;text-decoration:underline;font-weight:700">Samakan sekarang</span>`:''}</div>`:`<div style="font-size:10px;color:#3E9142;margin-top:6px">✅ REM Pips sama dengan aturan (${rp.map(x=>x.nm+' -'+x.aturan).join(' · ')})</div>`}
+    <details style="margin-top:6px"><summary style="cursor:pointer;font-size:10px;color:#C8A84B">📜 Riwayat versi aturan (${rw.length})</summary>${riwayat}</details>
+    <div style="font-size:8px;color:#7A5D1F;line-height:1.5;margin-top:6px">Untuk bukti yang tidak bergantung pada situs, simpan atau umumkan sidik jari ini di tempat lain (mis. catatan TF atau grup). Riwayat perubahan file di GitHub juga mencatat waktunya.</div>`;
+}
+function renderRekapSemuaBulan(){
+  const wrap=document.getElementById('batasDDAuditWrap'); if(!wrap) return;
+  const nmB=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const namaCh=g=>(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+  const bulanSet=new Set(); ['XAUUSD','FOREX'].forEach(g=>(cachedSinyalAnalis[g]||[]).forEach(r=>{ if(r.status!=='running') bulanSet.add(bulanKeyOf(r.tanggal)); }));
+  const baris=Array.from(bulanSet).sort().reverse().map(b=>{
+    const sel=['XAUUSD','FOREX'].map(g=>{ const h=auditChannel(g,b); if(!h.n) return null;
+      const pB=h.flags.filter(f=>f.sev!=='indikasi'&&!f.pra).length, pR=h.flags.filter(f=>f.sev!=='indikasi'&&f.pra).length, ind=h.flags.filter(f=>f.sev==='indikasi').length;
+      const t=(pB?`❌ ${pB} `:'')+(pR?`🕰️ ${pR} `:'')+(ind?`⚠️ ${ind} `:'');
+      return `${namaCh(g)}: <b style="color:${pB?'#D9534F':(pR?'#B8761F':(ind?'#C99A2E':'#3E9142'))}">${t.trim()||'✅ sesuai'}</b> (${h.n} sinyal)`; }).filter(Boolean).join(' · ');
+    const [yy,mm]=b.split('-'); return `<div style="font-size:10px;color:#3A2E10;padding:3px 0;border-top:1px solid var(--border);line-height:1.5"><b>${nmB[parseInt(mm,10)-1]} ${yy}</b> — ${sel}</div>`;
+  }).join('');
+  const html=`<details id="bdRekapBulan" style="margin-bottom:8px"><summary style="cursor:pointer;font-size:10px;color:#C8A84B">📅 Rekap kepatuhan semua bulan (❌ pelanggaran sejak aturan berlaku · 🕰️ penyimpangan sebelum aturan dibuat · ⚠️ indikasi)</summary>${baris||'<div style="font-size:10px;color:#7A5D1F">Belum ada data.</div>'}</details>`;
+  const lama=document.getElementById('bdRekapBulan'); if(lama&&lama.parentNode) lama.parentNode.removeChild(lama);
+  wrap.insertAdjacentHTML('afterbegin',html);
+}
+(function(){
+  const _r8=renderBatasDDCard;
+  renderBatasDDCard=function(){ _r8.apply(this,arguments);
+    try{ const w=document.getElementById('batasDDAturanWrap'); if(w && !document.getElementById('bdKunciStatus')){ const card=w.firstElementChild; if(card) card.insertAdjacentHTML('beforeend','<div id="bdKunciStatus"></div>'); } perbaruiStatusKunci(); }catch(e){ console.error('statusKunci', e); }
+    try{ renderRekapSemuaBulan(); }catch(e){ console.error('rekapBulan', e); } };
+  const _lb4=loadBatasDD;
+  loadBatasDD=async function(){ await _lb4.apply(this,arguments); await loadAturanKunci(); try{ perbaruiStatusKunci(); }catch(e){} };
 })();
 </script>
 </body>
