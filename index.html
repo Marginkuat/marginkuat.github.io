@@ -1575,6 +1575,7 @@ function renderInvCalcDisclaimer(){
           <div style="flex:1"><label class="lbl">Modal Anda ($)</label><input class="inp" type="number" step="any" id="batasDDModalInv" placeholder="mis. 1000" oninput="renderBatasDDSim()"></div>
           <div style="flex:1"><label class="lbl">Lot (opsional)</label><input class="inp" type="number" step="0.01" id="batasDDLotInv" placeholder="otomatis" oninput="renderBatasDDSim()"></div>
         </div>
+        <div id="batasDDStrategiWrap" style="margin-top:8px"></div>
         <div id="batasDDSimWrap" style="margin-top:8px"></div>
       </div>
       <select class="inp" id="batasDDBulan" onchange="batasDDBulanDipilih=this.value;renderBatasDDCard()" style="margin-bottom:10px"></select>
@@ -15529,6 +15530,61 @@ function renderRemForex(){
 (function(){
   const _r5=renderBatasDDCard;
   renderBatasDDCard=function(){ _r5.apply(this,arguments); try{ renderRemForex(); }catch(e){ console.error('renderRemForex', e); } };
+})();
+
+// ══ STRATEGI & TINGKAT KERUGIAN UNTUK CALON INVESTOR (berlaku Nov 2026 – Jan 2027) ══
+// Tidak bergantung data bulan berjalan: dihitung dari aturan yang sudah disepakati, lalu diskalakan ke modal & lot investor.
+const STRATEGI_PERIODE={mulai:'2026-11', akhir:'2027-01', teks:'Nov 2026 – Jan 2027 (3 bulan uji, lalu dievaluasi)'};
+function renderStrategiInvestor(){
+  const wrap=document.getElementById('batasDDStrategiWrap'); if(!wrap) return;
+  const mEl=document.getElementById('batasDDModalInv'), lEl=document.getElementById('batasDDLotInv');
+  const mIn=parseFloat(mEl&&mEl.value);
+  const modal=(isFinite(mIn)&&mIn>0)?mIn:cachedBatasDD.XAUUSD.modal;
+  const lotAuto=Math.max(0.01,Math.floor(modal/2000*0.01*100+1e-9)/100);
+  const lot=parseFloat(lEl&&lEl.value)||lotAuto;
+  const k=lot/0.01, pipUsd=PIP_VALUE_USD_PER_0_01_LOT*k;
+  const fm=v=>'$'+(Math.round(v*100)/100).toString().replace('.',',');
+  const pct=v=>(v/modal*100);
+  const warna=pc=>pc<=5?'#3E9142':pc<=10?'#C99A2E':'#D9534F';
+  const label=pc=>pc<=5?'konservatif':pc<=10?'sedang-agresif':pc<=15?'tinggi':'sangat berat';
+  const chip=v=>{ const pc=pct(v); return `<b style="color:${warna(pc)}">${fm(v)} (${pc.toFixed(1)}% modal · ${label(pc)})</b>`; };
+  const E=METODE_DEF['H4-500'], emasRisk=E.risk*k, emasMaks=emasRisk*E.jatah;
+  const BX=remForexBatas('XAUUSD'), BF=remForexBatas('FOREX');
+  const fxX=BX.maksLoss*pipUsd, fxF=BF.maksLoss*pipUsd;
+  const totX=emasMaks+fxX;
+  const nmX=(cachedScoreMeta.XAUUSD&&cachedScoreMeta.XAUUSD.namaChannel)||'Datuk EURUSD', nmF=(cachedScoreMeta.FOREX&&cachedScoreMeta.FOREX.namaChannel)||'Datuk Crypto 89';
+  const modalAman=v=>'$'+Math.ceil(v/0.10/100)*100;   // modal agar kerugian terburuk ≤ 10%
+  const R=FOREX_REM;
+  const kotak=(judul,isi)=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 10px;margin-bottom:8px"><div style="font-size:11px;font-weight:800;color:#3A2E10;margin-bottom:4px">${judul}</div>${isi}</div>`;
+  const baris=t=>`<div style="font-size:10px;color:#3A2E10;line-height:1.7">${t}</div>`;
+  wrap.innerHTML=`<div style="background:var(--bg0);border:1.5px solid #C8A84B;border-radius:10px;padding:10px 12px;margin-bottom:10px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:2px">📋 Strategi & Tingkat Kerugian</div>
+    <div style="font-size:10px;color:#3A2E10;margin-bottom:8px;line-height:1.5">Berlaku <b>${STRATEGI_PERIODE.teks}</b>. Dihitung untuk modal <b>${fm(modal)}</b> dan lot <b>${lot.toFixed(2)}</b>${(isFinite(mIn)&&mIn>0)?'':' (contoh acuan, ketik modal Anda di atas)'}.</div>
+    ${kotak(nmX+' — Emas (XAUUSD, H4)',
+      baris(`<b>Strategi:</b> SL ${E.sl} pips / TP ${E.tp} pips (RR 1:1). Titik impas win rate 50%.`)+
+      baris(`<b>Jatah open:</b> ${E.jatah} order per bulan (untung atau rugi). Setelah ${E.jatah} order, stop sampai bulan depan.`)+
+      baris(`<b>Rugi per order:</b> ${chip(emasRisk)}`)+
+      baris(`<b>Rugi maksimal sebulan</b> (${E.jatah} order semuanya kena SL): ${chip(emasMaks)}`))}
+    ${kotak(nmX+' — Forex ('+BX.maksOrder/R.jatahPair+' pair)',
+      baris(`<b>Pair:</b> ${R.kanal.XAUUSD.pairs.join(', ')}`)+
+      baris(`<b>Strategi:</b> SL 30 atau 45 pips (beda per pair), TP 3× SL (RR 1:3). Titik impas win rate 25%.`)+
+      baris(`<b>Jatah open:</b> ${R.jatahPair} order per pair per bulan (untung atau rugi), maksimal ${BX.maksOrder} order. Maksimal ${R.maxLossHari} loss per hari, lalu stop sampai besok.`)+
+      baris(`<b>Rugi maksimal sebulan:</b> ${chip(fxX)} · stop gabungan di ${BX.stop} pips (${fm(BX.stop*pipUsd)})`))}
+    ${kotak('Total terburuk '+nmX+' (emas + forex)',
+      baris(`Kalau semua order di bulan itu kena SL: ${chip(totX)}`)+
+      baris(`Modal yang disarankan agar terburuk ≤10%: <b>${modalAman(totX)}</b> (lot ${lot.toFixed(2)})`))}
+    ${kotak(nmF+' — Forex ('+BF.maksOrder/R.jatahPair+' pair)',
+      baris(`<b>Pair:</b> ${R.kanal.FOREX.pairs.join(', ')}`)+
+      baris(`<b>Strategi:</b> SL 45 atau 60 pips (beda per pair), TP 3× SL (RR 1:3). Titik impas win rate 25%.`)+
+      baris(`<b>Jatah open:</b> ${R.jatahPair} order per pair per bulan (untung atau rugi), maksimal ${BF.maksOrder} order. Maksimal ${R.maxLossHari} loss per hari, lalu stop sampai besok.`)+
+      baris(`<b>Rugi maksimal sebulan:</b> ${chip(fxF)} · stop gabungan di ${BF.stop} pips (${fm(BF.stop*pipUsd)})`)+
+      baris(`Modal yang disarankan agar terburuk ≤10%: <b>${modalAman(fxF)}</b> (lot ${lot.toFixed(2)})`))}
+    <div style="font-size:9px;color:#7A5D1F;line-height:1.5">Angka "terburuk" adalah kalau semua order kena stop loss, jarang terjadi. Rem otomatis: pair atau emas yang jatahnya habis harus stop sampai bulan depan, dan seluruh channel stop kalau batas gabungan tercapai. Hasil masa lalu bukan jaminan keuntungan.</div>
+  </div>`;
+}
+(function(){
+  const _sim=renderBatasDDSim;
+  renderBatasDDSim=function(){ _sim.apply(this,arguments); try{ renderStrategiInvestor(); }catch(e){ console.error('renderStrategiInvestor', e); } };
 })();
 </script>
 </body>
