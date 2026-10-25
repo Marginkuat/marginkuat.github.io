@@ -370,6 +370,7 @@ function toggleKamusGrup(btn){
     <div class="bal-box"><div class="bal-box-val cg" id="bProfit">¢0</div><div class="bal-box-lbl" id="bProfitLbl">Total Profit</div></div>
   </div>
   <div id="balDrawdownRow" style="margin-top:10px;text-align:center;font-size:10px;color:#8A6B26"></div>
+  <div id="mt4AturanWrap"></div>
   <div style="text-align:center;margin-top:6px"><a href="#secKamusIstilah" style="font-size:9px;color:#7A5D1F;text-decoration:underline">❓ Belum ngerti Win Rate/istilah lain? Lihat Kamus Istilah</a></div>
 
   <!-- EQUITY CURVE REAL-TIME (gabung dengan Saldo MT4) -->
@@ -15844,6 +15845,37 @@ async function renderAturanResmiV2(){
 }
 function nmChannelV2(g){ return (cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||(g==='XAUUSD'?'Datuk EURUSD':'Datuk Crypto 89'); }
 (function(){ const _r9=renderBatasDDCard; renderBatasDDCard=function(){ _r9.apply(this,arguments); try{ renderAturanResmiV2(); }catch(e){ console.error('aturanV2', e); } }; })();
+
+// ══ ATURAN EMAS AKUN MT4 (trading riil) — sama seperti aturan emas Datuk EURUSD (v2) ══
+// SL 500 / TP 500 (RR 1:1) · jatah 5 order per bulan · win pertama langsung stop · 5 loss stop.
+// Dihitung dari Saldo Harian (jumlah signal + profit harian). Urutan jam per order tidak tersedia di data harian.
+const MT4_ATURAN_MULAI='2026-10-26';   // aturan akun MT4 mulai Senin 26 Oktober 2026
+function renderAturanMt4(){
+  const el=document.getElementById('mt4AturanWrap'); if(!el) return;
+  const now=new Date(), bk=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'), J=5;
+  const hariIni=bk+'-'+String(now.getDate()).padStart(2,'0'), belumMulai=hariIni<MT4_ATURAN_MULAI, uji=false;
+  const rows=(allSaldoData||[]).filter(r=>(r.pair||'XAUUSD')==='XAUUSD' && String(r.tanggal).slice(0,7)===bk && String(r.tanggal)>=MT4_ATURAN_MULAI).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
+  let n=0, tglWin=null; const langgar=[];
+  rows.forEach(r=>{
+    const sig=parseInt(r.jumlah_signal||0)||0; if(sig<=0) return;
+    const gp=r.gross_profit!=null?parseFloat(r.gross_profit||0):parseFloat(r.profit||0), menang=gp>0, tg=String(r.tanggal).slice(8)+'/'+String(r.tanggal).slice(5,7);
+    if(tglWin && String(r.tanggal)>tglWin) langgar.push(tg+': open setelah win pertama ('+tglWin.slice(8)+'/'+tglWin.slice(5,7)+')');
+    if(n<J && n+sig>J) langgar.push(tg+': melebihi jatah '+J+' order (order ke-'+(n+1)+' sampai '+(n+sig)+')');
+    else if(n>=J) langgar.push(tg+': open setelah jatah '+J+' order habis');
+    n+=sig; if(menang && !tglWin) tglWin=r.tanggal;
+  });
+  const stopJatah=n>=J, stopWin=!!tglWin, stop=stopJatah||stopWin;
+  const warna=belumMulai?'#C9B27A':(stop?'#F87171':'#4ADE80');
+  const status=belumMulai?'⏳ Mulai berlaku Senin 26 Okt 2026 — belum dihitung':stopJatah?`🛑 STOP — jatah ${J} order habis, lanjut bulan depan`:stopWin?`🛑 STOP — sudah win pertama (${tglWin.slice(8)}/${tglWin.slice(5,7)}), lanjut bulan depan`:`✅ BOLEH OPEN — sisa jatah ${J-n} order`;
+  el.innerHTML=`<div style="margin-top:12px;background:${stop?'#2A0F0F':'var(--bg2)'};border:1px solid ${stop?'#7F1D1D':'var(--border)'};border-radius:12px;padding:12px 14px;text-align:left">
+    <div style="font-size:9px;color:#B8860B;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🎯 Aturan Emas Akun MT4 — sama seperti Datuk EURUSD (berlaku mulai Senin 26 Okt 2026)</div>
+    <div style="font-size:13px;font-weight:800;color:${warna};line-height:1.4">${status}</div>
+    <div style="font-size:10px;color:#C9B27A;margin-top:6px;line-height:1.7">Order bulan ini: <b>${n}/${J}</b> · Win pertama: <b>${tglWin?'sudah':'belum'}</b><br>SL 500 / TP 500 pips (RR 1:1) · jatah ${J} order · win pertama langsung stop · order berikutnya dibuka setelah order sebelumnya kena SL.</div>
+    ${langgar.length?`<div style="font-size:10px;color:${uji?'#C99A2E':'#F87171'};margin-top:8px;line-height:1.6">${uji?'⚠️ Indikasi menyalahi aturan (uji coba)':'❌ Menyalahi aturan'}:<br>${langgar.slice(0,6).map(t=>'• '+t).join('<br>')}</div>`:''}
+    <div style="font-size:8px;color:#7A5D1F;margin-top:6px;line-height:1.5">Dihitung dari Saldo Harian (jumlah signal dan profit). Urutan jam tiap order tidak terlihat di data harian.</div>
+  </div>`;
+}
+(function(){ const _rg=renderGraph; renderGraph=function(){ _rg.apply(this,arguments); try{ renderAturanMt4(); }catch(e){ console.error('aturanMt4', e); } }; })();
 
 // ══ KUNCI ATURAN RESMI DI SERVER + DETEKSI PERUBAHAN + REKAP SEMUA BULAN ══
 // Melengkapi "Aturan Resmi v1": (1) dicatat di server sebagai riwayat versi, (2) kalau aturan di situs berbeda dari yang dikunci
