@@ -5974,7 +5974,7 @@ function renderRemPipsCard(){
   if(!wrap)return;
   const potongan=['XAUUSD','FOREX'].map(g=>{
     const labelGrup=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
-    const batasRugi=cachedRemPips[g]||0, tMin=cachedTargetMin[g]||0, tMax=cachedTargetMax[g]||0;
+    const batasRugi=((typeof remPipsAturan==='function')?remPipsAturan()[g]:cachedRemPips[g])||0, tMin=cachedTargetMin[g]||0, tMax=cachedTargetMax[g]||0;
     const now=new Date();
     const rowsBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>{
       const d=new Date(r.tanggal);
@@ -15073,6 +15073,7 @@ function renderBatasDDMetode(){
   const modal=cachedBatasDD[g].modal;
   const h=hitungBatasDD(g,bk);
   const sisa=m.jatah-h.loss;
+  const adaWin=aturanBulan(bk).v==='v2' && (cachedSinyalAnalis[g]||[]).some(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk && parseFloat(r.pips||0)>0);
   let st, warna;
   const byLoss=(m.hitung==='loss');
   const pakai=byLoss?h.loss:Math.max(h.n,h.loss);   // H4 200: hitung LOSS saja; H4 500: ORDER atau LOSS, mana yang duluan
@@ -15087,6 +15088,7 @@ function renderBatasDDMetode(){
     else { st=`${pc>=50?'⚠️ Peringatan':'✅ Aman'} — rugi bersih <b>${rugiPips.toFixed(1)}</b> dari ${batasPipsM.toFixed(0)} pips (${pc.toFixed(0)}%)<br><span style="font-size:10px;font-weight:600">Sisa ruang ${sisaPipsM.toFixed(1)} pips ($${(sisaPipsM*pipUsdM).toFixed(2).replace(/\.00$/,'')})</span>`; warna=pc>=75?'#D9534F':pc>=50?'#C99A2E':'#3E9142'; }
   } else
   if(h.n===0){ st='Belum ada sinyal closed bulan ini'; warna='#8A6B26'; }
+  else if(adaWin){ st='🛑 SUDAH WIN — WAJIB STOP sampai bulan depan<br><span style="font-size:10px;font-weight:600">Aturan v2: win pertama langsung stop. '+info+'</span>'; warna='#D9534F'; }
   else if(pakai>m.jatah){ st='❌ Melewati jatah<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#D9534F'; }
   else if(pakai===m.jatah){ st='🛑 Jatah habis — stop sampai bulan depan<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#D9534F'; }
   else { st=`✅ Jatah masih ada<br><span style="font-size:10px;font-weight:600">${info} (sisa ${sisaJ})</span>`; warna=sisaJ<=1?'#C99A2E':'#3E9142'; }
@@ -15503,8 +15505,8 @@ const FOREX_REM={ rr:3, jatahPair:3, maxLossHari:1, targetMinVP:300, targetVP:93
           FOREX: {pairs:['GBPUSD','NZDJPY','USDCAD','CHFJPY','EURJPY','EURNZD','GBPJPY','USDJPY']} } };
 function slPair(nm){ return FOREX_SL_PAIR[nm]||60; }
 // Batas stop = jatah × SL tiap pair, +10% untuk slippage, dibulatkan ke atas per 50 pips. Peringatan = separuh.
-function remForexBatas(g){
-  const R=FOREX_REM, K=R.kanal[g];
+function remForexBatas(g,Rx){
+  const R=Rx||FOREX_REM, K=R.kanal[g];
   const maksLoss=K.pairs.reduce((t,nm)=>t+R.jatahPair*slPair(nm),0);
   const stop=Math.ceil(maksLoss*R.slippage/50)*50;
   return {maksLoss, stop, warn:stop/2, maksOrder:R.jatahPair*K.pairs.length, maksUntung:K.pairs.reduce((t,nm)=>t+R.jatahPair*slPair(nm)*R.rr,0)};
@@ -15512,7 +15514,7 @@ function remForexBatas(g){
 function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const wrap=document.getElementById(wrapId); if(!wrap) return;
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
-  const R=FOREX_REM, cfg=cachedBatasDD.FOREX, K=R.kanal[g], B=remForexBatas(g);
+  const R=aturanBulan(bk).R, cfg=cachedBatasDD.FOREX, K=R.kanal[g], B=remForexBatas(g,R);
   const pipUsd=PIP_VALUE_USD_PER_0_01_LOT*(cfg.lot/0.01);
   const stopPips=B.stop, warnPips=B.warn;
   const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
@@ -15531,18 +15533,19 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const lossHariIni=lossHari[hariIni]||0;
   const pairList=Object.keys(per).sort((a,b)=>per[b].n-per[a].n || slPair(a)-slPair(b) || a.localeCompare(b));
   const pairAda=pairList.filter(k=>per[k].n>0);
-  const pairPenuh=pairList.filter(k=>per[k].n>=R.jatahPair);
+  const sw=(R===FOREX_REM_V2);   // aturan v2: win pertama langsung stop
+  const pairPenuh=pairList.filter(k=>per[k].n>=R.jatahPair || (sw&&per[k].w>0));
   const pairLewat=pairList.filter(k=>per[k].n>R.jatahPair);
-  const pairSisa1=pairList.filter(k=>per[k].n===R.jatahPair-1);
+  const pairSisa1=pairList.filter(k=>per[k].n===R.jatahPair-1 && !(sw&&per[k].w>0));
   const uji=false;   // Aturan Resmi v1 berlaku untuk semua data (retroaktif); penandaan sebelum/sesudah 24 Okt 2026 ada di kartu Audit
   let warna='#3E9142', st='✅ AMAN — belum ada pair yang penuh';
-  if(uji){ warna='#8A6B26'; st='🧪 BULAN UJI COBA — aturan baru (RR 1:3, jatah '+R.jatahPair+' order per pair) mulai berlaku '+R.mulai.slice(5)+'/'+R.mulai.slice(0,4)+'. Angka di bawah hanya informasi, belum ada stop.'; }
+  if(uji){ warna='#8A6B26'; st='🧪 BULAN UJI COBA — aturan baru (RR 1:'+R.rr+', jatah '+R.jatahPair+' order per pair) mulai berlaku '+R.mulai.slice(5)+'/'+R.mulai.slice(0,4)+'. Angka di bawah hanya informasi, belum ada stop.'; }
   else if(n===0){ warna='#8A6B26'; st='Belum ada sinyal closed bulan ini'; }
   else if(lossKotor>=stopPips){ warna='#D9534F'; st='🛑 STOP SEMUA PAIR — loss kotor mencapai batas, stop sampai bulan depan'; }
-  else if(pairPenuh.length){ warna='#D9534F'; st='🛑 STOP TRADING PAIR INI SAMPAI BULAN DEPAN (jatah '+R.jatahPair+' order habis, untung atau rugi): '+pairPenuh.join(', '); }
+  else if(pairPenuh.length){ warna='#D9534F'; st='🛑 STOP TRADING PAIR INI SAMPAI BULAN DEPAN ('+(sw?'WIN PERTAMA = STOP, atau jatah '+R.jatahPair+' order habis':'jatah '+R.jatahPair+' order habis, untung atau rugi')+'): '+pairPenuh.join(', '); }
   else if(lossHariIni>=R.maxLossHari){ warna='#C99A2E'; st='⏸️ Sudah '+lossHariIni+' loss hari ini — stop sampai besok'; }
   else if(lossKotor>=warnPips || pairSisa1.length){ warna='#C99A2E'; st='⚠️ PERINGATAN — '+(pairSisa1.length?'pair tinggal 1 order: '+pairSisa1.join(', '):'loss kotor lewat separuh batas'); }
-  const statusPair=o=> uji ? [`${o.n} order (info)`,'#7A5D1F'] : o.n>R.jatahPair ? [`❌ lewat ${o.n}/${R.jatahPair}`,'#D9534F'] : o.n===R.jatahPair ? [`🛑 STOP ${o.n}/${R.jatahPair}`,'#D9534F'] : o.n===R.jatahPair-1 ? [`⚠️ sisa 1 (${o.n}/${R.jatahPair})`,'#C99A2E'] : [`✅ sisa ${R.jatahPair-o.n} (${o.n}/${R.jatahPair})`,'#3E9142'];
+  const statusPair=o=> uji ? [`${o.n} order (info)`,'#7A5D1F'] : (sw&&o.w>0) ? [`🛑 WIN → STOP (${o.n}x)`,'#D9534F'] : o.n>R.jatahPair ? [`❌ lewat ${o.n}/${R.jatahPair}`,'#D9534F'] : o.n===R.jatahPair ? [`🛑 STOP ${o.n}/${R.jatahPair}`,'#D9534F'] : o.n===R.jatahPair-1 ? [`⚠️ sisa 1 (${o.n}/${R.jatahPair})`,'#C99A2E'] : [`✅ sisa ${R.jatahPair-o.n} (${o.n}/${R.jatahPair})`,'#3E9142'];
   const tabel=pairList.map(k=>{ const o=per[k], [t,c]=statusPair(o), sl=slPair(k);
     return `<div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:10px;color:#3A2E10;padding:4px 0;border-top:1px solid var(--border);align-items:center"><span><b>${k}</b><br><span style="font-size:8px;color:#7A5D1F">SL ${sl} / TP ${sl*R.rr} · $${(sl*pipUsd).toFixed(2).replace(/\.?0+$/,'')}</span></span><span>${o.n}x</span><span>${o.l}L/${o.w}W</span><span style="color:${o.net<0?'#D9534F':'#3E9142'}">${sg(o.net)}</span><span style="color:${c};font-weight:700">${t}</span></div>`; }).join('');
   const bar=(nilai,maks,warnaB)=>`<div style="height:8px;background:var(--bg0);border-radius:6px;overflow:hidden;margin:3px 0"><div style="width:${Math.max(0,Math.min(100,nilai/maks*100))}%;height:100%;background:${warnaB}"></div></div>`;
@@ -15552,11 +15555,11 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
       ${vp>=R.targetMinVP?'✅':'⬜'} Syarat medal: minimal ${R.targetMinVP} VP${bar(vp,R.targetMinVP,'#3E9142')}
       ${net>=0?'✅':'⬜'} Pips bulanan minimal 0 (sekarang <b>${sg(net)}</b>)<br>
       ${vp>=R.targetVP?'✅':'⬜'} Target penuh: ${R.targetVP} VP${bar(vp,R.targetVP,'#C8A84B')}
-      <span style="font-size:9px;color:#7A5D1F">RR 1:3: 1 win ≈ +180 sampai +202,5 VP, 1 loss ≈ -60 sampai -67,5 VP (SL tiap pair sudah menyeimbangkan VP). Titik impas win rate 25%. Dari maksimal ${B.maksOrder} order (${K.pairs.length} pair × ${R.jatahPair}): syarat medal butuh ±8 win (±33%), target penuh butuh ±10 win (±42%).</span></div>
+      <span style="font-size:9px;color:#7A5D1F">RR 1:${R.rr}: 1 win ≈ +${R.rr*60} sampai +${String(R.rr*67.5).replace('.',',')} VP, 1 loss ≈ -60 sampai -67,5 VP (SL tiap pair sudah menyeimbangkan VP). Titik impas win rate 25%. Dari maksimal ${B.maksOrder} order (${K.pairs.length} pair × ${R.jatahPair}): syarat medal butuh ±8 win (±33%), target penuh butuh ±10 win (±42%).</span></div>
     </div>`;
   wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🚦 Rem Forex${sebagaiForexSaja?' (bagian forex)':' & Target'} — ${label}</div>
-    <div style="font-size:10px;color:#3A2E10;line-height:1.7;margin-bottom:6px"><b>Strategi:</b> ${K.pairs.length} pair, <b>SL beda per pair</b> (30 / 45 / 60 pips = $3 / $4,5 / $6), TP = 3× SL (<b>RR 1:3</b>) · <b>jatah ${R.jatahPair} order per pair per bulan</b> (untung atau rugi, begitu penuh pair itu stop) · maks ${R.maxLossHari} loss per hari · loss maksimal ${fmt(B.maksLoss)} pips ($${(B.maksLoss*pipUsd).toFixed(1).replace(/\.0$/,'')}) → <b>stop gabungan loss kotor ${fmt(stopPips)} pips</b> (peringatan ${fmt(warnPips)}).${sebagaiForexSaja?' Emas punya aturan sendiri di kartu di atas.':''}</div>
+    <div style="font-size:10px;color:#3A2E10;line-height:1.7;margin-bottom:6px"><b>Strategi:</b> ${K.pairs.length} pair, <b>SL beda per pair</b> (30 / 45 / 60 pips = $3 / $4,5 / $6), TP = ${R.rr}× SL (<b>RR 1:${R.rr}</b>) · <b>jatah ${R.jatahPair} order per pair per bulan</b> (untung atau rugi, begitu penuh pair itu stop) · maks ${R.maxLossHari} loss per hari · loss maksimal ${fmt(B.maksLoss)} pips ($${(B.maksLoss*pipUsd).toFixed(1).replace(/\.0$/,'')}) → <b>stop gabungan loss kotor ${fmt(stopPips)} pips</b> (peringatan ${fmt(warnPips)}).${sebagaiForexSaja?' Emas punya aturan sendiri di kartu di atas.':''}</div>
     <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:8px;line-height:1.5">${st}</div>
     <div style="font-size:10px;color:#3A2E10">Order terpakai: <b>${n}</b> dari maks ${B.maksOrder} · pair penuh: <b>${pairPenuh.length}</b>/${K.pairs.length}</div>
     <div style="font-size:10px;color:#3A2E10;margin-top:4px">Loss kotor: <b style="color:#D9534F">-${fmt(lossKotor)} pips</b> dari ${fmt(stopPips)} ($${(lossKotor*pipUsd).toFixed(2).replace(/\.00$/,'')})${bar(lossKotor,stopPips,lossKotor>=stopPips?'#D9534F':(lossKotor>=warnPips?'#C99A2E':'#3E9142'))}</div>
@@ -15596,12 +15599,12 @@ function renderStrategiInvestor(){
   const label=pc=>pc<=5?'konservatif':pc<=10?'sedang-agresif':pc<=15?'tinggi':'sangat berat';
   const chip=v=>{ const pc=pct(v); return `<b style="color:${warna(pc)}">${fm(v)} (${pc.toFixed(1)}% modal · ${label(pc)})</b>`; };
   const E=METODE_DEF['H4-500'], emasRisk=E.risk*k, emasMaks=emasRisk*E.jatah;
-  const BX=remForexBatas('XAUUSD'), BF=remForexBatas('FOREX');
+  const BX=remForexBatas('XAUUSD',aturanSekarang().R), BF=remForexBatas('FOREX',aturanSekarang().R);
   const fxX=BX.maksLoss*pipUsd, fxF=BF.maksLoss*pipUsd;
   const totX=emasMaks+fxX;
   const nmX=(cachedScoreMeta.XAUUSD&&cachedScoreMeta.XAUUSD.namaChannel)||'Datuk EURUSD', nmF=(cachedScoreMeta.FOREX&&cachedScoreMeta.FOREX.namaChannel)||'Datuk Crypto 89';
   const modalAman=v=>'$'+Math.ceil(v/0.10/100)*100;   // modal agar kerugian terburuk ≤ 10%
-  const R=FOREX_REM;
+  const R=aturanSekarang().R;
   const kotak=(judul,isi)=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 10px;margin-bottom:8px"><div style="font-size:11px;font-weight:800;color:#3A2E10;margin-bottom:4px">${judul}</div>${isi}</div>`;
   const baris=t=>`<div style="font-size:10px;color:#3A2E10;line-height:1.7">${t}</div>`;
   wrap.innerHTML=`<div style="background:var(--bg0);border:1.5px solid #C8A84B;border-radius:10px;padding:10px 12px;margin-bottom:10px">
@@ -15614,12 +15617,12 @@ function renderStrategiInvestor(){
       baris(`Lot minimal 0,01. Kerugian dibatasi aturan: jatah order, maksimal ${R.maxLossHari} loss per hari, dan stop gabungan.`))}
     ${kotak(nmX+' — Emas (XAUUSD, H4)',
       baris(`<b>Strategi:</b> SL ${E.sl} pips / TP ${E.tp} pips (RR 1:1). Titik impas win rate 50%.`)+
-      baris(`<b>Jatah open:</b> ${E.jatah} order per bulan (untung atau rugi). Setelah ${E.jatah} order, stop sampai bulan depan.`)+
+      baris(`<b>Jatah open:</b> ${E.jatah} order per bulan (untung atau rugi). Setelah ${E.jatah} order, stop sampai bulan depan.${aturanSekarang().v==='v2'?' Order pertama win langsung stop.':''}`)+
       baris(`<b>Rugi per order:</b> ${chip(emasRisk)}`)+
       baris(`<b>Rugi maksimal sebulan</b> (${E.jatah} order semuanya kena SL): ${chip(emasMaks)}`))}
     ${kotak(nmX+' — Forex ('+BX.maksOrder/R.jatahPair+' pair)',
       baris(`<b>Pair:</b> ${R.kanal.XAUUSD.pairs.join(', ')}`)+
-      baris(`<b>Strategi:</b> SL 30 atau 45 pips (beda per pair), TP 3× SL (RR 1:3). Titik impas win rate 25%.`)+
+      baris(`<b>Strategi:</b> SL 30 atau 45 pips (beda per pair), TP ${R.rr}× SL (RR 1:${R.rr}). Titik impas win rate ${R.rr===2?33:25}%.${R.rr===2?' Win langsung stop; order berikutnya dibuka setelah order sebelumnya kena SL.':''}`)+
       baris(`<b>Jatah open:</b> ${R.jatahPair} order per pair per bulan (untung atau rugi), maksimal ${BX.maksOrder} order. Maksimal ${R.maxLossHari} loss per hari, lalu stop sampai besok.`)+
       baris(`<b>Rugi maksimal sebulan:</b> ${chip(fxX)} · stop gabungan di ${BX.stop} pips (${fm(BX.stop*pipUsd)})`))}
     ${kotak('Total terburuk '+nmX+' (emas + forex)',
@@ -15627,7 +15630,7 @@ function renderStrategiInvestor(){
       baris(`Modal yang disarankan agar terburuk ≤10%: <b>${modalAman(totX)}</b> (lot ${lot.toFixed(2)})`))}
     ${kotak(nmF+' — Forex ('+BF.maksOrder/R.jatahPair+' pair)',
       baris(`<b>Pair:</b> ${R.kanal.FOREX.pairs.join(', ')}`)+
-      baris(`<b>Strategi:</b> SL 45 atau 60 pips (beda per pair), TP 3× SL (RR 1:3). Titik impas win rate 25%.`)+
+      baris(`<b>Strategi:</b> SL 45 atau 60 pips (beda per pair), TP ${R.rr}× SL (RR 1:${R.rr}). Titik impas win rate ${R.rr===2?33:25}%.${R.rr===2?' Win langsung stop; order berikutnya dibuka setelah order sebelumnya kena SL.':''}`)+
       baris(`<b>Jatah open:</b> ${R.jatahPair} order per pair per bulan (untung atau rugi), maksimal ${BF.maksOrder} order. Maksimal ${R.maxLossHari} loss per hari, lalu stop sampai besok.`)+
       baris(`<b>Rugi maksimal sebulan:</b> ${chip(fxF)} · stop gabungan di ${BF.stop} pips (${fm(BF.stop*pipUsd)})`)+
       baris(`Modal yang disarankan agar terburuk ≤10%: <b>${modalAman(fxF)}</b> (lot ${lot.toFixed(2)})`))}
@@ -15644,16 +15647,21 @@ function renderStrategiInvestor(){
 // forex SL per pair, TP 3×SL (RR 1:3), jatah 3 order/pair/bulan, maks 1 loss/hari, stop gabungan.
 // Tingkat bukti: PASTI (rencana SL/TP tercatat / hitungan jatah), KUAT (hasil identik dengan RR yang salah), INDIKASI (perlu konfirmasi).
 const AUDIT_ATURAN={ emas:{sl:500,tp:500,rr:1,jatah:5}, forexRR:3, jatahPair:3 };
+const ATURAN_V2_EFEKTIF='2026-11-01';   // Aturan v2 berlaku mulai bulan November 2026
+const AUDIT_ATURAN_V2={ emas:{sl:500,tp:500,rr:1,jatah:5}, forexRR:2, jatahPair:2 };
+const FOREX_REM_V2=Object.assign({},FOREX_REM,{rr:2,jatahPair:2,mulai:ATURAN_V2_EFEKTIF});
+function aturanBulan(bk){ return String(bk||'')>=ATURAN_V2_EFEKTIF.slice(0,7) ? {v:'v2',AA:AUDIT_ATURAN_V2,R:FOREX_REM_V2} : {v:'v1',AA:AUDIT_ATURAN,R:FOREX_REM}; }
+function aturanSekarang(){ return aturanBulan(new Date().toISOString().slice(0,7)); }
 const ATURAN_EFEKTIF='2026-10-24';   // tanggal aturan resmi v1 ditetapkan & mulai berlaku
 function auditWaktu(tgl,jam){ return new Date((tgl||'1970-01-01')+'T'+(jam||'00:00')); }
 function auditWaktuInput(id){ // id sinyal = 's' + Date.now() base36 + 5 acak → waktu pencatatan di situs
   if(!id||id[0]!=='s'||id.length<9) return null; const t=parseInt(id.slice(1,-5),36); return (isFinite(t)&&t>1.5e12&&t<4e12)?new Date(t):null; }
-function aturanUntuk(g,nm){
-  if(nm==='XAUUSD'){ const A=AUDIT_ATURAN.emas; return {jenis:'emas', sl:A.sl, tp:A.tp, rr:A.rr, rrTeks:'1:1', rrSalah:3, masukChannel:(g==='XAUUSD')}; }
-  const sl=slPair(nm); return {jenis:'forex', sl, tp:sl*AUDIT_ATURAN.forexRR, rr:AUDIT_ATURAN.forexRR, rrTeks:'1:3', rrSalah:1, masukChannel:FOREX_REM.kanal[g].pairs.includes(nm)};
+function aturanUntuk(g,nm,AA){ AA=AA||AUDIT_ATURAN;
+  if(nm==='XAUUSD'){ const A=AA.emas; return {jenis:'emas', sl:A.sl, tp:A.tp, rr:A.rr, rrTeks:'1:1', rrSalah:3, masukChannel:(g==='XAUUSD')}; }
+  const sl=slPair(nm); return {jenis:'forex', sl, tp:sl*AA.forexRR, rr:AA.forexRR, rrTeks:'1:'+AA.forexRR, rrSalah:(AA.forexRR===2?3:1), masukChannel:FOREX_REM.kanal[g].pairs.includes(nm)};
 }
 function auditChannel(g,bk){
-  const R=FOREX_REM, hasil={flags:[], n:0, rencana:0, belakangan:[], diaudit:true};
+  const V=aturanBulan(bk), AA=V.AA, R=V.R, hasil={flags:[], n:0, rencana:0, belakangan:[], diaudit:true};
   const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk);
   hasil.n=rows.length; if(!hasil.diaudit) return hasil;
   const info=r=>({r, nm:(r.simbol||'(tanpa nama)').toUpperCase()});
@@ -15663,7 +15671,7 @@ function auditChannel(g,bk){
   const tambah=(x,sev,aturan,detail)=>{ let f=hasil.flags.find(z=>z.r===x.r); if(!f){ f={r:x.r,nm:x.nm,sev:'indikasi',masalah:[],pra:String(x.r.tanggalBuka||x.r.tanggal)<ATURAN_EFEKTIF}; hasil.flags.push(f); } const rank={indikasi:1,kuat:2,pasti:3}; if(rank[sev]>rank[f.sev]) f.sev=sev; f.masalah.push({sev,aturan,detail}); };
   const fmtP=v=>(v>0?'+':'')+(Math.round(v*10)/10);
   L.forEach(x=>{
-    const r=x.r, pp=parseFloat(r.pips||0), A=aturanUntuk(g,x.nm);
+    const r=x.r, pp=parseFloat(r.pips||0), A=aturanUntuk(g,x.nm,AA);
     if(r.slPips!=null && r.tpPips!=null) hasil.rencana++;
     // pair/instrumen di luar strategi channel
     if(!A.masukChannel) tambah(x,'indikasi','Pair di luar strategi channel', `${x.nm} tidak ada di daftar strategi ${(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g}`);
@@ -15689,11 +15697,11 @@ function auditChannel(g,bk){
   const urutBuka=L.slice().sort((a,b)=>buka(a)-buka(b));
   let emasN=0; const pairN={};
   urutBuka.forEach(x=>{
-    if(x.nm==='XAUUSD'){ emasN++; if(emasN>AUDIT_ATURAN.emas.jatah) tambah(x,'pasti','Melebihi jatah order emas', `Order emas ke-${emasN} bulan ini, jatah ${AUDIT_ATURAN.emas.jatah} order (untung atau rugi). Seharusnya sudah stop.`); }
-    else { pairN[x.nm]=(pairN[x.nm]||0)+1; if(pairN[x.nm]>AUDIT_ATURAN.jatahPair) tambah(x,'pasti','Melebihi jatah order pair', `Order ke-${pairN[x.nm]} untuk ${x.nm} bulan ini, jatah ${AUDIT_ATURAN.jatahPair} order per pair (untung atau rugi). Seharusnya pair ini sudah stop.`); }
+    if(x.nm==='XAUUSD'){ emasN++; if(emasN>AA.emas.jatah) tambah(x,'pasti','Melebihi jatah order emas', `Order emas ke-${emasN} bulan ini, jatah ${AA.emas.jatah} order (untung atau rugi). Seharusnya sudah stop.`); }
+    else { pairN[x.nm]=(pairN[x.nm]||0)+1; if(pairN[x.nm]>AA.jatahPair) tambah(x,'pasti','Melebihi jatah order pair', `Order ke-${pairN[x.nm]} untuk ${x.nm} bulan ini, jatah ${AA.jatahPair} order per pair (untung atau rugi). Seharusnya pair ini sudah stop.`); }
   });
   // (D) forex: dibuka setelah ada loss di hari yang sama, dan (E) dibuka setelah batas stop gabungan tercapai
-  const fx=urutBuka.filter(x=>x.nm!=='XAUUSD'); const B=remForexBatas(g);
+  const fx=urutBuka.filter(x=>x.nm!=='XAUUSD'); const B=remForexBatas(g,R);
   fx.forEach(x=>{
     if(!(x.r.jamBuka)) return;                       // tanpa jam buka tidak bisa dipastikan
     const tglBukaX=x.r.tanggalBuka||x.r.tanggal, bx=buka(x);
@@ -15702,6 +15710,15 @@ function auditChannel(g,bk){
     const lossKum=fx.filter(y=>y!==x && parseFloat(y.r.pips||0)<0 && y.r.jam && tutup(y)<=bx).reduce((t,y)=>t-parseFloat(y.r.pips||0),0);
     if(lossKum>=B.stop) tambah(x,'pasti','Dibuka setelah batas stop tercapai', `Saat dibuka, loss kotor forex sudah ${Math.round(lossKum)} pips (batas stop ${B.stop}).`);
   });
+  // (G) Aturan v2: win langsung stop & order dibuka berurutan (berikutnya setelah order sebelumnya kena SL)
+  if(V.v==='v2'){
+    const grup={}; urutBuka.forEach(x=>{ (grup[x.nm]=grup[x.nm]||[]).push(x); });
+    Object.keys(grup).forEach(k=>{ const a=grup[k];
+      a.forEach((x,i)=>{ const bx=buka(x), sblm=a.slice(0,i);
+        if(sblm.find(y=>parseFloat(y.r.pips||0)>0)) tambah(x,'pasti','Dibuka setelah win (win langsung stop)', `${k} sudah win lebih dulu bulan ini. Aturan v2: 1 win langsung stop sampai bulan depan.`);
+        if(x.r.jamBuka){ const jalan=sblm.find(y=>y.r.jam && tutup(y)>bx); if(jalan) tambah(x,'pasti','Dibuka sebelum order sebelumnya kena SL', `${k} dibuka ${x.r.jamBuka} saat order sebelumnya belum ditutup. Aturan v2: order berikutnya dibuka setelah order sebelumnya kena SL.`); }
+      }); });
+  }
   // (F) pencatatan belakangan (transparansi, bukan pelanggaran aturan trading)
   L.forEach(x=>{ const w=auditWaktuInput(x.r.id); if(!w) return; const lag=(w-tutup(x))/86400000; if(lag>1) hasil.belakangan.push({x,lag}); });
   hasil.flags.sort((a,b)=>buka({r:a.r})-buka({r:b.r}));
@@ -15740,7 +15757,7 @@ function renderAudit(){
   }).join('');
   wrap.innerHTML=`<div style="background:var(--bg0);border:1.5px solid #C8A84B;border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🔍 Audit Kepatuhan Aturan — untuk investor & pihak ketiga</div>
-    <div style="font-size:9px;color:#5C4818;line-height:1.5;margin-bottom:8px">Setiap sinyal, di semua bulan, diperiksa otomatis dengan <b>Aturan Resmi v1</b> (ditetapkan ${efektifTeks}): emas SL 500 / TP 500 (RR 1:1) jatah 5 order per bulan; forex SL per pair, TP 3× SL (RR 1:3), jatah 3 order per pair, maksimal 1 loss per hari, dan stop gabungan. Sinyal yang dibuka <b>sebelum ${efektifTeks}</b> tetap ditampilkan dan dinilai, diberi tanda 🕰️ karena aturan belum ada saat itu. <b>❌ PASTI</b> = data tercatat jelas melanggar. <b>❌ KUAT</b> = hasilnya sama dengan RR yang salah. <b>⚠️ INDIKASI</b> = janggal, perlu dikonfirmasi. Yang bisa diaudit hanya data yang diinput; cocokkan juga dengan riwayat TF.</div>
+    <div style="font-size:9px;color:#5C4818;line-height:1.5;margin-bottom:8px">Setiap sinyal, di semua bulan, diperiksa otomatis dengan <b>Aturan Resmi v1</b> (ditetapkan ${efektifTeks}): emas SL 500 / TP 500 (RR 1:1) jatah 5 order per bulan; forex SL per pair, TP 3× SL (RR 1:3), jatah 3 order per pair, maksimal 1 loss per hari, dan stop gabungan. Sinyal yang dibuka <b>sebelum ${efektifTeks}</b> tetap ditampilkan dan dinilai, diberi tanda 🕰️ karena aturan belum ada saat itu. Sinyal bulan <b>November 2026 dan sesudahnya</b> dinilai dengan <b>Aturan Resmi v2</b> (forex RR 1:2, jatah 2 order per pair, win langsung stop, order dibuka berurutan). <b>❌ PASTI</b> = data tercatat jelas melanggar. <b>❌ KUAT</b> = hasilnya sama dengan RR yang salah. <b>⚠️ INDIKASI</b> = janggal, perlu dikonfirmasi. Yang bisa diaudit hanya data yang diinput; cocokkan juga dengan riwayat TF.</div>
     ${blok}
   </div>`;
 }
@@ -15760,8 +15777,8 @@ function aturanResmiV1(){
     targetTF:{minVP:R.targetMinVP, penuhVP:R.targetVP} };
 }
 let bdSidikJari=null;
-async function hitungSidikJariAturan(){
-  const teks=stabilStr(aturanResmiV1());
+async function hitungSidikJariAturan(Ax){
+  const teks=stabilStr(Ax||aturanResmiV1());
   if(!(globalThis.crypto&&crypto.subtle)) return null;
   const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(teks));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -15788,6 +15805,34 @@ function renderAturanResmi(){
   renderBatasDDCard=function(){ _r7.apply(this,arguments); try{ renderAturanResmi(); }catch(e){ console.error('renderAturanResmi', e); } };
 })();
 
+function aturanResmiV2(){
+  const R=FOREX_REM_V2, E=METODE_DEF['H4-500'];
+  return { versi:'v2', ditetapkan:ATURAN_V2_EFEKTIF, berlakuSejak:ATURAN_V2_EFEKTIF, modalAcuanUsd:2000, lotAcuan:0.01, nilaiPipUsd:0.1,
+    emas:{pair:'XAUUSD', timeframe:'H4', slPips:E.sl, tpPips:E.tp, rr:'1:1', jatahOrderPerBulan:E.jatah, stopSetelahWin:true, bukaBerurutan:true, rugiMaksUsd:E.risk*E.jatah},
+    forex:{rr:'1:'+R.rr, tpKaliSl:R.rr, jatahOrderPerPairPerBulan:R.jatahPair, stopSetelahWin:true, bukaBerurutan:true, maksLossPerHari:R.maxLossHari, slippage:R.slippage, slPipsPerPair:FOREX_SL_PAIR,
+      channel:{ datukEURUSD:{pairs:R.kanal.XAUUSD.pairs, stopGabunganPips:remForexBatas('XAUUSD',R).stop}, datukCrypto89:{pairs:R.kanal.FOREX.pairs, stopGabunganPips:remForexBatas('FOREX',R).stop} }},
+    targetTF:{minVP:R.targetMinVP, penuhVP:R.targetVP} };
+}
+async function renderAturanResmiV2(){
+  const wrap=document.getElementById('batasDDAturanWrap'); if(!wrap) return;
+  const A=aturanResmiV2(), R=FOREX_REM_V2, BX=remForexBatas('XAUUSD',R), BF=remForexBatas('FOREX',R);
+  let h=null; try{ h=await hitungSidikJariAturan(A); }catch(e){}
+  const c=((cachedAturanKunci&&cachedAturanKunci.riwayat)||[]).find(x=>x.versi==='v2');
+  const st=!h?'⚠️ Sidik jari tidak bisa dihitung di browser ini (perlu HTTPS).':!c?`❗ Belum dikunci di server. ${isAdmin?`<span onclick="kunciAturanResmi('v2')" style="color:#C8A84B;cursor:pointer;text-decoration:underline;font-weight:700">🔒 Kunci Aturan Resmi v2 sekarang</span>`:'Menunggu admin mengunci.'}`:(c.hash!==h?'❌ Aturan v2 di situs berbeda dari yang dikunci (sidik jari tidak cocok).':'✅ Terkunci di server; sidik jari cocok.');
+  const lama=document.getElementById('aturanV2Card'); if(lama) lama.remove();
+  const b=t=>`<div style="font-size:10px;color:#3A2E10;line-height:1.7">${t}</div>`;
+  wrap.insertAdjacentHTML('beforeend',`<div id="aturanV2Card" style="background:var(--bg0);border:2px dashed #C8A84B;border-radius:10px;padding:12px;margin-top:10px">
+    <div style="font-size:9px;color:#8A6B26;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:2px">📜 Aturan Resmi v2 — berlaku mulai 1 November 2026</div>
+    ${b(`<b>Emas (XAUUSD, H4):</b> SL ${A.emas.slPips} / TP ${A.emas.tpPips} pips (RR 1:1) · jatah ${A.emas.jatahOrderPerBulan} order per bulan · <b>order pertama win langsung stop</b>`)}
+    ${b(`<b>Forex (kedua channel):</b> SL per pair tetap, <b>TP 2× SL (RR 1:2)</b> · jatah <b>${R.jatahPair} order per pair per bulan</b> · <b>win langsung stop</b> · maks ${R.maxLossHari} loss per hari`)}
+    ${b(`<b>Cara buka order:</b> tidak dibuka sekaligus. Order berikutnya dibuka setelah order sebelumnya kena SL.`)}
+    ${b(`<b>Stop gabungan:</b> ${nmChannelV2('XAUUSD')} ${BX.stop} pips · ${nmChannelV2('FOREX')} ${BF.stop} pips`)}
+    <div style="font-size:9px;color:#5C4818;line-height:1.6;margin-top:6px"><b>Sidik jari v2 (SHA-256):</b> <span style="font-family:monospace;word-break:break-all;color:#3A2E10">${h||'tidak tersedia'}</span><br>${st}<br>Sinyal sebelum 1 November 2026 tetap dinilai dengan v1.</div>
+  </div>`);
+}
+function nmChannelV2(g){ return (cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||(g==='XAUUSD'?'Datuk EURUSD':'Datuk Crypto 89'); }
+(function(){ const _r9=renderBatasDDCard; renderBatasDDCard=function(){ _r9.apply(this,arguments); try{ renderAturanResmiV2(); }catch(e){ console.error('aturanV2', e); } }; })();
+
 // ══ KUNCI ATURAN RESMI DI SERVER + DETEKSI PERUBAHAN + REKAP SEMUA BULAN ══
 // Melengkapi "Aturan Resmi v1": (1) dicatat di server sebagai riwayat versi, (2) kalau aturan di situs berbeda dari yang dikunci
 // langsung ditandai, (3) batas lama tidak bisa diubah diam-diam dari layar, (4) REM Pips lama dicek sama dengan aturan,
@@ -15797,20 +15842,20 @@ async function loadAturanKunci(){
   try{ const rows=await api('app_settings?select=value&key=eq.aturan_terkunci'); if(rows&&rows.length&&rows[0].value){ const p=JSON.parse(rows[0].value); if(p&&Array.isArray(p.riwayat)) cachedAturanKunci=p; } }
   catch(e){ console.error('Gagal load aturan_terkunci', e); }
 }
-async function kunciAturanResmi(){
+async function kunciAturanResmi(ver){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk mengunci aturan');return;}
-  const A=aturanResmiV1();
+  const A=(ver==='v2'?aturanResmiV2():aturanResmiV1());
   if(cachedAturanKunci.riwayat.some(x=>x.versi===A.versi)){ toast('🔒 Versi '+A.versi+' sudah terkunci. Perubahan aturan harus lewat versi baru.'); return; }
-  const hash=await hitungSidikJariAturan();
+  const hash=await hitungSidikJariAturan(A);
   if(!hash){ toast('❌ Browser ini tidak mendukung SHA-256 (perlu HTTPS). Kunci dibatalkan.'); return; }
-  const alasan=prompt(`Kunci Aturan Resmi ${A.versi}\nDitetapkan ${A.ditetapkan}.\nSidik jari: ${hash}\n\nTulis keterangan (boleh kosong), lalu OK untuk mengunci. Setelah terkunci tidak bisa dihapus dari layar situs:`, 'Aturan awal strategi analis');
+  const alasan=prompt(`Kunci Aturan Resmi ${A.versi}\nDitetapkan ${A.ditetapkan}.\nSidik jari: ${hash}\n\nTulis keterangan (boleh kosong), lalu OK untuk mengunci. Setelah terkunci tidak bisa dihapus dari layar situs:`, (ver==='v2'?'Aturan v2: forex RR 1:2, jatah 2 order per pair, win langsung stop, order berurutan; berlaku 1 Nov 2026':'Aturan awal strategi analis'));
   if(alasan===null) return;
   const lama=cachedAturanKunci;
   const baru={ versi:A.versi, ditetapkan:A.ditetapkan, hash, dikunciPada:new Date().toISOString(), alasan:(alasan||'').trim(), aturan:A };
   try{ const gabung={riwayat:lama.riwayat.concat([baru])}; await simpanSettingRem('aturan_terkunci', JSON.stringify(gabung)); cachedAturanKunci=gabung; toast('🔒 Aturan '+A.versi+' terkunci'); renderBatasDDCard(); }
   catch(e){ console.error(e); cachedAturanKunci=lama; toast('❌ Gagal mengunci: '+(e.message||'').slice(0,100)); }
 }
-function remPipsAturan(){ const E=METODE_DEF['H4-500']; return { XAUUSD:E.sl*E.jatah+remForexBatas('XAUUSD').stop, FOREX:remForexBatas('FOREX').stop }; }
+function remPipsAturan(){ const E=METODE_DEF['H4-500'], RA=aturanSekarang().R; return { XAUUSD:E.sl*E.jatah+remForexBatas('XAUUSD',RA).stop, FOREX:remForexBatas('FOREX',RA).stop }; }
 async function samakanRemPips(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const t=remPipsAturan();
@@ -15821,6 +15866,7 @@ editBatasDD=async function(){ toast('🔒 Aturan Resmi v1 terkunci. Batas tidak 
 editMetodeBulan=async function(){ toast('🔒 Metode emas terkunci (Aturan Resmi v1).'); };
 async function perbaruiStatusKunci(){
   const el=document.getElementById('bdKunciStatus'); if(!el) return;
+  try{ const ra=remPipsAturan(); cachedRemPips.XAUUSD=ra.XAUUSD; cachedRemPips.FOREX=ra.FOREX; }catch(e){}   // REM Pips otomatis mengikuti aturan
   const A=aturanResmiV1(); if(!bdSidikJari){ try{ bdSidikJari=await hitungSidikJariAturan(); }catch(e){} }
   const hash=bdSidikJari, rw=cachedAturanKunci.riwayat||[], catat=rw.find(x=>x.versi===A.versi);
   const wkt=t=>new Date(t).toLocaleString('id-ID');
