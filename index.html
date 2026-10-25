@@ -4673,6 +4673,7 @@ async function simpanDataHarianRingkas(){
     // tanggal yang sama (dipakai buat urutan kurva Recovery Factor juga).
     const slRenc=parseFloat((document.getElementById('inpRingkasSl')||{}).value), tpRenc=parseFloat((document.getElementById('inpRingkasTp')||{}).value);
     cachedSinyalAnalis[g].push(Object.assign({id:buatIdSinyal(), tanggal:tgl, jam:jam||null, tanggalBuka:tglBuka||tgl, jamBuka:jamBuka||null, simbol:pairSimbol||null, batch:batchInput.trim()||null, status:'closed', pips, vp}, (isFinite(slRenc)&&isFinite(tpRenc))?{slPips:slRenc, tpPips:tpRenc}:{}));
+    const sBaru=cachedSinyalAnalis[g][cachedSinyalAnalis[g].length-1];
     await simpanSinyalKeServer(g);
     statusEl.textContent=`✅ Tersimpan: ${pips>=0?'+':''}${pips} pip / ${vp>=0?'+':''}${vp} VP`;
     toast(`✅ Sinyal ${pairSimbol||g} tersimpan (khusus tool analis, gak nyentuh data MT4/kalkulator lain)`);
@@ -4688,6 +4689,12 @@ async function simpanDataHarianRingkas(){
     renderScoreCard();
     renderRemPipsCard();
     renderDaftarSinyal();
+    // Periksa aturan SETELAH data diinput: segarkan kartu REM/Audit dan langsung beri tahu kalau sinyal ini menyalahi aturan
+    try{
+      if(typeof renderBatasDDCard==='function') renderBatasDDCard();
+      const au=auditChannel(g, bulanKeyOf(sBaru.tanggal)), fl=au.flags.find(f=>f.r===sBaru||f.r.id===sBaru.id);
+      if(fl){ const ps=fl.masalah.map(m=>m.aturan).join('; '); statusEl.textContent+=' · ⚠️ MENYALAHI ATURAN: '+ps; toast('⚠️ Menyalahi aturan: '+ps); }
+    }catch(e2){ console.error('cek aturan', e2); }
   }catch(e){
     console.error(e);
     statusEl.textContent='❌ Gagal simpan';
