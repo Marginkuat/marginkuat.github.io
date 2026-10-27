@@ -15854,6 +15854,13 @@ function nmChannelV2(g){ return (cachedScoreMeta[g]&&cachedScoreMeta[g].namaChan
 // SL 500 / TP 500 (RR 1:1) · jatah 5 order per bulan · win pertama langsung stop · 5 loss stop.
 // Dihitung dari Saldo Harian (jumlah signal + profit harian). Urutan jam per order tidak tersedia di data harian.
 const MT4_ATURAN_MULAI='2026-10-26';   // aturan akun MT4 mulai Senin 26 Oktober 2026
+function mt4UbahBerjalan(d){
+  const now=new Date(), bk=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  let o={}; try{ o=JSON.parse(localStorage.getItem('mt4OrderBerjalan')||'{}'); }catch(e){}
+  const n=Math.max(0,(o.bulan===bk?(parseInt(o.n)||0):0)+d);
+  try{ localStorage.setItem('mt4OrderBerjalan',JSON.stringify({bulan:bk,n})); }catch(e){}
+  renderAturanMt4();
+}
 function renderAturanMt4(){
   const el=document.getElementById('mt4AturanWrap'); if(!el) return;
   const now=new Date(), bk=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'), J=5;
@@ -15868,14 +15875,18 @@ function renderAturanMt4(){
     else if(n>=J) langgar.push(tg+': open setelah jatah '+J+' order habis');
     n+=sig; cum+=parseFloat(r.profit||0); if(cum>0 && !tglWin) tglWin=r.tanggal;
   });
-  const stopJatah=n>=J, stopWin=!!tglWin, stop=stopJatah||stopWin;
+  let ber=0; try{ const o=JSON.parse(localStorage.getItem('mt4OrderBerjalan')||'{}'); if(o.bulan===bk) ber=Math.max(0,parseInt(o.n)||0); }catch(e){}
+  const nAll=n+ber;   // order selesai (Saldo Harian) + order masih berjalan
+  const stopJatah=nAll>=J, stopWin=!!tglWin, stop=stopJatah||stopWin;
   const warna=belumMulai?'#C9B27A':(stop?'#F87171':'#4ADE80');
-  const status=belumMulai?'⏳ Mulai berlaku Senin 26 Okt 2026 — belum dihitung':stopJatah?`🛑 STOP — jatah ${J} order habis, lanjut bulan depan`:stopWin?`🛑 STOP — untung bersih sudah tercapai (${tglWin.slice(8)}/${tglWin.slice(5,7)}), lanjut bulan depan`:`✅ BOLEH OPEN — sisa jatah ${J-n} order`;
+  const status=belumMulai?'⏳ Mulai berlaku Senin 26 Okt 2026 — belum dihitung':stopJatah?`🛑 STOP — jatah ${J} order habis, lanjut bulan depan`:stopWin?`🛑 STOP — untung bersih sudah tercapai (${tglWin.slice(8)}/${tglWin.slice(5,7)}), lanjut bulan depan`:(ber>0?`⏳ ADA ${ber} ORDER BERJALAN — jangan open baru sampai kena SL/TP (terpakai ${nAll}/${J})`:`✅ BOLEH OPEN — sisa jatah ${J-nAll} order`);
   el.innerHTML=`<div style="margin-top:12px;background:${stop?'#2A0F0F':'var(--bg2)'};border:1px solid ${stop?'#7F1D1D':'var(--border)'};border-radius:12px;padding:12px 14px;text-align:left">
     <div style="font-size:9px;color:#B8860B;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🎯 Aturan Emas Akun MT4 — sama seperti Datuk EURUSD (berlaku mulai Senin 26 Okt 2026)</div>
     <div style="font-size:13px;font-weight:800;color:${warna};line-height:1.4">${status}</div>
-    <div style="font-size:10px;color:#C9B27A;margin-top:6px;line-height:1.7">Order bulan ini: <b>${n}/${J}</b> · Untung bersih bulan ini positif (≈ +500 pips): <b>${tglWin?'sudah':'belum'}</b><br>SL 500 / TP 500 pips (RR 1:1) · jatah ${J} order · stop saat untung bersih +500 pips · order berikutnya dibuka setelah order sebelumnya kena SL.</div>
+    <div style="font-size:10px;color:#C9B27A;margin-top:6px;line-height:1.7">Order bulan ini: <b>${nAll}/${J}</b> (${n} selesai + ${ber} berjalan) · Untung bersih bulan ini positif (≈ +500 pips): <b>${tglWin?'sudah':'belum'}</b><br>SL 500 / TP 500 pips (RR 1:1) · jatah ${J} order · stop saat untung bersih +500 pips · order berikutnya dibuka setelah order sebelumnya kena SL.</div>
     ${langgar.length?`<div style="font-size:10px;color:${uji?'#C99A2E':'#F87171'};margin-top:8px;line-height:1.6">${uji?'⚠️ Indikasi menyalahi aturan (uji coba)':'❌ Menyalahi aturan'}:<br>${langgar.slice(0,6).map(t=>'• '+t).join('<br>')}</div>`:''}
+    <div style="font-size:8px;color:#7A5D1F;margin-top:6px;line-height:1.5"><div style="margin-top:8px;font-size:10px;color:#C9B27A">Order berjalan (belum kena SL/TP): <span onclick="mt4UbahBerjalan(-1)" style="cursor:pointer;padding:2px 11px;border:1px solid #7A5D1F;border-radius:6px">−</span> <b style="margin:0 4px">${ber}</b> <span onclick="mt4UbahBerjalan(1)" style="cursor:pointer;padding:2px 11px;border:1px solid #7A5D1F;border-radius:6px">+</span></div>
+    <div style="font-size:8px;color:#7A5D1F;margin-top:4px;line-height:1.5">Kurangi angka ini saat order sudah ditutup, lalu input hasilnya di Saldo Harian. Angka berjalan tersimpan di HP ini. </div>
     <div style="font-size:8px;color:#7A5D1F;margin-top:6px;line-height:1.5">Dihitung dari Saldo Harian (jumlah signal dan profit). Urutan jam tiap order tidak terlihat di data harian.</div>
   </div>`;
 }
