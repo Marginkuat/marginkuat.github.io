@@ -1637,7 +1637,7 @@ function renderInvCalcDisclaimer(){
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <div style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">📝 Input Sinyal</div>
+        <div id="secInputSinyal" style="font-size:10px;color:#8A6B26;text-transform:uppercase;letter-spacing:.8px">📝 Input Sinyal</div>
       </div>
       <div style="font-size:9px;color:#5C4818;margin-bottom:10px;line-height:1.5">Input SATU-SATU tiap sinyal yang closed — bukan rekap harian.</div>
       <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
@@ -2530,7 +2530,7 @@ function renderInvCalcDisclaimer(){
       </div>
     </div>
 
-    <div class="ap-title">🗑️ Hapus Data Periode (Riwayat Saldo Harian)</div>
+    <div class="ap-title" id="secHapusPeriode">🗑️ Hapus Data Periode (Riwayat Saldo Harian)</div>
     <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.6">Hapus permanen catatan "Saldo Harian" dalam rentang tanggal tertentu — misalnya data lama yang salah input manual. Cek dulu daftarnya sebelum konfirmasi hapus. Tindakan ini TIDAK BISA dibatalkan.</div>
     <div class="calc-row">
       <div><label class="lbl">Dari Tanggal</label><input class="inp" type="date" id="hapusDari" style="margin-bottom:0"></div>
@@ -2541,7 +2541,7 @@ function renderInvCalcDisclaimer(){
 
     <div style="height:1px;background:var(--border);margin:16px 0"></div>
 
-    <div class="ap-title">🔎 Verifikasi Data vs Laporan Broker</div>
+    <div class="ap-title" id="secVerifikasiBroker">🔎 Verifikasi Data vs Laporan Broker</div>
     <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.6">Upload laporan statement broker (HTML, boleh cover banyak hari/bulan sekaligus). Situs akan kelompokkan transaksi per tanggal, hitung net P/L-nya, lalu bandingkan dengan catatan "Saldo Harian" yang sudah tersimpan — supaya ketahuan hari mana yang datanya beda atau belum tercatat.</div>
     <input type="file" id="verifikasiFile" accept=".html,.htm,.eml,text/html,message/rfc822" style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px">
     <textarea id="verifikasiPaste" rows="3" placeholder="Atau tempel isi HTML laporan di sini..." style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px;font-family:monospace"></textarea>
@@ -2551,7 +2551,7 @@ function renderInvCalcDisclaimer(){
 
     <div style="height:1px;background:var(--border);margin:16px 0"></div>
 
-    <div class="ap-title">🧾 Ekstrak & Kelompokkan Transaksi per Hari</div>
+    <div class="ap-title" id="secEkstrakTransaksi">🧾 Ekstrak & Kelompokkan Transaksi per Hari</div>
     <div style="font-size:10px;color:#8A6B26;margin-bottom:10px;line-height:1.6">Upload laporan HTML dari FBS (boleh laporan resmi email, atau laporan bulanan custom seperti yang biasa Anda pakai). Semua transaksi closed otomatis dibaca &amp; dikelompokkan per tanggal — Gross Profit, Gross Loss, Swap, dan Net P/L per hari langsung ketauan. Ini biar gak salah hitung manual lagi.</div>
     <input type="file" id="ekstrakFile" accept=".html,.htm,.eml,text/html,message/rfc822" style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px">
     <textarea id="ekstrakPaste" rows="3" placeholder="Atau tempel isi HTML laporan di sini..." style="width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;color:#D4AF37;font-size:11px;margin-bottom:8px;font-family:monospace"></textarea>
@@ -2668,7 +2668,7 @@ function renderInvCalcDisclaimer(){
 
     <div style="height:1px;background:var(--border);margin:16px 0"></div>
 
-    <div class="ap-title">💸 Input Aliran Uang</div>
+    <div class="ap-title" id="secInputAliranUang">💸 Input Aliran Uang</div>
 
     <label class="lbl">Arah Transaksi</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
@@ -3136,6 +3136,13 @@ const fd=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short
 
 // ══ SEARCH MENU: cari & lompat ke bagian manapun di situs ══
 const SEARCH_MENU=[
+  {id:'inpSaldoHarianTitle', icon:'⚙️', label:'Input Saldo Harian', desc:'Isi saldo MT4, profit, dan jumlah signal tiap hari (butuh login admin)', kw:'input saldo harian data harian catatan harian isi tambah simpan saldo mt4 profit jumlah signal tanggal edit', cat:'input'},
+  {id:'secInputSinyal', icon:'📝', label:'Input Sinyal Analis', desc:'Catat sinyal Datuk EURUSD / Datuk Crypto 89: pair, jam buka & tutup, pips, SL/TP rencana', kw:'input sinyal analis datuk eurusd crypto 89 order closed buka tutup pips simpan sinyal forex emas', cat:'input'},
+  {id:'mt4AturanWrap', icon:'🎯', label:'Aturan Emas MT4 & Order Berjalan', desc:'Cek jatah 5 order emas, stop saat untung bersih +500 pips, tombol order berjalan', kw:'aturan emas mt4 order berjalan jatah 5 order stop open posisi emas boleh open', cat:'input'},
+  {id:'secInputAliranUang', icon:'💸', label:'Input Aliran Uang', desc:'Catat deposit, modal pribadi, pengeluaran, kas (butuh login admin)', kw:'input aliran uang deposit modal pribadi pengeluaran kas catat uang masuk keluar', cat:'input'},
+  {id:'secVerifikasiBroker', icon:'🔎', label:'Verifikasi Data vs Laporan Broker', desc:'Cocokkan data situs dengan laporan/statement broker FBS', kw:'verifikasi laporan broker statement fbs email cocokkan cek data', cat:'input'},
+  {id:'secEkstrakTransaksi', icon:'🧾', label:'Ekstrak & Kelompokkan Transaksi per Hari', desc:'Tempel statement, situs mengelompokkan transaksi per hari', kw:'ekstrak kelompokkan transaksi per hari statement html tempel laporan broker', cat:'input'},
+  {id:'secHapusPeriode', icon:'🗑️', label:'Hapus Data Periode', desc:'Hapus riwayat Saldo Harian untuk rentang tanggal tertentu', kw:'hapus data periode riwayat saldo harian hapus baris ganda duplikat', cat:'input'},
   {id:'secKamusIstilah', icon:'📖', label:'Kamus Istilah', desc:'Penjelasan sederhana Win Rate, ROI, Avg Loss, dan istilah trading lainnya', kw:'kamus istilah glosarium arti definisi win rate roi avg loss avg win monte carlo simulasi risk meter risk reward sharpe lot pip stop loss take profit mood keyakinan entry kesesuaian rencana kualitas eksekusi skor disiplin fi number financial independence skor kesehatan finansial dana darurat runway ekuitas kekayaan bersih laba rugi bersih pemula belajar', cat:'lain'},
   {id:'secSaldo', icon:'💰', label:'Saldo MT4 & Equity Curve', desc:'Saldo saat ini, win rate, total profit, grafik equity', kw:'saldo mt4 equity curve balance modal akun win rate', cat:'performa'},
   {id:'secScore', icon:'🏆', label:'Score Dashboard', desc:'Skor keseluruhan performa trading kamu', kw:'score dashboard skor nilai rating', cat:'performa'},
@@ -3176,7 +3183,7 @@ const SEARCH_MENU=[
   {id:'secJournal', icon:'🎨', label:'Trading Journal Visual', desc:'Visualisasi titik profit/loss harian', kw:'trading journal visual jurnal', cat:'grafik'},
   {id:'secRiwayat', icon:'📋', label:'Riwayat Harian', desc:'Daftar semua catatan trading harian', kw:'riwayat harian history log catatan', cat:'grafik'},
   {id:'secDiskusi', icon:'💬', label:'Diskusi & Komentar', desc:'Diskusi bebas antar trader', kw:'diskusi komentar komunitas chat forum', cat:'lain'},
-  {id:'secAdmin', icon:'⚙️', label:'Panel Admin & Import CSV', desc:'Input catatan harian & import data dari MT4', kw:'admin panel import csv input catatan simpan', cat:'lain'},
+  {id:'secAdmin', icon:'⚙️', label:'Panel Admin & Import CSV', desc:'Input catatan harian & import data dari MT4', kw:'admin panel import csv input catatan simpan', cat:'input'},
   {id:'secTentang', icon:'📝', label:'Tentang Saya', desc:'Profil & tujuan situs ini', kw:'tentang saya about profil', cat:'lain'},
   {id:'secKontak', icon:'📞', label:'Kontak / Kirim Pesan', desc:'Form kontak & kerja sama', kw:'kontak pesan email hubungi', cat:'lain'},
   {id:'secPrivasi', icon:'📜', label:'Kebijakan Privasi & Disclaimer', desc:'Disclaimer & kebijakan privasi', kw:'privasi disclaimer kebijakan legal', cat:'lain'}
@@ -3184,6 +3191,7 @@ const SEARCH_MENU=[
 // Urutan & label kategori buat tampilan "Semua Menu" (browse tanpa ngetik) —
 // biar pengunjung bisa langsung nemu tools berdasarkan fungsinya, gak perlu tau nama fitur persis.
 const SEARCH_CATEGORIES=[
+  {cat:'input', label:'✍️ Input Data (Saldo, Sinyal, Kas, Statement)'},
   {cat:'performa', label:'📈 Performa Trading & Analisa Risiko'},
   {cat:'kalkulator', label:'🧮 Kalkulator & Simulasi'},
   {cat:'investor', label:'👥 Investor'},
@@ -3224,7 +3232,9 @@ function onSearchInput(){
     resultsEl.classList.add('show');
     return;
   }
-  const terms=q.split(/\s+/).filter(Boolean);
+  const STOP=['apa','itu','adalah','apakah','arti','artinya','maksud','jelaskan','penjelasan','pengertian','definisi','tentang','yang','dan','di','ke','dari','untuk','cara','saya','mau','ingin','tolong','cari'];
+  const rawTerms=q.split(/\s+/).filter(Boolean), terms0=rawTerms.filter(t=>!STOP.includes(t)), terms=terms0.length?terms0:rawTerms;
+  const tanya=/^(apa|apakah|arti|artinya|maksud|jelaskan|penjelasan|pengertian|definisi)\b/.test(q);
   const scored=SEARCH_MENU.map(item=>{
     const hay=normalizeSearchText(item.label+' '+item.desc+' '+item.kw);
     let score=0;
@@ -3234,15 +3244,32 @@ function onSearchInput(){
     return {item, score};
   }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).map(x=>x.item);
 
-  searchCurrentResults=scored;
-  if(!scored.length){
+  // Kelompokkan hasil per kategori (urutan sama dengan menu), tiap kelompok tetap urut dari yang paling cocok
+  // Istilah dari Kamus Istilah: cocokkan judul (dan isi kalau pertanyaan seperti "apa itu rr")
+  const kamusCat={cat:'kamus', label:'📖 Penjelasan Istilah (Kamus)'};
+  const kamusHits=[];
+  document.querySelectorAll('#secKamusIstilah .kamus-item').forEach((it,idx)=>{
+    const sm=it.querySelector('summary'); if(!sm) return;
+    const judul=sm.textContent.trim(), judulN=normalizeSearchText(judul), isi=(it.textContent||'').replace(judul,'').trim(), isiN=normalizeSearchText(isi);
+    let sc=0; terms.forEach(t=>{ if(judulN.split(/[^a-z0-9%]+/).includes(t)||judulN.includes(t)&&t.length>2) sc+=3; else if(tanya&&isiN.includes(t)) sc+=1; });
+    if(sc>0 && (tanya || sc>=3)) kamusHits.push({sc, item:{id:'kamus:'+idx, icon:'📖', label:judul, desc:isi.slice(0,90)+(isi.length>90?'…':''), cat:'kamus'}});
+  });
+  kamusHits.sort((a,b)=>b.sc-a.sc).slice(0,4).forEach(h=>scored.push(h.item));
+  const cats=tanya?[kamusCat,...SEARCH_CATEGORIES]:[...SEARCH_CATEGORIES,kamusCat];
+  const ordered=[]; cats.forEach(c=>scored.filter(i=>i.cat===c.cat).forEach(i=>ordered.push(i)));
+  searchCurrentResults=ordered;
+  if(!ordered.length){
     resultsEl.innerHTML='<div class="search-empty">🔍 Tidak ada menu yang cocok dengan "'+escapeHtml(document.getElementById('searchInput').value.trim())+'"</div>';
   }else{
-    resultsEl.innerHTML='<div class="search-hint">'+scored.length+' menu ditemukan</div>'+
-      scored.map((item,i)=>`<div class="search-result-item" data-idx="${i}" onclick="goToSearchResult('${item.id}')">
-        <div class="search-result-icon">${item.icon}</div>
-        <div><div class="search-result-label">${item.label}</div><div class="search-result-desc">${item.desc}</div></div>
-      </div>`).join('');
+    resultsEl.innerHTML='<div class="search-hint">'+ordered.length+' menu ditemukan — dikelompokkan per fungsi</div>'+
+      cats.map(c=>{
+        const items=ordered.filter(i=>i.cat===c.cat); if(!items.length) return '';
+        return `<div class="search-cat-label" style="font-size:10px;font-weight:800;color:#B8860B;text-transform:uppercase;letter-spacing:.6px;padding:10px 14px 4px">${c.label}</div>`+
+          items.map(item=>`<div class="search-result-item" data-idx="${ordered.indexOf(item)}" onclick="goToSearchResult('${item.id}')">
+            <div class="search-result-icon">${item.icon}</div>
+            <div><div class="search-result-label">${item.label}</div><div class="search-result-desc">${item.desc}</div></div>
+          </div>`).join('');
+      }).join('');
   }
   resultsEl.classList.add('show');
 }
@@ -3270,10 +3297,21 @@ function updateSearchActiveHighlight(){
     if(i===searchActiveIdx) el.scrollIntoView({block:'nearest'});
   });
 }
+function goToKamusEntry(i){
+  clearSearch();
+  const it=document.querySelectorAll('#secKamusIstilah .kamus-item')[i]; if(!it) return;
+  const f=document.getElementById('kamusIstilahFilter'); if(f){ f.value=''; try{ filterKamusIstilah(); }catch(e){} }
+  const g=it.closest('.kamus-grup'); if(g) g.classList.add('grup-expanded');
+  it.style.display=''; it.open=true;
+  it.scrollIntoView({behavior:'smooth', block:'center'});
+  it.classList.remove('sec-flash'); void it.offsetWidth; it.classList.add('sec-flash'); setTimeout(()=>it.classList.remove('sec-flash'), 1500);
+}
 function goToSearchResult(id){
+  if(String(id).indexOf('kamus:')===0){ goToKamusEntry(parseInt(String(id).slice(6))); return; }
   const el=document.getElementById(id);
   clearSearch();
   if(!el){ toast('⚠️ Bagian ini belum tersedia'); return; }
+  if(!el.getClientRects().length){ toast('🔒 Bagian input ini baru muncul setelah login admin'); return; }
   el.scrollIntoView({behavior:'smooth', block:'start'});
   el.classList.remove('sec-flash');
   void el.offsetWidth;
