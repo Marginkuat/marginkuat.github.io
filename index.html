@@ -1518,19 +1518,37 @@ function renderLabelProfilRisiko(){
     <div style="font-size:16px;font-weight:900;color:${p.teks};letter-spacing:.3px;line-height:1.4">⚠️ ${p.judul}<br>${p.sub}</div>
     <div style="font-size:10px;color:${p.subteks};margin-top:6px;line-height:1.5">${p.ket}</div>
     ${opsiAdmin}
-    ${auto?`<div style="font-size:9px;color:${p.subteks};margin-top:8px;line-height:1.5;opacity:.9">Label ini otomatis mengikuti modal MT4: ≥ ¢${Math.round(auto.risk/0.02).toLocaleString('id-ID')} = Umum 2% · ≥ ¢${Math.round(auto.risk/0.05).toLocaleString('id-ID')} = Agresif 5% · di bawahnya = risiko tinggi. Kalkulator 2% dan 5% tetap tersedia.</div>`:''}
+    ${auto?`<div style="font-size:9px;color:${p.subteks};margin-top:8px;line-height:1.5;opacity:.9">Label dikunci per bulan dari modal acuan bulan ini dan diperbarui saat ganti bulan: ≥ ¢${Math.round(auto.risk/0.02).toLocaleString('id-ID')} = Umum 2% · ≥ ¢${Math.round(auto.risk/0.05).toLocaleString('id-ID')} = Agresif 5% · di bawahnya = risiko tinggi. Kalkulator 2% dan 5% tetap tersedia.</div>`:''}
   </div>`;
+}
+// ── Modal acuan risiko dikunci PER BULAN: tidak berubah di tengah bulan, baru diperbarui saat ganti bulan ──
+let risikoBulanCache=null, risikoBulanSedang=false;
+function bulanIniKeyMt4(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function saldoTerakhirMt4(){
+  const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4))).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
+  return rows.length?parseFloat(rows[rows.length-1].saldo_mt4):0;
+}
+function saldoAcuanBulanMt4(){ const bk=bulanIniKeyMt4(); return (risikoBulanCache&&risikoBulanCache.bulan===bk)?risikoBulanCache.saldo:saldoTerakhirMt4(); }
+async function muatRisikoBulanMt4(){
+  const bk=bulanIniKeyMt4(), key='risiko_mt4_'+bk; if(risikoBulanSedang) return; risikoBulanSedang=true;
+  try{
+    const rows=await api('app_settings?select=value&key=eq.'+key);
+    if(rows && rows.length){ const v=JSON.parse(rows[0].value); if(v && v.saldo>0) risikoBulanCache={bulan:bk, saldo:v.saldo}; }
+    else if(isAdmin){ const sd=saldoTerakhirMt4(); if(sd>0){ await api('app_settings','POST',{key, value:JSON.stringify({saldo:sd, dikunci:new Date().toISOString().slice(0,10)})}); risikoBulanCache={bulan:bk, saldo:sd}; } }
+  }catch(e){ /* tanpa server: pakai saldo terakhir */ }
+  risikoBulanSedang=false;
+  try{ renderLabelProfilRisiko(); renderRisikoModalMt4(); }catch(e){}
 }
 function profilOtomatisMt4(){
   const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4))).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
-  const saldo=rows.length?parseFloat(rows[rows.length-1].saldo_mt4):0; if(!(saldo>0)) return null;
+  const saldo=saldoAcuanBulanMt4(); if(!(saldo>0)) return null;
   const risk=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01), pct=risk/saldo*100;
   return {saldo, risk, pct, kode: pct<=2?'umum':(pct<=5?'agresif':'tinggi')};
 }
 function profilTinggiMeta(a){
   const f1=v=>(Math.round(v*10)/10).toString().replace('.',','), J=MT4_RISIKO.jatah, habis=Math.max(1,Math.floor(a.saldo/a.risk)), bln=Math.max(1,Math.ceil(habis/J));
-  return {judul:'AKUN INI BERISIKO TINGGI', sub:'RISK ±'+Math.ceil(a.pct-0.0001)+'% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FECACA', subteks:'#FEE2E2',
-    ket:`Di atas batas Agresif 5%. Dari modal MT4 sekarang, 1 order (SL ${MT4_RISIKO.slPips} pips) ≈ ${f1(a.pct)}% saldo. Kalau loss ${habis}× berturut-turut (±${bln} bulan dengan jatah ${J} order per bulan) saldo habis dan bisa kena margin call. Hati-hati sebelum menambah risiko.`};
+  return {judul:'AKUN INI BERISIKO TINGGI', sub:'RISK '+f1(a.pct)+'% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FECACA', subteks:'#FEE2E2',
+    ket:`Di atas batas Agresif 5%. Dari modal MT4 sekarang, 1 order (SL ${MT4_RISIKO.slPips} pips) ≈ ${f1(a.pct)}% saldo. Kalau loss ${habis}× berturut-turut (±${bln} bulan dengan jatah ${J} order per bulan) saldo habis dan bisa kena margin call. Modal acuan dikunci per bulan dan diperbarui saat ganti bulan.`};
 }
 async function setProfilRisiko(kode){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
@@ -15962,7 +15980,7 @@ const MT4_RISIKO={slPips:500, lot:0.01, centPerPip:0.1, jatah:5};
 function renderRisikoModalMt4(){
   const el=document.getElementById('mt4RisikoWrap'); if(!el) return;
   const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4))).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
-  const saldo=rows.length?parseFloat(rows[rows.length-1].saldo_mt4):0;
+  const saldo=saldoAcuanBulanMt4();
   if(!(saldo>0)){ el.innerHTML=''; return; }
   const risk=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);   // risiko 1 order (sen) — tidak ditampilkan sebagai nominal
   const J=MT4_RISIKO.jatah, pct=risk/saldo*100, pctBulan=Math.min(100,risk*J/saldo*100);
@@ -15979,12 +15997,12 @@ function renderRisikoModalMt4(){
     ${li(`Satu order (SL ${MT4_RISIKO.slPips} pips) ≈ <b style="color:${T.w}">${f1(pct)}%</b> dari saldo. Batas umum: 2% (Umum) dan 5% (Agresif).`)}
     ${li(`Jatah ${J} order per bulan: kalau loss semua ≈ <b style="color:${T.w}">${f1(pctBulan)}%</b> saldo hilang dalam 1 bulan.`)}
     ${li(`Kalau loss terus, saldo habis setelah ±<b style="color:${T.w}">${orderHabis}</b> order (±<b style="color:${T.w}">bulan ke-${bulanHabis}</b>) dan margin call bisa terjadi lebih cepat.`)}
-    ${li(`Saldo sekarang ≈ <b>${f1(kali)}×</b> risiko 1 order. Agar risiko ≤5% per order, saldo perlu ≥ 20×; agar ≤2%, ≥ 50×.`)}
+    ${li(`Modal acuan bulan ini ≈ <b>${f1(kali)}×</b> risiko 1 order. Agar risiko ≤5% per order, saldo perlu ≥ 20×; agar ≤2%, ≥ 50×.`)}
     ${pct>5?li(`Catatan: banner "Kalkulator Agresif 5%" hanyalah profil kalkulator. Risiko nyata aturan emas ini ≈ ${f1(pct)}% per order, <b>lebih tinggi dari 5%</b>.`):''}
     <div style="font-size:9px;color:#9CA3AF;margin-top:8px;line-height:1.5">Perhitungan kasar dari saldo terakhir, SL aturan 500 pips, dan lot yang dipakai. Bukan jaminan dan bukan saran keuangan.</div>
   </div>`;
 }
-(function(){ const _rg2=renderGraph; renderGraph=function(){ _rg2.apply(this,arguments); try{ renderRisikoModalMt4(); renderLabelProfilRisiko(); }catch(e){ console.error('risikoMt4', e); } }; })();
+(function(){ const _rg2=renderGraph; renderGraph=function(){ _rg2.apply(this,arguments); try{ renderRisikoModalMt4(); renderLabelProfilRisiko(); if(!(risikoBulanCache&&risikoBulanCache.bulan===bulanIniKeyMt4()) && saldoTerakhirMt4()>0) muatRisikoBulanMt4(); }catch(e){ console.error('risikoMt4', e); } }; })();
 
 // ══ KUNCI ATURAN RESMI DI SERVER + DETEKSI PERUBAHAN + REKAP SEMUA BULAN ══
 // Melengkapi "Aturan Resmi v1": (1) dicatat di server sebagai riwayat versi, (2) kalau aturan di situs berbeda dari yang dikunci
