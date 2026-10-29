@@ -371,6 +371,7 @@ function toggleKamusGrup(btn){
   </div>
   <div id="balDrawdownRow" style="margin-top:10px;text-align:center;font-size:10px;color:#E5E7EB"></div>
   <div id="mt4AturanWrap"></div>
+  <div id="mt4RisikoWrap"></div>
   <div style="text-align:center;margin-top:6px"><a href="#secKamusIstilah" style="font-size:9px;color:#E5E7EB;text-decoration:underline">❓ Belum ngerti Win Rate/istilah lain? Lihat Kamus Istilah</a></div>
 
   <!-- EQUITY CURVE REAL-TIME (gabung dengan Saldo MT4) -->
@@ -3136,6 +3137,7 @@ const fd=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short
 
 // ══ SEARCH MENU: cari & lompat ke bagian manapun di situs ══
 const SEARCH_MENU=[
+  {id:'mt4RisikoWrap', icon:'⚠️', label:'Peringatan Risiko Modal MT4', desc:'Risiko per order vs saldo, jatah 5 order, perkiraan margin call', kw:'peringatan risiko modal margin call bahaya saldo habis 5% jatah risiko per order berbahaya', cat:'performa'},
   {id:'inpSaldoHarianTitle', icon:'⚙️', label:'Input Saldo Harian', desc:'Isi saldo MT4, profit, dan jumlah signal tiap hari (butuh login admin)', kw:'input saldo harian data harian catatan harian isi tambah simpan saldo mt4 profit jumlah signal tanggal edit', cat:'input'},
   {id:'secInputSinyal', icon:'📝', label:'Input Sinyal Analis', desc:'Catat sinyal Datuk EURUSD / Datuk Crypto 89: pair, jam buka & tutup, pips, SL/TP rencana', kw:'input sinyal analis datuk eurusd crypto 89 order closed buka tutup pips simpan sinyal forex emas', cat:'input'},
   {id:'mt4AturanWrap', icon:'🎯', label:'Aturan Emas MT4 & Order Berjalan', desc:'Cek jatah 5 order emas, stop saat untung bersih +500 pips, tombol order berjalan', kw:'aturan emas mt4 order berjalan jatah 5 order stop open posisi emas boleh open', cat:'input'},
@@ -15938,6 +15940,36 @@ function renderAturanMt4(){
   </div>`;
 }
 (function(){ const _rg=renderGraph; renderGraph=function(){ _rg.apply(this,arguments); try{ renderAturanMt4(); }catch(e){ console.error('aturanMt4', e); } }; })();
+
+// ══ PERINGATAN RISIKO MODAL AKUN MT4 (kartu terpisah; aturan emas TIDAK diubah) ══
+// Membandingkan risiko aturan emas (SL 500 pips, jatah 5 order/bulan) dengan saldo terakhir. Hanya persentase ditampilkan (nominal saldo privat).
+const MT4_RISIKO={slPips:500, lot:0.01, centPerPip:0.1, jatah:5};
+function renderRisikoModalMt4(){
+  const el=document.getElementById('mt4RisikoWrap'); if(!el) return;
+  const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4))).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
+  const saldo=rows.length?parseFloat(rows[rows.length-1].saldo_mt4):0;
+  if(!(saldo>0)){ el.innerHTML=''; return; }
+  const risk=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);   // risiko 1 order (sen) — tidak ditampilkan sebagai nominal
+  const J=MT4_RISIKO.jatah, pct=risk/saldo*100, pctBulan=Math.min(100,risk*J/saldo*100);
+  const kali=saldo/risk, orderHabis=Math.floor(kali), bulanHabis=Math.max(1,Math.ceil(orderHabis/J));
+  const f1=v=>(Math.round(v*10)/10).toString().replace('.',',');
+  const lvl=pct>5?'bahaya':(pct>2?'waspada':'wajar');
+  const T={bahaya:{w:'#F87171',bg:'#2A0F0F',bd:'#7F1D1D',ic:'🔴',j:'BERBAHAYA — risiko per order di atas batas Agresif 5%'},
+           waspada:{w:'#FACC15',bg:'#2A230A',bd:'#854D0E',ic:'🟡',j:'WASPADA — risiko per order di atas batas Umum 2%'},
+           wajar:{w:'#4ADE80',bg:'#0F2A17',bd:'#166534',ic:'🟢',j:'WAJAR — risiko per order di bawah 2%'}}[lvl];
+  const li=t=>`<div style="font-size:11px;color:#E5E7EB;line-height:1.7;margin-top:4px">${t}</div>`;
+  el.innerHTML=`<div style="margin-top:12px;background:${T.bg};border:1px solid ${T.bd};border-radius:12px;padding:12px 14px;text-align:left">
+    <div style="font-size:9px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">⚠️ Peringatan Risiko Modal — aturan emas vs ukuran saldo</div>
+    <div style="font-size:13px;font-weight:800;color:${T.w};line-height:1.4">${T.ic} ${T.j}</div>
+    ${li(`Satu order (SL ${MT4_RISIKO.slPips} pips) ≈ <b style="color:${T.w}">${f1(pct)}%</b> dari saldo. Batas umum: 2% (Umum) dan 5% (Agresif).`)}
+    ${li(`Jatah ${J} order per bulan: kalau loss semua ≈ <b style="color:${T.w}">${f1(pctBulan)}%</b> saldo hilang dalam 1 bulan.`)}
+    ${li(`Kalau loss terus, saldo habis setelah ±<b style="color:${T.w}">${orderHabis}</b> order (±<b style="color:${T.w}">bulan ke-${bulanHabis}</b>) dan margin call bisa terjadi lebih cepat.`)}
+    ${li(`Saldo sekarang ≈ <b>${f1(kali)}×</b> risiko 1 order. Agar risiko ≤5% per order, saldo perlu ≥ 20×; agar ≤2%, ≥ 50×.`)}
+    ${pct>5?li(`Catatan: banner "Kalkulator Agresif 5%" hanyalah profil kalkulator. Risiko nyata aturan emas ini ≈ ${f1(pct)}% per order, <b>lebih tinggi dari 5%</b>.`):''}
+    <div style="font-size:9px;color:#9CA3AF;margin-top:8px;line-height:1.5">Perhitungan kasar dari saldo terakhir, SL aturan 500 pips, dan lot yang dipakai. Bukan jaminan dan bukan saran keuangan.</div>
+  </div>`;
+}
+(function(){ const _rg2=renderGraph; renderGraph=function(){ _rg2.apply(this,arguments); try{ renderRisikoModalMt4(); }catch(e){ console.error('risikoMt4', e); } }; })();
 
 // ══ KUNCI ATURAN RESMI DI SERVER + DETEKSI PERUBAHAN + REKAP SEMUA BULAN ══
 // Melengkapi "Aturan Resmi v1": (1) dicatat di server sebagai riwayat versi, (2) kalau aturan di situs berbeda dari yang dikunci
