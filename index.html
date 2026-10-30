@@ -1517,6 +1517,7 @@ function renderLabelProfilRisiko(){
   el.innerHTML=`<div style="background:linear-gradient(135deg,${p.warna1},${p.warna2});border:2px solid ${p.border};border-radius:12px;padding:14px;text-align:center">
     <div style="font-size:16px;font-weight:900;color:${p.teks};letter-spacing:.3px;line-height:1.4">⚠️ ${p.judul}<br>${p.sub}</div>
     <div style="font-size:10px;color:${p.subteks};margin-top:6px;line-height:1.5">${p.ket}</div>
+    ${auto?syaratModalMt4Html(auto):''}
     ${opsiAdmin}
     ${auto?`<div style="font-size:9px;color:${p.subteks};margin-top:8px;line-height:1.5;opacity:.9">Label dikunci per bulan dari modal acuan bulan ini dan diperbarui saat ganti bulan: ≥ ¢${Math.round(auto.risk/0.02).toLocaleString('id-ID')} = Umum 2% · ≥ ¢${Math.round(auto.risk/0.05).toLocaleString('id-ID')} = Agresif 5% · di bawahnya = risiko tinggi. Kalkulator 2% dan 5% tetap tersedia.</div>`:''}
   </div>`;
@@ -1544,6 +1545,18 @@ function profilOtomatisMt4(){
   const saldo=saldoAcuanBulanMt4(); if(!(saldo>0)) return null;
   const risk=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01), pct=risk/saldo*100;
   return {saldo, risk, pct, kode: pct<=2?'umum':(pct<=5?'agresif':'tinggi')};
+}
+// Syarat modal: kerugian maksimal 1 bulan (jatah order × SL aturan) harus ≤ 6% saldo. Persen dan kelipatan dihitung pasti dari modal acuan bulan ini.
+const MT4_BATAS_RUGI_BULAN_PCT=6;
+function syaratModalMt4Html(a){
+  const f1=v=>(Math.round(v*100)/100).toFixed(2).replace('.',','), id=v=>Math.ceil(v).toLocaleString('id-ID');
+  const B=MT4_BATAS_RUGI_BULAN_PCT, J=MT4_RISIKO.jatah, rugiBulan=a.risk*J, pctBulan=rugiBulan/a.saldo*100;
+  const nBatas=Math.floor((a.saldo*B/100)/a.risk+1e-9), perluSaldo=rugiBulan/(B/100), lolos=pctBulan<=B+1e-9;
+  const w=lolos?'#4ADE80':'#F87171', bg=lolos?'rgba(20,83,45,.45)':'rgba(0,0,0,.35)';
+  const isi=lolos
+    ? `<b style="color:${w}">✅ MEMENUHI SYARAT MODAL</b><br>Syarat: kerugian maksimal 1 bulan ≤ ${B}% saldo. Aturan emas (${J} order × SL ${MT4_RISIKO.slPips} pips) paling banyak rugi <b>${f1(pctBulan)}%</b> saldo. Kerugian baru menyentuh ${B}% pada loss ke-<b>${nBatas+1}</b> (sudah ≥ ${J} order).`
+    : `<b style="color:${w}">⛔ BELUM MEMENUHI SYARAT MODAL</b><br>Syarat: kerugian maksimal 1 bulan ≤ ${B}% saldo. Aturan emas (${J} order × SL ${MT4_RISIKO.slPips} pips) bisa rugi <b style="color:${w}">${f1(pctBulan)}%</b> saldo per bulan, ${f1(pctBulan/B)}× di atas batas ${B}%${nBatas<1?'. Satu order loss saja sudah melewati batas '+B+'%':'. Batas '+B+'% hanya cukup untuk '+nBatas+' order loss'}. Saldo minimal agar memenuhi: <b>¢${id(perluSaldo)}</b> (${B}% = ¢${id(rugiBulan)} = ${J} order).`;
+  return `<div style="margin:10px 10px 0;padding:10px 12px;border:1px solid ${w};border-radius:10px;background:${bg};font-size:12px;line-height:1.6;color:#FFFFFF;text-align:left">${isi}</div>`;
 }
 function profilTinggiMeta(a){
   const f1=v=>(Math.round(v*10)/10).toString().replace('.',','), J=MT4_RISIKO.jatah, habis=Math.max(1,Math.floor(a.saldo/a.risk)), bln=Math.max(1,Math.ceil(habis/J));
