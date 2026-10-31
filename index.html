@@ -5344,20 +5344,26 @@ function renderRekapPair(){
   const grup={};
   closedList.forEach(r=>{
     const key=(r.simbol||g).toString().toUpperCase();
-    if(!grup[key]) grup[key]={pips:0, vp:0, win:0, loss:0, total:0};
+    if(!grup[key]) grup[key]={pips:0, vp:0, win:0, loss:0, total:0, arr:[]};
     const p=parseFloat(r.pips||0), v=parseFloat(r.vp||0);
-    grup[key].pips+=p; grup[key].vp+=v; grup[key].total+=1;
+    grup[key].pips+=p; grup[key].vp+=v; grup[key].total+=1; grup[key].arr.push(r);
     if(p>0) grup[key].win+=1; else if(p<0) grup[key].loss+=1;
   });
   const keys=Object.keys(grup).sort((a,b)=>grup[b].vp-grup[a].vp);
   const profitKeys=keys.filter(k=>grup[k].vp>0);
   const lossKeys=keys.filter(k=>grup[k].vp<0);
-  // ── ATURAN KUNCI PAIR (bulan berjalan): ada WIN = stop; rugi 2x tanpa win = terkunci/stop; rugi 1x = peringatan ──
-  // ATURAN: pair STOP kalau TOTAL pair itu sudah untung; TERKUNCI kalau rugi MAKS_LOSS_PAIR kali (belum untung).
-  const MAKS_LOSS_PAIR=4;
-  const winKeys=keys.filter(k=>grup[k].pips>0);
-  const lockKeys=keys.filter(k=>!(grup[k].pips>0) && grup[k].loss>=MAKS_LOSS_PAIR);
-  const warnKeys=keys.filter(k=>!(grup[k].pips>0) && grup[k].loss===MAKS_LOSS_PAIR-1);
+  // ── ATURAN v2 per pair (bulan berjalan): emas jatah 5 order, STOP saat untung bersih +500 pips; forex jatah 2 order, STOP saat win pertama ──
+  const A2=AUDIT_ATURAN_V2;
+  const status=k=>{
+    const d=grup[k], emas=(k==='XAUUSD'), J=emas?A2.emas.jatah:A2.jatahPair;
+    const arr=d.arr.slice().sort((x,y)=>String(x.tanggal+' '+(x.jam||'00:00')).localeCompare(String(y.tanggal+' '+(y.jam||'00:00'))));
+    let cum=0, idxStop=-1;
+    arr.forEach((r,i)=>{ const pp=parseFloat(r.pips||0); cum+=pp; if(idxStop<0 && (emas? cum>=A2.emas.tp-1e-9 : pp>0)) idxStop=i; });
+    return {emas, J, total:d.total, idxStop, lewatStop: idxStop>=0?arr.length-1-idxStop:0, lewatJatah:Math.max(0,d.total-J)};
+  };
+  const winKeys=keys.filter(k=>status(k).idxStop>=0);
+  const lockKeys=keys.filter(k=>{ const s=status(k); return s.lewatJatah>0 || (s.total===s.J && s.idxStop<0); });
+  const warnKeys=keys.filter(k=>{ const s=status(k); return s.idxStop<0 && s.lewatJatah===0 && s.total===s.J-1 && grup[k].loss>=1; });
   const netVp=keys.reduce((s,k)=>s+grup[k].vp,0);
   const netPip=keys.reduce((s,k)=>s+grup[k].pips,0);
   const kartu=key=>{
@@ -5369,18 +5375,19 @@ function renderRekapPair(){
     const pill=(bg,bd,tc,teks)=>`<div style="display:inline-block;margin-top:5px;padding:2px 8px;border-radius:20px;background:${bg};border:1px solid ${bd};color:${tc};font-size:9px;font-weight:800;letter-spacing:.3px">${teks}</div>`;
     let labelStop='';
     if(rekapPairBulanDipilih===bulanIni){
-      if(d.pips>0) labelStop=pill('#3A0E0E','#D9534F','#F87171','🛑 STOP — total pair sudah untung');
-      else if(d.loss>MAKS_LOSS_PAIR) labelStop=pill('#3A0E0E','#D9534F','#F87171','🔒 TERKUNCI — rugi '+d.loss+'x (MELEBIHI aturan '+MAKS_LOSS_PAIR+'x!)');
-      else if(d.loss===MAKS_LOSS_PAIR) labelStop=pill('#3A0E0E','#D9534F','#F87171','🔒 TERKUNCI — rugi '+MAKS_LOSS_PAIR+'x, STOP');
-      else if(d.loss===MAKS_LOSS_PAIR-1) labelStop=pill('#2A2410','#C99A2E','#FFFFFF','⚠️ Rugi '+d.loss+'x — tinggal 1 kesempatan');
-      else if(d.loss>=1) labelStop=pill('#1F1B0E','#7A5D1F','#FACC15','🔁 Lanjut — rugi '+d.loss+'x, total belum untung');
+      const st=status(key), tp=A2.emas.tp, merah=(t)=>pill('#3A0E0E','#F87171','#FFFFFF',t);
+      if(st.lewatJatah>0) labelStop+=merah('🔒 MELEBIHI JATAH — '+st.total+' order (aturan maksimal '+st.J+'x per bulan)');
+      else if(st.total===st.J && st.idxStop<0) labelStop+=merah('🔒 JATAH HABIS — '+st.J+'x, STOP sampai bulan depan');
+      if(st.idxStop>=0) labelStop+=' '+merah('🛑 STOP — '+(st.emas?'untung bersih +'+tp+' pips tercapai':'win pertama')+', KUNCI PROFIT'+(st.lewatStop>0?' · '+st.lewatStop+' order sesudahnya menyalahi aturan':''));
+      else if(st.lewatJatah===0 && st.total===st.J-1 && d.loss>=1) labelStop+=pill('#2A2410','#FACC15','#FFFFFF','⚠️ Rugi '+d.loss+'x — tinggal 1 order');
+      else if(st.lewatJatah===0 && d.loss>=1 && st.total<st.J-1) labelStop+=pill('#1F1B0E','#FACC15','#FACC15','🔁 Lanjut — rugi '+d.loss+'x, belum untung');
     }
     return `<div style="background:var(--bg0);border:1px dashed var(--border);border-left:3px solid ${warna};border-radius:9px;padding:8px 10px;margin-bottom:6px">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <div style="font-size:11px;font-weight:800;color:#E5E7EB">${ikon} ${key}</div>
         <div style="font-size:8px;color:#E5E7EB">${d.total} sinyal (${d.win}W/${d.loss}L) · WR ${wr}%</div>
       </div>
-      <div style="font-size:13px;font-weight:800;color:${warna};margin-top:2px">${d.vp>=0?'+':''}${d.vp.toFixed(2)} VP <span style="font-size:9px;font-weight:400;color:#E5E7EB">(${d.pips>=0?'+':''}${d.pips.toFixed(1)} pip)</span></div>
+      <div style="font-size:13px;font-weight:800;color:${warna};margin-top:2px">${d.pips>=0?'+':''}${d.pips.toFixed(1)} pip <span style="font-size:9px;font-weight:400;color:#E5E7EB">(${d.vp>=0?'+':''}${d.vp.toFixed(2)} VP)</span></div>
       ${labelStop}
     </div>`;
   };
@@ -5393,11 +5400,11 @@ function renderRekapPair(){
       <div style="flex:1;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:6px;text-align:center">
         <div style="font-size:14px;font-weight:800;color:#F87171">${lossKeys.length}</div><div style="font-size:8px;color:#E5E7EB">PAIR LOSS</div></div>
       <div style="flex:1;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:6px;text-align:center">
-        <div style="font-size:14px;font-weight:800;color:${warnaNet}">${netVp>=0?'+':''}${netVp.toFixed(2)}</div><div style="font-size:8px;color:#E5E7EB">NET VP</div><div style="font-size:11px;font-weight:800;color:${warnaNet};margin-top:3px;padding-top:3px;border-top:1px dashed var(--border)">${netPip>=0?'+':''}${netPip.toFixed(1)} pip</div></div>
+        <div style="font-size:14px;font-weight:800;color:${warnaNet}">${netPip>=0?'+':''}${netPip.toFixed(1)}</div><div style="font-size:8px;color:#E5E7EB">NET PIP</div><div style="font-size:10px;font-weight:600;color:#E5E7EB;margin-top:3px;padding-top:3px;border-top:1px dashed var(--border)">${netVp>=0?'+':''}${netVp.toFixed(2)} VP</div></div>
     </div>
-    ${(rekapPairBulanDipilih===bulanIni && lockKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🔒 TERKUNCI — rugi 4x, JANGAN trading:</div><div style="font-size:11px;font-weight:800;color:#F87171;margin-top:2px">${lockKeys.join(' · ')}</div><div style="font-size:8px;color:#F87171;margin-top:3px">Pair ini sudah kena batas rugi. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
-    ${(rekapPairBulanDipilih===bulanIni && winKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🛑 STOP — total pair sudah untung, amankan cuan:</div><div style="font-size:11px;font-weight:800;color:#F87171;margin-top:2px">${winKeys.join(' · ')}</div><div style="font-size:8px;color:#F87171;margin-top:3px">Total pair ini sudah untung. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
-    ${(rekapPairBulanDipilih===bulanIni && warnKeys.length)?`<div style="background:#241E0B;border:1.5px solid #C99A2E;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#FFFFFF">⚠️ HATI-HATI — sudah rugi 3x (tinggal 1 kesempatan):</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${warnKeys.join(' · ')}</div></div>`:''}
+    ${(rekapPairBulanDipilih===bulanIni && lockKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #F87171;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🔒 JATAH HABIS / MELEBIHI JATAH — JANGAN trading:</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${lockKeys.join(' · ')}</div><div style="font-size:9px;color:#E5E7EB;margin-top:3px">Jatah bulan ini: emas 5 order, forex 2 order per pair. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
+    ${(rekapPairBulanDipilih===bulanIni && winKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #F87171;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🛑 STOP — target tercapai, KUNCI PROFIT:</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${winKeys.join(' · ')}</div><div style="font-size:9px;color:#E5E7EB;margin-top:3px">Emas: untung bersih sudah +500 pips. Forex: sudah ada win pertama. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
+    ${(rekapPairBulanDipilih===bulanIni && warnKeys.length)?`<div style="background:#241E0B;border:1.5px solid #FACC15;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#FACC15">⚠️ HATI-HATI — tinggal 1 order lagi:</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${warnKeys.join(' · ')}</div></div>`:''}
     ${profitKeys.length?judul('✅ Pair Profit','#3E9142')+profitKeys.map(kartu).join(''):''}
     ${lossKeys.length?judul('❌ Pair Loss','#D9534F')+lossKeys.slice().reverse().map(kartu).join(''):''}
     ${keys.filter(k=>grup[k].vp===0).length?judul('⚪ Impas','#8A6B26')+keys.filter(k=>grup[k].vp===0).map(kartu).join(''):''}${catatanNonForex}`;
@@ -5437,7 +5444,7 @@ function renderRingkasanBatch(){
         <div style="font-size:10px;font-weight:700;color:#E5E7EB">${key}</div>
         <div style="font-size:8px;color:#E5E7EB">${d.total} sinyal (${d.win}W/${d.loss}L)</div>
       </div>
-      <div style="font-size:13px;font-weight:800;color:${warna};margin-top:2px">${d.vp>=0?'+':''}${d.vp.toFixed(2)} VP <span style="font-size:9px;font-weight:400;color:#E5E7EB">(${d.pips>=0?'+':''}${d.pips.toFixed(1)} pip)</span></div>
+      <div style="font-size:13px;font-weight:800;color:${warna};margin-top:2px">${d.pips>=0?'+':''}${d.pips.toFixed(1)} pip <span style="font-size:9px;font-weight:400;color:#E5E7EB">(${d.vp>=0?'+':''}${d.vp.toFixed(2)} VP)</span></div>
     </div>`;
   }).join('');
   renderKalkulatorRemSinyal(g);
@@ -12766,7 +12773,7 @@ async function loadStatPair(){
         <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val" style="font-size:16px;color:${totalProfit>=0?'#4ADE80':'#F87171'}">${totalProfit>=0?'+':''}${fc(totalProfit)}</div><div class="bal-box-lbl">Total Profit</div></div>
         <div class="bal-box" style="background:var(--bg2)"><div class="bal-box-val" style="font-size:16px;color:#F87171">${fc(maxDd)}</div><div class="bal-box-lbl">Max Drawdown</div></div>
       </div>
-      <div style="font-size:9px;color:#E5E7EB">Berdasarkan ${rows.length} hari tercatat${currentPairFilter!=='ALL'?' — pair '+currentPairFilter:' — semua pair'}</div>${warnHtml}`;
+      <div style="font-size:9px;color:#E5E7EB">Berdasarkan ${rows.length} hari tercatat${currentPairFilter!=='ALL'?' — pair '+currentPairFilter:' — semua pair'}</div>${currentPairFilter==='ALL'?(()=>{ const per={}; rows.forEach(r=>{ const k=r.pair||'(pair kosong)'; per[k]=(per[k]||0)+1; }); const ket=Object.keys(per).map(k=>k+' '+per[k]).join(' · '); return `<div style="font-size:9px;color:#E5E7EB;margin-top:4px;line-height:1.5">Rincian: ${ket}.${Object.keys(per).length>1?' Kartu Saldo MT4 di atas hanya menghitung XAUUSD, jadi angkanya bisa lebih kecil dari "Semua".':''}</div>${(()=>{ const lain=rows.filter(r=>(r.pair||'XAUUSD')!=='XAUUSD').sort((x,y)=>String(x.tanggal).localeCompare(String(y.tanggal))); if(!lain.length) return ''; const f=v=>(parseFloat(v||0)>=0?'+':'-')+'¢'+Math.abs(parseFloat(v||0)).toFixed(2); return `<div style="font-size:9px;color:#FACC15;margin-top:4px;line-height:1.6">Baris bukan XAUUSD (ini penyebab selisih hari): ${lain.slice(0,8).map(r=>String(r.tanggal).slice(8)+'/'+String(r.tanggal).slice(5,7)+'/'+String(r.tanggal).slice(0,4)+' '+(r.pair||'?')+' '+f(r.profit)).join(' · ')}${lain.length>8?' · …':''}. Ketuk baris tanggal itu di Riwayat Harian untuk edit atau hapus.</div>`; })()}`; })():''}${warnHtml}`;
   }catch(e){
     console.error(e);
     el.innerHTML='<div style="padding:10px;color:#F87171">Gagal memuat statistik per pair.</div>';
