@@ -1527,7 +1527,7 @@ function aturanPropMt4(){
     const bk=t.slice(0,7); bulanTerakhir=bk;
     const awal=modal+cum;
     if(puncakBulan[bk]===undefined){ awalBulan[bk]=awal; puncakBulan[bk]=awal; }
-    const base=puncakBulan[bk];                 // basis hari ini = saldo tertinggi sebelum hari ini
+    const base=awalBulan[bk];                   // v3: basis = saldo awal bulan
     baseHarian[t]=base;
     cum+=p;
     const eq=modal+cum;
@@ -1535,15 +1535,15 @@ function aturanPropMt4(){
     const lossHari=p<0?-p:0;
     const pctHari=lossHari/base*100;
     if(pctHari>maxHarian){ maxHarian=pctHari; tglHarian=t; }
-    if(pctHari>MT4_PROP.dailyPct) pelanggaran.push({tgl:t, jenis:'DD per hari', pct:pctHari, batas:MT4_PROP.dailyPct});
-    const pk=puncakBulan[bk];
+    // v3: batas harian dihapus (aturan hanya 6% per bulan)
+    const pk=awalBulan[bk];   // v3: DD bulan dari saldo awal bulan
     const ddBulan=Math.max(0, pk-eq)/pk*100;
     bulanMaxDD[bk]=Math.max(bulanMaxDD[bk]||0, ddBulan);
     if(ddBulan>MT4_PROP.maxPct && !bulanBreach[bk]){
       bulanBreach[bk]=true;
       pelanggaran.push({tgl:t, jenis:'DD max bulan', pct:ddBulan, batas:MT4_PROP.maxPct});
     }
-    baseNow=puncakBulan[bk]; pHari=p; eqNow=eq;
+    baseNow=awalBulan[bk]; pHari=p; eqNow=eq;
   });
   let bulanTerburuk='', ddBulanTerburuk=0;
   Object.keys(bulanMaxDD).forEach(bk=>{ if(bulanMaxDD[bk]>ddBulanTerburuk){ ddBulanTerburuk=bulanMaxDD[bk]; bulanTerburuk=bk; } });
@@ -1552,7 +1552,7 @@ function aturanPropMt4(){
   const limitHarian=MT4_PROP.dailyPct/100*baseNow, limitBulan=MT4_PROP.maxPct/100*baseNow;
   const dailyRoom=Math.max(0, limitHarian - Math.max(0,-pHari));
   const monthRoom=Math.max(0, eqNow - baseNow*(1-MT4_PROP.maxPct/100));
-  const batas=Math.min(dailyRoom, monthRoom);
+  const batas=monthRoom;   // v3: hanya batas bulanan
   return {modal, eqNow, baseNow, awalBlnNow, naik: baseNow>awalBlnNow+1e-9, persenNaik:(baseNow/awalBlnNow-1)*100,
           baseHarian, maxHarian, tglHarian,
           ddHariIni: Math.max(0,-pHari)/baseNow*100, ddBulanIni: bulanMaxDD[bkNow]||0, bulanTerakhir: bkNow,
@@ -1585,11 +1585,6 @@ function aturanPropHtml(p,a){
     ${alertHtml}
     <div style="display:flex;gap:6px;margin-bottom:8px">
       <div style="flex:1;padding:6px;border-radius:8px;background:rgba(0,0,0,.35);border:1px solid ${p.border};text-align:center">
-        <div style="font-size:9px;color:${p.subteks};text-transform:uppercase">DD hari ini</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:${st.ddHariIni>MT4_PROP.dailyPct?'#F87171':'#FFFFFF'}">${f1(st.ddHariIni)}%</div>
-        <div style="font-size:9px;color:${p.subteks}">maks ${MT4_PROP.dailyPct}% / hari</div>
-      </div>
-      <div style="flex:1;padding:6px;border-radius:8px;background:rgba(0,0,0,.35);border:1px solid ${p.border};text-align:center">
         <div style="font-size:9px;color:${p.subteks};text-transform:uppercase">DD bulan ini</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:${st.ddBulanIni>MT4_PROP.maxPct?'#F87171':'#FFFFFF'}">${f1(st.ddBulanIni)}%</div>
         <div style="font-size:9px;color:${p.subteks}">maks ${MT4_PROP.maxPct}% / bulan</div>
@@ -1598,11 +1593,10 @@ function aturanPropHtml(p,a){
     ${st.naik?`<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:rgba(20,83,45,.45);border:1px solid #4ADE80;color:#DCFCE7;font-size:11px">📈 Saldo naik → batas DD ikut naik${isAdmin?` : ¢${f2(st.limitHarianAwal)} / ¢${f2(st.limitBulanAwal)} → ¢${f2(st.limitHarianNom)} / ¢${f2(st.limitBulanNom)}`:` (+${f1(st.persenNaik)}% dari saldo awal bulan)`}</div>`:''}
     <div style="font-weight:800;margin-bottom:4px">📜 Aturan</div>
     <div>Risk per trade: <b>${f1(a.pct)}%</b> dari saldo (1 order, SL ${slSekarang} pips, lot 0,01)</div>
-    <div>DD per hari: maks <b>${MT4_PROP.dailyPct}%</b>${nom(st.limitHarianNom)} — tertinggi <b>${f1(st.maxHarian)}%</b>${st.tglHarian?' ('+tglF(st.tglHarian)+')':''} ${badge(okHarian)}</div>
     <div>DD max bulan: maks <b>${MT4_PROP.maxPct}%</b>${nom(st.limitBulanNom)} — bulan ${namaBulan(st.bulanTerakhir)} <b>${f1(st.ddBulanIni)}%</b> ${badge(st.okBulanIni)}</div>
     <div>DD max terburuk: <b>${f1(st.ddBulanTerburuk)}%</b> (${namaBulan(st.bulanTerburuk)})</div>
     <div style="margin-top:6px;padding-top:6px;border-top:1px dashed ${p.border}">Batas loss 1 trade sekarang: <b>${f1(st.batasPct)}%</b>${nom(st.batas)}</div>
-    <div>Kalau kena SL 1 order: rugi <b>${f1(a.pct)}%</b> dari saldo → ${aman?'<b style="color:#4ADE80">✅ TIDAK menyalahi aturan</b>':`<b style="color:#F87171">⛔ MENYALAHI aturan DD (batas ${MT4_PROP.dailyPct}% per hari)</b>`}</div>
+    <div>Kalau kena SL 1 order: rugi <b>${f1(a.pct)}%</b> dari saldo → ${aman?'<b style="color:#4ADE80">✅ TIDAK menyalahi aturan</b>':`<b style="color:#F87171">⛔ MENYALAHI aturan DD (batas 6% per bulan)</b>`}</div>
     ${aman?'':`<div style="color:#FDE68A">SL maks yang aman dengan lot 0,01 saat ini: <b>±${slMaks} pips</b>. RR 1:1 dengan SL ${slSekarang} pips akan melanggar aturan.</div>`}
     ${daftar}
   </div>`;
