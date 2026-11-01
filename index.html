@@ -1503,13 +1503,129 @@ async function loadProfilRisiko(){
   renderLabelProfilRisiko();
   renderInvCalcDisclaimer();
 }
+// ── ATURAN PROP FIRM (Daily DD 3% · Max DD 6%) — jadi acuan utama akun ini, berlaku sejak awal ──
+// DD mengikuti saldo: Daily DD = 3% dari ekuitas awal hari; Max DD = 6% dari PUNCAK ekuitas (trailing).
+// Deposit/WD tidak dihitung sebagai rugi (hanya P/L trading).
+const MT4_PROP={dailyPct:3, maxPct:6};
+// Basis (sesuai aturan kamu): modal awal bulan = saldo awal bulan.
+// DD per hari = 3% dari saldo awal hari itu. DD max bulan = 6% dari puncak saldo dalam bulan itu (mulai dari modal awal bulan).
+// Batas ¢ ikut saldo: saldo naik ke 2000 di tengah bulan → per hari ≈ ¢60, max bulan ≈ ¢120. Deposit/WD tidak dihitung sebagai rugi.
+function aturanPropMt4(){
+  const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4)) && r.profit!=null && isFinite(parseFloat(r.profit)))
+    .sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
+  if(!rows.length) return null;
+  const modal=parseFloat(rows[0].saldo_mt4)-parseFloat(rows[0].profit);
+  if(!(modal>0)) return null;
+  const perHari={};
+  rows.forEach(r=>{ const t=String(r.tanggal); perHari[t]=(perHari[t]||0)+parseFloat(r.profit); });
+  // Basis batas DD = saldo awal bulan, dan NAIK ikut saldo tertinggi bulan itu (contoh: 627 → 2000 = 18/36 jadi 60/120).
+  // Basis tidak turun lagi di tengah bulan. Deposit/WD tidak dihitung sebagai rugi.
+  let cum=0; const baseHarian={}, awalBulan={}, puncakBulan={}, bulanMaxDD={}, pelanggaran=[], bulanBreach={};
+  let maxHarian=0, tglHarian='', bulanTerakhir='', baseNow=modal, pHari=0, eqNow=modal;
+  Object.keys(perHari).sort().forEach(t=>{
+    const p=perHari[t];
+    const bk=t.slice(0,7); bulanTerakhir=bk;
+    const awal=modal+cum;
+    if(puncakBulan[bk]===undefined){ awalBulan[bk]=awal; puncakBulan[bk]=awal; }
+    const base=puncakBulan[bk];                 // basis hari ini = saldo tertinggi sebelum hari ini
+    baseHarian[t]=base;
+    cum+=p;
+    const eq=modal+cum;
+    if(eq>puncakBulan[bk]) puncakBulan[bk]=eq;
+    const lossHari=p<0?-p:0;
+    const pctHari=lossHari/base*100;
+    if(pctHari>maxHarian){ maxHarian=pctHari; tglHarian=t; }
+    if(pctHari>MT4_PROP.dailyPct) pelanggaran.push({tgl:t, jenis:'DD per hari', pct:pctHari, batas:MT4_PROP.dailyPct});
+    const pk=puncakBulan[bk];
+    const ddBulan=Math.max(0, pk-eq)/pk*100;
+    bulanMaxDD[bk]=Math.max(bulanMaxDD[bk]||0, ddBulan);
+    if(ddBulan>MT4_PROP.maxPct && !bulanBreach[bk]){
+      bulanBreach[bk]=true;
+      pelanggaran.push({tgl:t, jenis:'DD max bulan', pct:ddBulan, batas:MT4_PROP.maxPct});
+    }
+    baseNow=puncakBulan[bk]; pHari=p; eqNow=eq;
+  });
+  let bulanTerburuk='', ddBulanTerburuk=0;
+  Object.keys(bulanMaxDD).forEach(bk=>{ if(bulanMaxDD[bk]>ddBulanTerburuk){ ddBulanTerburuk=bulanMaxDD[bk]; bulanTerburuk=bk; } });
+  const bkNow=bulanTerakhir;
+  const awalBlnNow=awalBulan[bkNow]||baseNow;
+  const limitHarian=MT4_PROP.dailyPct/100*baseNow, limitBulan=MT4_PROP.maxPct/100*baseNow;
+  const dailyRoom=Math.max(0, limitHarian - Math.max(0,-pHari));
+  const monthRoom=Math.max(0, eqNow - baseNow*(1-MT4_PROP.maxPct/100));
+  const batas=Math.min(dailyRoom, monthRoom);
+  return {modal, eqNow, baseNow, awalBlnNow, naik: baseNow>awalBlnNow+1e-9, persenNaik:(baseNow/awalBlnNow-1)*100,
+          baseHarian, maxHarian, tglHarian,
+          ddHariIni: Math.max(0,-pHari)/baseNow*100, ddBulanIni: bulanMaxDD[bkNow]||0, bulanTerakhir: bkNow,
+          ddBulanTerburuk, bulanTerburuk, pelanggaran, batas, batasPct: eqNow>0?batas/eqNow*100:0,
+          limitHarianNom: limitHarian, limitBulanNom: limitBulan,
+          limitHarianAwal: MT4_PROP.dailyPct/100*awalBlnNow, limitBulanAwal: MT4_PROP.maxPct/100*awalBlnNow,
+          okBulanIni: !pelanggaran.some(x=>x.jenis==='DD max bulan' && x.tgl.slice(0,7)===bkNow),
+          langgarBulanIni: pelanggaran.some(x=>x.tgl.slice(0,7)===bkNow),
+          pelanggaranTerakhir: pelanggaran.length?pelanggaran[pelanggaran.length-1]:null};
+}
+function aturanPropHtml(p,a){
+  const st=aturanPropMt4(); if(!st) return '';
+  const f1=v=>(Math.round(v*10)/10).toString().replace('.',',');
+  const f2=v=>(Math.round(v*100)/100).toFixed(2).replace('.',',');
+  const tglF=t=>String(t).split('-').reverse().join('/');
+  const namaBulan=k=>{ if(!k) return '-'; const [y,m]=k.split('-'); return ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][parseInt(m,10)-1]+' '+y; };
+  const okHarian=!st.pelanggaran.some(x=>x.jenis==='DD per hari');
+  const badge=ok=>ok?'<b style="color:#4ADE80">✅ AMAN</b>':'<b style="color:#F87171">⛔ MELANGGAR</b>';
+  const nom=v=>isAdmin?` (¢${f2(v)})`:'';
+  const aman=a.risk<=st.batas+1e-9;
+  const slMaks=Math.floor(st.batas/(MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01)));
+  const slSekarang=MT4_RISIKO.slPips;
+  const daftar=st.pelanggaran.length
+    ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed ${p.border}"><b style="color:#F87171">Pelanggaran tercatat:</b><br>${st.pelanggaran.slice(0,10).map(x=>`• ${tglF(x.tgl)} — ${x.jenis} ${f1(x.pct)}% (batas ${x.batas}%)`).join('<br>')}${st.pelanggaran.length>10?`<br>… dan ${st.pelanggaran.length-10} pelanggaran lainnya`:''}</div>`
+    : `<div style="margin-top:8px;color:#4ADE80">Tidak ada pelanggaran tercatat.</div>`;
+  const alertHtml=st.langgarBulanIni && st.pelanggaranTerakhir
+    ? `<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#7F1D1D;border:1px solid #F87171;color:#FECACA;font-weight:800">⛔ AKUN INI MENYALAHI ATURAN DD<br><span style="font-weight:500;font-size:11px">${tglF(st.pelanggaranTerakhir.tgl)} — ${st.pelanggaranTerakhir.jenis} ${f1(st.pelanggaranTerakhir.pct)}% (batas ${st.pelanggaranTerakhir.batas}%)</span></div>`
+    : '';
+  return `<div style="margin:10px 10px 0;padding:10px 12px;border:1px solid ${p.border};border-radius:10px;background:rgba(0,0,0,.35);font-size:12px;line-height:1.6;color:#FFFFFF;text-align:left">
+    ${alertHtml}
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <div style="flex:1;padding:6px;border-radius:8px;background:rgba(0,0,0,.35);border:1px solid ${p.border};text-align:center">
+        <div style="font-size:9px;color:${p.subteks};text-transform:uppercase">DD hari ini</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:${st.ddHariIni>MT4_PROP.dailyPct?'#F87171':'#FFFFFF'}">${f1(st.ddHariIni)}%</div>
+        <div style="font-size:9px;color:${p.subteks}">maks ${MT4_PROP.dailyPct}% / hari</div>
+      </div>
+      <div style="flex:1;padding:6px;border-radius:8px;background:rgba(0,0,0,.35);border:1px solid ${p.border};text-align:center">
+        <div style="font-size:9px;color:${p.subteks};text-transform:uppercase">DD bulan ini</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:${st.ddBulanIni>MT4_PROP.maxPct?'#F87171':'#FFFFFF'}">${f1(st.ddBulanIni)}%</div>
+        <div style="font-size:9px;color:${p.subteks}">maks ${MT4_PROP.maxPct}% / bulan</div>
+      </div>
+    </div>
+    ${st.naik?`<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:rgba(20,83,45,.45);border:1px solid #4ADE80;color:#DCFCE7;font-size:11px">📈 Saldo naik → batas DD ikut naik${isAdmin?` : ¢${f2(st.limitHarianAwal)} / ¢${f2(st.limitBulanAwal)} → ¢${f2(st.limitHarianNom)} / ¢${f2(st.limitBulanNom)}`:` (+${f1(st.persenNaik)}% dari saldo awal bulan)`}</div>`:''}
+    <div style="font-weight:800;margin-bottom:4px">📜 Aturan</div>
+    <div>Risk per trade: <b>${f1(a.pct)}%</b> dari saldo (1 order, SL ${slSekarang} pips, lot 0,01)</div>
+    <div>DD per hari: maks <b>${MT4_PROP.dailyPct}%</b>${nom(st.limitHarianNom)} — tertinggi <b>${f1(st.maxHarian)}%</b>${st.tglHarian?' ('+tglF(st.tglHarian)+')':''} ${badge(okHarian)}</div>
+    <div>DD max bulan: maks <b>${MT4_PROP.maxPct}%</b>${nom(st.limitBulanNom)} — bulan ${namaBulan(st.bulanTerakhir)} <b>${f1(st.ddBulanIni)}%</b> ${badge(st.okBulanIni)}</div>
+    <div>DD max terburuk: <b>${f1(st.ddBulanTerburuk)}%</b> (${namaBulan(st.bulanTerburuk)})</div>
+    <div style="margin-top:6px;padding-top:6px;border-top:1px dashed ${p.border}">Batas loss 1 trade sekarang: <b>${f1(st.batasPct)}%</b>${nom(st.batas)}</div>
+    <div>Kalau kena SL 1 order: rugi <b>${f1(a.pct)}%</b> dari saldo → ${aman?'<b style="color:#4ADE80">✅ TIDAK menyalahi aturan</b>':`<b style="color:#F87171">⛔ MENYALAHI aturan DD (batas ${MT4_PROP.dailyPct}% per hari)</b>`}</div>
+    ${aman?'':`<div style="color:#FDE68A">SL maks yang aman dengan lot 0,01 saat ini: <b>±${slMaks} pips</b>. RR 1:1 dengan SL ${slSekarang} pips akan melanggar aturan.</div>`}
+    ${daftar}
+  </div>`;
+}
+// Banner: tampilkan % per trade yang benar-benar dipakai (bukan kategori Umum/Agresif)
+function profilTradingMeta(a){
+  const f1=v=>(Math.round(v*10)/10).toString().replace('.',',');
+  const st=aturanPropMt4();
+  const langgarDD=!!st && st.langgarBulanIni;
+  const langgar=langgarDD || (!!st && a.risk>st.batas+1e-9);
+  const warna=langgar
+    ? {warna1:'#7F1D1D',warna2:'#450A0A',border:'#F87171',teks:'#FECACA',subteks:'#FEE2E2'}
+    : {warna1:'#1F2937',warna2:'#111827',border:'#9CA3AF',teks:'#FFFFFF',subteks:'#E5E7EB'};
+  return {judul:(langgarDD?'AKUN INI MENYALAHI ATURAN DD · ':'')+'TRADING '+f1(a.pct)+'% PER TRADE', sub:'', ...warna,
+    ket:`Dihitung dari 1 order (SL ${MT4_RISIKO.slPips} pips, lot 0,01) ÷ saldo MT4 terakhir.`+(langgarDD?' Ada pelanggaran DD bulan ini — cek daftar pelanggaran di bawah.':(langgar?' Ini melewati batas loss yang masih aman sekarang.':''))};
+}
 function renderLabelProfilRisiko(){
   const el=document.getElementById('labelProfilRisiko');
   if(!el)return;
-  let p=PROFIL_RISIKO_META[profilRisikoAktif] || PROFIL_RISIKO_META.agresif;
+  let p={judul:'AKUN INI TRADING', sub:'', warna1:'#1F2937', warna2:'#111827', border:'#9CA3AF', teks:'#FFFFFF', subteks:'#E5E7EB', ket:'Menunggu data saldo MT4.'};
   // Label OTOMATIS mengikuti modal MT4: risiko 1 order (SL 500 pips) ÷ saldo. ≤2% = Umum, ≤5% = Agresif, >5% = peringatan risiko tinggi (baru).
   let auto=null; try{ auto=profilOtomatisMt4(); }catch(e){}
-  if(auto){ p = auto.kode==='tinggi' ? profilTinggiMeta(auto) : PROFIL_RISIKO_META[auto.kode]; }
+  if(auto){ p = profilTradingMeta(auto); }
   const opsiAdmin=isAdmin ? `
     <div style="display:flex;gap:6px;justify-content:center;margin-top:10px">
       ${Object.keys(PROFIL_RISIKO_META).map(k=>`<span onclick="setProfilRisiko('${k}')" style="font-size:9px;padding:4px 10px;border-radius:8px;cursor:pointer;font-weight:700;${k===profilRisikoAktif?`background:${p.border};color:#1a1a1a`:`background:rgba(255,255,255,.08);color:${p.subteks}`}">${PROFIL_RISIKO_META[k].judul.replace('AKUN INI PAKAI KALKULATOR ','')}</span>`).join('')}
@@ -1517,9 +1633,9 @@ function renderLabelProfilRisiko(){
   el.innerHTML=`<div style="background:linear-gradient(135deg,${p.warna1},${p.warna2});border:2px solid ${p.border};border-radius:12px;padding:14px;text-align:center">
     <div style="font-size:16px;font-weight:900;color:${p.teks};letter-spacing:.3px;line-height:1.4">⚠️ ${p.judul}<br>${p.sub}</div>
     <div style="font-size:10px;color:${p.subteks};margin-top:6px;line-height:1.5">${p.ket}</div>
-    ${auto?syaratModalMt4Html(auto):''}
+    ${auto?aturanPropHtml(p,auto):''}
     ${opsiAdmin}
-    ${auto?`<div style="font-size:9px;color:${p.subteks};margin-top:8px;line-height:1.5;opacity:.9">Label dikunci per bulan dari modal acuan bulan ini dan diperbarui saat ganti bulan: ≥ ¢${Math.round(auto.risk/0.02).toLocaleString('id-ID')} = Umum 2% · ≥ ¢${Math.round(auto.risk/0.05).toLocaleString('id-ID')} = Agresif 5% · di bawahnya = risiko tinggi. Kalkulator 2% dan 5% tetap tersedia.</div>`:''}
+
   </div>`;
 }
 // ── Modal acuan risiko dikunci PER BULAN: tidak berubah di tengah bulan, baru diperbarui saat ganti bulan ──
@@ -1541,8 +1657,8 @@ async function muatRisikoBulanMt4(){
   try{ renderLabelProfilRisiko(); renderRisikoModalMt4(); }catch(e){}
 }
 function profilOtomatisMt4(){
-  const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4))).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
-  const saldo=saldoAcuanBulanMt4(); if(!(saldo>0)) return null;
+  const st=aturanPropMt4(); if(!st||!(st.baseNow>0)) return null;
+  const saldo=st.baseNow;
   const risk=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01), pct=risk/saldo*100;
   return {saldo, risk, pct, kode: pct<=2?'umum':(pct<=5?'agresif':'tinggi')};
 }
@@ -1561,7 +1677,7 @@ function syaratModalMt4Html(a){
 function profilTinggiMeta(a){
   const f1=v=>(Math.round(v*10)/10).toString().replace('.',','), J=MT4_RISIKO.jatah, habis=Math.max(1,Math.floor(a.saldo/a.risk)), bln=Math.max(1,Math.ceil(habis/J));
   return {judul:'AKUN INI BERISIKO TINGGI', sub:'RISK '+f1(a.pct)+'% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FECACA', subteks:'#FEE2E2',
-    ket:`Di atas batas Agresif 5%. Dari modal MT4 sekarang, 1 order (SL ${MT4_RISIKO.slPips} pips) ≈ ${f1(a.pct)}% saldo. Kalau loss ${habis}× berturut-turut (±${bln} bulan dengan jatah ${J} order per bulan) saldo habis dan bisa kena margin call. Modal acuan dikunci per bulan dan diperbarui saat ganti bulan.`};
+    ket:`Di atas batas Agresif 5%. Dari modal MT4 sekarang, 1 order (SL ${MT4_RISIKO.slPips} pips) ≈ ${f1(a.pct)}% saldo. Kalau loss ${habis}× berturut-turut (±${bln} bulan dengan jatah ${J} order per bulan) saldo habis dan bisa kena margin call. Dihitung harian dari saldo MT4 terakhir.`};
 }
 async function setProfilRisiko(kode){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
@@ -1968,11 +2084,14 @@ function renderInvCalcDisclaimer(){
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#132D0E"></div>Profit</div>
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#2D0E0E"></div>Loss</div>
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--bg1)"></div>Tidak Trading</div>
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#4ADE80;width:7px;height:7px;border-radius:50%"></div>Risk di bawah batas Daily DD 3%</div>
+      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#F87171;width:7px;height:7px;border-radius:50%"></div>Risk di atas batas Daily DD 3%</div>
+      <div class="cal-leg-item">% di tiap tanggal = risk per trade ÷ saldo hari itu</div>
     </div>
     <div class="cal-legend" style="margin-top:6px">
-      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#4ADE80;width:7px;height:7px;border-radius:50%"></div>🧮 Umum 2%</div>
-      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#FBBF24;width:7px;height:7px;border-radius:50%"></div>🧮 Agresif 5%</div>
-      <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#F87171;width:7px;height:7px;border-radius:50%"></div>🧮 Risiko tinggi (>5%)</div>
+      
+      
+      
     </div>
   </div>
 </div>
@@ -3719,13 +3838,10 @@ async function loadBalance(){
 function calProfilHarian(row, dateStr){
   const tgl=String(dateStr||(row&&row.tanggal)||'');
   if(tgl<MT4_ATURAN_MULAI) return (row&&row.profil_risiko)?{kode:row.profil_risiko,pct:0}:null;
-  let basis=parseFloat(row&&row.saldo_mt4);
-  if(!(basis>0)){
-    const prev=(allSaldoData||[]).filter(x=>String(x.tanggal)<=tgl && x.saldo_mt4!=null && parseFloat(x.saldo_mt4)>0)
-      .sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
-    basis=prev.length?parseFloat(prev[prev.length-1].saldo_mt4):0;
-  }
-  if(!(basis>0)) return (row&&row.profil_risiko)?{kode:row.profil_risiko,pct:0}:null;
+  const st=aturanPropMt4();
+  let basis=st&&st.baseHarian?st.baseHarian[tgl]:undefined;
+  if(!(basis>0)) basis=parseFloat(row&&row.saldo_mt4);
+  if(!(basis>0)) return null;
   const risk=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01), pct=risk/basis*100;
   return {kode: pct<=2?'umum':(pct<=5?'agresif':'tinggi'), pct};
 }
@@ -3760,13 +3876,17 @@ function renderKalender(){
     }
     let profilDotHtml='';
     const efK=row?calProfilHarian(row,dateStr):null;
-    if(efK && (efK.kode==='tinggi' || PROFIL_RISIKO_META[efK.kode])){
-      const pm=PROFIL_RISIKO_META[efK.kode];
+    if(efK && efK.pct>0){
+      const warnaDot=efK.pct<=MT4_PROP.dailyPct?'#4ADE80':'#F87171';
+      profilDotHtml=`<div style="position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:${warnaDot}" title="Risk ${(Math.round(efK.pct*10)/10).toString().replace('.',',')}%"></div>`;
       c.style.position='relative';
-      const warnaDot=efK.kode==='tinggi'?'#F87171':pm.border, ttl=efK.kode==='tinggi'?('Risiko tinggi'+(efK.pct?' '+(Math.round(efK.pct*10)/10).toString().replace('.',',')+'%':'')):pm.judul.replace('AKUN INI PAKAI ','');
-      profilDotHtml=`<div style="position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:${warnaDot}" title="${ttl}"></div>`;
     }
-    c.innerHTML=`${profilDotHtml}<div class="cal-num">${d}</div>${amtHtml}`;
+    let pctHtml='';
+    if(efK && efK.pct>0){
+      const warnaPct=efK.kode==='tinggi'?'#F87171':(PROFIL_RISIKO_META[efK.kode]?PROFIL_RISIKO_META[efK.kode].border:'#E5E7EB');
+      pctHtml=`<div class="cal-amt" style="color:${warnaPct}">${(Math.round(efK.pct*10)/10).toString().replace('.',',')}%</div>`;
+    }
+    c.innerHTML=`${profilDotHtml}<div class="cal-num">${d}</div>${amtHtml}${pctHtml}`;
     grid.appendChild(c);
   }
 }
@@ -6824,19 +6944,10 @@ function profilBadgeHtml(kode){
   const riskLabel=p.sub.replace('RISK ','').replace(' PER TRADE','');
   return `<span style="display:inline-block;font-size:8px;font-weight:700;padding:2px 7px;border-radius:6px;background:${p.warna2};color:${p.teks};border:1px solid ${p.border};white-space:nowrap;margin-top:3px">🧮 ${singkat} ${riskLabel}</span>`;
 }
-function profilEfektifRow(r){
-  const tgl=String(r&&r.tanggal||''), stored=(r&&r.profil_risiko)||null;
-  if(tgl<MT4_ATURAN_MULAI) return stored?{kode:stored,pct:0}:null;          // sebelum 1 Okt 2026: pakai catatan lama
-  const bk=tgl.slice(0,7); let basis=0;
-  if(bk===bulanIniKeyMt4()) basis=saldoAcuanBulanMt4();                     // bulan berjalan: modal acuan terkunci
-  else { const rs=(allSaldoData||[]).filter(x=>String(x.tanggal).slice(0,7)===bk && x.saldo_mt4!=null).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal))); basis=rs.length?parseFloat(rs[0].saldo_mt4):0; }
-  if(!(basis>0)) return stored?{kode:stored,pct:0}:null;
-  const risk=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01), pct=risk/basis*100;
-  return {kode: pct<=2?'umum':(pct<=5?'agresif':'tinggi'), pct};
-}
+function profilEfektifRow(r){ return calProfilHarian(r, String(r&&r.tanggal||'')); }
 function badgeTinggi(pct){ return `<span style="display:inline-block;font-size:8px;font-weight:700;padding:2px 7px;border-radius:6px;background:#450A0A;color:#FECACA;border:1px solid #F87171;white-space:nowrap;margin-top:3px">🧮 Risiko tinggi${pct?' '+(Math.round(pct*10)/10).toString().replace('.',',')+'%':' (>5%)'}</span>`; }
-function profilBadgeRowHtml(r){ const e=profilEfektifRow(r); if(!e) return ''; return e.kode==='tinggi'?badgeTinggi(e.pct):profilBadgeHtml(e.kode); }
-function profilLabelEfektif(r){ const e=profilEfektifRow(r); if(!e) return ''; return e.kode==='tinggi'?('Risiko tinggi '+(e.pct?(Math.round(e.pct*10)/10).toString().replace('.',',')+'%':'(>5%)')):profilLabelSingkat(e.kode); }
+function profilBadgeRowHtml(r){ const e=profilEfektifRow(r); if(!e||!(e.pct>0)) return ''; return `<span style="display:inline-block;font-size:8px;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(255,255,255,.08);color:#FFFFFF;border:1px solid #9CA3AF;white-space:nowrap;margin-top:3px">🧮 Risk ${(Math.round(e.pct*10)/10).toString().replace('.',',')}% per trade</span>`; }
+function profilLabelEfektif(r){ const e=profilEfektifRow(r); if(!e||!(e.pct>0)) return ''; return 'Risk '+(Math.round(e.pct*10)/10).toString().replace('.',',')+'% per trade'; }
 function profilLabelSingkat(kode){
   if(kode==='tinggi') return 'Risiko tinggi (di atas 5%)';
   if(!kode || !PROFIL_RISIKO_META[kode]) return '-';
