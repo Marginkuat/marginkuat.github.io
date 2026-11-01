@@ -1506,7 +1506,7 @@ async function loadProfilRisiko(){
 // ── ATURAN PROP FIRM (Daily DD 3% · Max DD 6%) — jadi acuan utama akun ini, berlaku sejak awal ──
 // DD mengikuti saldo: Daily DD = 3% dari ekuitas awal hari; Max DD = 6% dari PUNCAK ekuitas (trailing).
 // Deposit/WD tidak dihitung sebagai rugi (hanya P/L trading).
-const MT4_PROP={dailyPct:3, maxPct:6};
+const MT4_PROP={dailyPct:3, maxPct:6, targetPct:10};
 // Basis (sesuai aturan kamu): modal awal bulan = saldo awal bulan.
 // DD per hari = 3% dari saldo awal hari itu. DD max bulan = 6% dari puncak saldo dalam bulan itu (mulai dari modal awal bulan).
 // Batas ¢ ikut saldo: saldo naik ke 2000 di tengah bulan → per hari ≈ ¢60, max bulan ≈ ¢120. Deposit/WD tidak dihitung sebagai rugi.
@@ -1553,7 +1553,8 @@ function aturanPropMt4(){
   const dailyRoom=Math.max(0, limitHarian - Math.max(0,-pHari));
   const monthRoom=Math.max(0, eqNow - baseNow*(1-MT4_PROP.maxPct/100));
   const batas=Math.min(dailyRoom, monthRoom);
-  return {modal, eqNow, baseNow, awalBlnNow, naik: baseNow>awalBlnNow+1e-9, persenNaik:(baseNow/awalBlnNow-1)*100,
+  const profitBulanNom=eqNow-awalBlnNow, targetNom=MT4_PROP.targetPct/100*awalBlnNow;
+  return {modal, eqNow, baseNow, awalBlnNow, profitBulanNom, targetNom, profitBulanPct: awalBlnNow>0?profitBulanNom/awalBlnNow*100:0, targetTercapai: profitBulanNom>=targetNom-1e-9, naik: baseNow>awalBlnNow+1e-9, persenNaik:(baseNow/awalBlnNow-1)*100,
           baseHarian, maxHarian, tglHarian,
           ddHariIni: Math.max(0,-pHari)/baseNow*100, ddBulanIni: bulanMaxDD[bkNow]||0, bulanTerakhir: bkNow,
           ddBulanTerburuk, bulanTerburuk, pelanggaran, batas, batasPct: eqNow>0?batas/eqNow*100:0,
@@ -1594,6 +1595,11 @@ function aturanPropHtml(p,a){
         <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:${st.ddBulanIni>MT4_PROP.maxPct?'#F87171':'#FFFFFF'}">${f1(st.ddBulanIni)}%</div>
         <div style="font-size:9px;color:${p.subteks}">maks ${MT4_PROP.maxPct}% / bulan</div>
       </div>
+    </div>
+    <div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.3);border:1px solid ${p.border};text-align:center">
+      <div style="font-size:9px;color:${p.subteks};text-transform:uppercase">Target profit bulan ini (${MT4_PROP.targetPct}% saldo awal bulan)</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:${st.targetTercapai?'#4ADE80':'#FFFFFF'}">${f1(st.profitBulanPct)}% <span style="font-size:11px">${st.targetTercapai?'✅ TERCAPAI':'/ '+MT4_PROP.targetPct+'%'}</span></div>
+      <div style="font-size:9px;color:${p.subteks}">${isAdmin?`profit ¢${f2(st.profitBulanNom)} dari target ¢${f2(st.targetNom)}`:(st.targetTercapai?'Target bulan ini sudah tercapai':'Sisa target: '+f1(Math.max(0,MT4_PROP.targetPct-st.profitBulanPct))+'%')}</div>
     </div>
     ${st.naik?`<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:rgba(20,83,45,.45);border:1px solid #4ADE80;color:#DCFCE7;font-size:11px">📈 Saldo naik → batas DD ikut naik${isAdmin?` : ¢${f2(st.limitHarianAwal)} / ¢${f2(st.limitBulanAwal)} → ¢${f2(st.limitHarianNom)} / ¢${f2(st.limitBulanNom)}`:` (+${f1(st.persenNaik)}% dari saldo awal bulan)`}</div>`:''}
     <div style="font-weight:800;margin-bottom:4px">📜 Aturan</div>
@@ -6435,10 +6441,10 @@ function renderStrategiRisikoHtml(g, bufferVp){
   } else {
     const mult=estimasiMultiplierVp(g);
     kartuKartu.push(renderSatuKartuInstrumen({
-      judul:'📐 Strategi Forex (Flat)', slBerikutnya:60,
-      catatanState:'Strategi flat — SL:TP selalu <b>60:120</b>, tidak berubah walau menang atau kalah',
+      judul:'📐 Strategi Forex (Hard)', slBerikutnya:30,
+      catatanState:'Kalkulator <b>Hard</b> — SL:TP selalu <b>30:60</b> (RR 1:2). Hard 2 (60:120) dianggap MENYALAHI aturan.',
       mult, sumberRasio:'rata-rata histori sinyal channel ini',
-      aturanTeks:'Aturan: Win → naik ke jenjang berikutnya. Loss → balik ke 60:120.',
+      aturanTeks:'Aturan: SL:TP tetap 30:60 (Hard). Sinyal dengan SL 2× dasar (Hard 2) ditandai menyalahi aturan.',
       bufferVp
     }));
   }
@@ -15907,9 +15913,9 @@ function renderStrategiInvestor(){
 const AUDIT_ATURAN={ emas:{sl:500,tp:500,rr:1,jatah:5}, forexRR:3, jatahPair:3 };
 const ATURAN_V2_EFEKTIF='2026-10-01';   // Aturan v2 analis DINILAI mundur sejak 1 Oktober 2026
 const ATURAN_V2_DITETAPKAN='2026-10-26';   // tetapi aturan ini dibuat/ditetapkan pada 26 Oktober 2026 (investor harus tahu)
-const AUDIT_ATURAN_V2={ emas:{sl:500,tp:500,rr:1,jatah:5}, forexRR:2, jatahPair:2, slKali:2 };
-const FOREX_REM_V2=Object.assign({},FOREX_REM,{rr:2,jatahPair:2,slKali:2,maxLossHari:0,mulai:ATURAN_V2_EFEKTIF});
-function aturanBulan(bk){ return {v:'v2',AA:AUDIT_ATURAN_V2,R:FOREX_REM_V2,uji:String(bk||'')<ATURAN_V2_EFEKTIF.slice(0,7)}; }   // v1 tidak dipakai lagi; bulan < November 2026 = uji coba (tidak dinilai)
+const AUDIT_ATURAN_V2={ emas:{sl:500,tp:500,rr:1,jatah:5}, forexRR:2, jatahPair:2, slKali:1 };   // Hard: SL dasar per pair, TP 2x SL
+const FOREX_REM_V2=Object.assign({},FOREX_REM,{rr:2,jatahPair:2,slKali:1,maxLossHari:0,mulai:ATURAN_V2_EFEKTIF});
+function aturanBulan(bk){ return {v:'v2',AA:AUDIT_ATURAN_V2,R:FOREX_REM_V2,uji:false}; }   // berlaku retroaktif ke semua bulan   // v1 tidak dipakai lagi; bulan < November 2026 = uji coba (tidak dinilai)
 function awalAturan(bk){ return String(bk||'')===ATURAN_V2_EFEKTIF.slice(0,7) ? ATURAN_V2_EFEKTIF : '0000-00-00'; }   // tanggal mulai dinilai dalam bulan itu
 function aturanSekarang(){ return aturanBulan(new Date().toISOString().slice(0,7)); }
 const ATURAN_EFEKTIF='2026-10-24';   // tanggal aturan resmi v1 ditetapkan & mulai berlaku
