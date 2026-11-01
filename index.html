@@ -6423,20 +6423,13 @@ function renderStrategiRisikoHtml(g, bufferVp){
       }));
     });
   } else if(g==='XAUUSD'){
-    const state=hitungStateStrategiGold(g);
+    // Analis GOLD pakai kalkulator HARD (500:500, RR 1:1) — flat, tidak ada progresi 200:400 / 400:500
     const mult=estimasiMultiplierVp(g);
-    let slBerikutnya, catatanState;
-    if(state==='A'){
-      slBerikutnya=200;
-      catatanState='Posisi saat ini: <b>200:400</b> (state dasar — sinyal terakhir Loss, atau belum ada sinyal bulan ini)';
-    } else {
-      slBerikutnya=400;
-      catatanState='Posisi saat ini: <b>400:500</b> (state lanjutan — lagi dalam rentetan Win dari 200:400 atau lanjut Win di 400:500)';
-    }
     kartuKartu.push(renderSatuKartuInstrumen({
-      judul:'📐 Strategi Gold (Progresif)', slBerikutnya, catatanState, mult,
-      sumberRasio:'rata-rata histori sinyal channel ini',
-      aturanTeks:'Aturan: Win → naik ke jenjang berikutnya. Loss (dari 400:500) → balik ke 200:400.',
+      judul:'📐 Strategi Gold (Hard 500:500)', slBerikutnya:500,
+      catatanState:'Mode <b>Hard</b> — SL:TP selalu <b>500:500</b> (RR 1:1), tidak berubah walau menang atau kalah',
+      mult, sumberRasio:'rata-rata histori sinyal channel ini',
+      aturanTeks:'Aturan: SL:TP tetap 500:500 (Hard). Tidak ada progresi.',
       bufferVp
     }));
   } else {
