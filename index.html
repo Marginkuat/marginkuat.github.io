@@ -15842,7 +15842,7 @@ function renderRemForex(){
 
 // ══ STRATEGI & TINGKAT KERUGIAN UNTUK CALON INVESTOR (berlaku Nov 2026 – Jan 2027) ══
 // Tidak bergantung data bulan berjalan: dihitung dari aturan yang sudah disepakati, lalu diskalakan ke modal & lot investor.
-const STRATEGI_PERIODE={mulai:'2026-10-24', akhir:'2027-01-24', teks:'24 Okt 2026 – 24 Jan 2027 (3 bulan uji, lalu dievaluasi)'};
+const STRATEGI_PERIODE={mulai:'2026-11-02', akhir:null, teks:'mulai 2 Nov 2026, berlaku sampai tidak ditentukan'};
 function renderStrategiInvestor(){
   const wrap=document.getElementById('batasDDStrategiWrap'); if(!wrap) return;
   const mEl=document.getElementById('batasDDModalInv'), lEl=document.getElementById('batasDDLotInv');
@@ -15913,7 +15913,7 @@ function renderStrategiInvestor(){
 // Tingkat bukti: PASTI (rencana SL/TP tercatat / hitungan jatah), KUAT (hasil identik dengan RR yang salah), INDIKASI (perlu konfirmasi).
 const AUDIT_ATURAN={ emas:{sl:500,tp:500,rr:1,jatah:5}, forexRR:3, jatahPair:3 };
 const ATURAN_V2_EFEKTIF='2026-10-01';   // Aturan v2 analis DINILAI mundur sejak 1 Oktober 2026
-const ATURAN_V2_DITETAPKAN='2026-10-26';   // tetapi aturan ini dibuat/ditetapkan pada 26 Oktober 2026 (investor harus tahu)
+const ATURAN_V2_DITETAPKAN='2026-11-02';   // aturan ini dibuat/ditetapkan pada 2 November 2026, berlaku hari ini sampai tidak ditentukan; dinilai mundur sejak 1 Oktober 2026
 const AUDIT_ATURAN_V2={ emas:{sl:500,tp:500,rr:1,jatah:5}, forexRR:2, jatahPair:2, slKali:1 };   // Hard: SL dasar per pair, TP 2x SL
 const FOREX_REM_V2=Object.assign({},FOREX_REM,{rr:2,jatahPair:2,slKali:1,maxLossHari:0,mulai:ATURAN_V2_EFEKTIF});
 function aturanBulan(bk){ return {v:'v2',AA:AUDIT_ATURAN_V2,R:FOREX_REM_V2,uji:String(bk||'')<ATURAN_V2_EFEKTIF.slice(0,7)}; }   // v1 tidak dipakai lagi; bulan < November 2026 = uji coba (tidak dinilai)
@@ -15999,7 +15999,7 @@ function renderAudit(){
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
   const ikon={pasti:'❌ PASTI',kuat:'❌ KUAT',indikasi:'⚠️ INDIKASI'}, warnaSev={pasti:'#F87171',kuat:'#F87171',indikasi:'#FACC15'};
   const fmtT=(t,j)=>t?`${t.slice(8)}/${t.slice(5,7)}${j?' '+j:''}`:'-';
-  const efektifTeks='24 Okt 2026';
+  const efektifTeks='1 Okt 2026';
   const itemHtml=f=>{ const r=f.r, pp=parseFloat(r.pips||0);
     return `<div style="border-top:1px solid var(--border);padding:6px 0"><div style="font-size:10px;color:#E5E7EB;line-height:1.5"><b>${f.nm}</b> · buka ${fmtT(r.tanggalBuka||r.tanggal,r.jamBuka)} → tutup ${fmtT(r.tanggal,r.jam)} · <b style="color:${pp<0?'#F87171':'#4ADE80'}">${pp>0?'+':''}${Math.round(pp*10)/10} pips</b>${r.slPips!=null?` · rencana SL ${r.slPips}/TP ${r.tpPips}`:''}${f.pra?` <span style="color:#E5E7EB">🕰️ sebelum ${efektifTeks}</span>`:''}</div>${f.masalah.map(m=>`<div style="font-size:10px;line-height:1.5;padding-left:8px"><b style="color:${warnaSev[m.sev]}">${ikon[m.sev]}</b> ${m.aturan}<br><span style="color:#E5E7EB">${m.detail}</span></div>`).join('')}</div>`; };
   const blok=['XAUUSD','FOREX'].map(g=>{
@@ -16010,7 +16010,7 @@ function renderAudit(){
     const warna=(h.n===0||h.ujiCoba)?'#E5E7EB':pelBaru?'#F87171':(indBaru||retro.length)?'#FACC15':'#4ADE80';
     let judul;
     if(h.n===0) judul='Belum ada sinyal closed sejak aturan berlaku'+(h.ujiN?` (${h.ujiN} sinyal sebelum 1 Okt = tidak dinilai)`:'');
-    else if(h.ujiCoba) judul=`🧪 Bulan uji coba — RR, SL, dan TP masih campur. Aturan Resmi v2 dinilai sejak 1 Oktober 2026 (ditetapkan 26 Oktober 2026); sinyal bulan ini tidak dinilai (${h.n} sinyal tercatat).`;
+    else if(h.ujiCoba) judul=`🧪 Bulan uji coba — RR, SL, dan TP masih campur. Aturan Resmi v2 dinilai sejak 1 Oktober 2026 (ditetapkan 2 November 2026); sinyal bulan ini tidak dinilai (${h.n} sinyal tercatat).`;
     else if(!h.flags.length) judul=`✅ ${h.n} sinyal sesuai aturan, tidak ditemukan penyimpangan`;
     else judul=(baru.length?(pelBaru?`❌ ${pelBaru} pelanggaran sejak ${efektifTeks}`:`✅ tidak ada pelanggaran pasti sejak ${efektifTeks}`)+(indBaru?` · ⚠️ ${indBaru} indikasi`:''):`✅ tidak ada penyimpangan sejak ${efektifTeks}`)+
       (retro.length?`<br><span style="font-size:11px;color:#E5E7EB">🕰️ ${retro.length} dari ${h.n} sinyal menyimpang dari aturan tetapi dibuka SEBELUM ${efektifTeks} (aturan belum ada): ${pelRetro} jelas · ${indRetro} indikasi. Dicatat terbuka sebagai catatan retroaktif.</span>`:'');
@@ -16093,13 +16093,13 @@ async function renderAturanResmiV2(){
   wrap.innerHTML='';   // kartu Aturan Resmi v1 dihapus dari tampilan; hanya v2 yang tampil
   const b=t=>`<div style="font-size:10px;color:#E5E7EB;line-height:1.7">${t}</div>`;
   wrap.insertAdjacentHTML('beforeend',`<div id="aturanV2Card" style="background:var(--bg0);border:2px dashed #C8A84B;border-radius:10px;padding:12px;margin-top:10px">
-    <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:2px">📜 Aturan Resmi v2 — ditetapkan 26 Oktober 2026, dinilai mundur sejak 1 Oktober 2026</div>
+    <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:2px">📜 Aturan Resmi v2 — ditetapkan 2 November 2026, dinilai mundur sejak 1 Oktober 2026</div>
     ${b(`<b>Emas (XAUUSD, timeframe bebas H4 / D1 / W1):</b> SL ${A.emas.slPips} / TP ${A.emas.tpPips} pips (RR 1:1) · jatah ${A.emas.jatahOrderPerBulan} order per bulan · <b>stop saat untung bersih +${A.emas.tpPips} pips</b> (contoh: loss, win, win); jatah habis juga stop`)}
     ${b(`<b>Forex (kedua channel):</b> <b>SL per pair = Hard (Datuk EURUSD 30/45 pips, Datuk Crypto 89 45/60 pips)</b>, <b>TP 2× SL (RR 1:2)</b> · jatah <b>${R.jatahPair} order per pair per bulan</b> · <b>win langsung stop</b> · <b>2 loss di satu pair langsung stop, walau terjadi di hari yang sama</b> (tidak ada jeda harian)`)}
     ${b(`<b>Cara buka order:</b> hanya 1 order berjalan per pair (tidak dibuka sekaligus). Order berikutnya baru dibuka setelah order sebelumnya kena SL.`)}
     ${b(`<b>Audit — kategori menyimpang:</b> hanya dua, yaitu <b>jatah melebihi</b> dan <b>RR melebihi / kurang</b>. Tidak menyimpang: order pertama win lalu stop; emas loss, win, win lalu stop; forex loss, win lalu stop.`)}
     ${b(`<b>Stop gabungan:</b> ${nmChannelV2('XAUUSD')} ${BX.stop} pips · ${nmChannelV2('FOREX')} ${BF.stop} pips`)}
-    <div style="font-size:9px;color:#E5E7EB;line-height:1.6;margin-top:6px"><b>Sidik jari v2 (SHA-256):</b> <span style="font-family:monospace;word-break:break-all;color:#E5E7EB">${h||'tidak tersedia'}</span><br>${st}<br><b>Aturan ini dibuat dan ditetapkan pada 26 Oktober 2026.</b> Sinyal 1–25 Oktober dinilai mundur (retroaktif) agar kepatuhan terlihat sejak awal bulan, dan diberi tanda 🕰️. Sinyal sebelum 1 Oktober 2026 tidak dinilai.</div>
+    <div style="font-size:9px;color:#E5E7EB;line-height:1.6;margin-top:6px"><b>Sidik jari v2 (SHA-256):</b> <span style="font-family:monospace;word-break:break-all;color:#E5E7EB">${h||'tidak tersedia'}</span><br>${st}<br><b>Aturan ini dibuat dan ditetapkan pada 2 November 2026.</b> Sinyal 1–25 Oktober dinilai mundur (retroaktif) agar kepatuhan terlihat sejak awal bulan, dan diberi tanda 🕰️. Sinyal sebelum 1 Oktober 2026 tidak dinilai.</div>
   </div>`);
 }
 function nmChannelV2(g){ return (cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||(g==='XAUUSD'?'Datuk EURUSD':'Datuk Crypto 89'); }
