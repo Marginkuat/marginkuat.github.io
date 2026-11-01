@@ -3714,6 +3714,21 @@ async function loadBalance(){
 }
 
 // ══ KALENDER ══
+// ── Kalender Trading: label Umum/Agresif/Risiko tinggi dihitung HARIAN dari saldo MT4 hari itu
+//    (bukan modal acuan bulanan). Fungsi ini khusus kalender; profilEfektifRow tetap dipakai tool lain.
+function calProfilHarian(row, dateStr){
+  const tgl=String(dateStr||(row&&row.tanggal)||'');
+  if(tgl<MT4_ATURAN_MULAI) return (row&&row.profil_risiko)?{kode:row.profil_risiko,pct:0}:null;
+  let basis=parseFloat(row&&row.saldo_mt4);
+  if(!(basis>0)){
+    const prev=(allSaldoData||[]).filter(x=>String(x.tanggal)<=tgl && x.saldo_mt4!=null && parseFloat(x.saldo_mt4)>0)
+      .sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
+    basis=prev.length?parseFloat(prev[prev.length-1].saldo_mt4):0;
+  }
+  if(!(basis>0)) return (row&&row.profil_risiko)?{kode:row.profil_risiko,pct:0}:null;
+  const risk=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01), pct=risk/basis*100;
+  return {kode: pct<=2?'umum':(pct<=5?'agresif':'tinggi'), pct};
+}
 function renderKalender(){
   const bulanNama=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   document.getElementById('calTitle').textContent=`${bulanNama[calMonth]} ${calYear}`;
@@ -3744,7 +3759,7 @@ function renderKalender(){
       if(p!==0) amtHtml=`<div class="cal-amt" style="color:${p>0?'#4ADE80':'#F87171'}">${p>0?'+':''}${fc(p)}</div>`;
     }
     let profilDotHtml='';
-    const efK=row?profilEfektifRow(row):null;
+    const efK=row?calProfilHarian(row,dateStr):null;
     if(efK && (efK.kode==='tinggi' || PROFIL_RISIKO_META[efK.kode])){
       const pm=PROFIL_RISIKO_META[efK.kode];
       c.style.position='relative';
