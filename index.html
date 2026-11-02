@@ -1772,7 +1772,7 @@ function renderInvCalcDisclaimer(){
       <div style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.5">Modal acuan = modal MINIMAL agar kerugian maksimal 1 bulan tidak lebih dari 6% (dihitung otomatis dari aturan v2), TIDAK memakai saldo akun/sen di situs ini. Otomatis dari sinyal closed yang di-input di bawah. Dihitung dalam $ (pips × nilai pip lot acuan), drawdown (DD) diukur dari PUNCAK bersih bulan itu. Loss dihitung berdasarkan tanggal <b>Closed at</b>. Investor & admin sama-sama bisa cek; hanya admin yang bisa ubah batas.</div>
       <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
         <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🧮 Masukkan Modal Anda di Sini</div>
-        <div style="font-size:9px;color:#E5E7EB;margin-bottom:8px;line-height:1.5">Ketik modal Anda, lalu batas kerugian, drawdown (DD), dan sisa ruang untuk modal Anda muncul di bawahnya. Lot boleh dikosongkan (otomatis dihitung sebanding dengan acuan $2000). Hanya simulasi di layar Anda, tidak disimpan ke server dan tidak mengubah batas analis.</div>
+        <div style="font-size:9px;color:#E5E7EB;margin-bottom:8px;line-height:1.5">Ketik modal Anda, lalu batas kerugian, drawdown (DD), dan sisa ruang untuk modal Anda muncul di bawahnya. Lot boleh dikosongkan (otomatis dihitung sebanding dengan acuan minimal per channel (Datuk EURUSD $4.917, Datuk Crypto 89 $1.450)). Hanya simulasi di layar Anda, tidak disimpan ke server dan tidak mengubah batas analis.</div>
         <div style="display:flex;gap:8px">
           <div style="flex:1"><label class="lbl">Modal Anda ($)</label><input class="inp" type="number" step="any" min="1" id="batasDDModalInv" placeholder="mis. 1000" oninput="renderBatasDDSim()"></div>
           <div style="flex:1"><label class="lbl">Lot (minimal 0,01)</label><input class="inp" type="number" step="0.01" min="0.01" id="batasDDLotInv" placeholder="otomatis" oninput="renderBatasDDSim()"></div>
@@ -15259,6 +15259,7 @@ function renderBatasDDSim(){
     const stop=c.stopUsd*k, loss1=c.riskLossUsd*k, ddNow=h.curDD*k, ddMax=h.maxDD*k, cum=h.cum*k;
     const pStop=stop/modal*100, pLoss=loss1/modal*100, pNow=ddNow/modal*100, pMax=ddMax/modal*100;
     const [wr,tx]=nilai(pStop);
+    const minM=batasAturanV2(g).modal, syaratOk=modal>=minM;
     return `<div style="background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:6px">
       <div style="font-size:10px;font-weight:800;color:#E5E7EB;margin-bottom:3px">${label}</div>
       <div style="font-size:10px;color:#E5E7EB;line-height:1.7">
@@ -15266,6 +15267,7 @@ function renderBatasDDSim(){
         DD sekarang <b>${_bdFmt(-ddNow)}</b> (${pNow.toFixed(1)}%) · DD terdalam <b>${_bdFmt(-ddMax)}</b> (${pMax.toFixed(1)}%)<br>
         1 loss = ${_bdFmt(-loss1)} (${pLoss.toFixed(2)}%) · batas stop ${_bdFmt(-stop)} = <b style="color:${wr}">${pStop.toFixed(1)}% modal (${tx})</b><br>
         Level peringatan ${_bdFmt(-c.warnUsd*k)} · sisa ruang sebelum stop <b>${_bdFmt(Math.max(0,stop-ddNow))}</b> ≈ <b>${Math.floor(Math.max(0,stop-ddNow)/loss1+1e-9)} loss lagi</b><br>
+        ${syaratOk?'':`<div style="margin-top:4px;padding:6px 8px;border-radius:6px;background:#7F1D1D;border:1px solid #F87171;color:#FECACA;font-weight:800">❌ TIDAK MEMENUHI SYARAT: modal minimal $${minM} untuk batas rugi 6%/bulan. Dengan modal $${modal}, DD bulan terdalam ${pMax.toFixed(1)}% dan batas stop ${_bdFmt(-stop)} = ${pStop.toFixed(1)}% modal (melewati 6%).</div>`}<br>
         Status: <b style="color:${h.n===0?'#E5E7EB':(h.curDD>=c.stopUsd-1e-9?'#F87171':(h.curDD>=c.warnUsd-1e-9?'#FACC15':'#4ADE80'))}">${h.n===0?'belum ada sinyal bulan ini':(h.curDD>=c.stopUsd-1e-9?'🛑 batas kena, stop':(h.curDD>=c.warnUsd-1e-9?'⚠️ peringatan, pilih entry paling jelas':'✅ aman'))}</b>
       </div></div>`;
   }).join('');
