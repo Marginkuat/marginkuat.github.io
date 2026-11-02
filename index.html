@@ -15078,8 +15078,8 @@ loadTahunanPengelolaProfil();
 // Setting disimpan di app_settings key 'batas_dd_XAUUSD' / 'batas_dd_FOREX' (JSON).
 // ══════════════════════════════════════════════════════════════════════
 const BATAS_DD_DEFAULT={
-  XAUUSD:{modal:1000, lot:0.01, stopUsd:200, warnUsd:100, riskLossUsd:20, maxLossPerHari:1},
-  FOREX: {modal:1000, lot:0.01, stopUsd:145, warnUsd:72.5, riskLossUsd:5.5, maxLossPerHari:1}
+  XAUUSD:{modal:1000, lot:0.01, stopUsd:60, warnUsd:30, riskLossUsd:50, maxLossPerHari:1},   // stop 6% dari $1.000 = $60 = 600 pips (1 pip = $0,10)
+  FOREX: {modal:1000, lot:0.01, stopUsd:60, warnUsd:30, riskLossUsd:5.5, maxLossPerHari:1}
 };
 let cachedBatasDD={XAUUSD:Object.assign({},BATAS_DD_DEFAULT.XAUUSD), FOREX:Object.assign({},BATAS_DD_DEFAULT.FOREX)};
 let batasDDBulanDipilih=null;
@@ -15130,7 +15130,7 @@ function _bdPilihBulanOpsi(){
 const BATAS_RUGI_BULAN_PCT_ANALIS=6;   // maksimal rugi 1 bulan = 6% dari modal
 function batasAturanV2(g){
   const R=FOREX_REM_V2, E=METODE_DEF['H4-500'], f=remForexBatas(g,R);
-  const stopPips=(g==='XAUUSD'?E.sl*E.jatah:0)+f.stop;                 // batas REM (pips)
+  const stopPips=1000*BATAS_RUGI_BULAN_PCT_ANALIS/100/0.1;               // 6% dari acuan $1.000 = $60 = 600 pips (1 pip = $0,10, gold & forex sama)
   const stopUsd=Math.round(stopPips*0.1*100)/100;                       // lot 0,01: 1 pip = $0,10
   const modal=Math.ceil(stopUsd/(BATAS_RUGI_BULAN_PCT_ANALIS/100)-1e-9); // modal minimal agar batas = 6%
   const nPair=R.kanal[g].pairs.length;
@@ -15300,7 +15300,7 @@ function metodeEfektif(g,bulanKey){
   const m=METODE_DEF[key]; if(!m) return null;
   const k=(cachedBatasDD[g].lot||0.01)/0.01;
   const risk=m.risk*k;
-  const stop=m.stopPips?m.stopPips*PIP_VALUE_USD_PER_0_01_LOT*k:risk*m.jatah;
+  const stop=1000*BATAS_RUGI_BULAN_PCT_ANALIS/100;   // v3: stop bulanan = 6% dari acuan $1.000 = $60 (bukan jatah x risiko)
   return Object.assign({key, diatur:!!METODE_DEF[cachedMetodeBulan.XAUUSD[bulanKey]]}, m, {riskUsd:risk, stopUsd:stop, warnUsd:stop/2, basisNet:!!m.campur, k});
 }
 async function editMetodeBulan(g){
