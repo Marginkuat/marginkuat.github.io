@@ -1527,7 +1527,7 @@ function aturanPropMt4(){
     const bk=t.slice(0,7); bulanTerakhir=bk;
     const awal=modal+cum;
     if(puncakBulan[bk]===undefined){ awalBulan[bk]=awal; puncakBulan[bk]=awal; }
-    const base=awalBulan[bk];                   // v3: basis = saldo awal bulan
+    const base=puncakBulan[bk];                 // basis = saldo tertinggi bulan itu (mulai dari saldo awal bulan)
     baseHarian[t]=base;
     cum+=p;
     const eq=modal+cum;
@@ -1536,14 +1536,14 @@ function aturanPropMt4(){
     const pctHari=lossHari/base*100;
     if(pctHari>maxHarian){ maxHarian=pctHari; tglHarian=t; }
     // v3: batas harian dihapus (aturan hanya 6% per bulan)
-    const pk=awalBulan[bk];   // v3: DD bulan dari saldo awal bulan
+    const pk=puncakBulan[bk];
     const ddBulan=Math.max(0, pk-eq)/pk*100;
     bulanMaxDD[bk]=Math.max(bulanMaxDD[bk]||0, ddBulan);
     if(ddBulan>MT4_PROP.maxPct && !bulanBreach[bk]){
       bulanBreach[bk]=true;
       pelanggaran.push({tgl:t, jenis:'DD max bulan', pct:ddBulan, batas:MT4_PROP.maxPct});
     }
-    baseNow=awalBulan[bk]; pHari=p; eqNow=eq;
+    baseNow=puncakBulan[bk]; pHari=p; eqNow=eq;
   });
   let bulanTerburuk='', ddBulanTerburuk=0;
   Object.keys(bulanMaxDD).forEach(bk=>{ if(bulanMaxDD[bk]>ddBulanTerburuk){ ddBulanTerburuk=bulanMaxDD[bk]; bulanTerburuk=bk; } });
@@ -1596,6 +1596,8 @@ function aturanPropHtml(p,a){
     <div>DD max bulan: maks <b>${MT4_PROP.maxPct}%</b>${nom(st.limitBulanNom)} — bulan ${namaBulan(st.bulanTerakhir)} <b>${f1(st.ddBulanIni)}%</b> ${badge(st.okBulanIni)}</div>
     <div>DD max terburuk: <b>${f1(st.ddBulanTerburuk)}%</b> (${namaBulan(st.bulanTerburuk)})</div>
     <div style="margin-top:6px;padding-top:6px;border-top:1px dashed ${p.border}">Batas loss 1 trade sekarang: <b>${f1(st.batasPct)}%</b>${nom(st.batas)}</div>
+    <div style="color:#E5E7EB">DD per hari (acuan, tidak wajib): tertinggi <b>${f1(st.maxHarian)}%</b>${st.tglHarian?' ('+tglF(st.tglHarian)+')':''} · acuan 3%</div>
+    <div style="color:#E5E7EB">Target 10% dari saldo awal bulan (${f2(st.awalBlnNow)}): <b>${f2(0.1*st.awalBlnNow)}</b> · profit bulan ini ${f2(st.eqNow-st.awalBlnNow)} ${st.eqNow-st.awalBlnNow>=0.1*st.awalBlnNow?'✅ tercapai':'belum tercapai (tidak dihitung melanggar)'}</div>
     <div>Kalau kena SL 1 order: rugi <b>${f1(a.pct)}%</b> dari saldo → ${aman?'<b style="color:#4ADE80">✅ TIDAK menyalahi aturan</b>':`<b style="color:#F87171">⛔ MENYALAHI aturan DD (batas 6% per bulan)</b>`}</div>
     ${aman?'':`<div style="color:#FDE68A">SL maks yang aman dengan lot 0,01 saat ini: <b>±${slMaks} pips</b>. RR 1:1 dengan SL ${slSekarang} pips akan melanggar aturan.</div>`}
     ${daftar}
