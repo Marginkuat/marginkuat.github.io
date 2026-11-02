@@ -16201,7 +16201,7 @@ async function kunciAturanResmi(ver){
   try{ const gabung={riwayat:lama.riwayat.concat([baru])}; await simpanSettingRem('aturan_terkunci', JSON.stringify(gabung)); cachedAturanKunci=gabung; toast('🔒 Aturan '+A.versi+' terkunci'); renderBatasDDCard(); }
   catch(e){ console.error(e); cachedAturanKunci=lama; toast('❌ Gagal mengunci: '+(e.message||'').slice(0,100)); }
 }
-function remPipsAturan(){ const E=METODE_DEF['H4-500'], RA=aturanSekarang().R; return { XAUUSD:E.sl*E.jatah+remForexBatas('XAUUSD',RA).stop, FOREX:remForexBatas('FOREX',RA).stop }; }
+function remPipsAturan(){ const pips=Math.round(1000*BATAS_RUGI_BULAN_PCT_ANALIS/100/0.1); return { XAUUSD:pips, FOREX:pips }; }   // v3: 6% dari $1.000 = $60 = 600 pips, gold & forex sama
 async function samakanRemPips(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const t=remPipsAturan();
