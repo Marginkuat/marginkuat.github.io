@@ -15078,8 +15078,8 @@ loadTahunanPengelolaProfil();
 // Setting disimpan di app_settings key 'batas_dd_XAUUSD' / 'batas_dd_FOREX' (JSON).
 // ══════════════════════════════════════════════════════════════════════
 const BATAS_DD_DEFAULT={
-  XAUUSD:{modal:1000, lot:0.01, stopUsd:60, warnUsd:30, riskLossUsd:50, maxLossPerHari:1},   // stop 6% dari $1.000 = $60 = 600 pips (1 pip = $0,10)
-  FOREX: {modal:1000, lot:0.01, stopUsd:60, warnUsd:30, riskLossUsd:5.5, maxLossPerHari:1}
+  XAUUSD:{modal:4920, lot:0.01, stopUsd:295, warnUsd:147.5, riskLossUsd:50, maxLossPerHari:1},   // Datuk EURUSD: acuan $4.920, stop 6% = $295 = 2950 pips   // stop 6% dari $1.000 = $60 = 600 pips (1 pip = $0,10)
+  FOREX: {modal:1450, lot:0.01, stopUsd:87, warnUsd:43.5, riskLossUsd:5.5, maxLossPerHari:1}   // Datuk Crypto 89: acuan $1.450, stop 6% = $87 = 870 pips
 };
 let cachedBatasDD={XAUUSD:Object.assign({},BATAS_DD_DEFAULT.XAUUSD), FOREX:Object.assign({},BATAS_DD_DEFAULT.FOREX)};
 let batasDDBulanDipilih=null;
@@ -15130,7 +15130,7 @@ function _bdPilihBulanOpsi(){
 const BATAS_RUGI_BULAN_PCT_ANALIS=6;   // maksimal rugi 1 bulan = 6% dari modal
 function batasAturanV2(g){
   const R=FOREX_REM_V2, E=METODE_DEF['H4-500'], f=remForexBatas(g,R);
-  const stopPips=1000*BATAS_RUGI_BULAN_PCT_ANALIS/100/0.1;               // 6% dari acuan $1.000 = $60 = 600 pips (1 pip = $0,10, gold & forex sama)
+  const stopPips=(g==='XAUUSD'?2950:870);   // Datuk EURUSD 2950 pips ($295, acuan $4.920); Datuk Crypto 89 870 pips ($87, acuan $1.450)
   const stopUsd=Math.round(stopPips*0.1*100)/100;                       // lot 0,01: 1 pip = $0,10
   const modal=Math.ceil(stopUsd/(BATAS_RUGI_BULAN_PCT_ANALIS/100)-1e-9); // modal minimal agar batas = 6%
   const nPair=R.kanal[g].pairs.length;
@@ -15300,7 +15300,7 @@ function metodeEfektif(g,bulanKey){
   const m=METODE_DEF[key]; if(!m) return null;
   const k=(cachedBatasDD[g].lot||0.01)/0.01;
   const risk=m.risk*k;
-  const stop=1000*BATAS_RUGI_BULAN_PCT_ANALIS/100;   // v3: stop bulanan = 6% dari acuan $1.000 = $60 (bukan jatah x risiko)
+  const stop=295;   // v3: stop bulanan Datuk EURUSD = 6% dari acuan $4.920 = $295 (2950 pips)
   return Object.assign({key, diatur:!!METODE_DEF[cachedMetodeBulan.XAUUSD[bulanKey]]}, m, {riskUsd:risk, stopUsd:stop, warnUsd:stop/2, basisNet:!!m.campur, k});
 }
 async function editMetodeBulan(g){
@@ -16201,7 +16201,7 @@ async function kunciAturanResmi(ver){
   try{ const gabung={riwayat:lama.riwayat.concat([baru])}; await simpanSettingRem('aturan_terkunci', JSON.stringify(gabung)); cachedAturanKunci=gabung; toast('🔒 Aturan '+A.versi+' terkunci'); renderBatasDDCard(); }
   catch(e){ console.error(e); cachedAturanKunci=lama; toast('❌ Gagal mengunci: '+(e.message||'').slice(0,100)); }
 }
-function remPipsAturan(){ const pips=Math.round(1000*BATAS_RUGI_BULAN_PCT_ANALIS/100/0.1); return { XAUUSD:pips, FOREX:pips }; }   // v3: 6% dari $1.000 = $60 = 600 pips, gold & forex sama
+function remPipsAturan(){ return { XAUUSD:2950, FOREX:870 }; }   // v3: Datuk EURUSD 2950 pips ($295, acuan $4.920); Datuk Crypto 89 870 pips ($87, acuan $1.450)
 async function samakanRemPips(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const t=remPipsAturan();
@@ -16254,23 +16254,23 @@ function renderRekapSemuaBulan(){
   loadBatasDD=async function(){ await _lb4.apply(this,arguments); await loadAturanKunci(); try{ perbaruiStatusKunci(); }catch(e){} };
 })();
 
-// ══ DD ANALIS (WAJIB): acuan modal $1.000, harian 3% & bulanan 6%, peringatan di banner ══
-const ANALIS_DD={modalAcuan:1000, usdPerPip:0.1, harianPct:3, bulanPct:6};
-function hitungDDAnalis(){
+// ══ DD ANALIS (WAJIB): per channel, acuan masing-masing, harian 3% & bulanan 6%, peringatan di banner ══
+const ANALIS_DD={usdPerPip:0.1, harianPct:3, bulanPct:6, channel:[{g:'XAUUSD', nama:'Datuk EURUSD', modal:4920},{g:'FOREX', nama:'Datuk Crypto 89', modal:1450}]};
+function hitungDDAnalis(g, modal){
   const rows=[];
-  ['XAUUSD','FOREX'].forEach(g=>(cachedSinyalAnalis[g]||[]).forEach(r=>{
+  (cachedSinyalAnalis[g]||[]).forEach(r=>{
     if(r.status==='running') return;
     const pips=parseFloat(r.pips); if(!isFinite(pips)) return;
-    rows.push({tgl:String(r.tanggal), jam:String(r.jam||'00:00'), usd:pips*ANALIS_DD.usdPerPip, simbol:(r.simbol||g)});
-  }));
+    rows.push({tgl:String(r.tanggal), jam:String(r.jam||'00:00'), usd:pips*ANALIS_DD.usdPerPip});
+  });
   rows.sort((a,b)=>(a.tgl+a.jam).localeCompare(b.tgl+b.jam));
   const perHari={}; rows.forEach(x=>{ perHari[x.tgl]=(perHari[x.tgl]||0)+x.usd; });
-  const pelanggaran=[], peak={}, bulanMax={}; let cum=0, maxHarian=0, tglHarian='', bulanNow='', eqNow=ANALIS_DD.modalAcuan;
+  const pelanggaran=[], peak={}, bulanMax={}; let cum=0, maxHarian=0, tglHarian='', bulanNow='', eqNow=modal;
   Object.keys(perHari).sort().forEach(t=>{
-    const bk=t.slice(0,7), awal=ANALIS_DD.modalAcuan+cum;
-    if(peak[bk]===undefined) peak[bk]=awal;          // basis = saldo awal bulan, naik ikut saldo tertinggi
+    const bk=t.slice(0,7), awal=modal+cum;
+    if(peak[bk]===undefined) peak[bk]=awal;          // basis = saldo awal bulan, naik ikut saldo tertinggi bulan itu
     const base=peak[bk], p=perHari[t];
-    cum+=p; const eq=ANALIS_DD.modalAcuan+cum;
+    cum+=p; const eq=modal+cum;
     if(eq>peak[bk]) peak[bk]=eq;
     const pctHari=p<0? -p/base*100 : 0;
     if(pctHari>maxHarian){ maxHarian=pctHari; tglHarian=t; }
@@ -16286,22 +16286,27 @@ function hitungDDAnalis(){
 function renderBannerDDAnalis(){
   const wrap=document.getElementById('batasDDAuditWrap'); if(!wrap) return;
   const lama=document.getElementById('ddAnalisBanner'); if(lama) lama.parentNode.removeChild(lama);
-  const h=hitungDDAnalis(); if(!h.n) return;
   const f1=v=>(Math.round(v*10)/10).toString().replace('.',',');
   const tglF=t=>String(t).split('-').reverse().join('/');
-  const bulanIni=h.pelanggaran.filter(x=>x.tgl.slice(0,7)===h.bulanNow);
-  const adaLanggar=h.pelanggaran.length>0;
-  const warna=bulanIni.length?'#F87171':(adaLanggar?'#FACC15':'#4ADE80');
-  const bg=bulanIni.length?'#7F1D1D':'rgba(0,0,0,.35)';
-  const judul=bulanIni.length?'⛔ ANALIS MELANGGAR DD BULAN INI':(adaLanggar?'⚠️ Ada pelanggaran DD di bulan sebelumnya':'✅ DD analis dalam batas');
-  const daftar=h.pelanggaran.slice(-8).reverse().map(x=>`• ${tglF(x.tgl)} — ${x.jenis} ${f1(x.pct)}% (batas ${x.batas}%)`).join('<br>');
-  const html=`<div id="ddAnalisBanner" style="margin:0 0 10px;padding:10px 12px;border-radius:10px;border:1px solid ${warna};background:${bg};color:#FFFFFF;font-size:11px;line-height:1.6">
-    <div style="font-weight:800;color:${warna}">${judul}</div>
-    <div style="font-size:10px;color:#E5E7EB">Acuan modal $${ANALIS_DD.modalAcuan} · DD harian maks ${ANALIS_DD.harianPct}% · DD bulanan maks ${ANALIS_DD.bulanPct}% (dari saldo tertinggi bulan itu, mulai saldo awal bulan)</div>
-    <div style="font-size:10px">Saldo acuan sekarang: <b>$${f1(h.eqNow)}</b> · DD bulan ini <b>${f1(h.ddBulanNow)}%</b> · DD harian tertinggi <b>${f1(h.maxHarian)}%</b>${h.tglHarian?' ('+tglF(h.tglHarian)+')':''}</div>
-    ${adaLanggar?`<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #4A4A4A;font-size:10px"><b>Pelanggaran tercatat:</b><br>${daftar}</div>`:''}
-  </div>`;
-  wrap.insertAdjacentHTML('afterbegin', html);
+  let blok='', adaBulanIni=false, adaData=false;
+  ANALIS_DD.channel.forEach(c=>{
+    const h=hitungDDAnalis(c.g, c.modal); if(!h.n) return;
+    adaData=true;
+    const bulanIni=h.pelanggaran.filter(x=>x.tgl.slice(0,7)===h.bulanNow);
+    if(bulanIni.length) adaBulanIni=true;
+    const warna=bulanIni.length?'#F87171':(h.pelanggaran.length?'#FACC15':'#4ADE80');
+    const daftar=h.pelanggaran.slice(-6).reverse().map(x=>`• ${tglF(x.tgl)} — ${x.jenis} ${f1(x.pct)}% (batas ${x.batas}%)`).join('<br>');
+    blok+=`<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;border:1px solid ${warna};background:${bulanIni.length?'#7F1D1D':'rgba(0,0,0,.35)'};color:#FFFFFF;font-size:11px;line-height:1.6">
+      <div style="font-weight:800;color:${warna}">${bulanIni.length?'⛔':(h.pelanggaran.length?'⚠️':'✅')} ${c.nama} — acuan $${c.modal}</div>
+      <div style="font-size:10px">Saldo acuan sekarang <b>$${f1(h.eqNow)}</b> · DD bulan ini <b>${f1(h.ddBulanNow)}%</b> (maks 6%) · DD harian tertinggi <b>${f1(h.maxHarian)}%</b> (maks 3%)${h.tglHarian?' ('+tglF(h.tglHarian)+')':''}</div>
+      ${h.pelanggaran.length?`<div style="margin-top:4px;padding-top:4px;border-top:1px dashed #4A4A4A;font-size:10px"><b>Pelanggaran tercatat:</b><br>${daftar}</div>`:''}
+    </div>`;
+  });
+  if(!adaData) return;
+  const judul=adaBulanIni?'⛔ ANALIS MELANGGAR DD BULAN INI':'DD analis (wajib)';
+  wrap.insertAdjacentHTML('afterbegin', `<div id="ddAnalisBanner" style="margin:0 0 10px">
+    <div style="font-size:10px;font-weight:800;color:${adaBulanIni?'#F87171':'#FFFFFF'};margin-bottom:4px">${judul} · DD harian maks 3% · DD bulanan maks 6% dari saldo awal bulan (naik ikut saldo tertinggi)</div>
+    ${blok}</div>`);
 }
 (function(){ const _rb=renderBatasDDCard; renderBatasDDCard=function(){ _rb.apply(this,arguments); try{ renderBannerDDAnalis(); }catch(e){ console.error('ddAnalis', e); } }; })();
 </script>
