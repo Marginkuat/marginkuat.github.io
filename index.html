@@ -15967,13 +15967,23 @@ function auditChannel(g,bk){
     // (B) hasil realisasi vs SL/TP aturan
     if(pp<0){
       const rugi=-pp;
-      if(rugi>A.sl*1.15) tambah(x,'indikasi','Rugi melebihi SL aturan', `Rugi ${rugi} pips, SL aturan ${A.sl} (batas wajar +15% slippage ≈ ${Math.round(A.sl*1.15)}). Kemungkinan SL digeser atau dibiarkan.`);
-      else if(rugi<A.sl*0.85) tambah(x,'indikasi','Ditutup sebelum SL aturan', `Rugi ${rugi} pips, SL aturan ${A.sl}. Ditutup manual lebih awal.`);
+      const cocokHard2 = g!=='XAUUSD' && rugi>A.sl*1.15 && Math.abs(rugi-2*A.sl)<=2*A.sl*0.15;   // rugi ≈ SL Hard 2 (2× SL Hard)
+      const slMedium = (g!=='XAUUSD' && (x.nm==='GBPUSD'||x.nm==='NZDJPY'||x.nm==='USDCAD')) ? 30 : (g!=='XAUUSD' ? 40 : null);
+      const cocokMedium = slMedium!=null && Math.abs(rugi-slMedium)<=slMedium*0.15 && Math.abs(rugi-A.sl)>A.sl*0.15;
+      const SL_EMAS_ALT=[100,200,250,300,315,400];   // SL kalkulator emas selain Hard (aturan fix: Hard 500/500)
+      const slEmasAlt = g==='XAUUSD' ? SL_EMAS_ALT.find(s=>Math.abs(rugi-s)<=s*0.15 && Math.abs(rugi-A.sl)>A.sl*0.15) : null;
+      if(slEmasAlt) tambah(x,'pasti','Pelanggaran: pakai kalkulator emas selain Hard', `Rugi ${rugi} pips = SL kalkulator emas ${slEmasAlt} pips. Aturan fix: kalkulator Hard, SL ${A.sl} / TP ${A.tp}. SL/TP tidak bisa digeser setelah order dieksekusi.`);
+      else if(cocokHard2) tambah(x,'pasti','Pelanggaran: pakai kalkulator Hard 2', `Rugi ${rugi} pips = SL Hard 2 (${2*A.sl} pips). Aturan fix: kalkulator Hard, SL ${A.sl}. SL/TP tidak bisa digeser setelah order dieksekusi.`);
+      else if(cocokMedium) tambah(x,'pasti','Pelanggaran: pakai kalkulator Medium', `Rugi ${rugi} pips = SL Medium (${slMedium} pips). Aturan fix: kalkulator Hard, SL ${A.sl}. SL/TP tidak bisa digeser setelah order dieksekusi.`);
+      else if(rugi>A.sl*1.15) tambah(x,'pasti','Pelanggaran: tidak sesuai kalkulator Hard (rugi melebihi SL)', `Rugi ${rugi} pips, SL aturan ${A.sl} (batas wajar +15% slippage ≈ ${Math.round(A.sl*1.15)}). Kemungkinan SL digeser atau dibiarkan.`);
+      else if(rugi<A.sl*0.85) tambah(x,'pasti','Pelanggaran: tidak sesuai kalkulator Hard (ditutup sebelum SL)', `Rugi ${rugi} pips, SL aturan ${A.sl}. Ditutup manual lebih awal.`);
     } else if(pp>0){
       const rrHasil=pp/A.sl;
-      if(pp>=A.tp*0.85 && pp<=A.tp*1.25){ /* sesuai TP aturan */ }
+      const cocokTpHard2 = g!=='XAUUSD' && !(pp>=A.tp*0.85 && pp<=A.tp*1.25) && Math.abs(pp-2*A.tp)<=2*A.tp*0.15;
+      if(cocokTpHard2) tambah(x,'pasti','Pelanggaran: pakai kalkulator Hard 2', `Untung ${fmtP(pp)} pips = TP Hard 2 (${2*A.tp} pips). Aturan fix: kalkulator Hard, TP ${A.tp}. TP tidak bisa digeser setelah order dieksekusi.`);
+      else if(pp>=A.tp*0.85 && pp<=A.tp*1.25){ /* sesuai TP aturan */ }
       else if([].concat(A.rrSalah).some(z=>Math.abs(rrHasil-z)/z<=0.2)) tambah(x,'kuat','Hasil sama dengan RR yang salah', `Untung ${fmtP(pp)} pips ≈ RR 1:${Math.round(rrHasil*10)/10} dari SL aturan ${A.sl}. Aturan ${A.jenis}: RR ${A.rrTeks} (TP ${A.tp}). Diduga memakai RR 1:${[].concat(A.rrSalah).find(z=>Math.abs(rrHasil-z)/z<=0.2)}.`);
-      else tambah(x,'indikasi','Untung tidak sama dengan TP aturan', `Untung ${fmtP(pp)} pips, TP aturan ${A.tp} (RR ${A.rrTeks}). Ditutup manual atau TP berbeda.`);
+      else tambah(x,'pasti','Pelanggaran: tidak sesuai kalkulator Hard (untung tidak sama dengan TP)', `Untung ${fmtP(pp)} pips, TP aturan ${A.tp} (RR ${A.rrTeks}). Ditutup manual atau TP berbeda.`);
     }
   });
   // (C) jatah order: emas 5/bulan (hanya di channel emas), forex 3 per pair — dihitung urut waktu BUKA
