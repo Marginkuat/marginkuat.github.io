@@ -1852,7 +1852,7 @@ function renderInvCalcDisclaimer(){
       <input class="inp" type="number" step="0.01" id="inpRingkasVp" placeholder="-60">
       <div id="inpRingkasVpKeterangan" style="font-size:8px;color:#E5E7EB;margin-top:-4px;margin-bottom:6px"></div>
       <div style="display:flex;gap:8px"><div style="flex:1"><label class="lbl">SL rencana (pips) — untuk audit</label><input class="inp" type="number" step="any" id="inpRingkasSl" placeholder="mis. 500"></div><div style="flex:1"><label class="lbl">TP rencana (pips) — untuk audit</label><input class="inp" type="number" step="any" id="inpRingkasTp" placeholder="mis. 500"></div></div>
-      <div style="font-size:8px;color:#E5E7EB;margin-bottom:6px">Isi SL dan TP yang DIRENCANAKAN saat order dibuka. Dipakai kartu Audit untuk membuktikan RR sesuai aturan (opsional, tapi sangat disarankan).</div>
+      <div style="font-size:8px;color:#E5E7EB;margin-bottom:6px">Pakai kalkulator <b>Hard</b>. Kalau SL/TP kosong, otomatis terisi dari kalkulator Hard untuk pair ini (forex: SL sesuai pair, TP = 2× SL; emas: SL 500 / TP 500). Isi manual hanya kalau SL/TP Anda berbeda dari Hard.</div>
       <button class="btn btn-p" onclick="simpanDataHarianRingkas()" style="margin-top:10px">💾 Simpan Sinyal (pair: <span id="inpRingkasPairLabel2">Datuk EURUSD</span>)</button>
       <div id="inpRingkasStatus" style="font-size:10px;color:#E5E7EB;margin-top:8px;text-align:center"></div>
     </div>
@@ -4849,7 +4849,19 @@ function onSimbolSinyalPilihanBerubah(){
   if(manualEl) manualEl.style.display = (selEl && selEl.value==='__LAINNYA__') ? 'block' : 'none';
   autoHitungVpRingkas();
 }
+function autoIsiSlTpRencana(simbol){
+  // SL/TP rencana otomatis dari kalkulator Hard (forex: SL per pair, TP = 2× SL; gold: 500 / 500)
+  const slEl=document.getElementById('inpRingkasSl'), tpEl=document.getElementById('inpRingkasTp');
+  if(!slEl||!tpEl) return;
+  const sl = (simbol && FOREX_SL_PAIR[simbol]) || (simbol==='XAUUSD' ? 500 : null);
+  if(!sl) return;
+  if(!slEl.value || slEl.dataset.otomatis==='1'){
+    slEl.value = sl;  slEl.dataset.otomatis='1';
+    tpEl.value = (simbol==='XAUUSD' ? 500 : 2*sl); tpEl.dataset.otomatis='1';
+  }
+}
 function autoHitungVpRingkas(){
+  autoIsiSlTpRencana(getSimbolSinyalTerpilih());
   const pipsEl=document.getElementById('inpRingkasPips');
   const vpEl=document.getElementById('inpRingkasVp');
   const ketEl=document.getElementById('inpRingkasVpKeterangan');
@@ -4892,7 +4904,12 @@ async function simpanDataHarianRingkas(){
     // — gak perlu cek/gabung dengan sinyal lain, penjumlahan per hari/bulan dihitung on-the-fly.
     // 'jam' opsional, cuma buat tampilan & urutan yang lebih presisi kalau ada >1 sinyal di
     // tanggal yang sama (dipakai buat urutan kurva Recovery Factor juga).
-    const slRenc=parseFloat((document.getElementById('inpRingkasSl')||{}).value), tpRenc=parseFloat((document.getElementById('inpRingkasTp')||{}).value);
+    let slRenc=parseFloat((document.getElementById('inpRingkasSl')||{}).value), tpRenc=parseFloat((document.getElementById('inpRingkasTp')||{}).value);
+    // SL/TP rencana kosong → otomatis dari kalkulator Hard (SL per pair, TP = 2× SL). Gold: SL 500 / TP 500.
+    if(!isFinite(slRenc)||!isFinite(tpRenc)){
+      const slHard=(pairSimbol && FOREX_SL_PAIR[pairSimbol]) || (g==='XAUUSD' ? 500 : null);
+      if(slHard){ slRenc=slHard; tpRenc=(g==='XAUUSD'?500:2*slHard); }
+    }
     cachedSinyalAnalis[g].push(Object.assign({id:buatIdSinyal(), tanggal:tgl, jam:jam||null, tanggalBuka:tglBuka||tgl, jamBuka:jamBuka||null, simbol:pairSimbol||null, batch:batchInput.trim()||null, status:'closed', pips, vp}, (isFinite(slRenc)&&isFinite(tpRenc))?{slPips:slRenc, tpPips:tpRenc}:{}));
     const sBaru=cachedSinyalAnalis[g][cachedSinyalAnalis[g].length-1];
     await simpanSinyalKeServer(g);
