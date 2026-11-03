@@ -15811,15 +15811,18 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const pairPenuh=pairList.filter(k=>per[k].n>=R.jatahPair || (sw&&per[k].w>0));
   const pairLewat=pairList.filter(k=>per[k].n>R.jatahPair);
   const pairSisa1=pairList.filter(k=>per[k].n===R.jatahPair-1 && !(sw&&per[k].w>0));
+  const pairWinStop=pairPenuh.filter(k=>sw&&per[k].w>0&&per[k].n<=R.jatahPair);   // sudah WIN = profit, stop trading pair ini (hijau, bukan rugi)
+  const pairStopRugi=pairPenuh.filter(k=>!pairWinStop.includes(k));                   // jatah habis tanpa win / lewat jatah (merah)
+  const infoWin=pairWinStop.length?' · ✅ sudah WIN → STOP (profit): '+pairWinStop.join(', '):'';
   const uji=aturanBulan(bk).uji;   // bulan uji coba (sebelum November 2026): hanya info, tidak dinilai
-  let warna='#4ADE80', st='✅ AMAN — belum ada pair yang penuh';
+  let warna='#4ADE80', st=pairWinStop.length?'✅ AMAN — pair sudah WIN → STOP (profit, jangan trading lagi bulan ini): '+pairWinStop.join(', '):'✅ AMAN — belum ada pair yang penuh';
   if(uji){ warna='#E5E7EB'; st='🧪 BULAN UJI COBA — aturan baru (RR 1:'+R.rr+', jatah '+R.jatahPair+' order per pair) mulai berlaku '+R.mulai.slice(5)+'/'+R.mulai.slice(0,4)+'. Angka di bawah hanya informasi, belum ada stop.'; }
   else if(n===0){ warna='#E5E7EB'; st='Belum ada sinyal closed bulan ini'; }
   else if(lossKotor>=stopPips){ warna='#F87171'; st='🛑 STOP SEMUA PAIR — loss kotor mencapai batas, stop sampai bulan depan'; }
-  else if(pairPenuh.length){ warna='#F87171'; st='🛑 STOP TRADING PAIR INI SAMPAI BULAN DEPAN ('+(sw?'WIN PERTAMA = STOP, atau jatah '+R.jatahPair+' order habis':'jatah '+R.jatahPair+' order habis, untung atau rugi')+'): '+pairPenuh.join(', '); }
+  else if(pairStopRugi.length){ warna='#F87171'; st='🛑 STOP TRADING PAIR INI SAMPAI BULAN DEPAN ('+(sw?'jatah '+R.jatahPair+' order habis tanpa win':'jatah '+R.jatahPair+' order habis, untung atau rugi')+'): '+pairStopRugi.join(', ')+infoWin; }
   else if(R.maxLossHari>0 && lossHariIni>=R.maxLossHari){ warna='#FACC15'; st='⏸️ Sudah '+lossHariIni+' loss hari ini — stop sampai besok'; }
-  else if(lossKotor>=warnPips || pairSisa1.length){ warna='#FACC15'; st='⚠️ PERINGATAN — '+(pairSisa1.length?'pair tinggal 1 order: '+pairSisa1.join(', '):'loss kotor lewat separuh batas'); }
-  const statusPair=o=> uji ? [`${o.n} order (info)`,'#7A5D1F'] : (sw&&o.w>0) ? [`🛑 WIN → STOP (${o.n}x)`,'#D9534F'] : o.n>R.jatahPair ? [`❌ lewat ${o.n}/${R.jatahPair}`,'#D9534F'] : o.n===R.jatahPair ? [`🛑 STOP ${o.n}/${R.jatahPair}`,'#D9534F'] : o.n===R.jatahPair-1 ? [`⚠️ sisa 1 (${o.n}/${R.jatahPair})`,'#C99A2E'] : [`✅ sisa ${R.jatahPair-o.n} (${o.n}/${R.jatahPair})`,'#3E9142'];
+  else if(lossKotor>=warnPips || pairSisa1.length){ warna='#FACC15'; st='⚠️ PERINGATAN — '+(pairSisa1.length?'pair tinggal 1 order: '+pairSisa1.join(', '):'loss kotor lewat separuh batas')+infoWin; }
+  const statusPair=o=> uji ? [`${o.n} order (info)`,'#7A5D1F'] : o.n>R.jatahPair ? [`❌ lewat ${o.n}/${R.jatahPair}`,'#D9534F'] : (sw&&o.w>0) ? [`✅ WIN → STOP (${o.n}x) · profit`,'#4ADE80'] : o.n===R.jatahPair ? [`🛑 STOP ${o.n}/${R.jatahPair}`,'#D9534F'] : o.n===R.jatahPair-1 ? [`⚠️ sisa 1 (${o.n}/${R.jatahPair})`,'#C99A2E'] : [`✅ sisa ${R.jatahPair-o.n} (${o.n}/${R.jatahPair})`,'#3E9142'];
   const tabel=pairList.map(k=>{ const o=per[k], [t,c]=statusPair(o), sl=slPair(k,R.slKali);
     return `<div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:10px;color:#E5E7EB;padding:4px 0;border-top:1px solid var(--border);align-items:center"><span><b>${k}</b><br><span style="font-size:8px;color:#E5E7EB">SL ${sl} / TP ${sl*R.rr} · $${(sl*pipUsd).toFixed(2).replace(/\.?0+$/,'')}</span></span><span>${o.n}x</span><span>${o.l}L/${o.w}W</span><span style="color:${o.net<0?'#F87171':'#4ADE80'}">${sg(o.net)}</span><span style="color:${c};font-weight:700">${t}</span></div>`; }).join('');
   // ── Baris EMAS di tabel rem (hanya kartu "bagian forex" Datuk EURUSD). Aturan emas = metode H4 (METODE_DEF); hitungan forex di atas tidak berubah.
