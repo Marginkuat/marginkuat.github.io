@@ -15822,6 +15822,26 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const statusPair=o=> uji ? [`${o.n} order (info)`,'#7A5D1F'] : (sw&&o.w>0) ? [`🛑 WIN → STOP (${o.n}x)`,'#D9534F'] : o.n>R.jatahPair ? [`❌ lewat ${o.n}/${R.jatahPair}`,'#D9534F'] : o.n===R.jatahPair ? [`🛑 STOP ${o.n}/${R.jatahPair}`,'#D9534F'] : o.n===R.jatahPair-1 ? [`⚠️ sisa 1 (${o.n}/${R.jatahPair})`,'#C99A2E'] : [`✅ sisa ${R.jatahPair-o.n} (${o.n}/${R.jatahPair})`,'#3E9142'];
   const tabel=pairList.map(k=>{ const o=per[k], [t,c]=statusPair(o), sl=slPair(k,R.slKali);
     return `<div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:10px;color:#E5E7EB;padding:4px 0;border-top:1px solid var(--border);align-items:center"><span><b>${k}</b><br><span style="font-size:8px;color:#E5E7EB">SL ${sl} / TP ${sl*R.rr} · $${(sl*pipUsd).toFixed(2).replace(/\.?0+$/,'')}</span></span><span>${o.n}x</span><span>${o.l}L/${o.w}W</span><span style="color:${o.net<0?'#F87171':'#4ADE80'}">${sg(o.net)}</span><span style="color:${c};font-weight:700">${t}</span></div>`; }).join('');
+  // ── Baris EMAS di tabel rem (hanya kartu "bagian forex" Datuk EURUSD). Aturan emas = metode H4 (METODE_DEF); hitungan forex di atas tidak berubah.
+  let emasRow='';
+  if(sebagaiForexSaja){ try{
+    const me=metodeEfektif('XAUUSD',bk);
+    if(me){
+      const gr=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk && String(r.tanggal)>=awalAturan(bk) && (r.simbol||'').toUpperCase()==='XAUUSD')
+        .slice().sort((a,b)=>String(a.tanggal+(a.jam||'')).localeCompare(String(b.tanggal+(b.jam||''))));
+      let gl=0, gw=0, gnet=0, kenaTP=false;
+      gr.forEach(r=>{ const pp=parseFloat(r.pips||0); gnet+=pp; if(pp<0)gl++; else if(pp>0)gw++; if(gnet>=AUDIT_ATURAN_V2.emas.tp) kenaTP=true; });
+      const gn=gr.length, jt=me.jatah, pk=Math.max(gn,gl);
+      const [gt,gc]= uji ? [`${gn} order (info)`,'#7A5D1F']
+        : kenaTP ? [`🛑 UNTUNG +${AUDIT_ATURAN_V2.emas.tp} → STOP`,'#D9534F']
+        : pk>jt ? [`❌ lewat ${pk}/${jt}`,'#D9534F']
+        : pk===jt ? [`🛑 STOP ${pk}/${jt}`,'#D9534F']
+        : pk===jt-1 ? [`⚠️ sisa 1 (${pk}/${jt})`,'#C99A2E']
+        : [`✅ sisa ${jt-pk} (${pk}/${jt})`,'#3E9142'];
+      emasRow=`<div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:10px;color:#E5E7EB;padding:4px 0;border-top:2px solid #C8A84B;align-items:center"><span><b>XAUUSD</b> 🥇<br><span style="font-size:8px;color:#E5E7EB">SL ${me.sl} / TP ${me.tp} · $${(me.sl*pipUsd).toFixed(2).replace(/\.?0+$/,'')}</span></span><span>${gn}x</span><span>${gl}L/${gw}W</span><span style="color:${gnet<0?'#F87171':'#4ADE80'}">${sg(gnet)}</span><span style="color:${gc};font-weight:700">${gt}</span></div>
+      <div style="font-size:8px;color:#E5E7EB;line-height:1.5;margin-top:2px">Emas (metode ${me.label}): jatah ${jt} order per bulan (order atau loss, mana yang duluan) · stop kalau untung bersih mencapai +${AUDIT_ATURAN_V2.emas.tp} pips · batas rugi bulanan $${me.stopUsd}. Tidak dihitung ke loss kotor forex di atas.</div>`;
+    }
+  }catch(e){ console.error('baris emas rem forex', e); } }
   const bar=(nilai,maks,warnaB)=>`<div style="height:8px;background:var(--bg0);border-radius:6px;overflow:hidden;margin:3px 0"><div style="width:${Math.max(0,Math.min(100,nilai/maks*100))}%;height:100%;background:${warnaB}"></div></div>`;
   const target=sebagaiForexSaja?'':`<div style="background:var(--bg0);border-radius:8px;padding:8px 10px;margin:8px 0">
       <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">🎯 Target bulan ini (dari TF)</div>
@@ -15833,14 +15853,14 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
     </div>`;
   wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🚦 Rem Forex${sebagaiForexSaja?' (bagian forex)':' & Target'} — ${label}</div>
-    <div style="font-size:10px;color:#E5E7EB;line-height:1.7;margin-bottom:6px"><b>Strategi:</b> ${K.pairs.length} pair, <b>SL beda per pair</b> (30 / 45 / 60 pips = $3 / $4,5 / $6), TP = ${R.rr}× SL (<b>RR 1:${R.rr}</b>) · <b>jatah ${R.jatahPair} order per pair per bulan</b> (untung atau rugi, begitu penuh pair itu stop) · maks ${R.maxLossHari} loss per hari · loss maksimal ${fmt(B.maksLoss)} pips ($${(B.maksLoss*pipUsd).toFixed(1).replace(/\.0$/,'')}) → <b>stop gabungan loss kotor ${fmt(stopPips)} pips</b> (peringatan ${fmt(warnPips)}).${sebagaiForexSaja?' Emas punya aturan sendiri di kartu di atas.':''}</div>
+    <div style="font-size:10px;color:#E5E7EB;line-height:1.7;margin-bottom:6px"><b>Strategi:</b> ${K.pairs.length} pair, <b>SL beda per pair</b> (30 / 45 / 60 pips = $3 / $4,5 / $6), TP = ${R.rr}× SL (<b>RR 1:${R.rr}</b>) · <b>jatah ${R.jatahPair} order per pair per bulan</b> (untung atau rugi, begitu penuh pair itu stop) · maks ${R.maxLossHari} loss per hari · loss maksimal ${fmt(B.maksLoss)} pips ($${(B.maksLoss*pipUsd).toFixed(1).replace(/\.0$/,'')}) → <b>stop gabungan loss kotor ${fmt(stopPips)} pips</b> (peringatan ${fmt(warnPips)}).${sebagaiForexSaja?' Emas ikut dicek di baris terakhir tabel (aturannya tetap di kartu Metode di atas).':''}</div>
     <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:8px;line-height:1.5">${st}</div>
     <div style="font-size:10px;color:#E5E7EB">Order terpakai: <b>${n}</b> dari maks ${B.maksOrder} · pair penuh: <b>${pairPenuh.length}</b>/${K.pairs.length}</div>
     <div style="font-size:10px;color:#E5E7EB;margin-top:4px">Loss kotor: <b style="color:#F87171">-${fmt(lossKotor)} pips</b> dari ${fmt(stopPips)} ($${(lossKotor*pipUsd).toFixed(2).replace(/\.00$/,'')})${bar(lossKotor,stopPips,lossKotor>=stopPips?'#D9534F':(lossKotor>=warnPips?'#C99A2E':'#3E9142'))}</div>
     ${target}
     <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin:6px 0 2px">Jatah per pair (${R.jatahPair} order per bulan)</div>
     <div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:8px;color:#E5E7EB;text-transform:uppercase"><span>Pair / SL</span><span>Order</span><span>L/W</span><span>Bersih</span><span>Status</span></div>
-    ${tabel}
+    ${tabel}${emasRow}
     ${hariLanggar.length?`<div style="font-size:10px;color:${uji?'#E5E7EB':'#F87171'};line-height:1.6;margin-top:8px">${uji?'ℹ️':'❌'} Loss lebih dari ${R.maxLossHari}x per hari di tanggal: ${hariLanggar.map(t=>t.slice(8)+'/'+t.slice(5,7)+' ('+lossHari[t]+'x)').join(', ')}</div>`:(n?`<div style="font-size:10px;color:#4ADE80;margin-top:8px">✅ Aturan ${R.maxLossHari} loss per hari terjaga</div>`:'')}
     ${pairLewat.length?`<div style="font-size:10px;color:${uji?'#E5E7EB':'#F87171'};line-height:1.6;margin-top:4px">${uji?'ℹ️ Di atas jatah baru':'❌ Melewati jatah '+R.jatahPair+' order'} (${R.jatahPair} order per pair): ${pairLewat.map(k=>k+' ('+per[k].n+'x)').join(', ')}</div>`:''}
     <div style="font-size:8px;color:#E5E7EB;margin-top:6px;line-height:1.5">SL per pair mengikuti pengali VP TF (2 VP/pip → 30, 1,5 → 45, 1 → 60). Pair di luar daftar channel memakai SL 60.</div>
