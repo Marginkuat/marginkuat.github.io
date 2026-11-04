@@ -677,7 +677,7 @@ function toggleKamusGrup(btn){
     <input type="number" class="inp" id="calcModal2" value="500" step="1" min="0" style="margin-bottom:0">
     <div style="font-size:8px;color:#E5E7EB;margin-top:4px">🔄 Otomatis keisi dari Saldo MT4 terakhir yang kamu input — tapi bebas diketik ulang manual (misal update saldo real-time pas lagi trading).</div>
     <div style="height:1px;background:var(--border);margin:18px 0"></div>
-    <div style="font-size:11px;color:#E5E7EB;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1 dan 1:2 sekaligus (pakai SL pips di atas sebagai basis).</div>
+    <div style="font-size:11px;color:#E5E7EB;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1, 1:2 dan 1:3 sekaligus (pakai SL pips di atas sebagai basis).</div>
     <div class="calc-row">
       <div>
         <label class="lbl">Entry Price</label>
@@ -873,7 +873,7 @@ function toggleRingkasRows(uid){
     </div>
 
     <div style="height:1px;background:var(--border);margin:18px 0"></div>
-    <div style="font-size:11px;color:#E5E7EB;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1 dan 1:2 sekaligus (pakai SL pips di atas sebagai basis).</div>
+    <div style="font-size:11px;color:#E5E7EB;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1, 1:2 dan 1:3 sekaligus (pakai SL pips di atas sebagai basis).</div>
 
     <div class="calc-row">
       <div>
@@ -1159,12 +1159,12 @@ function toggleRingkasRows(uid){
 
     // Set TP custom per SL tertentu (XAUUSD). Kalau SL tidak ada di daftar, pakai default x1/x2.
     const CUSTOM_TP_SETS = {
-      200: [200, 600],
-      250: [250, 750],
+      200: [200, 400, 600],
+      250: [250, 500, 750],
       500: [500]
     };
     // Forex: semua level (Standar/Medium/Hard) selalu tampil RR 1:1, 1:2.
-    const tpList = pairName==='BTCUSD' ? [slPips*1, slPips*2, slPips*3] : (pairName==='XAUUSD' && CUSTOM_TP_SETS[slPips]) ? CUSTOM_TP_SETS[slPips] : (pairName==='XAUUSD' && /RR 1:1\)/.test((pairSelectEl.options[pairSelectEl.selectedIndex]||{}).textContent||'')) ? [slPips*1, slPips*2] : [slPips*1, slPips*3];   // semua pair: RR 1:1 & 1:3 (Hard 500 emas tetap 1:1)
+    const tpList = (pairName==='XAUUSD' && CUSTOM_TP_SETS[slPips]) ? CUSTOM_TP_SETS[slPips] : [slPips*1, slPips*2, slPips*3];   // semua pair & emas: RR 1:1, 1:2, 1:3 (Hard 500 emas tetap 1:1 lewat CUSTOM_TP_SETS)
 
     tpList.forEach(tpPips=>{
       const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
@@ -1463,8 +1463,8 @@ function initEntryPriceCalcGeneric(suffix){
       <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#F87171;margin-top:2px">≈ -$${slUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
     </div>`;
 
-    const CUSTOM_TP_SETS = { 200: [200, 600], 250: [250, 750], 500: [500] };
-    const tpList = pairName==='BTCUSD' ? [slPips*1, slPips*2, slPips*3] : (pairName==='XAUUSD' && CUSTOM_TP_SETS[slPips]) ? CUSTOM_TP_SETS[slPips] : (pairName==='XAUUSD' && /RR 1:1\)/.test((pairSelectEl.options[pairSelectEl.selectedIndex]||{}).textContent||'')) ? [slPips*1, slPips*2] : [slPips*1, slPips*3];   // semua pair: RR 1:1 & 1:3 (Hard 500 emas tetap 1:1)
+    const CUSTOM_TP_SETS = { 200: [200, 400, 600], 250: [250, 500, 750], 500: [500] };
+    const tpList = (pairName==='XAUUSD' && CUSTOM_TP_SETS[slPips]) ? CUSTOM_TP_SETS[slPips] : [slPips*1, slPips*2, slPips*3];   // semua pair & emas: RR 1:1, 1:2, 1:3 (Hard 500 emas tetap 1:1 lewat CUSTOM_TP_SETS)
 
     tpList.forEach(tpPips=>{
       const rrLabel = (tpPips/slPips).toLocaleString('en-US',{minimumFractionDigits: (tpPips/slPips)%1===0?0:1, maximumFractionDigits:2});
@@ -6438,6 +6438,51 @@ function renderSatuKartuInstrumen({judul, slBerikutnya, catatanState, mult, sumb
 // Satu channel bisa punya LEBIH DARI 1 instrumen aktif sekaligus (mis. channel EURUSD jalanin
 // Gold DAN CADJPY bareng) — tiap instrumen dari override dikasih kartu resiko sendiri-sendiri,
 // biar gak ada satupun yang keluput dari perhitungan buffer.
+// ── Rencana kejar target TF Medal: dari histori sinyal channel ini (per simbol/pair), hitung
+// pair yang paling menguntungkan (ekspektasi VP per sinyal = win rate × rata-rata VP menang +
+// loss rate × rata-rata VP loss), lalu berapa menang yang dibutuhkan buat nutup kekurangan VP.
+// Ini ESTIMASI dari histori, bukan jaminan. Pair dengan sampel < 3 sinyal tidak dijadikan acuan. ──
+function renderRencanaKejarTarget(g, kurangSinyal, kekuranganVp){
+  const hist=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && isFinite(parseFloat(r.pips)) && parseFloat(r.pips)!==0);
+  if(!hist.length) return `<div style="font-size:9px;color:#E5E7EB;margin-top:6px">ℹ️ Belum ada histori sinyal channel ini buat nyusun rencana kejar target.</div>`;
+  const per={};
+  let sumWinAll=0, nWinAll=0;
+  hist.forEach(r=>{
+    const sim=String(r.simbol||r.pair||g).toUpperCase();
+    const vp=parseFloat(r.vp||0);
+    const menang=parseFloat(r.pips)>0;
+    const p=per[sim]||(per[sim]={n:0,w:0,sumWin:0,nLoss:0,sumLoss:0});
+    p.n++;
+    if(menang){ p.w++; p.sumWin+=vp; sumWinAll+=vp; nWinAll++; }
+    else { p.nLoss++; p.sumLoss+=vp; }
+  });
+  const rata=(sum,n)=>n?sum/n:0;
+  const avgWinAll=rata(sumWinAll,nWinAll);
+  const semua=Object.keys(per).map(sim=>{
+    const p=per[sim], wr=p.w/p.n, avgWin=rata(p.sumWin,p.w), avgLoss=rata(p.sumLoss,p.nLoss);
+    return {sim, n:p.n, wr, avgWin, ev: wr*avgWin + (1-wr)*avgLoss};
+  }).sort((a,b)=>b.ev-a.ev);
+  const layak=semua.filter(x=>x.n>=3);
+  const top=(layak.length?layak:semua).slice(0,3);
+  const winDibutuh=(kekuranganVp>0 && avgWinAll>0) ? Math.ceil(kekuranganVp/avgWinAll) : 0;
+  const barisVp = kekuranganVp>0
+    ? `Butuh sekitar <b>${winDibutuh} menang</b> lagi (rata-rata +${avgWinAll.toFixed(2)} VP per menang) buat nutup <b>${kekuranganVp.toFixed(2)} VP</b>.`
+    : `VP sudah cukup, tinggal lengkapi jumlah sinyal.`;
+  const barisSinyal = kurangSinyal>0 ? `Plus <b>${kurangSinyal} sinyal</b> lagi buat syarat jumlah sinyal.` : `Syarat jumlah sinyal sudah terpenuhi.`;
+  const daftarPair = top.map(x=>`<div style="font-size:9px;color:#E5E7EB;line-height:1.6">• <b>${x.sim}</b> — win rate ${(x.wr*100).toFixed(0)}% (${x.n} sinyal), rata-rata +${x.avgWin.toFixed(2)} VP/menang, ekspektasi <b style="color:${x.ev>0?'#4ADE80':'#F87171'}">${x.ev>=0?'+':''}${x.ev.toFixed(2)} VP/sinyal</b>${x.ev>0?'':' ⚠️ negatif, hindari'}</div>`).join('');
+  const best=top[0];
+  const estSinyal = (kekuranganVp>0 && best && best.ev>0)
+    ? `Perkiraan di <b>${best.sim}</b>: ±${Math.ceil(kekuranganVp/best.ev)} sinyal buat nutup selisih VP.`
+    : (kekuranganVp>0 ? `Pair terbaik pun ekspektasinya belum positif, jadi kekurangan VP belum bisa diandalkan dari histori.` : '');
+  return `<div style="background:var(--bg1);border:1px solid #4A4A4A;border-radius:8px;padding:8px 10px;margin:8px 0">
+    <div style="font-size:9px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">🧭 Rencana kejar target (dari histori channel ini)</div>
+    <div style="font-size:9px;color:#E5E7EB;line-height:1.6">${barisVp}<br>${barisSinyal}</div>
+    <div style="font-size:9px;color:#E5E7EB;margin-top:6px;margin-bottom:2px">Pair yang paling menguntungkan untuk dikejar:</div>
+    ${daftarPair || '<div style="font-size:9px;color:#E5E7EB">Belum ada pair dengan histori cukup.</div>'}
+    ${estSinyal?`<div style="font-size:9px;color:#FFFFFF;margin-top:6px">${estSinyal}</div>`:''}
+    <div style="font-size:8px;color:#E5E7EB;margin-top:6px;line-height:1.5">⚠️ Ini estimasi dari histori, bukan jaminan. Pair yang menang tinggi tetap bisa loss.</div>
+  </div>`;
+}
 function renderStrategiRisikoHtml(g, bufferVp){
   const overrideList=cachedInstrumenAktif[g]||[];
   const kartuKartu=[];
@@ -6698,6 +6743,7 @@ function renderSatuChannelScore(g){
       ${medalTercapai ? '✅ Syarat Medal bulan ini SUDAH LENGKAP' : `⚠️ Masih kurang: ${totalKurangTeks}`}
     </div>
     ${kecepatanHtml}
+    ${medalTercapai?'':renderRencanaKejarTarget(g, kurangSinyal, kekuranganVpTerbesar)}
     <div style="text-align:right;margin-top:6px"><span onclick="editTargetMedal('${g}')" style="font-size:8px;color:#E5E7EB;cursor:pointer;text-decoration:underline">Ubah target Medal bulan ini</span></div>
   </div>`;
 
@@ -15427,6 +15473,90 @@ function bdBarisSinyal(r, tandai){
   const w=pp>0?'W':pp<0?'L':'BE', warna=pp<0?'#F87171':pp>0?'#4ADE80':'#E5E7EB';
   return `<div style="font-size:9px;color:#E5E7EB;padding:1px 0 1px 8px;line-height:1.5"><b style="color:${warna}">${w} ${pp>0?'+':''}${Math.round(pp*10)/10} pips</b>${isFinite(vp)&&r.vp!=null?' ('+(vp>0?'+':'')+Math.round(vp*100)/100+' VP)':''} · ${bdWaktu(r)}${tandai?' <b style="color:#F87171">🔁 sama persis</b>':''}</div>`;
 }
+// ── Simulasi FOREX (Datuk Crypto 89): kalau SEMUA sinyal berikutnya WIN, berapa sinyal yang
+// dibutuhkan biar syarat VP (minimal VP / 80% Avg Monthly) dan jumlah sinyal tercapai.
+// Estimasi saja: VP per menang = SL × RR × rasio VP/pip pair. Tidak mengubah aturan/pelanggaran. ──
+const SIM_MULT_FOREX={AUDUSD:2,EURGBP:2,NZDUSD:2,USDCHF:2,AUDJPY:1.5,CADJPY:1.5,EURUSD:1.5,GBPUSD:1.5,NZDJPY:1.5,USDCAD:1.5,CHFJPY:1,EURJPY:1,GBPJPY:1,EURNZD:1,USDJPY:1};
+window.SIM_FOREX_STATE={pair:null, sl:null, slAcuan:60};
+function simForexData(){
+  const bk=bulanKeyOf(new Date().toISOString().slice(0,10));
+  const rows=(cachedSinyalAnalis['FOREX']||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk);
+  const tm=cachedTargetMedal['FOREX']||{minSinyal:5,minVp:300,avgMonthlyVp:null};
+  const totalVp=rows.reduce((a,r)=>a+parseFloat(r.vp||0),0);
+  const adaAvg=tm.avgMonthlyVp!=null && isFinite(tm.avgMonthlyVp);
+  const ambang80=adaAvg?tm.avgMonthlyVp*0.8:0;
+  const pakai80=adaAvg && ambang80>=300 && ambang80>tm.minVp;
+  const ambangVp=Math.max(tm.minVp, pakai80?ambang80:0);
+  return {jumlah:rows.length, totalVp, minSinyal:tm.minSinyal, minVp:tm.minVp, ambang80, pakai80, ambangVp};
+}
+function simForexPairTerbaik(){
+  const per={};
+  (cachedSinyalAnalis['FOREX']||[]).filter(r=>r.status!=='running' && isFinite(parseFloat(r.pips)) && parseFloat(r.pips)!==0).forEach(r=>{
+    const s=String(r.simbol||'').toUpperCase(); if(!s) return;
+    const vp=parseFloat(r.vp||0), menang=parseFloat(r.pips)>0;
+    const p=per[s]||(per[s]={n:0,w:0,sw:0,nl:0,sl:0});
+    p.n++; if(menang){ p.w++; p.sw+=vp; } else { p.nl++; p.sl+=vp; }
+  });
+  let best=null;
+  Object.keys(per).forEach(s=>{
+    const p=per[s]; if(p.n<3) return;
+    const wr=p.w/p.n, aw=p.w?p.sw/p.w:0, al=p.nl?p.sl/p.nl:0, ev=wr*aw+(1-wr)*al;
+    if(!best || ev>best.ev) best={s, ev};
+  });
+  return best?best.s:null;
+}
+function simForexBody(slAcuan){
+  const d=simForexData();
+  const st=window.SIM_FOREX_STATE;
+  const pair=(st.pair && SIM_MULT_FOREX[st.pair]) ? st.pair : (simForexPairTerbaik()||'EURUSD');
+  const mult=SIM_MULT_FOREX[pair]||1;
+  const sl=Math.max(1, Math.round((st.sl!=null && st.sl>0)?st.sl:slAcuan));
+  const sinyalKurang=Math.max(0, d.minSinyal-d.jumlah);
+  const gap=Math.max(0, d.ambangVp-d.totalVp);
+  const f1=v=>(Math.round(v*10)/10).toString();
+  const opsi=Object.keys(SIM_MULT_FOREX).sort().map(p=>`<option value="${p}" ${p===pair?'selected':''}>${p} (x${SIM_MULT_FOREX[p]})</option>`).join('');
+  const lossVp=sl*mult;
+  const barisRR=[1,2,3].map(rr=>{
+    const winVp=sl*rr*mult;
+    const n=Math.max(gap>0?Math.ceil(gap/winVp):0, sinyalKurang);
+    const akhirWin=d.totalVp+n*winVp;
+    const akhirSatuLoss=n>0 ? d.totalVp+(n-1)*winVp-lossVp : d.totalVp;
+    const okWin=akhirWin>=d.ambangVp && d.jumlah+n>=d.minSinyal;
+    const okLoss=n>0 ? (akhirSatuLoss>=d.ambangVp && d.jumlah+n>=d.minSinyal) : okWin;
+    return `<div style="display:grid;grid-template-columns:.8fr .9fr 1fr 1.1fr 1.1fr;gap:4px;font-size:10px;color:#E5E7EB;padding:5px 0;border-top:1px solid var(--border);align-items:center">
+      <span style="font-weight:700">RR 1:${rr}</span>
+      <span>+${f1(winVp)} VP</span>
+      <span>${n>0?n+' sinyal':'sudah cukup'}</span>
+      <span style="color:${okWin?'#4ADE80':'#F87171'}">${okWin?'✅':'❌'} ${f1(akhirWin)}</span>
+      <span style="color:${okLoss?'#4ADE80':'#F87171'}">${okLoss?'✅':'❌'} ${f1(akhirSatuLoss)}</span>
+    </div>`;
+  }).join('');
+  const labelAmbang = d.pakai80 ? 'min 80% Avg Monthly' : 'minimal VP';
+  return `<div style="font-size:10px;color:#E5E7EB;line-height:1.6">
+      Sekarang: <b>${f1(d.totalVp)} VP</b> dari ${d.jumlah} sinyal bulan ini.<br>
+      Syarat: VP ≥ <b>${f1(d.ambangVp)}</b> (${labelAmbang}) · sinyal ≥ <b>${d.minSinyal}</b>.
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">
+      <label style="font-size:9px;color:#E5E7EB">Pair <select onchange="simForexUbah('pair',this.value)" style="background:var(--bg0);color:#fff;border:1px solid var(--border);border-radius:6px;font-size:10px;padding:3px">${opsi}</select></label>
+      <label style="font-size:9px;color:#E5E7EB">SL (pips) <input type="number" min="1" value="${sl}" onchange="simForexUbah('sl',this.value)" style="width:64px;background:var(--bg0);color:#fff;border:1px solid var(--border);border-radius:6px;font-size:10px;padding:3px"></label>
+    </div>
+    <div style="display:grid;grid-template-columns:.8fr .9fr 1fr 1.1fr 1.1fr;gap:4px;font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.4px;padding-bottom:3px"><span>RR</span><span>VP / win</span><span>Sinyal (win semua)</span><span>VP akhir</span><span>Jika 1 kena SL</span></div>
+    ${barisRR}
+    <div style="font-size:8px;color:#E5E7EB;margin-top:6px;line-height:1.5">Pair ${pair}: ${mult} VP/pip. Ganti pair atau SL di atas untuk lihat hitungannya lagi.</div>`;
+}
+window.simForexUbah=function(field,val){
+  if(field==='pair') window.SIM_FOREX_STATE.pair=val;
+  else window.SIM_FOREX_STATE.sl=parseFloat(val)||null;
+  const box=document.getElementById('simForexBox');
+  if(box) box.innerHTML=simForexBody(window.SIM_FOREX_STATE.slAcuan);
+};
+function simHtmlForex(slPips){
+  window.SIM_FOREX_STATE.slAcuan=Math.max(1, Math.round(slPips||60));
+  return `<div style="background:var(--bg0);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:6px">
+    <div style="font-size:9px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Simulasi: kalau semua sinyal berikutnya WIN</div>
+    <div id="simForexBox">${simForexBody(window.SIM_FOREX_STATE.slAcuan)}</div>
+  </div>`;
+}
 function renderLossKotor(g, wrapId){
   const wrap=document.getElementById(wrapId); if(!wrap) return;
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
@@ -15504,9 +15634,9 @@ function renderLossKotor(g, wrapId){
       <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Urutan hasil (tanggal tutup)</div>
       <div style="line-height:1.1">${chips}</div>
     </div>`:''}
-    <div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.4px"><span>Pair</span><span>Loss</span><span>Pips hilang</span><span>Win</span><span>Bersih</span></div>
+    ${g==='FOREX' ? simHtmlForex(slPips) : `<div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.4px"><span>Pair</span><span>Loss</span><span>Pips hilang</span><span>Win</span><span>Bersih</span></div>
     ${baris||'<div style="font-size:10px;color:#E5E7EB;text-align:center;padding:8px 0">Belum ada data.</div>'}
-    ${list.length?`<div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:10px;font-weight:800;color:#E5E7EB;padding:5px 0 0;border-top:2px solid var(--border)"><span>TOTAL</span><span>${totLoss}x</span><span style="color:#F87171">-${fmt(totLossPips)}</span><span>${totWin}x</span><span style="color:${totNet<0?'#F87171':'#4ADE80'}">${totNet>=0?'+':''}${fmt(totNet)}</span></div>`:''}
+    ${list.length?`<div style="display:grid;grid-template-columns:1.3fr .7fr 1fr .7fr 1fr;gap:4px;font-size:10px;font-weight:800;color:#E5E7EB;padding:5px 0 0;border-top:2px solid var(--border)"><span>TOTAL</span><span>${totLoss}x</span><span style="color:#F87171">-${fmt(totLossPips)}</span><span>${totWin}x</span><span style="color:${totNet<0?'#F87171':'#4ADE80'}">${totNet>=0?'+':''}${fmt(totNet)}</span></div>`:''}`}
     ${detailPair}
     <div style="font-size:8px;color:#E5E7EB;margin-top:6px;line-height:1.5">Kolom "Bersih" (loss + win) ditampilkan sebagai pelengkap supaya hasil sebenarnya tetap transparan. Pair JPY/non-USD nilai pipnya bisa sedikit berbeda dari $0,10.</div>
   </div>`;
