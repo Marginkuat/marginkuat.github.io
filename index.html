@@ -1876,6 +1876,8 @@ function renderInvCalcDisclaimer(){
         </div>
       </div>
       <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🏃 Sinyal Sedang Running</div>
+      <label class="lbl">Channel (wajib dipilih)</label>
+      <select class="inp" id="inpRunningChannel" onchange="setDaftarSinyalPairGroup(this.value)"><option value="">— pilih channel —</option><option value="XAUUSD">Datuk EURUSD (XAUUSD)</option><option value="FOREX">Datuk Crypto 89 (FOREX)</option></select>
       <label class="lbl">Pair</label>
       <input class="inp" type="text" id="inpRunningSimbolManual" placeholder="mis. AUDJPY">
       <label class="lbl">Arah</label>
@@ -5106,8 +5108,10 @@ function renderPreviewLevelRunning(){
 }
 async function tambahSinyalRunning(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
-  const g=daftarSinyalPairGroup||'XAUUSD';
   const val=id=>((document.getElementById(id)||{}).value||'').trim();
+  const g=val('inpRunningChannel');
+  if(g!=='XAUUSD' && g!=='FOREX'){toast('❌ Pilih channel dulu (Datuk EURUSD atau Datuk Crypto 89)');return;}
+  const namaChannel = g==='FOREX' ? 'Datuk Crypto 89' : 'Datuk EURUSD';
   const simbol=val('inpRunningSimbolManual');
   const hargaEntry=parseFloat(val('inpRunningHarga'));
   const hargaTp=parseFloat(val('inpRunningTp'));
@@ -5136,7 +5140,7 @@ async function tambahSinyalRunning(){
       hargaSl: isFinite(hargaSl) ? hargaSl : null
     };
     await simpanSinyalPrivatKeServer(g);
-    toast(`🏃 ${simbol.toUpperCase()} dicatat running — ${arah.toUpperCase()}`);
+    toast(`🏃 ${simbol.toUpperCase()} dicatat running di ${namaChannel} — ${arah.toUpperCase()}`);
     ['inpRunningSimbolManual','inpRunningHarga','inpRunningTp','inpRunningSl','inpRunningOpenedAt','inpRunningBatch','inpRunningArah'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
     renderDaftarSinyal();
   }catch(e){
