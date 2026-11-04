@@ -6605,8 +6605,6 @@ function renderSatuChannelScore(g){
     ${baris('Minimal VP', totalVpBulanIni.toFixed(2), targetMedal.minVp, kurangVp, '')}
     ${baris('Pips bulanan minimal 0', totalPipsBulanIni.toFixed(1), '0', kurangPips, '')}
     ${baris80Html}
-    ${bufferVpHtml}
-    ${renderStrategiRisikoHtml(g, bufferVp)}
     <div style="font-size:9px;font-weight:800;color:${medalTercapai?'#4ADE80':'#F87171'};margin-top:6px;padding-top:6px">
       ${medalTercapai ? '✅ Syarat Medal bulan ini SUDAH LENGKAP' : `⚠️ Masih kurang: ${totalKurangTeks}`}
     </div>
@@ -6659,6 +6657,7 @@ function renderSatuChannelScore(g){
     </div>
     ${badgeBanding}
     ${liveBlok}
+    ${medalBlokHtml}
     ${g==='XAUUSD' ? '<div id="runningToolSlot"></div>' : ''}
     ${levelBlokHtml}
     <div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:center">
