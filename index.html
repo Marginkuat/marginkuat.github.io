@@ -3472,7 +3472,22 @@ function goToKamusEntry(i){
 }
 function goToSearchResult(id){
   if(String(id).indexOf('kamus:')===0){ goToKamusEntry(parseInt(String(id).slice(6))); return; }
-  const el=document.getElementById(id);
+  let el=document.getElementById(id);
+  // Kotak Datuk EURUSD dibuat dari data (baru ada setelah kartu Rem Forex selesai dimuat): coba render dulu, kalau belum ada lompat ke bagian Cek Batas Kerugian.
+  if(!el && (id==='simInvDatuk'||id==='targetVpDatuk')){
+    try{ renderRemForex(); }catch(e){}
+    el=document.getElementById(id);
+    if(!el){
+      const fb=document.getElementById('secBatasDD');
+      clearSearch();
+      if(fb && fb.getClientRects().length){
+        fb.scrollIntoView({behavior:'smooth', block:'start'});
+        fb.classList.remove('sec-flash'); void fb.offsetWidth; fb.classList.add('sec-flash'); setTimeout(()=>fb.classList.remove('sec-flash'), 1500);
+        toast('ℹ️ Data Datuk EURUSD belum termuat — tunggu sebentar, lalu cari lagi');
+      } else toast('⚠️ Bagian ini belum tersedia');
+      return;
+    }
+  }
   clearSearch();
   if(!el){ toast('⚠️ Bagian ini belum tersedia'); return; }
   if(!el.getClientRects().length){ toast('🔒 Bagian input ini baru muncul setelah login admin'); return; }
