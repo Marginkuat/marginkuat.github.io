@@ -15784,6 +15784,8 @@ function remForexBatas(g,Rx){
   return {maksLoss, stop, warn:stop/2, maksOrder:R.jatahPair*K.pairs.length, maksUntung:K.pairs.reduce((t,nm)=>t+R.jatahPair*slPair(nm,kx)*R.rr,0)};
 }
 // Target TF per channel (ubah angkanya kalau Syarat/Avg. Monthly VP di aplikasi TF berubah). Kunci = grup data (XAUUSD = Datuk EURUSD).
+const SIM_INV=(()=>{ const d={tgl:'',biaya:200000,kurs:18000}; try{ return Object.assign(d, JSON.parse(localStorage.getItem('simInvDatuk')||'{}')); }catch(e){ return d; } })();
+function simInvSet(k,v){ SIM_INV[k]=(k==='tgl')?String(v||''):(parseFloat(v)||0); try{ localStorage.setItem('simInvDatuk',JSON.stringify(SIM_INV)); }catch(e){} renderRemForex(); }
 const TF_TARGET_VP={ XAUUSD:{ min:300, avgBulanan:605.04, persen:0.8, minSinyal:5 } };
 function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const wrap=document.getElementById(wrapId); if(!wrap) return;
@@ -15879,6 +15881,38 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
       </div>
     </div>`;
   }catch(e){ console.error('target VP TF', e); } }
+  // ── Simulasi investor (hanya kartu Datuk EURUSD): hasil 1 bulan sejak tanggal masuk investor (emas + forex), apakah biaya langganan tertutup.
+  let simInv='';
+  if(sebagaiForexSaja){ try{
+    const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const dmy=t=>t.slice(8)+'/'+t.slice(5,7)+'/'+t.slice(0,4);
+    const rp=v=>'Rp'+Math.round(v).toLocaleString('id-ID');
+    const besok=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+    const SI=SIM_INV, tgl=SI.tgl||ymd(besok), kurs=SI.kurs>0?SI.kurs:18000, biaya=SI.biaya>0?SI.biaya:200000;
+    const [sy,sm,sd]=tgl.split('-').map(Number);
+    const keluar=ymd(new Date(sy,sm,Math.min(sd,new Date(sy,sm+1,0).getDate())));   // masuk + 1 bulan (5 Nov → 5 Des)
+    const rw=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && String(r.tanggal)>=tgl && String(r.tanggal)<=keluar);
+    let sw_=0, sl_=0, snet=0; rw.forEach(r=>{ const pp=parseFloat(r.pips||0)||0; snet+=pp; if(pp>0)sw_++; else if(pp<0)sl_++; });
+    const usd=snet*pipUsd, hasilRp=usd*kurs, biayaUsd=biaya/kurs, biayaPips=biayaUsd/pipUsd;
+    const selesai=keluar<=hariIni, tutup=hasilRp>=biaya;
+    const selisih=hasilRp-biaya;
+    const inpS='background:var(--bg1);color:#E5E7EB;border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:11px;width:100%;box-sizing:border-box';
+    simInv=`<div style="background:var(--bg0);border-radius:8px;padding:8px 10px;margin:8px 0">
+      <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">🧮 Simulasi investor — apakah biaya langganan tertutup?</div>
+      <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:6px;font-size:8px;color:#E5E7EB;margin-bottom:6px">
+        <label>Tanggal masuk<input type="date" value="${tgl}" onchange="simInvSet('tgl',this.value)" style="${inpS}"></label>
+        <label>Biaya (Rp)<input type="number" inputmode="numeric" value="${biaya}" onchange="simInvSet('biaya',this.value)" style="${inpS}"></label>
+        <label>Kurs (Rp/$)<input type="number" inputmode="numeric" value="${kurs}" onchange="simInvSet('kurs',this.value)" style="${inpS}"></label>
+      </div>
+      <div style="font-size:10px;color:#E5E7EB;line-height:1.7">
+      Masa langganan: <b>${dmy(tgl)} → ${dmy(keluar)}</b> (1 bulan, sinyal tanggal masuk sampai keluar ikut dihitung)${selesai?'':' · <span style="color:#FACC15">masih berjalan / belum dimulai</span>'}<br>
+      Sinyal closed di masa itu: <b>${rw.length}</b> (${sw_} win / ${sl_} loss) · hasil bersih <b style="color:${snet<0?'#F87171':'#4ADE80'}">${sg(snet)} pips</b> ≈ <b>${usd<0?'-':''}$${Math.abs(usd).toFixed(2)}</b> ≈ <b>${hasilRp<0?'-':''}${rp(Math.abs(hasilRp))}</b><br>
+      Biaya ${rp(biaya)} ≈ $${biayaUsd.toFixed(2)} ≈ <b>${fmt(biayaPips)} pips</b>${bar(Math.max(snet,0),biayaPips,tutup?'#3E9142':'#C99A2E')}
+      <div style="font-size:11px;font-weight:800;color:${tutup?'#4ADE80':'#FACC15'}">${rw.length===0?'Belum ada sinyal closed di masa itu':(tutup?'✅ Biaya tertutup — untung bersih '+rp(selisih)+(selesai?'':' (sementara)'):'⬜ Belum tertutup — kurang '+rp(-selisih)+' ≈ '+fmt(-selisih/kurs/pipUsd)+' pips'+(selesai?'':' (masih bisa berubah)'))}</div>
+      <span style="font-size:9px;color:#E5E7EB;line-height:1.6">Sinyal yang masih running tidak dihitung. Belum termasuk spread/slippage. Kurs bisa kamu ubah sendiri (isi kurs hari ini).</span>
+      </div>
+    </div>`;
+  }catch(e){ console.error('simulasi investor', e); } }
   const target=sebagaiForexSaja?'':`<div style="background:var(--bg0);border-radius:8px;padding:8px 10px;margin:8px 0">
       <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">🎯 Target bulan ini (dari TF)</div>
       <div style="font-size:10px;color:#E5E7EB;line-height:1.7">VP bulan ini: <b style="color:${vp<0?'#F87171':'#4ADE80'}">${fmt(vp)}</b><br>
@@ -15893,7 +15927,7 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
     <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:8px;line-height:1.5">${st}</div>
     <div style="font-size:10px;color:#E5E7EB">Order terpakai: <b>${n}</b> dari maks ${B.maksOrder} · pair penuh: <b>${pairPenuh.length}</b>/${K.pairs.length}</div>
     <div style="font-size:10px;color:#E5E7EB;margin-top:4px">Loss kotor: <b style="color:#F87171">-${fmt(lossKotor)} pips</b> dari ${fmt(stopPips)} ($${(lossKotor*pipUsd).toFixed(2).replace(/\.00$/,'')})${bar(lossKotor,stopPips,lossKotor>=stopPips?'#D9534F':(lossKotor>=warnPips?'#C99A2E':'#3E9142'))}</div>
-    ${target}${targetTF}
+    ${target}${targetTF}${simInv}
     <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin:6px 0 2px">Jatah per pair (${R.jatahPair} order per bulan)</div>
     <div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:8px;color:#E5E7EB;text-transform:uppercase"><span>Pair / SL</span><span>Order</span><span>L/W</span><span>Bersih</span><span>Status</span></div>
     ${tabel}${emasRow}
