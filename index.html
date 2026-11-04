@@ -1793,6 +1793,7 @@ function renderInvCalcDisclaimer(){
     </div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div id="stopInputSinyalBanner" style="margin-bottom:10px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div id="secInputSinyal" style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px">📝 Input Sinyal</div>
       </div>
@@ -1832,7 +1833,8 @@ function renderInvCalcDisclaimer(){
         <option value="GBPJPY">GBPJPY — ×1</option>
         <option value="__LAINNYA__">Lainnya (ketik manual)…</option>
       </select>
-      <input class="inp" type="text" id="inpRingkasSimbolManual" placeholder="mis. BTCUSD" style="display:none;margin-top:6px" oninput="autoHitungVpRingkas()">
+      <input class="inp" type="text" id="inpRingkasSimbolManual" placeholder="mis. BTCUSD" style="display:none;margin-top:6px" oninput="autoHitungVpRingkas();updateStopPairWarn()">
+      <div id="stopPairWarn"></div>
       <label class="lbl">Closed at (tanggal sinyal ditutup)</label>
       <input class="inp" type="date" id="inpRingkasTgl">
       <label class="lbl">Jam ditutup (opsional — biar gampang dibedain kalau ada beberapa sinyal di tanggal sama)</label>
@@ -4761,6 +4763,7 @@ function setInputSinyalPairGroup(g){
   document.querySelectorAll('#inpSinyalPairTabs .pair-tab').forEach(b=>b.classList.toggle('active', b.dataset.sp===g));
   const labelTeks=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||(g==='FOREX'?'Forex':g);
   const l2=document.getElementById('inpRingkasPairLabel2'); if(l2) l2.textContent=labelTeks;
+  try{ renderStopInputSinyal(); }catch(e){}
 }
 let daftarSinyalPairGroup='XAUUSD';
 function setDaftarSinyalPairGroup(g){
@@ -4863,6 +4866,7 @@ function onSimbolSinyalPilihanBerubah(){
   const manualEl=document.getElementById('inpRingkasSimbolManual');
   if(manualEl) manualEl.style.display = (selEl && selEl.value==='__LAINNYA__') ? 'block' : 'none';
   autoHitungVpRingkas();
+  try{ updateStopPairWarn(); }catch(e){}
 }
 function autoIsiSlTpRencana(simbol){
   // SL/TP rencana otomatis dari kalkulator Hard (forex: SL per pair, TP = 2× SL; gold: 500 / 500)
@@ -15801,6 +15805,59 @@ function remForexBatas(g,Rx){
   return {maksLoss, stop, warn:stop/2, maksOrder:R.jatahPair*K.pairs.length, maksUntung:K.pairs.reduce((t,nm)=>t+R.jatahPair*slPair(nm,kx)*R.rr,0)};
 }
 // Target TF per channel (ubah angkanya kalau Syarat/Avg. Monthly VP di aplikasi TF berubah). Kunci = grup data (XAUUSD = Datuk EURUSD).
+// ── Tanda STOP tepat di atas Input Sinyal: pair mana yang sudah tidak boleh di-input lagi (rugi = merah, WIN = hijau). Ikut channel yang dipilih di form.
+let STOP_SINYAL_STATE={};
+function renderStopInputSinyal(){
+  const box=document.getElementById('stopInputSinyalBanner'); if(!box) return;
+  try{
+    const g=inputSinyalPairGroup||'XAUUSD';
+    const t=new Date(), hariIni=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+    const bk=bulanKeyOf(hariIni), A=aturanBulan(bk), R=A.R, K=R.kanal&&R.kanal[g];
+    STOP_SINYAL_STATE={};
+    if(!K || A.uji){ box.innerHTML=''; updateStopPairWarn(); return; }
+    const sw=(R===FOREX_REM_V2), forexSaja=(g==='XAUUSD'), jt=R.jatahPair;
+    const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
+    const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk && String(r.tanggal)>=awalAturan(bk));
+    const per={}; K.pairs.forEach(nm=>per[nm]={n:0,w:0,l:0});
+    rows.forEach(r=>{ const nm=(r.simbol||'').toUpperCase(); if(forexSaja && nm==='XAUUSD') return; const pp=parseFloat(r.pips||0)||0; const o=per[nm]||(per[nm]={n:0,w:0,l:0}); o.n++; if(pp>0)o.w++; else if(pp<0)o.l++; });
+    const rugi=[], win=[], sisa1=[];
+    Object.keys(per).forEach(nm=>{ const o=per[nm];
+      if(sw&&o.w>0&&o.n<=jt){ win.push(nm+' ('+o.n+'x)'); STOP_SINYAL_STATE[nm]={state:'win',txt:'✅ '+nm+' sudah WIN → STOP (profit) — jangan input sinyal '+nm+' lagi bulan ini'}; }
+      else if(o.n>=jt){ rugi.push(nm+' ('+o.n+'/'+jt+')'); STOP_SINYAL_STATE[nm]={state:'rugi',txt:'⛔ '+nm+' sudah STOP ('+o.n+'/'+jt+' order tanpa win) — JANGAN input sinyal '+nm+' lagi bulan ini'}; }
+      else if(o.n===jt-1){ sisa1.push(nm); STOP_SINYAL_STATE[nm]={state:'sisa1',txt:'⚠️ '+nm+' tinggal 1 order lagi bulan ini'}; }
+    });
+    let emasHtml='';
+    if(forexSaja){
+      const me=metodeEfektif('XAUUSD',bk);
+      if(me){
+        const gr=rows.filter(r=>(r.simbol||'').toUpperCase()==='XAUUSD').slice().sort((a,b)=>String(a.tanggal+(a.jam||'')).localeCompare(String(b.tanggal+(b.jam||''))));
+        let gl=0, gnet=0, kena=false; gr.forEach(r=>{ const pp=parseFloat(r.pips||0)||0; gnet+=pp; if(pp<0)gl++; if(gnet>=AUDIT_ATURAN_V2.emas.tp) kena=true; });
+        const pk=Math.max(gr.length,gl);
+        if(kena){ STOP_SINYAL_STATE.XAUUSD={state:'win',txt:'✅ XAUUSD sudah UNTUNG +'+AUDIT_ATURAN_V2.emas.tp+' pips → STOP (profit) — jangan input sinyal emas lagi bulan ini'}; emasHtml=`<div style="color:#4ADE80">✅ <b>XAUUSD</b> — untung +${AUDIT_ATURAN_V2.emas.tp} pips, STOP (profit)</div>`; }
+        else if(pk>=me.jatah){ STOP_SINYAL_STATE.XAUUSD={state:'rugi',txt:'⛔ XAUUSD sudah STOP ('+pk+'/'+me.jatah+') — JANGAN input sinyal emas lagi bulan ini'}; emasHtml=`<div style="color:#F87171">⛔ <b>XAUUSD</b> — jatah habis ${pk}/${me.jatah}, STOP</div>`; }
+        else if(pk===me.jatah-1){ STOP_SINYAL_STATE.XAUUSD={state:'sisa1',txt:'⚠️ XAUUSD tinggal 1 order lagi bulan ini'}; emasHtml=`<div style="color:#FACC15">⚠️ <b>XAUUSD</b> — tinggal 1 order (${pk}/${me.jatah})</div>`; }
+      }
+    }
+    const baris=(warna,ikon,judul,arr)=>arr.length?`<div style="color:${warna};margin-top:3px">${ikon} <b>${judul}</b>: ${arr.join(', ')}</div>`:'';
+    const adaRugi=rugi.length>0 || /⛔/.test(emasHtml), adaStop=adaRugi||win.length>0||/✅/.test(emasHtml);
+    const warnaB=adaRugi?'#F87171':(adaStop?'#4ADE80':'#FACC15');
+    const isi=baris('#F87171','⛔','JANGAN INPUT (STOP, tanpa win)',rugi)+baris('#4ADE80','✅','Sudah WIN → STOP (profit), jangan input lagi',win)+baris('#FACC15','⚠️','Tinggal 1 order',sisa1)+emasHtml;
+    box.innerHTML=`<div style="border:1.5px solid ${warnaB};border-radius:10px;padding:8px 10px;background:var(--bg0)">
+      <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;font-weight:800">🚦 Cek dulu sebelum input — ${label}</div>
+      <div style="font-size:10px;line-height:1.6;margin-top:2px">${isi||'<span style="color:#4ADE80">✅ Belum ada pair yang STOP bulan ini.</span>'}</div>
+    </div>`;
+    updateStopPairWarn();
+  }catch(e){ console.error('renderStopInputSinyal', e); }
+}
+function updateStopPairWarn(){
+  const el=document.getElementById('stopPairWarn'); if(!el) return;
+  const sel=document.getElementById('inpRingkasSimbolSelect'), man=document.getElementById('inpRingkasSimbolManual');
+  let nm=sel?sel.value:''; if(nm==='__LAINNYA__') nm=((man&&man.value)||'').trim().toUpperCase();
+  const st=nm?STOP_SINYAL_STATE[nm]:null;
+  if(!st){ el.innerHTML=''; return; }
+  const c=st.state==='rugi'?'#F87171':(st.state==='win'?'#4ADE80':'#FACC15');
+  el.innerHTML=`<div style="font-size:10px;font-weight:700;color:${c};border:1px solid ${c};border-radius:8px;padding:6px 8px;margin-top:6px;line-height:1.5">${st.txt}</div>`;
+}
 const SIM_INV=(()=>{ const d={tgl:'',biaya:200000,kurs:18000}; try{ return Object.assign(d, JSON.parse(localStorage.getItem('simInvDatuk')||'{}')); }catch(e){ return d; } })();
 function simInvSet(k,v){ SIM_INV[k]=(k==='tgl')?String(v||''):(parseFloat(v)||0); try{ localStorage.setItem('simInvDatuk',JSON.stringify(SIM_INV)); }catch(e){} renderRemForex(); }
 const TF_TARGET_VP={ XAUUSD:{ min:300, avgBulanan:605.04, persen:0.8, minSinyal:5 } };
@@ -15855,7 +15912,7 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
       gr.forEach(r=>{ const pp=parseFloat(r.pips||0); gnet+=pp; if(pp<0)gl++; else if(pp>0)gw++; if(gnet>=AUDIT_ATURAN_V2.emas.tp) kenaTP=true; });
       const gn=gr.length, jt=me.jatah, pk=Math.max(gn,gl);
       const [gt,gc]= uji ? [`${gn} order (info)`,'#7A5D1F']
-        : kenaTP ? [`🛑 UNTUNG +${AUDIT_ATURAN_V2.emas.tp} → STOP`,'#D9534F']
+        : kenaTP ? [`✅ UNTUNG +${AUDIT_ATURAN_V2.emas.tp} → STOP · profit`,'#4ADE80']
         : pk>jt ? [`❌ lewat ${pk}/${jt}`,'#D9534F']
         : pk===jt ? [`🛑 STOP ${pk}/${jt}`,'#D9534F']
         : pk===jt-1 ? [`⚠️ sisa 1 (${pk}/${jt})`,'#C99A2E']
@@ -15956,6 +16013,7 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
 function renderRemForex(){
   renderRemForexGen('XAUUSD','batasDDRemForexEmasWrap',true);   // Datuk EURUSD — bagian forex
   renderRemForexGen('FOREX','batasDDRemForexWrap',false);       // Datuk Crypto 89
+  try{ renderStopInputSinyal(); }catch(e){}
 }
 (function(){
   const _r5=renderBatasDDCard;
