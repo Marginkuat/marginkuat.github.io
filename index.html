@@ -1867,14 +1867,6 @@ function renderInvCalcDisclaimer(){
     </div>
 
     <div id="runningToolBlock" style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="background:#2D0E0E;border:1.5px solid #D9534F;border-radius:10px;padding:10px 12px;margin-bottom:12px">
-        <div style="font-size:10px;font-weight:800;color:#F87171;margin-bottom:4px">🔒 ATURAN SINYAL RUNNING</div>
-        <div style="font-size:9px;color:#F87171;line-height:1.7">
-          Sinyal yang masih <b>running / belum closed</b> TIDAK BOLEH di-cut rugi manual.<br>
-          ✅ Boleh: tutup lebih awal kalau sudah <b>profit</b> (amankan cuan duluan).<br>
-          ❌ Tidak boleh: cut manual saat masih minus — <b>wajib ditunggu sampai beneran kena Stop Loss</b>.
-        </div>
-      </div>
       <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🏃 Sinyal Sedang Running</div>
       <label class="lbl">Channel (wajib dipilih)</label>
       <select class="inp" id="inpRunningChannel" onchange="setDaftarSinyalPairGroup(this.value)"><option value="">— pilih channel —</option><option value="XAUUSD">Datuk EURUSD (XAUUSD)</option><option value="FOREX">Datuk Crypto 89 (FOREX)</option></select>
@@ -5572,7 +5564,7 @@ function renderKalkulatorRemSinyal(g){
       <div style="font-size:9px;color:${warnaLos};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📉 Kalau SEMUA ${runningList.length} Running Ini LOSS</div>
       <div style="font-size:11px;color:#FFFFFF;font-weight:700;line-height:1.8">
         Pips berkurang: <b style="color:#F87171">${totalLossPips.toFixed(1)}</b> → jadi: <b style="color:#FFFFFF">${pipsKalauLos.toFixed(1)}</b> ${cek(pipsKalauLos,0)}<br>
-        VP berkurang: <b style="color:#F87171">${totalLossVp.toFixed(2)}</b> → jadi: <b style="color:#FFFFFF">${vpKalauLos.toFixed(2)}</b> ${cek(vpKalauLos,ambangVpBerlaku)}
+        VP berkurang: <b style="color:#F87171">${totalLossVp.toFixed(2)}</b> → jadi: <b style="color:#FFFFFF">${vpKalauLos.toFixed(2)}</b> ${cek(vpKalauLos,ambangVpBerlaku)}<br>Sisa toleransi VP sebelum di bawah syarat: <b style="color:#FFFFFF">${(vpKalauLos-ambangVpBerlaku).toFixed(2)}</b>
       </div>
       <div style="font-size:12px;font-weight:800;color:${warnaLos};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
         ${masihAmanLos ? '✅ Masih di atas syarat walau semua Loss — aman lanjut, gak perlu buru-buru berhenti kejar sinyal baru' : '🛑 STOP kejar sinyal baru — kalau semua running ini Loss, syarat bulan ini bakal di bawah ambang'}
