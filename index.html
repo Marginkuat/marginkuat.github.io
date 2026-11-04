@@ -557,7 +557,8 @@ function toggleKamusGrup(btn){
     <label class="lbl">Pilih Pair</label>
     <select class="inp" id="calcPairSelect2" style="margin-bottom:0">
       <optgroup label="XAUUSD">
-        <option value="100|300">XAUUSD Kerdil (100 pips)</option>
+        <option value="50|150">XAUUSD Kerdil (50 pips)</option>
+        <option value="100|300">XAUUSD Kerdil 2 (100 pips)</option>
         <option value="200|400" selected>XAUUSD Standar (200 pips)</option>
         <option value="250|500">XAUUSD Medium (250 pips)</option>
         <option value="500|500">XAUUSD Hard (500 pips)</option>
@@ -893,7 +894,8 @@ function toggleRingkasRows(uid){
     <label class="lbl">Pilih Pair</label>
     <select class="inp" id="calcPairSelect" style="margin-bottom:0">
       <optgroup label="XAUUSD">
-        <option value="100|300">XAUUSD Kerdil (100 pips)</option>
+        <option value="50|150">XAUUSD Kerdil (50 pips)</option>
+        <option value="100|300">XAUUSD Kerdil 2 (100 pips)</option>
         <option value="200|400" selected>XAUUSD Standar (200 pips)</option>
         <option value="250|500">XAUUSD Medium (250 pips)</option>
         <option value="500|500">XAUUSD Hard (500 pips)</option>
@@ -1163,7 +1165,7 @@ function toggleRingkasRows(uid){
     };
     // Forex: semua level (Standar/Medium/Hard) selalu tampil RR 1:1, 1:2.
     const tpList = pairName==='XAUUSD'
-      ? (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2])
+      ? (/Kerdil/.test((pairSelectEl.options[pairSelectEl.selectedIndex]||{}).textContent||'') ? [slPips*1, slPips*3] : (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2]))   // Kerdil = RR 1:1 & 1:3
       : (/Hard 2/.test((pairSelectEl.options[pairSelectEl.selectedIndex]||{}).textContent||'') ? [slPips*1, slPips*2, slPips*3] : [slPips*1, slPips*2]);   // Hard 2 = tambah TP RR 1:3
 
     tpList.forEach(tpPips=>{
@@ -1465,7 +1467,7 @@ function initEntryPriceCalcGeneric(suffix){
 
     const CUSTOM_TP_SETS = { 200: [200, 400], 250: [250, 500], 500: [500] };
     const tpList = pairName==='XAUUSD'
-      ? (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2])
+      ? (/Kerdil/.test((pairSelectEl.options[pairSelectEl.selectedIndex]||{}).textContent||'') ? [slPips*1, slPips*3] : (CUSTOM_TP_SETS[slPips] || [slPips*1, slPips*2]))   // Kerdil = RR 1:1 & 1:3
       : (/Hard 2/.test((pairSelectEl.options[pairSelectEl.selectedIndex]||{}).textContent||'') ? [slPips*1, slPips*2, slPips*3] : [slPips*1, slPips*2]);   // Hard 2 = tambah TP RR 1:3
 
     tpList.forEach(tpPips=>{
