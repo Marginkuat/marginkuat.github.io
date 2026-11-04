@@ -4757,7 +4757,10 @@ async function loadSinyalAnalisPrivat(){
         const parsed=JSON.parse(rows[0].value);
         if(parsed && typeof parsed==='object') cachedSinyalAnalisPrivat[g]=parsed;
       }
-    }catch(e){ console.error('Gagal load sinyal_analis_privat_'+g, e); }
+    }catch(e){
+      console.error('Gagal load sinyal_analis_privat_'+g, e);
+      toast('⚠️ Gagal baca harga Price/TP/SL dari server ('+g+'). Coba logout lalu login lagi.');
+    }
   }
 }
 async function simpanSinyalPrivatKeServer(g){
