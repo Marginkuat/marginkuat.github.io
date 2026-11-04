@@ -15783,6 +15783,8 @@ function remForexBatas(g,Rx){
   const stop=(R.stopOverride&&R.stopOverride[g])||Math.ceil(maksLoss*R.slippage/50)*50;   // v3: stop gabungan tetap (Crypto 89 = 540, EURUSD = 450)
   return {maksLoss, stop, warn:stop/2, maksOrder:R.jatahPair*K.pairs.length, maksUntung:K.pairs.reduce((t,nm)=>t+R.jatahPair*slPair(nm,kx)*R.rr,0)};
 }
+// Target TF per channel (ubah angkanya kalau Syarat/Avg. Monthly VP di aplikasi TF berubah). Kunci = grup data (XAUUSD = Datuk EURUSD).
+const TF_TARGET_VP={ XAUUSD:{ min:300, avgBulanan:605.04, persen:0.8, minSinyal:5 } };
 function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const wrap=document.getElementById(wrapId); if(!wrap) return;
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
@@ -15844,6 +15846,39 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
     }
   }catch(e){ console.error('baris emas rem forex', e); } }
   const bar=(nilai,maks,warnaB)=>`<div style="height:8px;background:var(--bg0);border-radius:6px;overflow:hidden;margin:3px 0"><div style="width:${Math.max(0,Math.min(100,nilai/maks*100))}%;height:100%;background:${warnaB}"></div></div>`;
+  // ── Target VP TF (hanya kartu "bagian forex" Datuk EURUSD): VP gabungan emas + forex, sisa yang harus dikejar, dan potensi dari pair yang belum penuh.
+  let targetTF='';
+  const TFT=TF_TARGET_VP[g];
+  if(sebagaiForexSaja && TFT){ try{
+    const rowsAll=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk && String(r.tanggal)>=awalAturan(bk));
+    let vpAll=0, netAll=0; rowsAll.forEach(r=>{ const v=parseFloat(r.vp||0); vpAll+=isFinite(v)?v:0; netAll+=parseFloat(r.pips||0)||0; });
+    const f2=v=>(Math.round(v*100)/100).toFixed(2), s2=v=>(v>0?'+':'')+f2(v);
+    const kx=R.slKali||1, vpPip={30:2,45:1.5,60:1};
+    const t1=TFT.min, t2=Math.round(TFT.avgBulanan*TFT.persen*100)/100;
+    let potensi=0, slot=0, pairSisaVP=[];
+    pairList.forEach(k=>{
+      if(per[k].n>=R.jatahPair || (sw&&per[k].w>0)) return;
+      const sl=slPair(k,kx), wv=R.rr*sl*(vpPip[sl/kx]||1), sisaOrder=sw?1:(R.jatahPair-per[k].n);
+      potensi+=wv*sisaOrder; slot+=sisaOrder; pairSisaVP.push(k+' +'+f2(wv));
+    });
+    const avgWin=slot?potensi/slot:0;
+    const butuh=kurang=>kurang<=0?0:(avgWin>0?Math.ceil(kurang/avgWin):null);
+    const k1=t1-vpAll, k2=t2-vpAll;
+    const baris=(ok,teks)=>`${ok?'✅':'⬜'} ${teks}<br>`;
+    const cukup=(k)=>k<=0?'sudah tercapai':(potensi>=k?'<b style="color:#4ADE80">cukup</b>':'<b style="color:#F87171">tidak cukup</b>');
+    targetTF=`<div style="background:var(--bg0);border-radius:8px;padding:8px 10px;margin:8px 0">
+      <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">🎯 Target VP TF — emas + forex</div>
+      <div style="font-size:10px;color:#E5E7EB;line-height:1.7">VP bulan ini: <b style="color:${vpAll<0?'#F87171':'#4ADE80'}">${f2(vpAll)}</b><br>
+      ${baris(rowsAll.length>=TFT.minSinyal,'Minimal '+TFT.minSinyal+' sinyal: '+rowsAll.length)}
+      ${baris(vpAll>=t1,'Minimal '+t1+' VP — '+(k1<=0?'tercapai':'kurang <b style="color:#FACC15">'+s2(k1)+' VP</b>'))}${bar(vpAll,t1,'#3E9142')}
+      ${baris(vpAll>=t2,TFT.persen*100+'% dari rata-rata '+TFT.avgBulanan+' = '+f2(t2)+' VP — '+(k2<=0?'tercapai':'kurang <b style="color:#FACC15">'+s2(k2)+' VP</b>'))}${bar(vpAll,t2,'#C8A84B')}
+      ${baris(netAll>=0,'Pips bulanan minimal 0 (sekarang <b>'+sg(netAll)+'</b>)')}
+      <span style="font-size:9px;color:#E5E7EB;line-height:1.6">Sisa pair yang masih boleh order: <b>${slot}</b> order${pairSisaVP.length?' ('+pairSisaVP.join(', ')+' VP kalau win)':''}.<br>
+      Kalau semua win: <b>${s2(potensi)} VP</b> → total ${f2(vpAll+potensi)} VP. Untuk ${t1} VP: ${cukup(k1)}${k1>0&&potensi>=k1&&butuh(k1)?' (min. ~'+butuh(k1)+' win)':''} · untuk ${f2(t2)} VP: ${cukup(k2)}${k2>0&&potensi>=k2&&butuh(k2)?' (min. ~'+butuh(k2)+' win)':''}.<br>
+      Catatan: 1 loss mengurangi sekitar ${60*kx}–${String(67.5*kx).replace('.',',')} VP, jadi butuh win lebih banyak kalau ada loss. Angka rata-rata VP bulanan (${TFT.avgBulanan}) diambil dari TF; ubah di <code>TF_TARGET_VP</code> kalau berubah.</span>
+      </div>
+    </div>`;
+  }catch(e){ console.error('target VP TF', e); } }
   const target=sebagaiForexSaja?'':`<div style="background:var(--bg0);border-radius:8px;padding:8px 10px;margin:8px 0">
       <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">🎯 Target bulan ini (dari TF)</div>
       <div style="font-size:10px;color:#E5E7EB;line-height:1.7">VP bulan ini: <b style="color:${vp<0?'#F87171':'#4ADE80'}">${fmt(vp)}</b><br>
@@ -15858,7 +15893,7 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
     <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:8px;line-height:1.5">${st}</div>
     <div style="font-size:10px;color:#E5E7EB">Order terpakai: <b>${n}</b> dari maks ${B.maksOrder} · pair penuh: <b>${pairPenuh.length}</b>/${K.pairs.length}</div>
     <div style="font-size:10px;color:#E5E7EB;margin-top:4px">Loss kotor: <b style="color:#F87171">-${fmt(lossKotor)} pips</b> dari ${fmt(stopPips)} ($${(lossKotor*pipUsd).toFixed(2).replace(/\.00$/,'')})${bar(lossKotor,stopPips,lossKotor>=stopPips?'#D9534F':(lossKotor>=warnPips?'#C99A2E':'#3E9142'))}</div>
-    ${target}
+    ${target}${targetTF}
     <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin:6px 0 2px">Jatah per pair (${R.jatahPair} order per bulan)</div>
     <div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:8px;color:#E5E7EB;text-transform:uppercase"><span>Pair / SL</span><span>Order</span><span>L/W</span><span>Bersih</span><span>Status</span></div>
     ${tabel}${emasRow}
