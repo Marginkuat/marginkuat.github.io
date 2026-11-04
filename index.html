@@ -1876,42 +1876,21 @@ function renderInvCalcDisclaimer(){
         </div>
       </div>
       <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🏃 Sinyal Sedang Running</div>
-      <label class="lbl">Pair + Level + RR (pilih 1x, SL/TP otomatis kepasang)</label>
-      <select class="inp" id="inpRunningLevelSelect" onchange="document.getElementById('inpRunningSimbolManual').style.display = this.value==='__LAINNYA__' ? 'block' : 'none'; document.getElementById('inpRunningManualSlTpWrap').style.display = this.value==='__LAINNYA__' ? 'block' : 'none'; renderPreviewLevelRunning();">
-        <option value="">— Pilih pair + level —</option>
-        <option value="__LAINNYA__">Lainnya (pair/SL/TP custom)…</option>
-      </select>
-      <div id="previewLevelRunningWrap"></div>
-      <input class="inp" type="text" id="inpRunningSimbolManual" placeholder="Nama pair, mis. BTCUSD" style="display:none;margin-top:6px">
-      <div id="inpRunningManualSlTpWrap" style="display:none">
-        <div style="display:flex;gap:8px">
-          <div style="flex:1"><label class="lbl">SL (pips)</label><input class="inp" type="number" step="any" id="inpRunningManualSl" placeholder="mis. 30"></div>
-          <div style="flex:1"><label class="lbl">TP (pips)</label><input class="inp" type="number" step="any" id="inpRunningManualTp" placeholder="mis. 60"></div>
-        </div>
-      </div>
+      <label class="lbl">Pair</label>
+      <input class="inp" type="text" id="inpRunningSimbolManual" placeholder="mis. AUDJPY">
+      <label class="lbl">Arah</label>
+      <select class="inp" id="inpRunningArah"><option value="">— pilih Buy/Sell —</option><option value="buy">Buy</option><option value="sell">Sell</option></select>
+      <label class="lbl">Price (entry)</label>
+      <input class="inp" type="number" step="any" id="inpRunningHarga" placeholder="mis. 110.860">
+      <label class="lbl">Take Profit</label>
+      <input class="inp" type="number" step="any" id="inpRunningTp" placeholder="mis. 111.760">
+      <label class="lbl">Stop Loss</label>
+      <input class="inp" type="number" step="any" id="inpRunningSl" placeholder="mis. 110.410">
+      <label class="lbl">Opened at</label>
+      <input class="inp" type="datetime-local" id="inpRunningOpenedAt">
+      <div style="font-size:8px;color:#E5E7EB;margin-top:-4px;margin-bottom:6px">⏱️ Opened at ini yang dipakai buat ngecek "sinyal ini kecopy subscriber mana" — beda dari jam TUTUP, dan gak akan ketimpa pas sinyal ini ditutup nanti.</div>
       <label class="lbl">Batch / Grup (opsional)</label>
       <input class="inp" type="text" id="inpRunningBatch" placeholder="mis. Forex 4 Sep">
-      <div style="display:flex;gap:8px">
-        <div style="flex:1"><label class="lbl">Tanggal dibuka</label><input class="inp" type="date" id="inpRunningTgl"></div>
-        <div style="flex:1"><label class="lbl">Jam dibuka</label><input class="inp" type="time" id="inpRunningJamBuka"></div>
-      </div>
-      <div style="font-size:8px;color:#E5E7EB;margin-top:-4px;margin-bottom:6px">⏱️ Jam dibuka ini yang dipakai buat ngecek "sinyal ini kecopy subscriber mana" — beda dari jam TUTUP, dan gak akan ketimpa pas sinyal ini ditutup nanti.</div>
-      <div onclick="const w=document.getElementById('inpRunningHargaAdvWrap'); w.style.display = w.style.display==='none' ? 'block' : 'none'" style="font-size:9px;color:#E5E7EB;text-decoration:underline;cursor:pointer;margin:6px 0">⚙️ Opsional: isi harga Entry/TP/SL persis (kalau mau catatan lebih presisi dari sekadar pips level)</div>
-      <div id="inpRunningHargaAdvWrap" style="display:none">
-        <label class="lbl">Arah</label>
-        <select class="inp" id="inpRunningArah">
-          <option value="">— Gak perlu —</option>
-          <option value="buy">Buy</option>
-          <option value="sell">Sell</option>
-        </select>
-        <label class="lbl">Harga Entry</label>
-        <input class="inp" type="number" step="any" id="inpRunningHarga" placeholder="mis. 91.950">
-        <label class="lbl">Harga TP</label>
-        <input class="inp" type="number" step="any" id="inpRunningTp" placeholder="mis. 91.050">
-        <label class="lbl">Harga SL</label>
-        <input class="inp" type="number" step="any" id="inpRunningSl" placeholder="mis. 92.400">
-        <div style="font-size:8px;color:#E5E7EB;margin-top:-4px;margin-bottom:6px">🔒 Angka harga ini TIDAK ditampilkan di kartu publik, cuma kelihatan pas login Admin. Kalau gak diisi, sistem tetap otomatis pakai SL/TP pips dari preset Level di atas.</div>
-      </div>
       <button class="btn" onclick="tambahSinyalRunning()" style="margin-top:8px">➕ Catat Sinyal Running</button>
       <div id="daftarRunningWrap" style="margin-top:10px"></div>
     </div>
@@ -5128,62 +5107,37 @@ function renderPreviewLevelRunning(){
 async function tambahSinyalRunning(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
   const g=daftarSinyalPairGroup||'XAUUSD';
-  const levelEl=document.getElementById('inpRunningLevelSelect');
-  const manualEl=document.getElementById('inpRunningSimbolManual');
-  const levelVal=(levelEl||{}).value||'';
-  let simbol='', slPips=null, tpPips=null, levelLabel=null;
-  if(levelVal==='__LAINNYA__'){
-    simbol=(manualEl?manualEl.value:'')||'';
-    slPips=parseFloat((document.getElementById('inpRunningManualSl')||{}).value);
-    tpPips=parseFloat((document.getElementById('inpRunningManualTp')||{}).value);
-    slPips=isFinite(slPips)?slPips:null; tpPips=isFinite(tpPips)?tpPips:null;
-  } else if(levelVal){
-    const parts=levelVal.split('|');
-    simbol=parts[0]||'';
-    slPips=parseFloat(parts[1]); tpPips=parseFloat(parts[2]);
-    levelLabel=(levelEl.selectedOptions[0]||{}).textContent||null;
-  }
-  const batch=(document.getElementById('inpRunningBatch')||{}).value||'';
-  const tgl=(document.getElementById('inpRunningTgl')||{}).value||new Date().toISOString().slice(0,10);
-  const jamBuka=(document.getElementById('inpRunningJamBuka')||{}).value||null;
-  const arah=(document.getElementById('inpRunningArah')||{}).value||'';
-  const hargaEntry=parseFloat((document.getElementById('inpRunningHarga')||{}).value);
-  const hargaTp=parseFloat((document.getElementById('inpRunningTp')||{}).value);
-  const hargaSl=parseFloat((document.getElementById('inpRunningSl')||{}).value);
-  if(!simbol.trim()){toast('❌ Pilih pair + level dulu dari daftar');return;}
+  const val=id=>((document.getElementById(id)||{}).value||'').trim();
+  const simbol=val('inpRunningSimbolManual');
+  const hargaEntry=parseFloat(val('inpRunningHarga'));
+  const hargaTp=parseFloat(val('inpRunningTp'));
+  const hargaSl=parseFloat(val('inpRunningSl'));
+  const openedAt=val('inpRunningOpenedAt'); // format: YYYY-MM-DDTHH:MM
+  const batch=val('inpRunningBatch');
+  if(!simbol){toast('❌ Isi pair dulu');return;}
+  if(!isFinite(hargaEntry)){toast('❌ Isi price (entry) dulu');return;}
+  if(!openedAt){toast('❌ Isi opened at dulu');return;}
+  const tgl=openedAt.slice(0,10);
+  const jamBuka=openedAt.slice(11,16)||null;
+  const arah = val('inpRunningArah');
+  if(arah!=='buy' && arah!=='sell'){toast('❌ Pilih arah Buy/Sell dulu');return;}
+  if(isFinite(hargaTp) && ((arah==='buy' && hargaTp<=hargaEntry)||(arah==='sell' && hargaTp>=hargaEntry))){toast('❌ TP tidak sesuai arah (Buy: TP > Price, Sell: TP < Price)');return;}
+  if(isFinite(hargaSl) && ((arah==='buy' && hargaSl>=hargaEntry)||(arah==='sell' && hargaSl<=hargaEntry))){toast('❌ SL tidak sesuai arah (Buy: SL < Price, Sell: SL > Price)');return;}
   try{
     const idBaru=buatIdSinyal();
-    // Field publik: SL/TP di sini cuma ANGKA PIPS dari level yang dipilih (mis. "45 pips"),
-    // BUKAN harga transaksi asli — jadi aman ditampilkan, gak perlu masuk penyimpanan privat.
-    // Ini yang bikin pas nutup sinyal nanti (Win/Loss) pips-nya udah otomatis diketahui, gak
-    // perlu "mencocokkan" manual lagi ke harga TP/SL asli.
-    // tanggalBuka/jamBuka DIPISAH dari tanggal/jam biasa — tanggal/jam bakal ketimpa jadi
-    // tanggal TUTUP begitu sinyal ini closed (buat keperluan hitung VP/pips bulanan), tapi
-    // tanggalBuka/jamBuka TETAP PERMANEN nyimpen kapan beneran dibuka — ini yang dipakai buat
-    // ngecek subscriber mana yang kecopy, biar akurat 100% kayak logika TF App yang asli.
-    const data={id:idBaru, tanggal:tgl, jam:null, tanggalBuka:tgl, jamBuka, simbol:simbol.trim(), batch:batch.trim()||null, status:'running', pips:null, vp:null, slPips, tpPips, levelLabel};
+    const data={id:idBaru, tanggal:tgl, jam:null, tanggalBuka:tgl, jamBuka, simbol:simbol.toUpperCase(), batch:batch||null, status:'running', pips:null, vp:null, slPips:null, tpPips:null, levelLabel:null};
     cachedSinyalAnalis[g].push(data);
     await simpanSinyalKeServer(g);
-    // Field privat (harga entry/TP/SL persis, opsional) tetap disimpan terpisah kalau diisi.
-    if(arah || isFinite(hargaEntry) || isFinite(hargaTp) || isFinite(hargaSl)){
-      cachedSinyalAnalisPrivat[g][idBaru]={
-        arah: arah||null,
-        hargaEntry: isFinite(hargaEntry) ? hargaEntry : null,
-        hargaTp: isFinite(hargaTp) ? hargaTp : null,
-        hargaSl: isFinite(hargaSl) ? hargaSl : null
-      };
-      await simpanSinyalPrivatKeServer(g);
-    }
-    toast(`🏃 ${simbol.trim()} dicatat running${levelLabel?' — '+levelLabel:''}`);
-    if(levelEl) levelEl.value='';
-    const sm=document.getElementById('inpRunningSimbolManual'); if(sm){ sm.value=''; sm.style.display='none'; }
-    const mslTp=document.getElementById('inpRunningManualSlTpWrap'); if(mslTp) mslTp.style.display='none';
-    ['inpRunningManualSl','inpRunningManualTp'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
-    const b=document.getElementById('inpRunningBatch'); if(b) b.value='';
-    const jb=document.getElementById('inpRunningJamBuka'); if(jb) jb.value='';
-    const a=document.getElementById('inpRunningArah'); if(a) a.value='';
-    const hw=document.getElementById('inpRunningHargaAdvWrap'); if(hw) hw.style.display='none';
-    ['inpRunningHarga','inpRunningTp','inpRunningSl'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+    // Harga entry/TP/SL disimpan privat (cuma kelihatan pas login Admin)
+    cachedSinyalAnalisPrivat[g][idBaru]={
+      arah: arah||null,
+      hargaEntry: hargaEntry,
+      hargaTp: isFinite(hargaTp) ? hargaTp : null,
+      hargaSl: isFinite(hargaSl) ? hargaSl : null
+    };
+    await simpanSinyalPrivatKeServer(g);
+    toast(`🏃 ${simbol.toUpperCase()} dicatat running — ${arah.toUpperCase()}`);
+    ['inpRunningSimbolManual','inpRunningHarga','inpRunningTp','inpRunningSl','inpRunningOpenedAt','inpRunningBatch','inpRunningArah'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
     renderDaftarSinyal();
   }catch(e){
     console.error(e);
@@ -5388,57 +5342,33 @@ async function tutupSinyalRunning(g, id, jenis){
     const arahMult = privat.arah==='sell' ? -1 : 1;
     return ((hargaAcuan-privat.hargaEntry)*arahMult)/factor;
   };
-  let pips=null, vp=null, otomatisPenuh=false;
+  // Hasil otomatis HANYA jadi nilai default. Admin selalu cek & bisa edit pips dan VP
+  // sebelum disimpan, lalu konfirmasi ringkasan.
+  let pips=null, vp=null, defPips;
   if(jenis==='sl'){
-    // Aturan: SL cuma boleh ditutup kalau BENERAN kena Stop Loss (gak ada "cut loss manual").
-    // Jadi kalau SL-nya udah diketahui (dari preset Level ATAU harga tercatat), hasilnya
-    // PASTI = SL itu — gak perlu ditanya/dikonfirmasi lagi, langsung otomatis.
-    if(punyaLevelPips && isFinite(item.slPips)){
-      pips=-Math.abs(item.slPips);
-      vp=pips*mult;
-      otomatisPenuh=true;
-    } else if(punyaDataHarga && isFinite(privat.hargaSl)){
-      pips=hitungPipsDariHarga(privat.hargaSl);
-      vp=pips*mult;
-      otomatisPenuh=true;
-    } else {
-      const pipsStr=prompt(`Tutup ${item.simbol||g} sebagai LOSS (kena Stop Loss)\n\nMasukkan Pips (isi minus):`, '-30');
-      if(pipsStr===null)return;
-      pips=parseFloat(pipsStr);
-      if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
-      if(pips>0){toast('❌ Tutup Kena SL tapi pips-nya plus? Cek lagi angkanya');return;}
-      vp=pips*mult;
-    }
+    if(punyaLevelPips && isFinite(item.slPips)) defPips=-Math.abs(item.slPips);
+    else if(punyaDataHarga && isFinite(privat.hargaSl)) defPips=hitungPipsDariHarga(privat.hargaSl);
+    else defPips=-30;
   } else {
-    // Tutup Profit bisa 2 macam: beneran kena TP (pips/VP dari preset Level atau harga TP
-    // tercatat), atau cut manual lebih awal sebelum nyampe TP (harus diisi manual).
     const tpPipsAcuan = punyaLevelPips && isFinite(item.tpPips) ? item.tpPips : (punyaDataHarga && isFinite(privat.hargaTp) ? hitungPipsDariHarga(privat.hargaTp) : null);
-    const kenaTpPersis = tpPipsAcuan!==null
-      ? confirm(`${item.simbol||g} ditutup sebagai PROFIT.\n\nTap OK kalau BENERAN kena TP persis — ${tpPipsAcuan.toFixed(1)} pips (dari ${punyaLevelPips?'preset level':'harga tercatat'}, gak perlu ketik ulang).\nTap Cancel kalau ini CUT MANUAL sebelum nyampe TP (perlu isi pips manual).`)
-      : false;
-    if(kenaTpPersis){
-      pips=tpPipsAcuan;
-      vp=pips*mult;
-      otomatisPenuh=true;
-    } else {
-      const saranPips = tpPipsAcuan!==null ? tpPipsAcuan.toFixed(1) : '30';
-      const pipsStr=prompt(`Tutup ${item.simbol||g} sebagai PROFIT (cut manual)\n\nMasukkan Pips (isi plus):`, saranPips);
-      if(pipsStr===null)return;
-      pips=parseFloat(pipsStr);
-      if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
-      if(pips<0){toast('❌ Tutup Profit tapi pips-nya minus? Cek lagi angkanya');return;}
-      vp=pips*mult;
-    }
+    if(tpPipsAcuan!==null){
+      const kenaTp = confirm(`${item.simbol||g} ditutup sebagai PROFIT.\n\nOK = kena TP persis (hasil otomatis ${tpPipsAcuan.toFixed(1)} pips).\nCancel = cut manual (isi pips sendiri).`);
+      defPips = tpPipsAcuan;
+    } else defPips=30;
   }
-  // Kalau dihitung otomatis penuh dari harga tercatat, VP gak perlu ditanya ulang — kalau
-  // manual (fallback/cut), tetap dikasih kesempatan koreksi VP-nya sebelum simpan.
-  if(!otomatisPenuh){
-    const vpStr=prompt('VP (otomatis dihitung dari tabel resmi, boleh ubah manual):', vp.toFixed(2));
-    if(vpStr===null)return;
-    const vpBaru=parseFloat(vpStr);
-    if(!isFinite(vpBaru)){toast('❌ Angka VP gak valid');return;}
-    vp=vpBaru;
-  }
+  const {pasti:multPasti}=multiplierVpDariSimbol(item.simbol);
+  const pipsStr=prompt(`CEK & EDIT PIPS — ${item.simbol||g} (${jenis==='sl'?'LOSS, isi minus':'PROFIT, isi plus'})\nHasil otomatis: ${defPips.toFixed(1)}`, defPips.toFixed(1));
+  if(pipsStr===null)return;
+  pips=parseFloat(pipsStr);
+  if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
+  if(jenis==='sl' && pips>0){toast('❌ Kena SL tapi pips plus? Cek lagi angkanya');return;}
+  if(jenis!=='sl' && pips<0){toast('❌ Profit tapi pips minus? Cek lagi angkanya');return;}
+  const defVp = pips*mult;
+  const vpStr=prompt(`CEK & EDIT VP — ${item.simbol||g}\nRumus: pips × ${mult}${multPasti?'':' (⚠️ pair ini belum ada di tabel resmi, cek manual!)'}\nHasil otomatis: ${defVp.toFixed(2)}`, defVp.toFixed(2));
+  if(vpStr===null)return;
+  vp=parseFloat(vpStr);
+  if(!isFinite(vp)){toast('❌ Angka VP gak valid');return;}
+  if(!confirm(`KONFIRMASI — simpan sinyal ${item.simbol||g} sebagai ${jenis==='sl'?'LOSS':'PROFIT'}?\n\nPips: ${pips.toFixed(1)}\nVP: ${vp.toFixed(2)}\n\nOK = simpan. Cancel = batal (bisa tutup ulang).`)) return;
   const now=new Date();
   const jamDefault=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const jamStr=prompt(`Jam kena ${jenis==='sl'?'SL':'TP/tutup'} (format JJ:MM, kosongkan kalau gak tau persis):`, jamDefault);
