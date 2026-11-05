@@ -4757,6 +4757,7 @@ async function loadSinyalAnalisPrivat(){
         const parsed=JSON.parse(rows[0].value);
         if(parsed && typeof parsed==='object') cachedSinyalAnalisPrivat[g]=parsed;
       }
+      window._privatLoadedSesi = true;
     }catch(e){
       console.error('Gagal load sinyal_analis_privat_'+g, e);
       toast('⚠️ Gagal baca harga Price/TP/SL dari server ('+g+'). Coba logout lalu login lagi.');
@@ -5191,6 +5192,15 @@ function teksPipsVpRunning(g, r){
 function renderDaftarRunning(){
   const wrap=document.getElementById('daftarRunningWrap');
   if(!wrap)return;
+  // Refresh halaman saat sesi admin masih aktif: harga privat belum sempat terbaca,
+  // jadi baca sekali lagi, lalu render ulang daftar.
+  if(isAdmin && !window._privatLoadedSesi && !window._privatLoadingSesi){
+    window._privatLoadingSesi = true;
+    loadSinyalAnalisPrivat().finally(()=>{
+      window._privatLoadingSesi = false;
+      if(window._privatLoadedSesi) renderDaftarSinyal();
+    });
+  }
   const g=daftarSinyalPairGroup||'XAUUSD';
   const list=(cachedSinyalAnalis[g]||[]).filter(r=>r.status==='running');
   if(!list.length){
@@ -11491,6 +11501,7 @@ async function logout(){
   // Buang data harga privat dari memori browser begitu logout — gak boleh nyangkut di RAM/cache
   // tab yang mungkin masih kebuka orang lain di device yang sama.
   cachedSinyalAnalisPrivat={XAUUSD:{}, FOREX:{}};
+  window._privatLoadedSesi=false;
   renderBalanceHero();
     if(typeof renderLabelProfilRisiko==='function') renderLabelProfilRisiko();
   renderInvestorDashboard(); // Admin logout → Investor Dashboard sembunyi lagi total buat publik (kecuali masih login investor)
