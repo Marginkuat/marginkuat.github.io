@@ -370,6 +370,7 @@ function toggleKamusGrup(btn){
     <div class="bal-box"><div class="bal-box-val cg" id="bProfit">¢0</div><div class="bal-box-lbl" id="bProfitLbl">Total Profit</div></div>
   </div>
   <div id="balDrawdownRow" style="margin-top:10px;text-align:center;font-size:10px;color:#E5E7EB"></div>
+  <div id="pertumbuhanBulanWrap" style="margin-top:14px"></div>
   <div id="mt4AturanWrap"></div>
   <div id="mt4RisikoWrap"></div>
   <div style="text-align:center;margin-top:6px"><a href="#secKamusIstilah" style="font-size:9px;color:#E5E7EB;text-decoration:underline">❓ Belum ngerti Win Rate/istilah lain? Lihat Kamus Istilah</a></div>
@@ -3199,7 +3200,7 @@ const MASK_STR='••••••';
 const mfc=v=>balanceMasked?'¢'+MASK_STR:fc(v);
 const mfu=v=>balanceMasked?'$'+MASK_STR:fu(v);
 const mfr=v=>balanceMasked?'Rp '+MASK_STR:fr(v);
-let lastSaldoTerakhir=0, lastTotalProfitAll=0, lastSaldoAwal=0;
+let lastSaldoTerakhir=0, lastTotalProfitAll=0, lastSaldoAwal=0, lastSaldoAwalTanggal='';
 
 // Render ulang Balance Hero dari nilai yang sudah di-cache (gak perlu fetch ulang ke server)
 // ATURAN PRIVASI: nominal $ / Rp cuma boleh kelihatan kalau login sebagai Admin (Fund Manager).
@@ -3212,7 +3213,8 @@ function renderBalanceHero(){
     const pct = lastSaldoAwal!==0 ? ((lastSaldoTerakhir-lastSaldoAwal)/Math.abs(lastSaldoAwal)*100) : 0;
     const pctSign = pct>=0?'+':'';
     set('balCent', pctSign+pct.toFixed(1)+'%');
-    set('balUSD', 'Pertumbuhan saldo (all-time)');
+    const tglAwalTxt = lastSaldoAwalTanggal ? new Date(lastSaldoAwalTanggal+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}) : '—';
+    set('balUSD', 'Pertumbuhan saldo (all-time) sejak ' + tglAwalTxt);
     set('balRp', isAdmin ? 'Mode privasi aktif — nominal disembunyikan' : 'Nominal saldo bersifat privat');
 
     const roi = lastSaldoAwal!==0 ? (lastTotalProfitAll/Math.abs(lastSaldoAwal)*100) : 0;
@@ -3785,6 +3787,7 @@ async function loadBalance(){
     // kepotong pair lain kalau kebetulan lebih lama tanggalnya)
     const rowsXauUrut=getRowsAkunRealXauusd().slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
     lastSaldoAwal = rowsXauUrut.length ? parseFloat(rowsXauUrut[0].saldo_mt4||0) : 0;
+    lastSaldoAwalTanggal = rowsXauUrut.length ? (rowsXauUrut[0].tanggal||'') : '';
 
     const hariProfit = allSh.filter(r=>parseFloat(r.profit||0)>0).length;
     const hariTotal = allSh.length;
@@ -3796,7 +3799,115 @@ async function loadBalance(){
     lastTotalProfitAll=totalProfit;
 
     renderBalanceHero();
+    await loadPelanggaranMt4();
+    renderPertumbuhanBulanan();
   }catch(e){console.error(e);}
+}
+
+// ══ ATURAN PERSENTASE AKUN MT4 (dipantau otomatis, pelanggaran dicatat di situs) ══
+const ATURAN_LOSS_HARIAN = -3;   // loss per hari maksimal 3% (dari saldo awal hari)
+const ATURAN_LOSS_BULAN  = -6;   // loss per bulan maksimal 6% (dari saldo awal bulan)
+const ATURAN_PROFIT_BULAN = 10;  // profit per bulan target 10%, lewat dari itu = melanggar (harus stop)
+let pelanggaranMt4Cache = {};
+
+// Saldo awal hari = saldo akhir hari dikurangi profit hari itu. Saldo awal bulan = saldo awal hari pertama bulan itu.
+function hitungPerformaMt4(){
+  const rows = getRowsAkunRealXauusd().slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const hari = rows.map(r=>{
+    const end = parseFloat(r.saldo_mt4||0), prof = parseFloat(r.profit||0), start = end - prof;
+    return { tgl: String(r.tanggal||''), start, end, prof, pctHari: start>0 ? prof/start*100 : 0 };
+  });
+  const map = {};
+  hari.forEach(h=>{
+    const k = h.tgl.slice(0,7);
+    if(!map[k]) map[k] = { periode:k, start:h.start, end:h.end, jumlahHari:0 };
+    map[k].end = h.end; map[k].jumlahHari++;
+  });
+  const bulan = Object.values(map).map(b=>({ ...b, pct: b.start>0 ? (b.end-b.start)/b.start*100 : 0 }));
+  return { hari, bulan };
+}
+
+function daftarPelanggaranMt4(perf){
+  const out = [];
+  perf.hari.forEach(h=>{
+    if(h.pctHari <= ATURAN_LOSS_HARIAN) out.push({ key:'harian_'+h.tgl, jenis:'Loss per hari melewati 3%', periode:h.tgl, nilai:h.pctHari });
+  });
+  perf.bulan.forEach(b=>{
+    if(b.pct <= ATURAN_LOSS_BULAN) out.push({ key:'bulan_loss_'+b.periode, jenis:'Loss per bulan melewati 6%', periode:b.periode, nilai:b.pct });
+    if(b.pct >= ATURAN_PROFIT_BULAN) out.push({ key:'bulan_profit_'+b.periode, jenis:'Profit per bulan melewati target 10%', periode:b.periode, nilai:b.pct });
+  });
+  return out;
+}
+
+async function loadPelanggaranMt4(){
+  try{
+    const r = await api('app_settings?select=value&key=eq.pelanggaran_mt4');
+    if(r && r.length && r[0].value) pelanggaranMt4Cache = JSON.parse(r[0].value) || {};
+  }catch(e){ console.error('loadPelanggaranMt4', e); }
+}
+
+// Pelanggaran baru dicatat sekali dan tidak dicatat ulang. Hanya admin yang bisa menulis.
+async function catatPelanggaranMt4(list){
+  const baru = list.filter(v=>!pelanggaranMt4Cache[v.key]);
+  if(!baru.length) return;
+  baru.forEach(v=>{ pelanggaranMt4Cache[v.key] = { jenis:v.jenis, periode:v.periode, nilai:+v.nilai.toFixed(2), tercatat:new Date().toISOString() }; });
+  if(!isAdmin) return;
+  try{
+    const payload = JSON.stringify(pelanggaranMt4Cache);
+    const ex = await api('app_settings?select=key&key=eq.pelanggaran_mt4');
+    if(ex.length) await api('app_settings?key=eq.pelanggaran_mt4','PATCH',{value:payload});
+    else await api('app_settings','POST',{key:'pelanggaran_mt4', value:payload});
+  }catch(e){ console.error('catatPelanggaranMt4', e); }
+}
+
+function renderPertumbuhanBulanan(){
+  const wrap = document.getElementById('pertumbuhanBulanWrap');
+  if(!wrap) return;
+  const perf = hitungPerformaMt4();
+  if(!perf.hari.length){ wrap.innerHTML=''; return; }
+  const viol = daftarPelanggaranMt4(perf);
+  catatPelanggaranMt4(viol);
+
+  const f = v => (v>=0?'+':'') + v.toFixed(2) + '%';
+  const namaBulan = p => { const [y,m]=p.split('-'); return new Date(+y,+m-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'}); };
+  const hariIni = perf.hari[perf.hari.length-1];
+  const bulanIni = perf.bulan[perf.bulan.length-1];
+  const lossHariOk = hariIni.pctHari > ATURAN_LOSS_HARIAN;
+  const lossBulanOk = bulanIni.pct > ATURAN_LOSS_BULAN;
+  const profitOk = bulanIni.pct < ATURAN_PROFIT_BULAN;
+  const baris = (label, nilai, ok, catatan) => `
+    <div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:11px">
+      <div><div style="color:#FFFFFF;font-weight:700">${label}</div><div style="font-size:9px;color:#E5E7EB">${catatan}</div></div>
+      <div style="text-align:right"><div style="color:${ok?'#4ADE80':'#F87171'};font-weight:800">${nilai}</div><div style="font-size:9px;color:${ok?'#4ADE80':'#F87171'}">${ok?'✅ sesuai aturan':'❌ melanggar'}</div></div>
+    </div>`;
+
+  const listBulan = perf.bulan.slice().reverse().map(b=>{
+    const melanggar = b.pct<=ATURAN_LOSS_BULAN || b.pct>=ATURAN_PROFIT_BULAN;
+    return `<div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;color:#FFFFFF"><span>${namaBulan(b.periode)}</span><span style="font-weight:700;color:${b.pct>=0?'#4ADE80':'#F87171'}">${f(b.pct)} ${melanggar?'❌':'✅'}</span></div>`;
+  }).join('');
+
+  const tercatat = Object.values(pelanggaranMt4Cache).sort((a,b)=>String(b.tercatat).localeCompare(String(a.tercatat)));
+  const listCatat = tercatat.length
+    ? tercatat.map(v=>`<div style="font-size:10px;color:#F87171;padding:3px 0">❌ ${v.jenis} — ${v.periode} (${f(v.nilai)})</div>`).join('')
+    : `<div style="font-size:10px;color:#4ADE80">Belum ada pelanggaran tercatat.</div>`;
+
+  wrap.innerHTML = `
+  <div style="background:var(--bg0);border:1.5px solid #4ADE80;border-radius:10px;padding:12px 14px">
+    <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📅 Pertumbuhan Bulan Ini — ${namaBulan(bulanIni.periode)}</div>
+    <div style="font-size:9px;color:#E5E7EB;margin-bottom:4px">Dihitung dari saldo awal bulan ini (bukan dari awal data).</div>
+    <div style="font-size:22px;font-weight:800;color:${bulanIni.pct>=0?'#4ADE80':'#F87171'}">${f(bulanIni.pct)}</div>
+
+    <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:10px">Aturan Anda</div>
+    ${baris('Loss per hari (maks 3%)', f(hariIni.pctHari), lossHariOk, 'Hari terakhir tercatat, dari saldo awal hari itu')}
+    ${baris('Loss per bulan (maks 6%)', f(bulanIni.pct), lossBulanOk, 'Bulan ini, dari saldo awal bulan')}
+    ${baris('Profit per bulan (target 10%)', f(bulanIni.pct), profitOk, 'Lewat 10% = melanggar, harus stop')}
+
+    <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">Per Bulan</div>
+    ${listBulan}
+
+    <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">Pelanggaran Tercatat</div>
+    ${listCatat}
+  </div>`;
 }
 
 // ══ KALENDER ══
