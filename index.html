@@ -5284,6 +5284,14 @@ function hitungBufferVpChannel(g){
 }
 // Teks pips & VP untuk kartu sinyal running. Dibungkus try/catch supaya kalau ada error
 // di sini, halaman tetap jalan (cuma teks ini yang kosong).
+// Format "Opened at" seperti di aplikasi: 04 Nov 2026, 16:07 WIB
+function fmtOpenedAtRunning(r){
+  try{
+    const t = r.tanggalBuka || r.tanggal;
+    const tgl = new Date(String(t)+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+    return r.jamBuka ? `${tgl}, ${r.jamBuka} WIB` : `${tgl} (jam belum dicatat)`;
+  }catch(e){ return String(r.tanggal||'—'); }
+}
 function teksPipsVpRunning(g, r){
   try{
     const est=estimasiPotensiVpSatuSinyal(g, r);
@@ -5329,7 +5337,7 @@ function renderDaftarRunning(){
         <div style="font-size:10px;color:#E5E7EB;font-weight:700">${r.simbol||g}${r.batch?` <span style="color:#E5E7EB;font-weight:400">— batch: ${r.batch}</span>`:''}</div>
         <span onclick="hapusSinyalRunning('${g}','${r.id}')" title="Hapus catatan (mis. salah channel/pair)" style="font-size:13px;cursor:pointer">🗑️</span>
       </div>
-      <div style="font-size:9px;color:#E5E7EB;margin-bottom:6px">Dibuka: ${r.tanggal}${teksPipsVpRunning(g, r)}</div>
+      <div style="font-size:9px;color:#E5E7EB;margin-bottom:6px">Opened at: ${fmtOpenedAtRunning(r)}${teksPipsVpRunning(g, r)}</div>
       <div style="display:flex;gap:6px">
         <button class="btn" onclick="isiHargaRunning('${g}','${r.id}')" title="Lengkapi Price/TP/SL/arah sinyal ini tanpa hapus" style="flex:0 0 auto;padding:6px 8px;font-size:9px;background:#2A2A10;border-color:#FACC15">✏️ Isi harga</button>
         <button class="btn" onclick="tutupSinyalRunning('${g}','${r.id}','profit')" style="flex:1;padding:6px;font-size:9px;background:#1E4A14;border-color:#3E9142">🎯 Tutup — Profit</button>
