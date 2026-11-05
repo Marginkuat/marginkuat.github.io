@@ -1798,6 +1798,29 @@ function renderInvCalcDisclaimer(){
         <div id="secInputSinyal" style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px">📝 Input Sinyal</div>
       </div>
       <div style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.5">Input SATU-SATU tiap sinyal yang closed — bukan rekap harian.</div>
+    <div id="runningToolBlock" style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+      <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🏃 Sinyal Sedang Running</div>
+      <label class="lbl">Channel (wajib dipilih)</label>
+      <select class="inp" id="inpRunningChannel" onchange="setDaftarSinyalPairGroup(this.value)"><option value="">— pilih channel —</option><option value="XAUUSD">Datuk EURUSD (XAUUSD)</option><option value="FOREX">Datuk Crypto 89 (FOREX)</option></select>
+      <label class="lbl">Pair</label>
+      <input class="inp" type="text" id="inpRunningSimbolManual" placeholder="mis. AUDJPY">
+      <label class="lbl">Arah</label>
+      <select class="inp" id="inpRunningArah"><option value="">— pilih Buy/Sell —</option><option value="buy">Buy</option><option value="sell">Sell</option></select>
+      <label class="lbl">Price (entry)</label>
+      <input class="inp" type="number" step="any" id="inpRunningHarga" placeholder="mis. 110.860">
+      <label class="lbl">Take Profit</label>
+      <input class="inp" type="number" step="any" id="inpRunningTp" placeholder="mis. 111.760">
+      <label class="lbl">Stop Loss</label>
+      <input class="inp" type="number" step="any" id="inpRunningSl" placeholder="mis. 110.410">
+      <label class="lbl">Opened at</label>
+      <input class="inp" type="datetime-local" id="inpRunningOpenedAt">
+      <div style="font-size:8px;color:#E5E7EB;margin-top:-4px;margin-bottom:6px">⏱️ Opened at ini yang dipakai buat ngecek "sinyal ini kecopy subscriber mana" — beda dari jam TUTUP, dan gak akan ketimpa pas sinyal ini ditutup nanti.</div>
+      <label class="lbl">Batch / Grup (opsional)</label>
+      <input class="inp" type="text" id="inpRunningBatch" placeholder="mis. Forex 4 Sep">
+      <button class="btn" onclick="tambahSinyalRunning()" style="margin-top:8px">➕ Catat Sinyal Running</button>
+      <div id="daftarRunningWrap" style="margin-top:10px"></div>
+    </div>
+
       <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
         <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">✅ Cek List — sontek dari notifikasi sinyal</div>
         <div style="font-size:9px;color:#E5E7EB;line-height:1.9">
@@ -1867,28 +1890,6 @@ function renderInvCalcDisclaimer(){
       <div id="daftarSinyalWrap"><div style="font-size:11px;color:#E5E7EB;text-align:center;padding:6px">Memuat...</div></div>
     </div>
 
-    <div id="runningToolBlock" style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-      <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🏃 Sinyal Sedang Running</div>
-      <label class="lbl">Channel (wajib dipilih)</label>
-      <select class="inp" id="inpRunningChannel" onchange="setDaftarSinyalPairGroup(this.value)"><option value="">— pilih channel —</option><option value="XAUUSD">Datuk EURUSD (XAUUSD)</option><option value="FOREX">Datuk Crypto 89 (FOREX)</option></select>
-      <label class="lbl">Pair</label>
-      <input class="inp" type="text" id="inpRunningSimbolManual" placeholder="mis. AUDJPY">
-      <label class="lbl">Arah</label>
-      <select class="inp" id="inpRunningArah"><option value="">— pilih Buy/Sell —</option><option value="buy">Buy</option><option value="sell">Sell</option></select>
-      <label class="lbl">Price (entry)</label>
-      <input class="inp" type="number" step="any" id="inpRunningHarga" placeholder="mis. 110.860">
-      <label class="lbl">Take Profit</label>
-      <input class="inp" type="number" step="any" id="inpRunningTp" placeholder="mis. 111.760">
-      <label class="lbl">Stop Loss</label>
-      <input class="inp" type="number" step="any" id="inpRunningSl" placeholder="mis. 110.410">
-      <label class="lbl">Opened at</label>
-      <input class="inp" type="datetime-local" id="inpRunningOpenedAt">
-      <div style="font-size:8px;color:#E5E7EB;margin-top:-4px;margin-bottom:6px">⏱️ Opened at ini yang dipakai buat ngecek "sinyal ini kecopy subscriber mana" — beda dari jam TUTUP, dan gak akan ketimpa pas sinyal ini ditutup nanti.</div>
-      <label class="lbl">Batch / Grup (opsional)</label>
-      <input class="inp" type="text" id="inpRunningBatch" placeholder="mis. Forex 4 Sep">
-      <button class="btn" onclick="tambahSinyalRunning()" style="margin-top:8px">➕ Catat Sinyal Running</button>
-      <div id="daftarRunningWrap" style="margin-top:10px"></div>
-    </div>
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
       <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">💱 Rekap per Pair / Mata Uang (channel ini)</div>
@@ -6870,7 +6871,6 @@ function renderSatuChannelScore(g){
     ${badgeBanding}
     ${liveBlok}
     ${medalBlokHtml}
-    ${g==='XAUUSD' ? '<div id="runningToolSlot"></div>' : ''}
     ${levelBlokHtml}
     <div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:center">
       <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Rekomendasi Harga Channel</div>
