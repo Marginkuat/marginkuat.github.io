@@ -5330,11 +5330,49 @@ function renderDaftarRunning(){
       </div>
       <div style="font-size:9px;color:#E5E7EB;margin-bottom:6px">Dibuka: ${r.tanggal}${teksPipsVpRunning(g, r)}</div>
       <div style="display:flex;gap:6px">
+        <button class="btn" onclick="isiHargaRunning('${g}','${r.id}')" title="Lengkapi Price/TP/SL/arah sinyal ini tanpa hapus" style="flex:0 0 auto;padding:6px 8px;font-size:9px;background:#2A2A10;border-color:#FACC15">✏️ Isi harga</button>
         <button class="btn" onclick="tutupSinyalRunning('${g}','${r.id}','profit')" style="flex:1;padding:6px;font-size:9px;background:#1E4A14;border-color:#3E9142">🎯 Tutup — Profit</button>
         <button class="btn" onclick="tutupSinyalRunning('${g}','${r.id}','sl')" style="flex:1;padding:6px;font-size:9px;background:#4A1414;border-color:#D9534F">🛑 Tutup — Kena SL</button>
       </div>
     </div>`).join('');
 }
+// Lengkapi harga (Price/TP/SL/arah) untuk sinyal running yang sudah tercatat tanpa harga.
+// Dipakai untuk sinyal lama, jadi tidak perlu hapus dan catat ulang.
+async function isiHargaRunning(g, id){
+  if(!isAdmin){ toast('❌ Harus masuk sebagai Admin'); return; }
+  const item = (cachedSinyalAnalis[g]||[]).find(x=>x.id===id);
+  if(!item){ toast('❌ Sinyal tidak ditemukan'); return; }
+  const pv = (cachedSinyalAnalisPrivat[g]||{})[id] || {};
+  const arahIn = prompt(`${item.simbol||g} — ARAH (ketik buy atau sell)`, pv.arah || '');
+  if(arahIn===null) return;
+  const arah = arahIn.trim().toLowerCase();
+  if(arah!=='buy' && arah!=='sell'){ toast('❌ Arah harus buy atau sell'); return; }
+  const entryIn = prompt(`${item.simbol||g} — PRICE (entry)`, pv.hargaEntry ?? '');
+  if(entryIn===null) return;
+  const hargaEntry = parseFloat(entryIn);
+  if(!isFinite(hargaEntry)){ toast('❌ Price harus angka'); return; }
+  const tpIn = prompt(`${item.simbol||g} — TAKE PROFIT (kosongkan kalau belum ada)`, pv.hargaTp ?? '');
+  if(tpIn===null) return;
+  const slIn = prompt(`${item.simbol||g} — STOP LOSS (kosongkan kalau belum ada)`, pv.hargaSl ?? '');
+  if(slIn===null) return;
+  const hargaTp = tpIn.trim()==='' ? null : parseFloat(tpIn);
+  const hargaSl = slIn.trim()==='' ? null : parseFloat(slIn);
+  if(hargaTp!==null && !isFinite(hargaTp)){ toast('❌ TP harus angka'); return; }
+  if(hargaSl!==null && !isFinite(hargaSl)){ toast('❌ SL harus angka'); return; }
+  if(hargaTp!==null && ((arah==='buy' && hargaTp<=hargaEntry)||(arah==='sell' && hargaTp>=hargaEntry))){ toast('❌ TP tidak sesuai arah'); return; }
+  if(hargaSl!==null && ((arah==='buy' && hargaSl>=hargaEntry)||(arah==='sell' && hargaSl<=hargaEntry))){ toast('❌ SL tidak sesuai arah'); return; }
+  if(!cachedSinyalAnalisPrivat[g]) cachedSinyalAnalisPrivat[g] = {};
+  cachedSinyalAnalisPrivat[g][id] = { arah, hargaEntry, hargaTp, hargaSl };
+  try{
+    await simpanSinyalPrivatKeServer(g);
+    toast(`✅ Harga ${item.simbol||g} tersimpan`);
+    renderDaftarSinyal();
+  }catch(e){
+    console.error('isiHargaRunning', e);
+    toast('❌ Gagal simpan harga: '+(e.message||'').slice(0,100));
+  }
+}
+
 // ── Proyeksi Buffer dari Sinyal Running — hitung berapa VP potensial kalau SEMUA sinyal
 // running yang lagi dipantau ini closed sebagai Win semua, dan berapa kalau closed sebagai
 // Loss semua, lalu dibandingkan ke Buffer VP saat ini. Kalau ada data harga privat (Admin
