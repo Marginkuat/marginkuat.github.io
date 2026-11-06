@@ -16125,7 +16125,7 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const lossHariIni=lossHari[hariIni]||0;
   const pairList=Object.keys(per).sort((a,b)=>per[b].n-per[a].n || slPair(a)-slPair(b) || a.localeCompare(b));
   const pairAda=pairList.filter(k=>per[k].n>0);
-  const sw=(R===FOREX_REM_V2);   // aturan v2: win pertama langsung stop
+  const sw=false;   // aturan win pertama langsung stop dihapus (acuan rem)
   const pairPenuh=pairList.filter(k=>per[k].n>=BATAS_ORDER_PAIR(R) || (sw&&per[k].w>0));
   const pairLewat=pairList.filter(k=>per[k].n>BATAS_ORDER_PAIR(R));
   const pairSisa1=pairList.filter(k=>per[k].n===BATAS_ORDER_PAIR(R)-1 && !(sw&&per[k].w>0));
@@ -16243,7 +16243,7 @@ function renderStrategiInvestor(){
       baris(`<b>Rugi maksimal sebulan (batas rem)</b>: ${chip(emasMaks)}`))}
     ${kotak(nmX+' — Forex ('+BX.maksOrder/R.jatahPair+' pair)',
       baris(`<b>Pair:</b> ${R.kanal.XAUUSD.pairs.join(', ')}`)+
-      baris(`<b>Strategi:</b> SL ${30*(R.slKali||1)} atau ${45*(R.slKali||1)} pips (beda per pair), TP ${R.rr}× SL (RR 1:${R.rr}). Titik impas win rate ${R.rr===2?33:25}%.${R.rr===2?' Win langsung stop; order berikutnya dibuka setelah order sebelumnya kena SL.':''}`)+
+      baris(`<b>Strategi:</b> SL ${30*(R.slKali||1)} atau ${45*(R.slKali||1)} pips (beda per pair), TP ${R.rr}× SL (RR 1:${R.rr}). Titik impas win rate ${R.rr===2?33:25}%.`)+
       baris(`${R.maxLossHari?'Maksimal '+R.maxLossHari+' loss per hari, lalu stop sampai besok.':'Tidak ada jeda harian: 2 loss di satu pair langsung stop, termasuk di hari yang sama.'}`)+
       baris(`<b>Rugi maksimal sebulan:</b> ${chip(fxX)} · stop gabungan di ${BX.stop} pips (${fm(BX.stop*pipUsd)})`))}
     ${kotak('Total terburuk '+nmX+' (emas + forex)',
@@ -16251,7 +16251,7 @@ function renderStrategiInvestor(){
       baris(`Modal yang disarankan agar terburuk ≤6%: <b>${modalAman(totX)}</b> (lot ${lot.toFixed(2)})`))}
     ${kotak(nmF+' — Forex ('+BF.maksOrder/R.jatahPair+' pair)',
       baris(`<b>Pair:</b> ${R.kanal.FOREX.pairs.join(', ')}`)+
-      baris(`<b>Strategi:</b> SL ${45*(R.slKali||1)} atau ${60*(R.slKali||1)} pips (beda per pair), TP ${R.rr}× SL (RR 1:${R.rr}). Titik impas win rate ${R.rr===2?33:25}%.${R.rr===2?' Win langsung stop; order berikutnya dibuka setelah order sebelumnya kena SL.':''}`)+
+      baris(`<b>Strategi:</b> SL ${45*(R.slKali||1)} atau ${60*(R.slKali||1)} pips (beda per pair), TP ${R.rr}× SL (RR 1:${R.rr}). Titik impas win rate ${R.rr===2?33:25}%.`)+
       baris(`${R.maxLossHari?'Maksimal '+R.maxLossHari+' loss per hari, lalu stop sampai besok.':'Tidak ada jeda harian: 2 loss di satu pair langsung stop, termasuk di hari yang sama.'}`)+
       baris(`<b>Rugi maksimal sebulan:</b> ${chip(fxF)} · stop gabungan di ${BF.stop} pips (${fm(BF.stop*pipUsd)})`)+
       baris(`Modal yang disarankan agar terburuk ≤6%: <b>${modalAman(fxF)}</b> (lot ${lot.toFixed(2)})`))}
