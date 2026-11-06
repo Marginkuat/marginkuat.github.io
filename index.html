@@ -5784,7 +5784,7 @@ function renderRekapPair(){
   // ── ATURAN v2 per pair (bulan berjalan): emas jatah 5 order, STOP saat untung bersih +500 pips; forex jatah 2 order, STOP saat win pertama ──
   const A2=AUDIT_ATURAN_V2;
   const status=k=>{
-    const d=grup[k], emas=(k==='XAUUSD'), J=emas?A2.emas.jatah:A2.jatahPair;
+    const d=grup[k], emas=(k==='XAUUSD'), J=emas?BATAS_ORDER_EMAS():BATAS_ORDER_PAIR(A2);
     const arr=d.arr.slice().sort((x,y)=>String(x.tanggal+' '+(x.jam||'00:00')).localeCompare(String(y.tanggal+' '+(y.jam||'00:00'))));
     let cum=0, idxStop=-1;
     arr.forEach((r,i)=>{ const pp=parseFloat(r.pips||0); cum+=pp; if(idxStop<0 && (emas? cum>=A2.emas.tp-1e-9 : pp>0)) idxStop=i; });
@@ -15660,13 +15660,13 @@ function renderBatasDDMetode(){
   const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
   const modal=cachedBatasDD[g].modal;
   const h=hitungBatasDD(g,bk);
-  const sisa=m.jatah-h.loss;
+  const sisa=(JATAH_ORDER_AKTIF?m.jatah:Infinity)-h.loss;
   const adaWin=!aturanBulan(bk).uji && (()=>{ let c=0; return (cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk && String(r.tanggal)>=awalAturan(bk)).sort((a,b)=>String(a.tanggal+(a.jam||'')).localeCompare(String(b.tanggal+(b.jam||'')))).some(r=>{ c+=parseFloat(r.pips||0); return c>=AUDIT_ATURAN_V2.emas.tp; }); })();
   let st, warna;
   const byLoss=(m.hitung==='loss');
   const pakai=byLoss?h.loss:Math.max(h.n,h.loss);   // H4 200: hitung LOSS saja; H4 500: ORDER atau LOSS, mana yang duluan
-  const sisaJ=m.jatah-pakai;
-  const info=byLoss?`Loss: <b>${h.loss}</b> dari ${m.jatah} (win tidak mengurangi jatah)`:`Order: <b>${h.n}</b> dari ${m.jatah} · Loss: <b>${h.loss}</b> dari ${m.jatah}`;
+  const sisaJ=(JATAH_ORDER_AKTIF?m.jatah:Infinity)-pakai;
+  const info=!JATAH_ORDER_AKTIF ? `Order: <b>${h.n}</b> · Loss: <b>${h.loss}</b> (tanpa batas jatah, dibatasi rem)` : (byLoss?`Loss: <b>${h.loss}</b> dari ${m.jatah} (win tidak mengurangi jatah)`:`Order: <b>${h.n}</b> dari ${m.jatah} · Loss: <b>${h.loss}</b> dari ${m.jatah}`);
   const pipUsdM=PIP_VALUE_USD_PER_0_01_LOT*m.k;
   const rugiPips=Math.max(0,-h.cum/pipUsdM), batasPipsM=m.stopUsd/pipUsdM, sisaPipsM=Math.max(0,batasPipsM-rugiPips);
   if(m.campur){
@@ -15677,8 +15677,8 @@ function renderBatasDDMetode(){
   } else
   if(h.n===0){ st='Belum ada sinyal closed bulan ini'; warna='#E5E7EB'; }
   else if(adaWin){ st='🛑 UNTUNG BERSIH +$300 — WAJIB STOP sampai bulan depan<br><span style="font-size:10px;font-weight:600">Aturan v2: stop saat untung bersih mencapai +$300 (contoh: loss, win, win). '+info+'</span>'; warna='#F87171'; }
-  else if(pakai>m.jatah){ st='❌ Melewati jatah<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#F87171'; }
-  else if(pakai===m.jatah){ st='🛑 Jatah habis — stop sampai bulan depan<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#F87171'; }
+  else if(pakai>(JATAH_ORDER_AKTIF?m.jatah:Infinity)){ st='❌ Melewati jatah<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#F87171'; }
+  else if(JATAH_ORDER_AKTIF && pakai===m.jatah){ st='🛑 Jatah habis — stop sampai bulan depan<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#F87171'; }
   else { st=`✅ Jatah masih ada<br><span style="font-size:10px;font-weight:600">${info} (sisa ${sisaJ})</span>`; warna=sisaJ<=1?'#FACC15':'#4ADE80'; }
   const nm=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   const fmtBulan=k=>{ const [y,mm]=k.split('-'); return nm[parseInt(mm,10)-1]+' '+y; };
@@ -16265,6 +16265,10 @@ function renderStrategiInvestor(){
 // forex SL per pair, TP 3×SL (RR 1:3), jatah 3 order/pair/bulan, maks 1 loss/hari, stop gabungan.
 // Tingkat bukti: PASTI (rencana SL/TP tercatat / hitungan jatah), KUAT (hasil identik dengan RR yang salah), INDIKASI (perlu konfirmasi).
 const AUDIT_ATURAN={ emas:{sl:500,tp:500,rr:1,jatah:5}, forexRR:3, jatahPair:3 };
+// JATAH ORDER DIHAPUS (keputusan pemilik): hanya REM yang membatasi kerugian bulanan.
+const JATAH_ORDER_AKTIF=false;
+function BATAS_ORDER_EMAS(){ return JATAH_ORDER_AKTIF ? AUDIT_ATURAN_V2.emas.jatah : Infinity; }
+function BATAS_ORDER_PAIR(X){ return (JATAH_ORDER_AKTIF && X && X.jatahPair) ? X.jatahPair : Infinity; }
 const ATURAN_V2_EFEKTIF='2026-10-01';   // Aturan v2 analis DINILAI mundur sejak 1 Oktober 2026
 const ATURAN_V2_DITETAPKAN='2026-11-02';   // aturan ini dibuat/ditetapkan pada 2 November 2026, berlaku hari ini sampai tidak ditentukan; dinilai mundur sejak 1 Oktober 2026
 const AUDIT_ATURAN_V2={ emas:{sl:500,tp:3000,rr:1,jatah:5}, /* tp = target untung bersih bulanan $300 (3000 pips di lot 0,01) */ forex:{rr:2,jatahPair:2,slKali:1} };   // Hard: SL dasar per pair, TP 2x SL
@@ -16350,8 +16354,8 @@ function auditChannel(g,bk){
   const urutBuka=L.slice().sort((a,b)=>buka(a)-buka(b));
   let emasN=0; const pairN={};
   urutBuka.forEach(x=>{
-    if(x.nm==='XAUUSD'){ emasN++; if(emasN>AA.emas.jatah) tambah(x,'pasti','Melebihi jatah order emas', `Order emas ke-${emasN} bulan ini, jatah ${AA.emas.jatah} order (untung atau rugi). Seharusnya sudah stop.`); }
-    else { pairN[x.nm]=(pairN[x.nm]||0)+1; if(pairN[x.nm]>AA.jatahPair) tambah(x,'pasti','Melebihi jatah order pair', `Order ke-${pairN[x.nm]} untuk ${x.nm} bulan ini, jatah ${AA.jatahPair} order per pair (untung atau rugi). Seharusnya pair ini sudah stop.`); }
+    if(x.nm==='XAUUSD'){ emasN++; if(emasN>BATAS_ORDER_EMAS()) tambah(x,'pasti','Melebihi jatah order emas', `Order emas ke-${emasN} bulan ini, jatah ${AA.emas.jatah} order (untung atau rugi). Seharusnya sudah stop.`); }
+    else { pairN[x.nm]=(pairN[x.nm]||0)+1; if(pairN[x.nm]>BATAS_ORDER_PAIR(AA)) tambah(x,'pasti','Melebihi jatah order pair', `Order ke-${pairN[x.nm]} untuk ${x.nm} bulan ini, jatah ${AA.jatahPair} order per pair (untung atau rugi). Seharusnya pair ini sudah stop.`); }
   });
   // (D) forex: dibuka setelah ada loss di hari yang sama, dan (E) dibuka setelah batas stop gabungan tercapai
   const fx=urutBuka.filter(x=>x.nm!=='XAUUSD'); const B=remForexBatas(g,R);
@@ -16567,7 +16571,7 @@ function perbandinganAturanMt4Html(){
 
 function renderAturanMt4(){
   const el=document.getElementById('mt4AturanWrap'); if(!el) return;
-  const now=new Date(), bk=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'), J=5;
+  const now=new Date(), bk=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'), J=JATAH_ORDER_AKTIF?5:Infinity;
   const hariIni=bk+'-'+String(now.getDate()).padStart(2,'0'), belumMulai=hariIni<MT4_ATURAN_MULAI, uji=false;
   const rows=(allSaldoData||[]).filter(r=>(r.pair||'XAUUSD')==='XAUUSD' && String(r.tanggal).slice(0,7)===bk && String(r.tanggal)>=MT4_ATURAN_MULAI).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
   let n=0, tglWin=null, cum=0; const langgar=[];
