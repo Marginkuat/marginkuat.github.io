@@ -5522,6 +5522,10 @@ function renderProyeksiBufferRunning(g, list){
   const batasRugiPips = ((typeof remPipsAturan==='function') ? remPipsAturan()[g] : cachedRemPips[g]) || 0;
   const sisaRuangPips = batasRugiPips + pipsFixKalauSemuaLos;  // pips fix (negatif) mengurangi ruang rugi
   const remJebol = batasRugiPips>0 && pipsFixKalauSemuaLos <= -batasRugiPips;
+  if(batasRugiPips>0 && totalPipsBulanIni <= -batasRugiPips){
+    const bulanRem = new Date().toISOString().slice(0,7);
+    catatPelanggaranMt4([{ key:'rem_'+g+'_'+bulanRem, jenis:'Rem bulanan terlewati ('+(g==='XAUUSD'?'Datuk EURUSD':'Datuk Crypto 89')+')', periode:bulanRem, nilai:totalPipsBulanIni }]);
+  }
   const remMin = (cachedTargetMin||{})[g] || 0, remMax = (cachedTargetMax||{})[g] || 0;
   const pipsFixKalauSemuaWinRem = totalPipsBulanIni + totalWinPips;
   const untungInfo = remMax>0 && totalPipsBulanIni >= remMax
@@ -5534,7 +5538,8 @@ function renderProyeksiBufferRunning(g, list){
       <div style="font-size:9px;color:#FFFFFF;font-weight:800;text-transform:uppercase;letter-spacing:.5px">🛑 REM Pips bulan ini — batas rugi ${batasRugiPips} pips</div>
       <div style="font-size:10px;color:#FFFFFF;line-height:1.7;margin-top:4px">
         Pips fix sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b> · Kalau semua running Loss: <b style="color:${remJebol?'#F87171':'#FFFFFF'}">${pipsFixKalauSemuaLos.toFixed(1)}</b><br>
-        Sisa ruang rugi sebelum rem: <b style="color:${sisaRuangPips>0?'#4ADE80':'#F87171'}">${sisaRuangPips.toFixed(1)} pips</b>
+        Sisa ruang rugi sebelum rem: <b style="color:${sisaRuangPips>0?'#4ADE80':'#F87171'}">${sisaRuangPips.toFixed(1)} pips</b><br>
+        ${g==='XAUUSD' ? `Batas emas ${(batasRugiPips/2).toFixed(0)} pips = <b>${Math.floor((batasRugiPips/2)/JALUR_EMAS_V2.sl)} order loss</b> (SL ${JALUR_EMAS_V2.sl}, v2)` : ''}
       </div>
       <div style="font-size:11px;font-weight:800;color:${remJebol?'#F87171':'#4ADE80'};margin-top:5px">
         ${remJebol
@@ -16577,7 +16582,7 @@ async function kunciAturanResmi(ver){
   try{ const gabung={riwayat:lama.riwayat.concat([baru])}; await simpanSettingRem('aturan_terkunci', JSON.stringify(gabung)); cachedAturanKunci=gabung; toast('🔒 Aturan '+A.versi+' terkunci'); renderBatasDDCard(); }
   catch(e){ console.error(e); cachedAturanKunci=lama; toast('❌ Gagal mengunci: '+(e.message||'').slice(0,100)); }
 }
-function remPipsAturan(){ return { XAUUSD:2950, FOREX:870 }; }   // v3: Datuk EURUSD 2950 pips ($295, acuan $4.920); Datuk Crypto 89 870 pips ($87, acuan $1.450)
+function remPipsAturan(){ return { XAUUSD:3000, FOREX:870 }; }   // Datuk EURUSD 3000 pips total = 6% modal $5.000 (emas 1500 + forex 1500); Datuk Crypto 89 870 pips tetap
 async function samakanRemPips(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const t=remPipsAturan();
