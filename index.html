@@ -1805,6 +1805,8 @@ function renderInvCalcDisclaimer(){
       <select class="inp" id="inpRunningChannel" onchange="setDaftarSinyalPairGroup(this.value)"><option value="">— pilih channel —</option><option value="XAUUSD">Datuk EURUSD (XAUUSD)</option><option value="FOREX">Datuk Crypto 89 (FOREX)</option></select>
       <label class="lbl">Pair</label>
       <input class="inp" type="text" id="inpRunningSimbolManual" placeholder="mis. AUDJPY">
+      <label class="lbl">Status</label>
+      <select class="inp" id="inpRunningStatus"><option value="running">Running (sudah masuk)</option><option value="pending">Pending (belum masuk, dihitung seperti running)</option></select>
       <label class="lbl">Arah</label>
       <select class="inp" id="inpRunningArah"><option value="">— pilih Buy/Sell —</option><option value="buy">Buy</option><option value="sell">Sell</option></select>
       <label class="lbl">Price (entry)</label>
@@ -5381,7 +5383,8 @@ async function tambahSinyalRunning(){
   if(isFinite(hargaSl) && ((arah==='buy' && hargaSl>=hargaEntry)||(arah==='sell' && hargaSl<=hargaEntry))){toast('❌ SL tidak sesuai arah (Buy: SL < Price, Sell: SL > Price)');return;}
   try{
     const idBaru=buatIdSinyal();
-    const data={id:idBaru, tanggal:tgl, jam:null, tanggalBuka:tgl, jamBuka, simbol:simbol.toUpperCase(), batch:batch||null, status:'running', pips:null, vp:null, slPips:null, tpPips:null, levelLabel:null};
+    const pendingBaru = val('inpRunningStatus')==='pending';
+    const data={id:idBaru, tanggal:tgl, jam:null, tanggalBuka:tgl, jamBuka, simbol:simbol.toUpperCase(), batch:batch||null, status:'running', pending:pendingBaru, pips:null, vp:null, slPips:null, tpPips:null, levelLabel:null};
     cachedSinyalAnalis[g].push(data);
     await simpanSinyalKeServer(g);
     // Harga entry/TP/SL disimpan privat (cuma kelihatan pas login Admin)
@@ -5481,13 +5484,23 @@ function renderDaftarRunning(){
         <div style="font-size:10px;color:#E5E7EB;font-weight:700">${r.simbol||g}${r.batch?` <span style="color:#E5E7EB;font-weight:400">— batch: ${r.batch}</span>`:''}</div>
         <span onclick="hapusSinyalRunning('${g}','${r.id}')" title="Hapus catatan (mis. salah channel/pair)" style="font-size:13px;cursor:pointer">🗑️</span>
       </div>
-      <div style="font-size:9px;color:#E5E7EB;margin-bottom:6px">Opened at: ${fmtOpenedAtRunning(r)}${teksPipsVpRunning(g, r)}</div>
+      <div style="font-size:9px;color:#E5E7EB;margin-bottom:6px">${r.pending?'<b style="color:#FACC15">⏳ PENDING</b> · ':''}Opened at: ${fmtOpenedAtRunning(r)}${teksPipsVpRunning(g, r)}</div>
       <div style="display:flex;gap:6px">
-        <button class="btn" onclick="isiHargaRunning('${g}','${r.id}')" title="Lengkapi Price/TP/SL/arah sinyal ini tanpa hapus" style="flex:0 0 auto;padding:6px 8px;font-size:9px;background:#2A2A10;border-color:#FACC15">✏️ Isi harga</button>
+        <button class="btn" onclick="isiHargaRunning('${g}','${r.id}')" title="Edit Price/TP/SL/arah" style="flex:0 0 auto;padding:6px 8px;font-size:9px;background:#2A2A10;border-color:#FACC15">✏️ Edit</button>
+        ${r.pending?`<button class="btn" onclick="tandaiSudahMasuk('${g}','${r.id}')" style="flex:0 0 auto;padding:6px 8px;font-size:9px;background:#14532D;border-color:#4ADE80">✔ Sudah masuk</button>`:''}
         <button class="btn" onclick="tutupSinyalRunning('${g}','${r.id}','profit')" style="flex:1;padding:6px;font-size:9px;background:#1E4A14;border-color:#3E9142">🎯 Tutup — Profit</button>
         <button class="btn" onclick="tutupSinyalRunning('${g}','${r.id}','sl')" style="flex:1;padding:6px;font-size:9px;background:#4A1414;border-color:#D9534F">🛑 Tutup — Kena SL</button>
       </div>
     </div>`).join('');
+}
+// Tandai pending sudah masuk (jadi running biasa). Pending tetap dihitung di semua skenario.
+async function tandaiSudahMasuk(g, id){
+  if(!isAdmin){ toast('❌ Harus masuk sebagai Admin'); return; }
+  const item=(cachedSinyalAnalis[g]||[]).find(x=>x.id===id);
+  if(!item) return;
+  item.pending=false;
+  try{ await simpanSinyalKeServer(g); toast('✅ '+(item.simbol||g)+' sudah masuk (running)'); renderDaftarSinyal(); }
+  catch(e){ console.error('tandaiSudahMasuk', e); toast('❌ Gagal simpan status'); }
 }
 // Lengkapi harga (Price/TP/SL/arah) untuk sinyal running yang sudah tercatat tanpa harga.
 // Dipakai untuk sinyal lama, jadi tidak perlu hapus dan catat ulang.
