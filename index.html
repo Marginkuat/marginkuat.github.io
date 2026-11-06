@@ -3809,30 +3809,37 @@ async function loadBalance(){
 const ATURAN_LOSS_HARIAN = -3;     // loss per hari maksimal 3% saldo sekarang
 const ATURAN_LOSS_BULAN  = -6;     // loss per bulan maksimal 6% saldo sekarang
 const ATURAN_PROFIT_BULAN = 10;    // profit per bulan 10% saldo sekarang = wajib stop
-const ATURAN_ORDER_HARI = 2;       // maksimal 2 order per hari
-const ATURAN_ORDER_BULAN = 4;      // maksimal 4 order per bulan
+const ATURAN_ORDER_HARI = Infinity;  // tanpa batas order per hari (hanya rem)
+const ATURAN_ORDER_BULAN = Infinity; // tanpa batas order per bulan (hanya rem)
 let pelanggaranMt4Cache = {};
 
-// Persen dihitung dari saldo terakhir (saldo sekarang). Order dihitung dari jumlah_signal.
+// Persen dihitung dari SALDO HARIAN: tiap hari memakai saldo awal hari itu.
+// Saldo awal hari = saldo akhir hari sebelumnya (atau saldo akhir dikurangi profit untuk hari pertama).
+// Persen bulan = total profit bulan itu dibagi saldo awal bulan. Tidak ada batas jumlah order (hanya rem).
 function hitungPerformaMt4(){
   const rows = getRowsAkunRealXauusd().slice().sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
-  const saldoSekarang = rows.length ? (parseFloat(rows[rows.length-1].saldo_mt4||0)||0) : 0;
   const hariMap = {};
   rows.forEach(r=>{
     const tgl=String(r.tanggal||'');
-    if(!hariMap[tgl]) hariMap[tgl]={tgl, profit:0, order:0};
+    if(!hariMap[tgl]) hariMap[tgl]={tgl, profit:0, order:0, saldoAkhir:0};
     hariMap[tgl].profit += parseFloat(r.profit||0)||0;
     hariMap[tgl].order  += parseInt(r.jumlah_signal||0)||0;
+    hariMap[tgl].saldoAkhir = parseFloat(r.saldo_mt4||0)||0;
   });
-  const hari = Object.values(hariMap).sort((a,b)=>a.tgl.localeCompare(b.tgl)).map(h=>({
-    ...h, pctHari: saldoSekarang>0 ? h.profit/saldoSekarang*100 : 0
-  }));
+  let prevEnd = null;
+  const hari = Object.values(hariMap).sort((a,b)=>a.tgl.localeCompare(b.tgl)).map(h=>{
+    const saldoAwal = prevEnd!=null ? prevEnd : (h.saldoAkhir - h.profit);
+    prevEnd = h.saldoAkhir;
+    return { ...h, saldoAwal, pctHari: saldoAwal>0 ? h.profit/saldoAwal*100 : 0 };
+  });
   const bulanMap = {};
   hari.forEach(h=>{
     const k=h.tgl.slice(0,7);
-    if(!bulanMap[k]) bulanMap[k]={periode:k, profit:0, order:0, jumlahHari:0};
+    if(!bulanMap[k]) bulanMap[k]={periode:k, profit:0, order:0, jumlahHari:0, saldoAwalBulan:h.saldoAwal};
     bulanMap[k].profit += h.profit; bulanMap[k].order += h.order; bulanMap[k].jumlahHari++;
   });
+  const saldoSekarang = hari.length ? hari[hari.length-1].saldoAkhir : 0;   // saldo harian terakhir (hari ini)
+  // Persen bulan memakai saldo harian terakhir (contoh: hari ini ¢700), sama dengan aturan harian
   const bulan = Object.values(bulanMap).sort((a,b)=>a.periode.localeCompare(b.periode)).map(b=>({
     ...b, pct: saldoSekarang>0 ? b.profit/saldoSekarang*100 : 0
   }));
@@ -3913,14 +3920,14 @@ function renderPertumbuhanBulanan(){
   wrap.innerHTML = `
   <div style="background:var(--bg0);border:1.5px solid #4ADE80;border-radius:10px;padding:12px 14px">
     <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📅 Pertumbuhan Bulan Ini — ${namaBulan(bulanIni.periode)}</div>
-    <div style="font-size:9px;color:#E5E7EB;margin-bottom:4px">Persen dihitung dari saldo sekarang ${fmtCRp(saldo)}.</div>
+    <div style="font-size:9px;color:#E5E7EB;margin-bottom:4px">Persen dihitung dari saldo harian (hari ini ${fmtCRp(saldo)}).</div>
     <div style="font-size:22px;font-weight:800;color:${bulanIni.pct>=0?'#4ADE80':'#F87171'}">${f(bulanIni.pct)} <span style="font-size:11px;font-weight:700">(${rp(bulanIni.pct)})</span></div>
 
     <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:10px">Aturan Anda</div>
-    ${baris('Loss per hari (maks 3%)', f(hariIni.pctHari)+' ('+rp(hariIni.pctHari)+')', okLossHari, 'Hari terakhir tercatat, dari saldo sekarang')}
-    ${baris('Order per hari (maks 2x)', hariIni.order+' order', okOrderHari, 'Jumlah order hari terakhir')}
-    ${baris('Loss per bulan (maks 6%)', f(bulanIni.pct)+' ('+rp(bulanIni.pct)+')', okLossBulan, 'Bulan ini, dari saldo sekarang')}
-    ${baris('Order per bulan (maks 4x)', bulanIni.order+' order', okOrderBulan, 'Jumlah order bulan ini')}
+    ${baris('Loss per hari (maks 3%)', f(hariIni.pctHari)+' ('+rp(hariIni.pctHari)+')', okLossHari, 'Hari terakhir tercatat, dari saldo awal hari itu')}
+    ${baris('Order per hari', hariIni.order+' order', true, 'Tanpa batas jatah, dibatasi rem')}
+    ${baris('Loss per bulan (maks 6%)', f(bulanIni.pct)+' ('+rp(bulanIni.pct)+')', okLossBulan, 'Bulan ini, dari saldo harian terakhir')}
+    ${baris('Order per bulan', bulanIni.order+' order', true, 'Tanpa batas jatah, dibatasi rem')}
     ${baris('Profit per bulan (stop 10%)', f(bulanIni.pct)+' ('+rp(bulanIni.pct)+')', okProfit, 'Lewat 10% = melanggar, harus stop')}
 
     <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">Per Bulan</div>
@@ -5831,7 +5838,7 @@ function renderRekapPair(){
       <div style="flex:1;background:var(--bg0);border:1px solid var(--border);border-radius:9px;padding:6px;text-align:center">
         <div style="font-size:14px;font-weight:800;color:${warnaNet}">${netPip>=0?'+':''}${netPip.toFixed(1)}</div><div style="font-size:8px;color:#E5E7EB">NET PIP</div><div style="font-size:10px;font-weight:600;color:#E5E7EB;margin-top:3px;padding-top:3px;border-top:1px dashed var(--border)">${netVp>=0?'+':''}${netVp.toFixed(2)} VP</div></div>
     </div>
-    ${(rekapPairBulanDipilih===bulanIni && lockKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #F87171;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🔒 JATAH HABIS / MELEBIHI JATAH — JANGAN trading:</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${lockKeys.join(' · ')}</div><div style="font-size:9px;color:#E5E7EB;margin-top:3px">Jatah bulan ini: emas 5 order, forex 2 order per pair. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
+    ${(rekapPairBulanDipilih===bulanIni && lockKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #F87171;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🔒 STOP — JANGAN trading:</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${lockKeys.join(' · ')}</div><div style="font-size:9px;color:#E5E7EB;margin-top:3px">Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
     ${(rekapPairBulanDipilih===bulanIni && winKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #F87171;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🛑 STOP — target tercapai, KUNCI PROFIT:</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${winKeys.join(' · ')}</div><div style="font-size:9px;color:#E5E7EB;margin-top:3px">Emas: untung bersih sudah +$300. Forex: sudah ada win pertama. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
     ${(rekapPairBulanDipilih===bulanIni && warnKeys.length)?`<div style="background:#241E0B;border:1.5px solid #FACC15;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#FACC15">⚠️ HATI-HATI — tinggal 1 order lagi:</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${warnKeys.join(' · ')}</div></div>`:''}
     ${profitKeys.length?judul('✅ Pair Profit','#3E9142')+profitKeys.map(kartu).join(''):''}
@@ -15689,9 +15696,9 @@ function renderBatasDDMetode(){
       ${Object.keys(METODE_DEF).length>1?`<span onclick="editMetodeBulan('XAUUSD')" style="font-size:9px;color:#FFFFFF;cursor:pointer;text-decoration:underline">Ubah metode</span>`:''}
     </div>
     <div style="font-size:15px;font-weight:800;color:#E5E7EB">${m.campur?`${m.label} — RR ${m.rr}`:`${m.label} — SL ${m.sl} / TP ${m.tp} pips (RR ${m.rr})`}</div>
-    <div style="font-size:10px;color:#E5E7EB;line-height:1.7;margin-top:3px">${m.campur?`SL & TP maksimal 500 pips per order · batas: <b>rugi bersih bulan ini ${batasPipsM.toFixed(0)} pips = $${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b>, begitu tercapai stop sampai bulan depan. Tidak ada jatah order.`:`Risiko per loss $${m.riskUsd} (${(m.riskUsd/modal*100).toFixed(1)}%) · jatah <b>${m.jatah} ${m.hitung==='order'?'order per bulan (untung atau rugi)':'loss'}</b> · batas rugi maksimal <b>$${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b>`}</div>
+    <div style="font-size:10px;color:#E5E7EB;line-height:1.7;margin-top:3px">${m.campur?`SL & TP maksimal 500 pips per order · batas: <b>rugi bersih bulan ini ${batasPipsM.toFixed(0)} pips = $${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b>, begitu tercapai stop sampai bulan depan.`:`Risiko per loss $${m.riskUsd} (${(m.riskUsd/modal*100).toFixed(1)}%) · batas rugi maksimal <b>$${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b>`}</div>
     <div style="font-size:11px;font-weight:800;color:${warna};margin-top:4px">${st}</div>
-    <div style="font-size:9px;color:#E5E7EB;margin-top:6px;line-height:1.5">Aturan Resmi v1 (ditetapkan 24 Okt 2026) berlaku untuk semua bulan; data sebelum tanggal itu dinilai retroaktif. Aturan Resmi v2 berlaku mulai 5 November 2026. Metode berlaku untuk semua sinyal channel ini di bulan tersebut. ${m.campur?'Aturan baru dibuat bulan ini, jadi Oktober memakai batas rugi bersih (win ikut mengurangi rugi). Mulai bulan depan memakai metode H4 tetap.':(byLoss?'Jatah dihitung dari jumlah LOSS (win tidak mengurangi jatah).':'Jatah habis kalau jumlah ORDER atau jumlah LOSS mencapai batas jatah, mana yang duluan.')}${riwayat?'<br>Riwayat metode: '+riwayat:''}</div>
+    <div style="font-size:9px;color:#E5E7EB;margin-top:6px;line-height:1.5">Aturan Resmi v1 (ditetapkan 24 Okt 2026) berlaku untuk semua bulan; data sebelum tanggal itu dinilai retroaktif. Aturan Resmi v2 berlaku mulai 5 November 2026. Metode berlaku untuk semua sinyal channel ini di bulan tersebut. ${m.campur?'Aturan baru dibuat bulan ini, jadi Oktober memakai batas rugi bersih (win ikut mengurangi rugi). Mulai bulan depan memakai metode H4 tetap.':(byLoss?'':'')}${riwayat?'<br>Riwayat metode: '+riwayat:''}</div>
   </div>`;
 }
 (function(){
@@ -16157,7 +16164,7 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
         : pk===jt-1 ? [`⚠️ sisa 1 (${pk}/${jt})`,'#C99A2E']
         : [`✅ sisa ${jt-pk} (${pk}/${jt})`,'#3E9142'];
       emasRow=`<div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:10px;color:#E5E7EB;padding:4px 0;border-top:2px solid #C8A84B;align-items:center"><span><b>XAUUSD</b> 🥇<br><span style="font-size:8px;color:#E5E7EB">SL ${me.sl} / TP ${me.tp} · $${(me.sl*pipUsd).toFixed(2).replace(/\.?0+$/,'')}</span></span><span>${gn}x</span><span>${gl}L/${gw}W</span><span style="color:${gnet<0?'#F87171':'#4ADE80'}">${sg(gnet)}</span><span style="color:${gc};font-weight:700">${gt}</span></div>
-      <div style="font-size:8px;color:#E5E7EB;line-height:1.5;margin-top:2px">Emas (metode ${me.label}): jatah ${jt} order per bulan (order atau loss, mana yang duluan) · stop kalau untung bersih mencapai +$300 · batas rugi bulanan $${me.stopUsd}. Tidak dihitung ke loss kotor forex di atas.</div>`;
+      <div style="font-size:8px;color:#E5E7EB;line-height:1.5;margin-top:2px">Emas (metode ${me.label}): stop kalau untung bersih mencapai +$300 · batas rugi bulanan $${me.stopUsd}. Tidak dihitung ke loss kotor forex di atas.</div>`;
     }
   }catch(e){ console.error('baris emas rem forex', e); } }
   const bar=(nilai,maks,warnaB)=>`<div style="height:8px;background:var(--bg0);border-radius:6px;overflow:hidden;margin:3px 0"><div style="width:${Math.max(0,Math.min(100,nilai/maks*100))}%;height:100%;background:${warnaB}"></div></div>`;
@@ -16167,16 +16174,16 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
       ${vp>=R.targetMinVP?'✅':'⬜'} Syarat medal: minimal ${R.targetMinVP} VP${bar(vp,R.targetMinVP,'#3E9142')}
       ${net>=0?'✅':'⬜'} Pips bulanan minimal 0 (sekarang <b>${sg(net)}</b>)<br>
       ${vp>=R.targetVP?'✅':'⬜'} Target penuh: ${R.targetVP} VP${bar(vp,R.targetVP,'#C8A84B')}
-      <span style="font-size:9px;color:#E5E7EB">RR 1:${R.rr}: 1 win ≈ +${R.rr*60*(R.slKali||1)} sampai +${String(R.rr*67.5*(R.slKali||1)).replace('.',',')} VP, 1 loss ≈ -${60*(R.slKali||1)} sampai -${String(67.5*(R.slKali||1)).replace('.',',')} VP (SL tiap pair sudah menyeimbangkan VP). Titik impas win rate 25%. Dari maksimal ${B.maksOrder} order (${K.pairs.length} pair × ${R.jatahPair}): syarat medal butuh ±8 win (±33%), target penuh butuh ±10 win (±42%).</span></div>
+      <span style="font-size:9px;color:#E5E7EB">RR 1:${R.rr}: 1 win ≈ +${R.rr*60*(R.slKali||1)} sampai +${String(R.rr*67.5*(R.slKali||1)).replace('.',',')} VP, 1 loss ≈ -${60*(R.slKali||1)} sampai -${String(67.5*(R.slKali||1)).replace('.',',')} VP (SL tiap pair sudah menyeimbangkan VP). Titik impas win rate 25%. syarat medal butuh ±8 win (±33%), target penuh butuh ±10 win (±42%).</span></div>
     </div>`;
   wrap.innerHTML=`<div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🚦 Rem Forex${sebagaiForexSaja?' (bagian forex)':' & Target'} — ${label}</div>
-    <div style="font-size:10px;color:#E5E7EB;line-height:1.7;margin-bottom:6px"><b>Strategi:</b> ${K.pairs.length} pair, <b>SL beda per pair</b> (30 / 45 / 60 pips = $3 / $4,5 / $6), TP = ${R.rr}× SL (<b>RR 1:${R.rr}</b>) · <b>jatah ${R.jatahPair} order per pair per bulan</b> (untung atau rugi, begitu penuh pair itu stop) · maks ${R.maxLossHari} loss per hari · loss maksimal ${fmt(B.maksLoss)} pips ($${(B.maksLoss*pipUsd).toFixed(1).replace(/\.0$/,'')}) → <b>stop gabungan loss kotor ${fmt(stopPips)} pips</b> (peringatan ${fmt(warnPips)}).${sebagaiForexSaja?' Emas ikut dicek di baris terakhir tabel (aturannya tetap di kartu Metode di atas).':''}</div>
+    <div style="font-size:10px;color:#E5E7EB;line-height:1.7;margin-bottom:6px"><b>Strategi:</b> ${K.pairs.length} pair, <b>SL beda per pair</b> (30 / 45 / 60 pips = $3 / $4,5 / $6), TP = ${R.rr}× SL (<b>RR 1:${R.rr}</b>) · maks ${R.maxLossHari} loss per hari · loss maksimal ${fmt(B.maksLoss)} pips ($${(B.maksLoss*pipUsd).toFixed(1).replace(/\.0$/,'')}) → <b>stop gabungan loss kotor ${fmt(stopPips)} pips</b> (peringatan ${fmt(warnPips)}).${sebagaiForexSaja?' Emas ikut dicek di baris terakhir tabel (aturannya tetap di kartu Metode di atas).':''}</div>
     <div style="font-size:12px;font-weight:800;color:${warna};margin-bottom:8px;line-height:1.5">${st}</div>
     <div style="font-size:10px;color:#E5E7EB">Order terpakai: <b>${n}</b> dari maks ${B.maksOrder} · pair penuh: <b>${pairPenuh.length}</b>/${K.pairs.length}</div>
     <div style="font-size:10px;color:#E5E7EB;margin-top:4px">Loss kotor: <b style="color:#F87171">-${fmt(lossKotor)} pips</b> dari ${fmt(stopPips)} ($${(lossKotor*pipUsd).toFixed(2).replace(/\.00$/,'')})${bar(lossKotor,stopPips,lossKotor>=stopPips?'#D9534F':(lossKotor>=warnPips?'#C99A2E':'#3E9142'))}</div>
     ${target}
-    <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin:6px 0 2px">Jatah per pair (${R.jatahPair} order per bulan)</div>
+    <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin:6px 0 2px">Per pair</div>
     <div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:8px;color:#E5E7EB;text-transform:uppercase"><span>Pair / SL</span><span>Order</span><span>L/W</span><span>Bersih</span><span>Status</span></div>
     ${tabel}${emasRow}
     ${hariLanggar.length?`<div style="font-size:10px;color:${uji?'#E5E7EB':'#F87171'};line-height:1.6;margin-top:8px">${uji?'ℹ️':'❌'} Loss lebih dari ${R.maxLossHari}x per hari di tanggal: ${hariLanggar.map(t=>t.slice(8)+'/'+t.slice(5,7)+' ('+lossHari[t]+'x)').join(', ')}</div>`:(n?`<div style="font-size:10px;color:#4ADE80;margin-top:8px">✅ Aturan ${R.maxLossHari} loss per hari terjaga</div>`:'')}
@@ -16232,16 +16239,16 @@ function renderStrategiInvestor(){
       baris(`Ikut <b>${nmF}</b>: maksimal ${chip(fxF)}`)+
       baris(`Ikut <b>keduanya</b>: maksimal ${chip(totX+fxF)}`)+
       baris(`<b>Modal minimal agar rugi maksimal ≤ 6% per bulan</b> (lot ${lot.toFixed(2)}): ${nmX} <b>$${minX.toLocaleString('id-ID')}</b> · ${nmF} <b>$${minF.toLocaleString('id-ID')}</b> · keduanya <b>$${minAll.toLocaleString('id-ID')}</b>. ${statusModal}`)+
-      baris(`Lot minimal 0,01. Kerugian dibatasi aturan: jatah order, ${R.maxLossHari?'maksimal '+R.maxLossHari+' loss per hari, ':''}dan stop gabungan.`))}
+      baris(`Lot minimal 0,01. Kerugian dibatasi rem: ${R.maxLossHari?'maksimal '+R.maxLossHari+' loss per hari, ':''}dan stop gabungan.`))}
     ${kotak(nmX+' — Emas (XAUUSD, H4)',
       baris(`<b>Strategi XAUUSD:</b><br><b>Aturan v1</b> (sampai 4 Nov 2026): SL ${E.sl} / TP ${E.tp} pips (RR 1:1). Impas kalau tiap 2 order ada 1 menang.<br><b>Aturan v2</b> (mulai 5 Nov 2026): SL 100 / TP 200 pips (RR 1:2). Impas kalau tiap 3 order ada 1 menang.<br><b>Mana yang lebih ringan untuk impas:</b> v2 (1 menang dari 3 order).`)+
-      baris(`<b>Jatah open:</b> ${E.jatah} order per bulan (untung atau rugi). Setelah ${E.jatah} order, stop sampai bulan depan.${aturanSekarang().v==='v2'?' Stop saat untung bersih +500 pips.':''}`)+
+      baris(`<b>Stop saat untung bersih +$300.</b>`)+
       baris(`<b>Rugi per order:</b> ${chip(emasRisk)}`)+
-      baris(`<b>Rugi maksimal sebulan</b> (${E.jatah} order semuanya kena SL): ${chip(emasMaks)}`))}
+      baris(`<b>Rugi maksimal sebulan (batas rem)</b>: ${chip(emasMaks)}`))}
     ${kotak(nmX+' — Forex ('+BX.maksOrder/R.jatahPair+' pair)',
       baris(`<b>Pair:</b> ${R.kanal.XAUUSD.pairs.join(', ')}`)+
       baris(`<b>Strategi:</b> SL ${30*(R.slKali||1)} atau ${45*(R.slKali||1)} pips (beda per pair), TP ${R.rr}× SL (RR 1:${R.rr}). Titik impas win rate ${R.rr===2?33:25}%.${R.rr===2?' Win langsung stop; order berikutnya dibuka setelah order sebelumnya kena SL.':''}`)+
-      baris(`<b>Jatah open:</b> ${R.jatahPair} order per pair per bulan (untung atau rugi), maksimal ${BX.maksOrder} order. ${R.maxLossHari?'Maksimal '+R.maxLossHari+' loss per hari, lalu stop sampai besok.':'Tidak ada jeda harian: 2 loss di satu pair langsung stop, termasuk di hari yang sama.'}`)+
+      baris(`${R.maxLossHari?'Maksimal '+R.maxLossHari+' loss per hari, lalu stop sampai besok.':'Tidak ada jeda harian: 2 loss di satu pair langsung stop, termasuk di hari yang sama.'}`)+
       baris(`<b>Rugi maksimal sebulan:</b> ${chip(fxX)} · stop gabungan di ${BX.stop} pips (${fm(BX.stop*pipUsd)})`))}
     ${kotak('Total terburuk '+nmX+' (emas + forex)',
       baris(`Kalau semua order di bulan itu kena SL: ${chip(totX)}`)+
@@ -16249,7 +16256,7 @@ function renderStrategiInvestor(){
     ${kotak(nmF+' — Forex ('+BF.maksOrder/R.jatahPair+' pair)',
       baris(`<b>Pair:</b> ${R.kanal.FOREX.pairs.join(', ')}`)+
       baris(`<b>Strategi:</b> SL ${45*(R.slKali||1)} atau ${60*(R.slKali||1)} pips (beda per pair), TP ${R.rr}× SL (RR 1:${R.rr}). Titik impas win rate ${R.rr===2?33:25}%.${R.rr===2?' Win langsung stop; order berikutnya dibuka setelah order sebelumnya kena SL.':''}`)+
-      baris(`<b>Jatah open:</b> ${R.jatahPair} order per pair per bulan (untung atau rugi), maksimal ${BF.maksOrder} order. ${R.maxLossHari?'Maksimal '+R.maxLossHari+' loss per hari, lalu stop sampai besok.':'Tidak ada jeda harian: 2 loss di satu pair langsung stop, termasuk di hari yang sama.'}`)+
+      baris(`${R.maxLossHari?'Maksimal '+R.maxLossHari+' loss per hari, lalu stop sampai besok.':'Tidak ada jeda harian: 2 loss di satu pair langsung stop, termasuk di hari yang sama.'}`)+
       baris(`<b>Rugi maksimal sebulan:</b> ${chip(fxF)} · stop gabungan di ${BF.stop} pips (${fm(BF.stop*pipUsd)})`)+
       baris(`Modal yang disarankan agar terburuk ≤6%: <b>${modalAman(fxF)}</b> (lot ${lot.toFixed(2)})`))}
     <div style="font-size:9px;color:#E5E7EB;line-height:1.5">Angka "terburuk" adalah kalau semua order kena stop loss, jarang terjadi. Rem otomatis: pair atau emas yang jatahnya habis harus stop sampai bulan depan, dan seluruh channel stop kalau batas gabungan tercapai. Hasil masa lalu bukan jaminan keuntungan.</div>
@@ -16417,7 +16424,7 @@ function renderAudit(){
   }).join('');
   wrap.innerHTML=`<div style="background:var(--bg0);border:1.5px solid #C8A84B;border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🔍 Audit Kepatuhan Aturan — untuk investor & pihak ketiga</div>
-    <div style="font-size:9px;color:#E5E7EB;line-height:1.5;margin-bottom:8px">Sinyal mulai <b>1 Oktober 2026</b> diperiksa otomatis dengan <b>Aturan Resmi v2</b>: emas SL 500 / TP 500 (RR 1:1) sampai 4 Nov, lalu SL 100 / TP 200 (RR 1:2) mulai 5 Nov 2026, jatah 5 order per bulan, stop saat untung bersih +500 pips; forex SL Hard 2 per pair (60 / 90 / 120 pips), TP 2× SL (RR 1:2), jatah 2 order per pair per bulan, win pertama langsung stop; timeframe bebas (H4, D1, W1); satu order per pair, order berikutnya setelah order sebelumnya kena SL. <b>Aturan ini dibuat dan ditetapkan pada 26 Oktober 2026</b>, jadi sinyal 1–25 Oktober dinilai mundur (retroaktif) dan diberi tanda 🕰️. Sinyal sebelum 1 Oktober 2026 tidak dinilai. Hanya <b>dua kategori menyimpang</b>: <b>jatah melebihi</b> dan <b>RR melebihi / kurang</b>. Tidak menyimpang: order pertama win lalu stop; emas loss, win, win lalu stop; forex loss, win lalu stop. <b>❌ PASTI</b> = data tercatat jelas melanggar. <b>❌ KUAT</b> = hasilnya sama dengan RR yang salah. <b>⚠️ INDIKASI</b> = janggal, perlu dikonfirmasi. Yang bisa diaudit hanya data yang diinput; cocokkan juga dengan riwayat TF.</div>
+    <div style="font-size:9px;color:#E5E7EB;line-height:1.5;margin-bottom:8px">Sinyal mulai <b>1 Oktober 2026</b> diperiksa otomatis dengan <b>Aturan Resmi v2</b>: emas SL 500 / TP 500 (RR 1:1) sampai 4 Nov, lalu SL 100 / TP 200 (RR 1:2) mulai 5 Nov 2026, stop saat untung bersih +$300; forex SL Hard 2 per pair (60 / 90 / 120 pips), TP 2× SL (RR 1:2), win pertama langsung stop; timeframe bebas (H4, D1, W1); satu order per pair, order berikutnya setelah order sebelumnya kena SL. <b>Aturan ini dibuat dan ditetapkan pada 26 Oktober 2026</b>, jadi sinyal 1–25 Oktober dinilai mundur (retroaktif) dan diberi tanda 🕰️. Sinyal sebelum 1 Oktober 2026 tidak dinilai. Kategori menyimpang: <b>RR melebihi / kurang</b>. Tidak menyimpang: order pertama win lalu stop; emas loss, win, win lalu stop; forex loss, win lalu stop. <b>❌ PASTI</b> = data tercatat jelas melanggar. <b>❌ KUAT</b> = hasilnya sama dengan RR yang salah. <b>⚠️ INDIKASI</b> = janggal, perlu dikonfirmasi. Yang bisa diaudit hanya data yang diinput; cocokkan juga dengan riwayat TF.</div>
     ${blok}
   </div>`;
 }
@@ -16451,9 +16458,9 @@ function renderAturanResmi(){
   wrap.innerHTML=`<div style="background:var(--bg0);border:2px solid #C8A84B;border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:2px">📜 Aturan Resmi v1</div>
     <div style="font-size:12px;font-weight:800;color:#E5E7EB;margin-bottom:6px">Ditetapkan & berlaku sejak 24 Oktober 2026</div>
-    ${b(`<b>${nmX} — Emas (XAUUSD, H4):</b> SL ${A.emas.slPips} / TP ${A.emas.tpPips} pips (RR 1:1) sampai 4 Nov, lalu SL 100 / TP 200 pips (RR 1:2) mulai 5 Nov 2026 · jatah ${A.emas.jatahOrderPerBulan} order per bulan, untung atau rugi · rugi maksimal $${A.emas.rugiMaksUsd} (lot 0,01)`)}
-    ${b(`<b>${nmX} — Forex (${R.kanal.XAUUSD.pairs.length} pair):</b> SL 30/45 pips sesuai pair, TP 3× SL (RR 1:3) · jatah ${A.forex.jatahOrderPerPairPerBulan} order per pair per bulan · maks ${A.forex.maksLossPerHari} loss per hari · stop gabungan ${BX.stop} pips`)}
-    ${b(`<b>${nmF} — Forex (${R.kanal.FOREX.pairs.length} pair):</b> SL 45/60 pips sesuai pair, TP 3× SL (RR 1:3) · jatah ${A.forex.jatahOrderPerPairPerBulan} order per pair per bulan · maks ${A.forex.maksLossPerHari} loss per hari · stop gabungan ${BF.stop} pips`)}
+    ${b(`<b>${nmX} — Emas (XAUUSD, H4):</b> SL ${A.emas.slPips} / TP ${A.emas.tpPips} pips (RR 1:1) sampai 4 Nov, lalu SL 100 / TP 200 pips (RR 1:2) mulai 5 Nov 2026 · rugi maksimal $${A.emas.rugiMaksUsd} (lot 0,01)`)}
+    ${b(`<b>${nmX} — Forex (${R.kanal.XAUUSD.pairs.length} pair):</b> SL 30/45 pips sesuai pair, TP 3× SL (RR 1:3) · maks ${A.forex.maksLossPerHari} loss per hari · stop gabungan ${BX.stop} pips`)}
+    ${b(`<b>${nmF} — Forex (${R.kanal.FOREX.pairs.length} pair):</b> SL 45/60 pips sesuai pair, TP 3× SL (RR 1:3) · maks ${A.forex.maksLossPerHari} loss per hari · stop gabungan ${BF.stop} pips`)}
     ${b(`<b>SL per pair:</b> 30 pips = AUDUSD, EURGBP, NZDUSD, USDCHF · 45 pips = AUDJPY, CADJPY, EURUSD, GBPUSD, NZDJPY, USDCAD · 60 pips = CHFJPY, EURJPY, EURNZD, GBPJPY, USDJPY`)}
     <div style="font-size:9px;color:#E5E7EB;line-height:1.6;margin-top:6px;border-top:1px dashed var(--border);padding-top:6px"><b>Komitmen keterbukaan:</b> semua data yang sudah diinput, termasuk bulan-bulan sebelum 24 Oktober 2026, dinilai dengan aturan ini dan penyimpangannya ditampilkan di kartu Audit. Penyimpangan sebelum tanggal berlaku diberi tanda 🕰️ (aturan belum ada saat itu), bukan disembunyikan.</div>
     <div style="font-size:9px;color:#E5E7EB;line-height:1.6;margin-top:6px"><b>Sidik jari aturan (SHA-256):</b> <span id="bdSidikJari" style="font-family:monospace;word-break:break-all;color:#E5E7EB">${bdSidikJari||'menghitung...'}</span><br>Kode ini dihitung dari seluruh angka aturan di atas. Kalau satu angka aturan diubah, kodenya ikut berubah. Bukti waktu yang tidak bisa diubah sendiri oleh situs adalah <b>riwayat commit di GitHub</b>; catat kode ini dan tanggalnya, dan beri tag rilis di GitHub.</div>
@@ -16483,10 +16490,10 @@ async function renderAturanResmiV2(){
   const b=t=>`<div style="font-size:10px;color:#E5E7EB;line-height:1.7">${t}</div>`;
   wrap.insertAdjacentHTML('beforeend',`<div id="aturanV2Card" style="background:var(--bg0);border:2px dashed #C8A84B;border-radius:10px;padding:12px;margin-top:10px">
     <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:2px">📜 Aturan Resmi v2 — ditetapkan 2 November 2026, dinilai mundur sejak 1 Oktober 2026</div>
-    ${b(`<b>Emas (XAUUSD, timeframe bebas H4 / D1 / W1):</b> SL ${A.emas.slPips} / TP ${A.emas.tpPips} pips (RR 1:1) sampai 4 Nov, lalu SL 100 / TP 200 pips (RR 1:2) mulai 5 Nov 2026 · jatah ${A.emas.jatahOrderPerBulan} order per bulan · <b>stop saat untung bersih +${A.emas.tpPips} pips</b> (contoh: loss, win, win); jatah habis juga stop`)}
-    ${b(`<b>Forex (kedua channel):</b> <b>SL per pair = Hard (Datuk EURUSD 30/45 pips, Datuk Crypto 89 45/60 pips)</b>, <b>TP 2× SL (RR 1:2)</b> · jatah <b>${R.jatahPair} order per pair per bulan</b> · <b>win langsung stop</b> · <b>2 loss di satu pair langsung stop, walau terjadi di hari yang sama</b> (tidak ada jeda harian)`)}
+    ${b(`<b>Emas (XAUUSD, timeframe bebas H4 / D1 / W1):</b> SL ${A.emas.slPips} / TP ${A.emas.tpPips} pips (RR 1:1) sampai 4 Nov, lalu SL 100 / TP 200 pips (RR 1:2) mulai 5 Nov 2026 · <b>stop saat untung bersih +$300</b> (contoh: loss, win, win)`)}
+    ${b(`<b>Forex (kedua channel):</b> <b>SL per pair = Hard (Datuk EURUSD 30/45 pips, Datuk Crypto 89 45/60 pips)</b>, <b>TP 2× SL (RR 1:2)</b> · <b>win langsung stop</b> · <b>2 loss di satu pair langsung stop, walau terjadi di hari yang sama</b> (tidak ada jeda harian)`)}
     ${b(`<b>Cara buka order:</b> hanya 1 order berjalan per pair (tidak dibuka sekaligus). Order berikutnya baru dibuka setelah order sebelumnya kena SL.`)}
-    ${b(`<b>Audit — kategori menyimpang:</b> hanya dua, yaitu <b>jatah melebihi</b> dan <b>RR melebihi / kurang</b>. Tidak menyimpang: order pertama win lalu stop; emas loss, win, win lalu stop; forex loss, win lalu stop.`)}
+    ${b(`<b>Audit — kategori menyimpang:</b> hanya <b>RR melebihi / kurang</b>. Tidak menyimpang: order pertama win lalu stop; emas loss, win, win lalu stop; forex loss, win lalu stop.`)}
     ${b(`<b>Stop gabungan:</b> ${nmChannelV2('XAUUSD')} ${BX.stop} pips · ${nmChannelV2('FOREX')} ${BF.stop} pips`)}
     <div style="font-size:9px;color:#E5E7EB;line-height:1.6;margin-top:6px"><b>Sidik jari v2 (SHA-256):</b> <span style="font-family:monospace;word-break:break-all;color:#E5E7EB">${h||'tidak tersedia'}</span><br>${st}<br><b>Aturan ini dibuat dan ditetapkan pada 2 November 2026.</b> Sinyal 1–25 Oktober dinilai mundur (retroaktif) agar kepatuhan terlihat sejak awal bulan, dan diberi tanda 🕰️. Sinyal sebelum 1 Oktober 2026 tidak dinilai.</div>
   </div>`);
