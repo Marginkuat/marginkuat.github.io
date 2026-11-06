@@ -3905,7 +3905,7 @@ function renderPertumbuhanBulanan(){
   }).join('');
 
   const tercatat = Object.values(pelanggaranMt4Cache).sort((a,b)=>String(b.tercatat).localeCompare(String(a.tercatat)));
-  const teksNilai = v => (v.satuan==='order' ? v.nilai+' order' : f(v.nilai));
+  const teksNilai = v => (v.satuan==='order' ? v.nilai+' order' : (v.satuan==='pips' ? v.nilai+' pips' : f(v.nilai)));
   const listCatat = tercatat.length
     ? tercatat.map(v=>`<div style="font-size:10px;color:#F87171;padding:3px 0">❌ ${v.jenis} — ${v.periode} (${teksNilai(v)})</div>`).join('')
     : `<div style="font-size:10px;color:#4ADE80">Belum ada pelanggaran tercatat.</div>`;
@@ -13872,6 +13872,29 @@ function buildColumnMap(headerRow){
   return map;
 }
 
+// Cek per trade dari laporan broker: lot harus 0,01 dan SL/TP emas harus di jalur RR 1:1 (500/500) atau RR 1:2 (100/200).
+// Hanya mencatat pelanggaran, tidak mengubah perhitungan saldo/profit yang sudah ada.
+function cekPelanggaranPerTradeMt4(trades){
+  if(!Array.isArray(trades)) return;
+  const dekat=(v,t,tol)=> v!=null && isFinite(v) && Math.abs(v-t)<=t*tol;
+  trades.forEach(t=>{
+    if(!/XAU|GOLD/i.test(String(t.item||''))) return;
+    const lot = parseNumBroker(String(t.size||''));
+    const op = t.openPrice, sl = t.sl, tp = t.tp;
+    const slPips = (isFinite(sl) && isFinite(op) && sl>0) ? Math.abs(op-sl)/0.1 : null;
+    const tpPips = (isFinite(tp) && isFinite(op) && tp>0) ? Math.abs(tp-op)/0.1 : null;
+    const alasan = [];
+    if(isFinite(lot) && Math.abs(lot-0.01)>0.0005) alasan.push('lot '+String(t.size)+' (aturan 0,01)');
+    if(slPips!=null && tpPips!=null){
+      const jalurOK = (dekat(slPips,100,0.05) && dekat(tpPips,200,0.05)) || (dekat(slPips,500,0.05) && dekat(tpPips,500,0.05));
+      if(!jalurOK) alasan.push('SL '+slPips.toFixed(0)+' / TP '+tpPips.toFixed(0)+' pips (di luar RR 1:1 dan 1:2)');
+    }
+    if(!alasan.length) return;
+    const kunci = 'trade_'+(t.ticket||(String(t.openTime)+'_'+String(t.closeTime)));
+    catatPelanggaranMt4([{ key:kunci, jenis:'Order emas melanggar: '+alasan.join('; '), periode:String(t.closeTime||t.openTime||''), nilai: slPips!=null?slPips:0, satuan:'pips' }]);
+  });
+}
+
 function extractClosedTrades(htmlString){
   const parser=new DOMParser();
   const doc=parser.parseFromString(htmlString,'text/html');
@@ -13942,6 +13965,7 @@ function analisaGapBroker(){
     let trades;
     try{ trades=extractClosedTrades(htmlStr); }
     catch(e){ statusEl.textContent='❌ Gagal membaca laporan: '+(e.message||''); return; }
+    try{ cekPelanggaranPerTradeMt4(trades); }catch(e){ console.error('cekPelanggaranPerTradeMt4', e); }
     if(!trades.length){ statusEl.textContent='⚠️ Tidak ditemukan transaksi tertutup di file/teks ini. Pastikan formatnya sesuai laporan statement broker (HTML).'; return; }
 
     const analyzed=[];
@@ -14241,6 +14265,7 @@ async function verifikasiData(){
     let trades;
     try{ trades=extractClosedTrades(htmlStr); }
     catch(e){ statusEl.textContent='❌ Gagal membaca file: '+(e.message||''); return; }
+    try{ cekPelanggaranPerTradeMt4(trades); }catch(e){ console.error('cekPelanggaranPerTradeMt4', e); }
     if(!trades.length){ statusEl.textContent='⚠️ Tidak ada transaksi tertutup ditemukan di file ini.'; return; }
 
     const byDate=groupTradesByDate(trades);
