@@ -5091,6 +5091,52 @@ function toggleDaftarSinyal(){
 }
 let filterTglRiwayat = '';
 function setFilterTglRiwayat(v){ filterTglRiwayat = v || ''; renderDaftarSinyal(); }
+// Perbandingan v1 vs v2 untuk XAUUSD dari sinyal yang sudah closed (khusus emas)
+function perbandinganSinyalEmasHtml(){
+  const g='XAUUSD';
+  const closed=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && r.pips!=null && isFinite(parseFloat(r.pips)));
+  if(!closed.length) return '';
+  const A1=aturanUntuk(g,'XAUUSD',AUDIT_ATURAN);
+  const kosong=()=>({n:0,menang:0,pips:0});
+  const perVersi={v1:kosong(), v2:kosong()};
+  const perHari={};
+  closed.forEach(r=>{
+    const pp=parseFloat(r.pips);
+    const v = pilihJalurEmas(A1, r, pp, r.tanggal, r.jam)===JALUR_EMAS_V2 ? 'v2' : 'v1';
+    const tg=String(r.tanggal);
+    perHari[tg]=perHari[tg]||{v1:kosong(), v2:kosong()};
+    [perVersi[v], perHari[tg][v]].forEach(h=>{ h.n++; if(pp>0) h.menang++; h.pips+=pp; });
+  });
+  const wr = h => h.n ? Math.round(h.menang/h.n*100)+'%' : '—';
+  const ps = h => h.n ? (h.pips/h.n>=0?'+':'')+(h.pips/h.n).toFixed(1) : '—';
+  const f1 = v => (v>=0?'+':'')+v.toFixed(1);
+  const lbl = {v1:'Aturan v1 (RR 1:1, SL 500 / TP 500)', v2:'Aturan v2 (RR 1:2, SL 100 / TP 200)'};
+  const barisV = v => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;padding:5px 0;border-top:1px solid var(--border);color:#FFFFFF">
+      <span><b>${lbl[v]}</b></span>
+      <span style="text-align:right">${perVersi[v].n} sinyal · win rate ${wr(perVersi[v])} · ${f1(perVersi[v].pips)} pips · ${ps(perVersi[v])}/sinyal</span></div>`;
+  const a=perVersi.v1, b=perVersi.v2;
+  let terbaik='Belum cukup data untuk membandingkan.';
+  if(a.n && b.n){
+    const pa=a.pips/a.n, pb=b.pips/b.n;
+    terbaik = pa===pb ? 'Sama.' : `Sementara lebih baik: <b style="color:#4ADE80">${pb>pa?lbl.v2:lbl.v1}</b> (pips per sinyal lebih tinggi).`;
+  }
+  const hariList = Object.keys(perHari).sort().reverse().map(tg=>{
+    const h=perHari[tg];
+    const tglTxt=new Date(tg+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short'});
+    const sel=(v)=> h[v].n ? `${h[v].menang}/${h[v].n} menang · ${f1(h[v].pips)} pips` : '—';
+    return `<div style="display:flex;justify-content:space-between;gap:6px;font-size:9px;padding:3px 0;color:#FFFFFF">
+      <span style="flex:0 0 52px">${tglTxt}</span>
+      <span style="flex:1">v1: ${sel('v1')}</span>
+      <span style="flex:1;text-align:right">v2: ${sel('v2')}</span></div>`;
+  }).join('');
+  return `<div style="background:var(--bg0);border:1.5px solid #FACC15;border-radius:10px;padding:10px 12px;margin-bottom:10px">
+    <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📊 Perbandingan Aturan Emas (XAUUSD) — sinyal sudah closed</div>
+    ${barisV('v1')}${barisV('v2')}
+    <div style="font-size:10px;color:#FFFFFF;margin-top:6px">${terbaik}</div>
+    <div style="font-size:9px;color:#FFFFFF;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-top:10px">Per hari</div>
+    ${hariList}
+  </div>`;
+}
 function renderDaftarSinyal(){
   const wrap=document.getElementById('daftarSinyalWrap');
   if(!wrap)return;
@@ -5155,7 +5201,7 @@ function renderDaftarSinyal(){
     ${filterTglRiwayat?`<button class="btn" onclick="setFilterTglRiwayat('')" style="padding:6px 8px;font-size:10px">Semua tanggal</button>`:''}
   </div>`;
   const kosongTgl = filterTglRiwayat && listTampil.length===0;
-  wrap.innerHTML = filterHtml + ringkasanCocokHtml + (kosongTgl
+  wrap.innerHTML = (g==='XAUUSD' ? perbandinganSinyalEmasHtml() : '') + filterHtml + ringkasanCocokHtml + (kosongTgl
     ? `<div style="font-size:10px;color:#E5E7EB;text-align:center;padding:10px">Tidak ada transaksi di tanggal ini.</div>`
     : baris);
   renderDaftarRunning();
