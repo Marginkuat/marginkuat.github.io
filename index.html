@@ -5560,14 +5560,20 @@ function renderProyeksiBufferRunning(g, list){
   </div>`;
   const vpFixKalauSemuaWin = totalVpBulanIni + totalWinVp;
   const pipsFixKalauSemuaWin = totalPipsBulanIni + totalWinPips;
+  const TARGET_VP_300 = 300;
+  const kurang300 = TARGET_VP_300 - vpFixKalauSemuaWin;
+  const kurang80 = ambangVpBerlaku - vpFixKalauSemuaWin;
+  const baris80 = (label, kurang) => kurang>0
+    ? `<div>${label}: <b style="color:#F87171">kurang ${kurang.toFixed(2)} VP</b></div>`
+    : `<div>${label}: <b style="color:#4ADE80">sudah tercapai ✅</b></div>`;
   const kontrolWinHtml = `<div style="background:${warnaWin}15;border:1.5px solid ${warnaWin};border-radius:9px;padding:9px 11px;margin-bottom:10px">
-    <div style="font-size:9px;color:${warnaWin};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Total VP — Skenario Semua Running WIN</div>
-    <div style="font-size:9px;color:#FFFFFF;font-weight:700;line-height:1.7">
-      VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> | Pips fix sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
-      Potensi tambahan kalau ${list.length} sinyal running semua Win: <b style="color:#4ADE80">+${totalWinVp.toFixed(2)} VP / +${totalWinPips.toFixed(1)} pips</b>
+    <div style="font-size:9px;color:${warnaWin};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Total VP — Menang Semua</div>
+    <div style="font-size:12px;font-weight:800;color:#FFFFFF;line-height:1.8">
+      Menang semua: <b style="color:${warnaWin}">${vpFixKalauSemuaWin.toFixed(2)} VP</b> · <b style="color:${warnaWin}">${pipsFixKalauSemuaWin.toFixed(1)} pips</b>
     </div>
-    <div style="font-size:12px;font-weight:800;color:${warnaWin};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
-      ✅ VP fix jadi: ${vpFixKalauSemuaWin.toFixed(2)} | Pips fix jadi: ${pipsFixKalauSemuaWin.toFixed(1)}
+    <div style="font-size:11px;font-weight:700;color:#FFFFFF;line-height:1.8;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+      ${baris80('Target VP 300', kurang300)}
+      ${baris80('Target 80% ('+ambangVpBerlaku.toFixed(2)+' VP)', kurang80)}
     </div>
   </div>`;
   return kontrolWinHtml + kontrolHtml + `<div style="background:var(--bg0);border:1.5px dashed var(--border);border-radius:9px;padding:9px 11px;margin-bottom:10px">
