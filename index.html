@@ -3276,7 +3276,7 @@ const SEARCH_MENU=[
   {id:'mt4RisikoWrap', icon:'⚠️', label:'Peringatan Risiko Modal MT4', desc:'Risiko per order vs saldo, jatah 5 order, perkiraan margin call', kw:'peringatan risiko modal margin call bahaya saldo habis 5% jatah risiko per order berbahaya', cat:'performa'},
   {id:'inpSaldoHarianTitle', icon:'⚙️', label:'Input Saldo Harian', desc:'Isi saldo MT4, profit, dan jumlah signal tiap hari (butuh login admin)', kw:'input saldo harian data harian catatan harian isi tambah simpan saldo mt4 profit jumlah signal tanggal edit', cat:'input'},
   {id:'secInputSinyal', icon:'📝', label:'Input Sinyal Analis', desc:'Catat sinyal Datuk EURUSD / Datuk Crypto 89: pair, jam buka & tutup, pips, SL/TP rencana', kw:'input sinyal analis datuk eurusd crypto 89 order closed buka tutup pips simpan sinyal forex emas', cat:'input'},
-  {id:'mt4AturanWrap', icon:'🎯', label:'Aturan Emas MT4 & Order Berjalan', desc:'Cek jatah 5 order emas, stop saat untung bersih +500 pips, tombol order berjalan', kw:'aturan emas mt4 order berjalan jatah 5 order stop open posisi emas boleh open', cat:'input'},
+  {id:'mt4AturanWrap', icon:'🎯', label:'Aturan Emas MT4 & Order Berjalan', desc:'Cek jatah 5 order emas, stop saat untung bersih +$300, tombol order berjalan', kw:'aturan emas mt4 order berjalan jatah 5 order stop open posisi emas boleh open', cat:'input'},
   {id:'secInputAliranUang', icon:'💸', label:'Input Aliran Uang', desc:'Catat deposit, modal pribadi, pengeluaran, kas (butuh login admin)', kw:'input aliran uang deposit modal pribadi pengeluaran kas catat uang masuk keluar', cat:'input'},
   {id:'secVerifikasiBroker', icon:'🔎', label:'Verifikasi Data vs Laporan Broker', desc:'Cocokkan data situs dengan laporan/statement broker FBS', kw:'verifikasi laporan broker statement fbs email cocokkan cek data', cat:'input'},
   {id:'secEkstrakTransaksi', icon:'🧾', label:'Ekstrak & Kelompokkan Transaksi per Hari', desc:'Tempel statement, situs mengelompokkan transaksi per hari', kw:'ekstrak kelompokkan transaksi per hari statement html tempel laporan broker', cat:'input'},
@@ -5172,6 +5172,28 @@ function perbandinganSinyalEmasHtml(){
     ${hariList}
   </div>`;
 }
+// Target untung bulanan analis (Datuk EURUSD) = $300 (3000 pips di lot 0,01).
+// Bulan yang sudah lewat dan punya sinyal closed, tapi untung bersihnya belum sampai target, dicatat sebagai pelanggaran.
+// Bulan berjalan belum dinilai.
+function cekTargetUntungBulanan(g){
+  if(g!=='XAUUSD') return;
+  const now=new Date();
+  const bkIni=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const target=AUDIT_ATURAN_V2.emas.tp;
+  const per={};
+  (cachedSinyalAnalis[g]||[]).forEach(r=>{
+    if(r.status==='running' || r.pips==null || !isFinite(parseFloat(r.pips))) return;
+    const bk=String(r.tanggal||'').slice(0,7);
+    if(!bk || bk<'2026-10' || bk>=bkIni) return;
+    per[bk]=(per[bk]||0)+parseFloat(r.pips);
+  });
+  const out=[];
+  Object.keys(per).forEach(bk=>{
+    if(per[bk]<target) out.push({ key:'target_untung_'+bk, jenis:'Target untung bulanan $300 tidak tercapai (Datuk EURUSD)', periode:bk, nilai:per[bk], satuan:'pips' });
+  });
+  if(out.length) catatPelanggaranMt4(out);
+}
+
 function renderDaftarSinyal(){
   const wrap=document.getElementById('daftarSinyalWrap');
   if(!wrap)return;
@@ -5231,6 +5253,7 @@ function renderDaftarSinyal(){
       ${buka?arr.map(barisHtml).join(''):''}
     </div>`;
   }).join('');
+  try{ cekTargetUntungBulanan(g); }catch(e){ console.error('cekTargetUntungBulanan', e); }
   const filterHtml = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
     <input type="date" value="${filterTglRiwayat}" onchange="setFilterTglRiwayat(this.value)" style="flex:1;padding:6px;font-size:11px;background:var(--bg0);color:#FFFFFF;border:1px solid var(--border);border-radius:6px">
     ${filterTglRiwayat?`<button class="btn" onclick="setFilterTglRiwayat('')" style="padding:6px 8px;font-size:10px">Semua tanggal</button>`:''}
@@ -5809,7 +5832,7 @@ function renderRekapPair(){
         <div style="font-size:14px;font-weight:800;color:${warnaNet}">${netPip>=0?'+':''}${netPip.toFixed(1)}</div><div style="font-size:8px;color:#E5E7EB">NET PIP</div><div style="font-size:10px;font-weight:600;color:#E5E7EB;margin-top:3px;padding-top:3px;border-top:1px dashed var(--border)">${netVp>=0?'+':''}${netVp.toFixed(2)} VP</div></div>
     </div>
     ${(rekapPairBulanDipilih===bulanIni && lockKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #F87171;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🔒 JATAH HABIS / MELEBIHI JATAH — JANGAN trading:</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${lockKeys.join(' · ')}</div><div style="font-size:9px;color:#E5E7EB;margin-top:3px">Jatah bulan ini: emas 5 order, forex 2 order per pair. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
-    ${(rekapPairBulanDipilih===bulanIni && winKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #F87171;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🛑 STOP — target tercapai, KUNCI PROFIT:</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${winKeys.join(' · ')}</div><div style="font-size:9px;color:#E5E7EB;margin-top:3px">Emas: untung bersih sudah +500 pips. Forex: sudah ada win pertama. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
+    ${(rekapPairBulanDipilih===bulanIni && winKeys.length)?`<div style="background:#2D0E0E;border:1.5px solid #F87171;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#F87171">🛑 STOP — target tercapai, KUNCI PROFIT:</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${winKeys.join(' · ')}</div><div style="font-size:9px;color:#E5E7EB;margin-top:3px">Emas: untung bersih sudah +$300. Forex: sudah ada win pertama. Jangan buka sinyal baru sampai bulan depan.</div></div>`:''}
     ${(rekapPairBulanDipilih===bulanIni && warnKeys.length)?`<div style="background:#241E0B;border:1.5px solid #FACC15;border-radius:10px;padding:8px 10px;margin:8px 0 2px"><div style="font-size:10px;font-weight:800;color:#FACC15">⚠️ HATI-HATI — tinggal 1 order lagi:</div><div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-top:2px">${warnKeys.join(' · ')}</div></div>`:''}
     ${profitKeys.length?judul('✅ Pair Profit','#3E9142')+profitKeys.map(kartu).join(''):''}
     ${lossKeys.length?judul('❌ Pair Loss','#D9534F')+lossKeys.slice().reverse().map(kartu).join(''):''}
@@ -15653,7 +15676,7 @@ function renderBatasDDMetode(){
     else { st=`${pc>=50?'⚠️ Peringatan':'✅ Aman'} — rugi bersih <b>${rugiPips.toFixed(1)}</b> dari ${batasPipsM.toFixed(0)} pips (${pc.toFixed(0)}%)<br><span style="font-size:10px;font-weight:600">Sisa ruang ${sisaPipsM.toFixed(1)} pips ($${(sisaPipsM*pipUsdM).toFixed(2).replace(/\.00$/,'')})</span>`; warna=pc>=75?'#F87171':pc>=50?'#FACC15':'#4ADE80'; }
   } else
   if(h.n===0){ st='Belum ada sinyal closed bulan ini'; warna='#E5E7EB'; }
-  else if(adaWin){ st='🛑 UNTUNG BERSIH +500 PIPS — WAJIB STOP sampai bulan depan<br><span style="font-size:10px;font-weight:600">Aturan v2: stop saat untung bersih mencapai +500 pips (contoh: loss, win, win). '+info+'</span>'; warna='#F87171'; }
+  else if(adaWin){ st='🛑 UNTUNG BERSIH +$300 — WAJIB STOP sampai bulan depan<br><span style="font-size:10px;font-weight:600">Aturan v2: stop saat untung bersih mencapai +$300 (contoh: loss, win, win). '+info+'</span>'; warna='#F87171'; }
   else if(pakai>m.jatah){ st='❌ Melewati jatah<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#F87171'; }
   else if(pakai===m.jatah){ st='🛑 Jatah habis — stop sampai bulan depan<br><span style="font-size:10px;font-weight:600">'+info+'</span>'; warna='#F87171'; }
   else { st=`✅ Jatah masih ada<br><span style="font-size:10px;font-weight:600">${info} (sisa ${sisaJ})</span>`; warna=sisaJ<=1?'#FACC15':'#4ADE80'; }
@@ -16128,13 +16151,13 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
       gr.forEach(r=>{ const pp=parseFloat(r.pips||0); gnet+=pp; if(pp<0)gl++; else if(pp>0)gw++; if(gnet>=AUDIT_ATURAN_V2.emas.tp) kenaTP=true; });
       const gn=gr.length, jt=me.jatah, pk=Math.max(gn,gl);
       const [gt,gc]= uji ? [`${gn} order (info)`,'#7A5D1F']
-        : kenaTP ? [`🛑 UNTUNG +${AUDIT_ATURAN_V2.emas.tp} → STOP`,'#D9534F']
+        : kenaTP ? [`🛑 UNTUNG +$300 → STOP`,'#D9534F']
         : pk>jt ? [`❌ lewat ${pk}/${jt}`,'#D9534F']
         : pk===jt ? [`🛑 STOP ${pk}/${jt}`,'#D9534F']
         : pk===jt-1 ? [`⚠️ sisa 1 (${pk}/${jt})`,'#C99A2E']
         : [`✅ sisa ${jt-pk} (${pk}/${jt})`,'#3E9142'];
       emasRow=`<div style="display:grid;grid-template-columns:1.5fr .5fr .6fr .9fr 1.3fr;gap:4px;font-size:10px;color:#E5E7EB;padding:4px 0;border-top:2px solid #C8A84B;align-items:center"><span><b>XAUUSD</b> 🥇<br><span style="font-size:8px;color:#E5E7EB">SL ${me.sl} / TP ${me.tp} · $${(me.sl*pipUsd).toFixed(2).replace(/\.?0+$/,'')}</span></span><span>${gn}x</span><span>${gl}L/${gw}W</span><span style="color:${gnet<0?'#F87171':'#4ADE80'}">${sg(gnet)}</span><span style="color:${gc};font-weight:700">${gt}</span></div>
-      <div style="font-size:8px;color:#E5E7EB;line-height:1.5;margin-top:2px">Emas (metode ${me.label}): jatah ${jt} order per bulan (order atau loss, mana yang duluan) · stop kalau untung bersih mencapai +${AUDIT_ATURAN_V2.emas.tp} pips · batas rugi bulanan $${me.stopUsd}. Tidak dihitung ke loss kotor forex di atas.</div>`;
+      <div style="font-size:8px;color:#E5E7EB;line-height:1.5;margin-top:2px">Emas (metode ${me.label}): jatah ${jt} order per bulan (order atau loss, mana yang duluan) · stop kalau untung bersih mencapai +$300 · batas rugi bulanan $${me.stopUsd}. Tidak dihitung ke loss kotor forex di atas.</div>`;
     }
   }catch(e){ console.error('baris emas rem forex', e); } }
   const bar=(nilai,maks,warnaB)=>`<div style="height:8px;background:var(--bg0);border-radius:6px;overflow:hidden;margin:3px 0"><div style="width:${Math.max(0,Math.min(100,nilai/maks*100))}%;height:100%;background:${warnaB}"></div></div>`;
@@ -16244,7 +16267,7 @@ function renderStrategiInvestor(){
 const AUDIT_ATURAN={ emas:{sl:500,tp:500,rr:1,jatah:5}, forexRR:3, jatahPair:3 };
 const ATURAN_V2_EFEKTIF='2026-10-01';   // Aturan v2 analis DINILAI mundur sejak 1 Oktober 2026
 const ATURAN_V2_DITETAPKAN='2026-11-02';   // aturan ini dibuat/ditetapkan pada 2 November 2026, berlaku hari ini sampai tidak ditentukan; dinilai mundur sejak 1 Oktober 2026
-const AUDIT_ATURAN_V2={ emas:{sl:500,tp:500,rr:1,jatah:5}, forexRR:2, jatahPair:2, slKali:1 };   // Hard: SL dasar per pair, TP 2x SL
+const AUDIT_ATURAN_V2={ emas:{sl:500,tp:3000,rr:1,jatah:5}, /* tp = target untung bersih bulanan $300 (3000 pips di lot 0,01) */ forex:{rr:2,jatahPair:2,slKali:1} };   // Hard: SL dasar per pair, TP 2x SL
 const FOREX_REM_V2=Object.assign({},FOREX_REM,{rr:2,jatahPair:2,slKali:1,maxLossHari:0,mulai:ATURAN_V2_EFEKTIF});
 function aturanBulan(bk){ return {v:'v2',AA:AUDIT_ATURAN_V2,R:FOREX_REM_V2,uji:String(bk||'')<ATURAN_V2_EFEKTIF.slice(0,7)}; }   // v1 tidak dipakai lagi; bulan < November 2026 = uji coba (tidak dinilai)
 function awalAturan(bk){ return String(bk||'')===ATURAN_V2_EFEKTIF.slice(0,7) ? ATURAN_V2_EFEKTIF : '0000-00-00'; }   // tanggal mulai dinilai dalam bulan itu
@@ -16347,7 +16370,7 @@ function auditChannel(g,bk){
       a.forEach((x,i)=>{ const bx=buka(x), sblm=a.slice(0,i);
         const emasK=(k==='XAUUSD');
         const stopMenang=emasK?(()=>{ let c=0; return sblm.some(y=>{ c+=parseFloat(y.r.pips||0); return c>=AA.emas.tp; }); })():!!sblm.find(y=>parseFloat(y.r.pips||0)>0);
-        if(stopMenang) tambah(x,'pasti',emasK?'Dibuka setelah untung bersih +500 pips (wajib stop)':'Dibuka setelah win (win langsung stop)', emasK?`Total untung bersih ${k} bulan ini sudah mencapai +${AA.emas.tp} pips sebelum order ini. Aturan v2: stop sampai bulan depan.`:`${k} sudah win lebih dulu bulan ini. Aturan v2: 1 win langsung stop sampai bulan depan.`);
+        if(stopMenang) tambah(x,'pasti',emasK?'Dibuka setelah untung bersih +500 pips (wajib stop)':'Dibuka setelah win (win langsung stop)', emasK?`Total untung bersih ${k} bulan ini sudah mencapai +$300 sebelum order ini. Aturan v2: stop sampai bulan depan.`:`${k} sudah win lebih dulu bulan ini. Aturan v2: 1 win langsung stop sampai bulan depan.`);
         if(x.r.jamBuka){ const jalan=sblm.find(y=>y.r.jam && tutup(y)>bx); if(jalan) tambah(x,'pasti','Dibuka sebelum order sebelumnya kena SL', `${k} dibuka ${x.r.jamBuka} saat order sebelumnya belum ditutup. Aturan v2: order berikutnya dibuka setelah order sebelumnya kena SL.`); }
       }); });
   }
