@@ -5891,6 +5891,8 @@ function renderRingkasanBatch(){
 // di atas syarat atau udah jatuh di bawah (jadi rem: kapan harus berhenti kejar sinyal baru).
 function renderKalkulatorRemSinyal(g){
   const wrap=document.getElementById('kalkulatorRemSinyalWrap');
+  // Kalkulator Rem Sinyal Analis dihapus: sudah tercakup di kartu Kontrol, Rem, dan Investor di atas.
+  wrap.innerHTML=''; return;
   if(!wrap)return;
   const {totalVpBulanIni, totalPipsBulanIni, ambangVpBerlaku}=hitungBufferVpChannel(g);
   const targetMedal=cachedTargetMedal[g]||{minVp:300, avgMonthlyVp:null};
