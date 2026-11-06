@@ -15566,7 +15566,7 @@ function renderBatasDDCard(){
         ${(()=>{
           const bkT=bulanKey;
           const rowsT=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bkT && String(r.tanggal)>=awalAturan(bkT));
-          const sigT=rowsT.length, vpT=rowsT.reduce((t,r)=>t+(parseFloat(r.vp)||0),0);
+          const sigT=rowsT.length+(cachedSinyalAnalis[g]||[]).filter(r=>r.status==='running').length, vpT=rowsT.reduce((t,r)=>t+(parseFloat(r.vp)||0),0);
           let ambT=0; try{ ambT=hitungBufferVpChannel(g).ambangVpBerlaku||0; }catch(e){}
           const tgtT=[
             {n:'Signal minimal 5', nilai:sigT, target:5, fmt:v=>v+' signal'},
@@ -15775,7 +15775,7 @@ function renderLossKotor(g, wrapId){
   </tr>`;
   // Target bulanan (sama dengan aplikasi TF): ✅ kalau tercapai, kalau belum tampil berapa kurangnya
   let ambangVp=0; try{ ambangVp=hitungBufferVpChannel(g).ambangVpBerlaku||0; }catch(e){}
-  const jumlahSinyal=list.reduce((t,x)=>t+x.order,0);
+  const jumlahSinyal=list.reduce((t,x)=>t+x.order,0)+(cachedSinyalAnalis[g]||[]).filter(r=>r.status==='running').length;
   const tgtList=[
     {nama:'Minimal 5 signal', nilai:jumlahSinyal, target:5, fmtNilai:v=>v+' signal'},
     {nama:'Minimal 300 VP', nilai:totVp, target:300, fmtNilai:v=>f2(v)+' VP'},
