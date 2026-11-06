@@ -223,6 +223,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#FFFFFF;min-heig
   <div class="brand">
     <div class="brand-name">MARGINKUAT</div>
     <div class="brand-sub">Trading emas di MT4</div>
+    <div id="tglSitusDibuat" style="font-size:9px;color:#E5E7EB;margin-top:3px"></div>
   </div>
   <div class="header-right">
     <button class="theme-toggle" id="btnTheme" onclick="toggleTheme()" title="Ganti tema gelap/terang">🌙</button>
@@ -3510,6 +3511,9 @@ let allSaldoData=[];
 function show(id){document.getElementById(id).style.display='block'}
 function hide(id){document.getElementById(id).style.display='none'}
 function set(id,v){const el=document.getElementById(id);if(el)el.textContent=v}
+// Tanggal situs pertama kali dibuat (isi format YYYY-MM-DD). Kosongkan kalau belum diketahui.
+const TGL_SITUS_DIBUAT='2026-05-30';
+(function(){ const el=document.getElementById('tglSitusDibuat'); if(!el||!TGL_SITUS_DIBUAT) return; const d=new Date(TGL_SITUS_DIBUAT+'T00:00:00'); el.textContent='Situs dibuat: '+d.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}); })();
 function openModal(id){document.getElementById(id).classList.add('open')}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 
