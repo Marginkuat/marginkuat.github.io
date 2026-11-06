@@ -3845,9 +3845,9 @@ function hitungPerformaMt4(){
     bulanMap[k].profit += h.profit; bulanMap[k].order += h.order; bulanMap[k].jumlahHari++;
   });
   const saldoSekarang = hari.length ? hari[hari.length-1].saldoAkhir : 0;   // saldo harian terakhir (hari ini)
-  // Persen bulan memakai saldo harian terakhir (contoh: hari ini ¢700), sama dengan aturan harian
+  // Semua persen bulanan memakai SALDO AWAL BULAN
   const bulan = Object.values(bulanMap).sort((a,b)=>a.periode.localeCompare(b.periode)).map(b=>({
-    ...b, pct: saldoSekarang>0 ? b.profit/saldoSekarang*100 : 0
+    ...b, pct: b.saldoAwalBulan>0 ? b.profit/b.saldoAwalBulan*100 : 0
   }));
   return { hari, bulan, saldoSekarang };
 }
@@ -3908,7 +3908,7 @@ function renderPertumbuhanBulanan(){
 
   const saldo = perf.saldoSekarang;
   const f = v => (v>=0?'+':'') + v.toFixed(2) + '%';
-  const rp = pct => { const n = pct/100*saldo; return (n>=0?'+':'-')+'¢'+Math.abs(n).toFixed(2); };
+  const rp = v => (v>=0?'+':'-')+'¢'+Math.abs(v).toFixed(2);   // nominal = P/L sebenarnya
   const namaBulan = p => { const [y,m]=p.split('-'); return new Date(+y,+m-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'}); };
   const hariIni = perf.hari[perf.hari.length-1];
   const bulanIni = perf.bulan[perf.bulan.length-1];
@@ -3938,15 +3938,15 @@ function renderPertumbuhanBulanan(){
   wrap.innerHTML = bannerMt4 + `
   <div style="background:var(--bg0);border:1.5px solid #4ADE80;border-radius:10px;padding:12px 14px">
     <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📅 Pertumbuhan Bulan Ini — ${namaBulan(bulanIni.periode)}</div>
-    <div style="font-size:9px;color:#E5E7EB;margin-bottom:4px">Persen dihitung dari saldo harian (hari ini ${fmtCRp(saldo)}).</div>
-    <div style="font-size:22px;font-weight:800;color:${bulanIni.pct>=0?'#4ADE80':'#F87171'}">${f(bulanIni.pct)} <span style="font-size:11px;font-weight:700">(${rp(bulanIni.pct)})</span></div>
+    <div style="font-size:9px;color:#E5E7EB;margin-bottom:4px">Persen bulan dihitung dari saldo awal bulan (${fmtCRp(bulanIni.saldoAwalBulan)}). Loss per hari dihitung dari saldo awal hari itu.</div>
+    <div style="font-size:22px;font-weight:800;color:${bulanIni.pct>=0?'#4ADE80':'#F87171'}">${f(bulanIni.pct)} <span style="font-size:11px;font-weight:700">(${rp(bulanIni.profit)})</span></div>
 
     <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:10px">Aturan Anda</div>
-    ${baris('Loss per hari (maks 3%)', f(hariIni.pctHari)+' ('+rp(hariIni.pctHari)+')', okLossHari, 'Hari terakhir tercatat, dari saldo awal hari itu')}
+    ${baris('Loss per hari (maks 3%)', f(hariIni.pctHari)+' ('+rp(hariIni.profit)+')', okLossHari, 'Hari terakhir tercatat, dari saldo awal hari itu')}
     ${baris('Order per hari', hariIni.order+' order', true, 'Tanpa batas jatah, dibatasi rem')}
-    ${baris('Loss per bulan (maks 6%)', f(bulanIni.pct)+' ('+rp(bulanIni.pct)+')', okLossBulan, 'Bulan ini, dari saldo harian terakhir')}
+    ${baris('Loss per bulan (maks 6%)', f(bulanIni.pct)+' ('+rp(bulanIni.profit)+')', okLossBulan, 'Bulan ini, dari saldo awal bulan')}
     ${baris('Order per bulan', bulanIni.order+' order', true, 'Tanpa batas jatah, dibatasi rem')}
-    ${baris('Profit per bulan (stop 10%)', f(bulanIni.pct)+' ('+rp(bulanIni.pct)+')', okProfit, 'Lewat 10% = melanggar, harus stop')}
+    ${baris('Profit per bulan (stop 10%)', f(bulanIni.pct)+' ('+rp(bulanIni.profit)+')', okProfit, 'Lewat 10% = melanggar, harus stop')}
 
     <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">Per Bulan</div>
     ${listBulan}
