@@ -16556,7 +16556,7 @@ function renderAturanMt4(){
 
 // ══ PERINGATAN RISIKO MODAL AKUN MT4 (kartu terpisah; aturan emas TIDAK diubah) ══
 // Membandingkan risiko aturan emas (SL 500 pips, jatah 5 order/bulan) dengan saldo terakhir. Hanya persentase ditampilkan (nominal saldo privat).
-const MT4_RISIKO={slPips:500, lot:0.01, centPerPip:0.1, jatah:5};
+const MT4_RISIKO={slPips:100, lot:0.01, centPerPip:0.1, jatah:5};
 function renderRisikoModalMt4(){
   const el=document.getElementById('mt4RisikoWrap'); if(!el) return;
   const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4))).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
