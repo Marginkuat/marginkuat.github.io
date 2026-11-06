@@ -3881,6 +3881,17 @@ async function catatPelanggaranMt4(list){
   }catch(e){ console.error('catatPelanggaranMt4', e); }
 }
 
+// Banner target profit (MT4 dan analis). Tercapai = SELAMAT PROFIT TERCAPAI.
+// Melewati target = SELAMAT PROFIT TERCAPAI SAMPAI LEBIH HEBAT.
+function bannerTargetProfitHtml(sudahCapai, melewati, keterangan){
+  if(!sudahCapai) return '';
+  const teks = melewati ? 'SELAMAT PROFIT TERCAPAI SAMPAI LEBIH HEBAT' : 'SELAMAT PROFIT TERCAPAI';
+  return `<div style="background:linear-gradient(135deg,#14532D,#166534);border:1.5px solid #4ADE80;border-radius:10px;padding:10px 12px;margin-bottom:10px;text-align:center">
+    <div style="font-size:13px;font-weight:900;color:#FFFFFF;letter-spacing:.5px">🏆 ${teks} 🏆</div>
+    <div style="font-size:10px;color:#DCFCE7;margin-top:3px">${keterangan}</div>
+  </div>`;
+}
+
 function renderPertumbuhanBulanan(){
   const wrap = document.getElementById('pertumbuhanBulanWrap');
   if(!wrap) return;
@@ -3917,7 +3928,8 @@ function renderPertumbuhanBulanan(){
     ? tercatat.map(v=>`<div style="font-size:10px;color:#F87171;padding:3px 0">❌ ${v.jenis} — ${v.periode} (${teksNilai(v)})</div>`).join('')
     : `<div style="font-size:10px;color:#4ADE80">Belum ada pelanggaran tercatat.</div>`;
 
-  wrap.innerHTML = `
+  const bannerMt4 = bannerTargetProfitHtml(bulanIni.pct>=ATURAN_PROFIT_BULAN, bulanIni.pct>ATURAN_PROFIT_BULAN, 'Target profit MT4 '+ATURAN_PROFIT_BULAN+'% dari saldo harian ('+namaBulan(bulanIni.periode)+')');
+  wrap.innerHTML = bannerMt4 + `
   <div style="background:var(--bg0);border:1.5px solid #4ADE80;border-radius:10px;padding:12px 14px">
     <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📅 Pertumbuhan Bulan Ini — ${namaBulan(bulanIni.periode)}</div>
     <div style="font-size:9px;color:#E5E7EB;margin-bottom:4px">Persen dihitung dari saldo harian (hari ini ${fmtCRp(saldo)}).</div>
@@ -5261,12 +5273,19 @@ function renderDaftarSinyal(){
     </div>`;
   }).join('');
   try{ cekTargetUntungBulanan(g); }catch(e){ console.error('cekTargetUntungBulanan', e); }
+  let bannerAnalis='';
+  if(g==='XAUUSD'){
+    const nowB=new Date(); const bkB=nowB.getFullYear()+'-'+String(nowB.getMonth()+1).padStart(2,'0');
+    const pipsBulan=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bkB && isFinite(parseFloat(r.pips))).reduce((t,r)=>t+parseFloat(r.pips),0);
+    const tgtB=AUDIT_ATURAN_V2.emas.tp;
+    bannerAnalis=bannerTargetProfitHtml(pipsBulan>=tgtB, pipsBulan>tgtB, 'Target untung analis $300 ('+tgtB+' pips) bulan ini: '+pipsBulan.toFixed(1)+' pips');
+  }
   const filterHtml = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
     <input type="date" value="${filterTglRiwayat}" onchange="setFilterTglRiwayat(this.value)" style="flex:1;padding:6px;font-size:11px;background:var(--bg0);color:#FFFFFF;border:1px solid var(--border);border-radius:6px">
     ${filterTglRiwayat?`<button class="btn" onclick="setFilterTglRiwayat('')" style="padding:6px 8px;font-size:10px">Semua tanggal</button>`:''}
   </div>`;
   const kosongTgl = filterTglRiwayat && listTampil.length===0;
-  wrap.innerHTML = (g==='XAUUSD' ? perbandinganSinyalEmasHtml() : '') + filterHtml + ringkasanCocokHtml + (kosongTgl
+  wrap.innerHTML = bannerAnalis + (g==='XAUUSD' ? perbandinganSinyalEmasHtml() : '') + filterHtml + ringkasanCocokHtml + (kosongTgl
     ? `<div style="font-size:10px;color:#E5E7EB;text-align:center;padding:10px">Tidak ada transaksi di tanggal ini.</div>`
     : baris);
   renderDaftarRunning();
