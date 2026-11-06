@@ -5113,12 +5113,16 @@ function perbandinganSinyalEmasHtml(){
   const f1 = v => (v>=0?'+':'')+v.toFixed(1);
   const f2 = v => (v>=0?'+':'')+v.toFixed(2);
   const lbl = {v1:'Aturan v1 (RR 1:1, SL 500 / TP 500)', v2:'Aturan v2 (RR 1:2, SL 100 / TP 200)'};
+  const remPips = ((typeof remPipsAturan==='function') ? remPipsAturan().XAUUSD : 2500) || 2500;
+  const slVersi = {v1:A1.sl, v2:JALUR_EMAS_V2.sl};
   const barisV = v => {
     const h=perVersi[v];
+    const bufferOrder = Math.floor(remPips/slVersi[v]);
     return `<div style="border-top:1px solid var(--border);padding:6px 0;font-size:10px;color:#FFFFFF">
       <div style="font-weight:800">${lbl[v]}</div>
       <div style="line-height:1.7">Sinyal: <b>${h.n}</b> (menang <b>${h.menang}</b> · kalah <b>${h.kalah}</b>) · <b style="color:#FACC15">Win rate ${wr(h)}</b><br>
-      Total pips: <b style="color:${h.pips>=0?'#4ADE80':'#F87171'}">${f1(h.pips)}</b> · Total VP: <b style="color:${h.vp>=0?'#4ADE80':'#F87171'}">${f2(h.vp)}</b></div>
+      Total pips: <b style="color:${h.pips>=0?'#4ADE80':'#F87171'}">${f1(h.pips)}</b> · Total VP: <b style="color:${h.vp>=0?'#4ADE80':'#F87171'}">${f2(h.vp)}</b><br>
+      Buffer sebelum rem (${remPips} pips): <b style="color:#FFFFFF">${bufferOrder} order loss</b> (SL ${slVersi[v]} pips)</div>
     </div>`;
   };
   const a=perVersi.v1, b=perVersi.v2;
