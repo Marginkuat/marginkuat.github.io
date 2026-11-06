@@ -15550,6 +15550,21 @@ function renderBatasDDCard(){
         <div style="font-size:9px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Checklist syarat investor</div>
         ${cek(okDDMaks, `DD terdalam ${_bdFmt(-h.maxDD)} ${okDDMaks?'≤':'melewati'} batas stop $${c.stopUsd}${okDDMaks?'':' (loss terakhir menembus batas)'}`)}
         ${cek(okBerhenti, okBerhenti?'Berhenti begitu batas tercapai (tidak ada sinyal closed sesudahnya)':`Ada <b>${h.setelahKena}</b> sinyal closed SETELAH batas tercapai (seharusnya sudah stop)`)}
+        ${(()=>{
+          const bkT=bulanKey;
+          const rowsT=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bkT && String(r.tanggal)>=awalAturan(bkT));
+          const sigT=rowsT.length, vpT=rowsT.reduce((t,r)=>t+(parseFloat(r.vp)||0),0);
+          let ambT=0; try{ ambT=hitungBufferVpChannel(g).ambangVpBerlaku||0; }catch(e){}
+          const tgtT=[
+            {n:'Signal minimal 5', nilai:sigT, target:5, fmt:v=>v+' signal'},
+            {n:'VP minimal 300', nilai:vpT, target:300, fmt:v=>v.toFixed(2)+' VP'},
+            {n:'VP minimal 80% Avg Monthly ('+ambT.toFixed(2)+')', nilai:vpT, target:ambT, fmt:v=>v.toFixed(2)+' VP'}
+          ];
+          return tgtT.map(t=>{
+            const ok=t.nilai>=t.target;
+            return `<div style="font-size:10px;color:${ok?'#4ADE80':'#F87171'};margin-top:3px">${ok?'✅':'⬜'} ${t.n}: ${t.fmt(t.nilai)}${ok?'':' · kurang '+t.fmt(t.target-t.nilai).replace(/^\+/,'')}</div>`;
+          }).join('');
+        })()}
         ${c.maxLossPerHari>=999?'':cek(okHarian, okHarian?`Maksimal ${c.maxLossPerHari} loss per hari terjaga`:`Loss lebih dari ${c.maxLossPerHari}x di tanggal: ${h.hariMelanggar.join(', ')}`)}
         <div style="font-size:11px;font-weight:800;margin-top:5px;color:${h.n===0?'#FFFFFF':(semuaOk?'#4ADE80':'#F87171')}">${h.n===0?'—':(semuaOk?'✅ MEMENUHI SYARAT BATAS KERUGIAN':'❌ BELUM MEMENUHI SYARAT')}</div>
       </div>
