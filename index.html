@@ -15557,7 +15557,7 @@ function renderBatasDDCard(){
     const kalauRunning = h.runningN>0 ? (()=>{
       const ddBaru=h.curDD-h.runningLossUsd; // runningLossUsd negatif
       const ddB=h.curDD+Math.abs(h.runningLossUsd);
-      return `<div style="font-size:9px;color:#FFFFFF;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border)">🏃 ${h.runningN} sinyal running. Kalau semuanya kena SL: DD jadi <b style="color:${ddB>=c.stopUsd?'#F87171':'#FFFFFF'}">${_bdFmt(-ddB)}</b> (${pct(ddB)}) ${ddB>=c.stopUsd?'→ menyentuh batas stop':'→ masih di bawah batas stop'}</div>`;
+      return `<div style="font-size:9px;color:#FFFFFF;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border)">🏃 ${h.runningN} sinyal running. Kalau semuanya kena SL: DD jadi <b style="color:${ddB>=c.stopUsd?'#F87171':'#FFFFFF'}">${_bdFmt(-ddB)}</b> (${pct(ddB)}) ${ddB>=c.stopUsd?'→ menyentuh batas stop':'→ masih di bawah batas stop'}${(cachedSinyalAnalis[g]||[]).filter(r=>r.status==='running').map(()=>`<div style="font-size:9px;color:#E5E7EB;padding-left:8px">• XXXXXX · arah xxx · entry xxx · TP xxx · SL xxx</div>`).join('')}</div>`;
     })() : '';
     return `
     <div style="background:var(--bg2);border:1.5px solid ${warna};border-radius:10px;padding:12px;margin-bottom:${idx===0?'10px':'0'}">
