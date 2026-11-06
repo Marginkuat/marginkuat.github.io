@@ -16126,10 +16126,10 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const pairList=Object.keys(per).sort((a,b)=>per[b].n-per[a].n || slPair(a)-slPair(b) || a.localeCompare(b));
   const pairAda=pairList.filter(k=>per[k].n>0);
   const sw=(R===FOREX_REM_V2);   // aturan v2: win pertama langsung stop
-  const pairPenuh=pairList.filter(k=>per[k].n>=R.jatahPair || (sw&&per[k].w>0));
-  const pairLewat=pairList.filter(k=>per[k].n>R.jatahPair);
-  const pairSisa1=pairList.filter(k=>per[k].n===R.jatahPair-1 && !(sw&&per[k].w>0));
-  const pairWinStop=pairPenuh.filter(k=>sw&&per[k].w>0&&per[k].n<=R.jatahPair);   // sudah WIN = profit, stop trading pair ini (hijau, bukan rugi)
+  const pairPenuh=pairList.filter(k=>per[k].n>=BATAS_ORDER_PAIR(R) || (sw&&per[k].w>0));
+  const pairLewat=pairList.filter(k=>per[k].n>BATAS_ORDER_PAIR(R));
+  const pairSisa1=pairList.filter(k=>per[k].n===BATAS_ORDER_PAIR(R)-1 && !(sw&&per[k].w>0));
+  const pairWinStop=pairPenuh.filter(k=>sw&&per[k].w>0&&per[k].n<=BATAS_ORDER_PAIR(R));   // sudah WIN = profit, stop trading pair ini (hijau, bukan rugi)
   const pairStopRugi=pairPenuh.filter(k=>!pairWinStop.includes(k));                   // jatah habis tanpa win / lewat jatah (merah)
   const infoWin=pairWinStop.length?' · ✅ sudah WIN → STOP (profit): '+pairWinStop.join(', '):'';
   const uji=aturanBulan(bk).uji;   // bulan uji coba (sebelum November 2026): hanya info, tidak dinilai
@@ -16164,7 +16164,7 @@ function renderRemForexGen(g, wrapId, sebagaiForexSaja){
     }
   }catch(e){ console.error('baris emas rem forex', e); } }
   const bar=(nilai,maks,warnaB)=>`<div style="height:8px;background:var(--bg0);border-radius:6px;overflow:hidden;margin:3px 0"><div style="width:${Math.max(0,Math.min(100,nilai/maks*100))}%;height:100%;background:${warnaB}"></div></div>`;
-  const target=sebagaiForexSaja?'':`<div style="background:var(--bg0);border-radius:8px;padding:8px 10px;margin:8px 0">
+  const target='';const _targetLamaTidakDipakai=sebagaiForexSaja?'':`<div style="background:var(--bg0);border-radius:8px;padding:8px 10px;margin:8px 0">
       <div style="font-size:8px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">🎯 Target bulan ini (dari TF)</div>
       <div style="font-size:10px;color:#E5E7EB;line-height:1.7">VP bulan ini: <b style="color:${vp<0?'#F87171':'#4ADE80'}">${fmt(vp)}</b><br>
       ${vp>=R.targetMinVP?'✅':'⬜'} Syarat medal: minimal ${R.targetMinVP} VP${bar(vp,R.targetMinVP,'#3E9142')}
