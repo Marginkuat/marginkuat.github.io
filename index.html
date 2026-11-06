@@ -15338,7 +15338,7 @@ loadTahunanPengelolaProfil();
 // Setting disimpan di app_settings key 'batas_dd_XAUUSD' / 'batas_dd_FOREX' (JSON).
 // ══════════════════════════════════════════════════════════════════════
 const BATAS_DD_DEFAULT={
-  XAUUSD:{modal:4920, lot:0.01, stopUsd:295, warnUsd:147.5, riskLossUsd:50, maxLossPerHari:1},   // Datuk EURUSD: acuan $4.920, stop 6% = $295 = 2950 pips   // stop 6% dari $1.000 = $60 = 600 pips (1 pip = $0,10)
+  XAUUSD:{modal:5000, lot:0.01, stopUsd:300, warnUsd:150, riskLossUsd:10, maxLossPerHari:1},   // Datuk EURUSD: acuan $4.920, stop 6% = $295 = 2950 pips   // stop 6% dari $1.000 = $60 = 600 pips (1 pip = $0,10)
   FOREX: {modal:1450, lot:0.01, stopUsd:87, warnUsd:43.5, riskLossUsd:5.5, maxLossPerHari:1}   // Datuk Crypto 89: acuan $1.450, stop 6% = $87 = 870 pips
 };
 let cachedBatasDD={XAUUSD:Object.assign({},BATAS_DD_DEFAULT.XAUUSD), FOREX:Object.assign({},BATAS_DD_DEFAULT.FOREX)};
@@ -15389,8 +15389,8 @@ function _bdPilihBulanOpsi(){
 }
 const BATAS_RUGI_BULAN_PCT_ANALIS=6;   // maksimal rugi 1 bulan = 6% dari modal
 function batasAturanV2(g){
-  const R=FOREX_REM_V2, E=METODE_DEF['H4-500'], f=remForexBatas(g,R);
-  const stopPips=(g==='XAUUSD'?2950:870);   // Datuk EURUSD 2950 pips ($295, acuan $4.920); Datuk Crypto 89 870 pips ($87, acuan $1.450)
+  const R=FOREX_REM_V2, E=METODE_DEF['V2-100'], f=remForexBatas(g,R);
+  const stopPips=(g==='XAUUSD'?3000:870);   // Datuk EURUSD 2950 pips ($295, acuan $4.920); Datuk Crypto 89 870 pips ($87, acuan $1.450)
   const stopUsd=Math.round(stopPips*0.1*100)/100;                       // lot 0,01: 1 pip = $0,10
   const modal=Math.ceil(stopUsd/(BATAS_RUGI_BULAN_PCT_ANALIS/100)-1e-9); // modal minimal agar batas = 6%
   const nPair=R.kanal[g].pairs.length;
@@ -15544,11 +15544,12 @@ function renderBatasDDSim(){
 // Admin memilih metode yang dipakai tiap bulan; investor otomatis melihatnya, dan batas rugi
 // di kartu Cek Batas Kerugian mengikuti metode itu. Disimpan di app_settings 'metode_bulan_XAUUSD'.
 const METODE_DEF={
-  'H4-500':{label:'H4', sl:500, tp:500, rr:'1:1', risk:50, jatah:5, hitung:'order'}
+  'H4-500':{label:'Aturan v1', sl:500, tp:500, rr:'1:1', risk:50, jatah:5, hitung:'order'},
+  'V2-100':{label:'Aturan v2', sl:100, tp:200, rr:'1:2', risk:10, jatah:5, hitung:'order'}
 };
 // ATURAN RESMI v1 (ditetapkan & berlaku sejak 24 Okt 2026): satu metode emas untuk semua data, tanpa pilihan per bulan.
-function metodeDefaultKey(bk){ return 'H4-500'; }
-function metodeKeyBulan(bk){ return 'H4-500'; }
+function metodeDefaultKey(bk){ return String(bk) >= '2026-11' ? 'V2-100' : 'H4-500'; }
+function metodeKeyBulan(bk){ return String(bk) >= '2026-11' ? 'V2-100' : 'H4-500'; }
 let cachedMetodeBulan={XAUUSD:{}};
 async function loadMetodeBulan(){
   try{
@@ -15562,7 +15563,7 @@ function metodeEfektif(g,bulanKey){
   const m=METODE_DEF[key]; if(!m) return null;
   const k=(cachedBatasDD[g].lot||0.01)/0.01;
   const risk=m.risk*k;
-  const stop=295;   // v3: stop bulanan Datuk EURUSD = 6% dari acuan $4.920 = $295 (2950 pips)
+  const stop=300;   // stop bulanan Datuk EURUSD = 6% dari modal minimal $5.000 = $300 (3000 pips)
   return Object.assign({key, diatur:!!METODE_DEF[cachedMetodeBulan.XAUUSD[bulanKey]]}, m, {riskUsd:risk, stopUsd:stop, warnUsd:stop/2, basisNet:!!m.campur, k});
 }
 async function editMetodeBulan(g){
@@ -15619,7 +15620,7 @@ function renderBatasDDMetode(){
     <div style="font-size:15px;font-weight:800;color:#E5E7EB">${m.campur?`${m.label} — RR ${m.rr}`:`${m.label} — SL ${m.sl} / TP ${m.tp} pips (RR ${m.rr})`}</div>
     <div style="font-size:10px;color:#E5E7EB;line-height:1.7;margin-top:3px">${m.campur?`SL & TP maksimal 500 pips per order · batas: <b>rugi bersih bulan ini ${batasPipsM.toFixed(0)} pips = $${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b>, begitu tercapai stop sampai bulan depan. Tidak ada jatah order.`:`Risiko per loss $${m.riskUsd} (${(m.riskUsd/modal*100).toFixed(1)}%) · jatah <b>${m.jatah} ${m.hitung==='order'?'order per bulan (untung atau rugi)':'loss'}</b> · batas rugi maksimal <b>$${m.stopUsd} (${(m.stopUsd/modal*100).toFixed(1)}% dari modal $${modal})</b>`}</div>
     <div style="font-size:11px;font-weight:800;color:${warna};margin-top:4px">${st}</div>
-    <div style="font-size:9px;color:#E5E7EB;margin-top:6px;line-height:1.5">Aturan Resmi v1 (ditetapkan 24 Okt 2026) berlaku untuk semua bulan; data sebelum tanggal itu dinilai retroaktif. Metode berlaku untuk semua sinyal channel ini di bulan tersebut. ${m.campur?'Aturan baru dibuat bulan ini, jadi Oktober memakai batas rugi bersih (win ikut mengurangi rugi). Mulai bulan depan memakai metode H4 tetap.':(byLoss?'Jatah dihitung dari jumlah LOSS (win tidak mengurangi jatah).':'Jatah habis kalau jumlah ORDER atau jumlah LOSS mencapai batas jatah, mana yang duluan.')}${riwayat?'<br>Riwayat metode: '+riwayat:''}</div>
+    <div style="font-size:9px;color:#E5E7EB;margin-top:6px;line-height:1.5">Aturan Resmi v1 (ditetapkan 24 Okt 2026) berlaku untuk semua bulan; data sebelum tanggal itu dinilai retroaktif. Aturan Resmi v2 berlaku mulai 5 November 2026. Metode berlaku untuk semua sinyal channel ini di bulan tersebut. ${m.campur?'Aturan baru dibuat bulan ini, jadi Oktober memakai batas rugi bersih (win ikut mengurangi rugi). Mulai bulan depan memakai metode H4 tetap.':(byLoss?'Jatah dihitung dari jumlah LOSS (win tidak mengurangi jatah).':'Jatah habis kalau jumlah ORDER atau jumlah LOSS mencapai batas jatah, mana yang duluan.')}${riwayat?'<br>Riwayat metode: '+riwayat:''}</div>
   </div>`;
 }
 (function(){
@@ -16138,7 +16139,7 @@ function renderStrategiInvestor(){
   const warna=pc=>pc<=6?'#4ADE80':pc<=10?'#FACC15':'#F87171';
   const label=pc=>pc<=6?'memenuhi batas 6%':pc<=10?'di atas batas 6%':pc<=15?'jauh di atas batas 6%':'sangat berat';
   const chip=v=>{ const pc=pct(v); return `<b style="color:${warna(pc)}">${fm(v)} (${pc.toFixed(1)}% modal · ${label(pc)})</b>`; };
-  const E=METODE_DEF['H4-500'], emasRisk=E.risk*k, emasMaks=emasRisk*E.jatah;
+  const E=METODE_DEF['V2-100'], emasRisk=E.risk*k, emasMaks=emasRisk*E.jatah;
   const BX=remForexBatas('XAUUSD',aturanSekarang().R), BF=remForexBatas('FOREX',aturanSekarang().R);
   const fxX=BX.maksLoss*pipUsd, fxF=BF.maksLoss*pipUsd;
   const totX=emasMaks+fxX;
@@ -16390,7 +16391,7 @@ function renderAturanResmi(){
 })();
 
 function aturanResmiV2(){
-  const R=FOREX_REM_V2, E=METODE_DEF['H4-500'];
+  const R=FOREX_REM_V2, E=METODE_DEF['V2-100'];
   return { versi:'v2', ditetapkan:ATURAN_V2_DITETAPKAN, berlakuSejak:ATURAN_V2_EFEKTIF, modalAcuanUsd:1000, lotAcuan:0.01, nilaiPipUsd:0.1,
     emas:{pair:'XAUUSD', timeframe:'bebas (H4, D1, W1)', slPips:E.sl, tpPips:E.tp, rr:'1:1', jatahOrderPerBulan:E.jatah, stopBilaUntungBersihPips:E.tp, bukaBerurutan:true, rugiMaksUsd:E.risk*E.jatah},
     forex:{rr:'1:'+R.rr, tpKaliSl:R.rr, jatahOrderPerPairPerBulan:R.jatahPair, stopSetelahWin:true, bukaBerurutan:true, maksLossPerHari:R.maxLossHari, slippage:R.slippage, slPipsPerPair:Object.fromEntries(Object.entries(FOREX_SL_PAIR).map(([k,v])=>[k,v*(R.slKali||1)])),
@@ -16636,7 +16637,7 @@ function renderRekapSemuaBulan(){
 })();
 
 // ══ DD ANALIS (WAJIB): per channel, acuan masing-masing, harian 3% & bulanan 6%, peringatan di banner ══
-const ANALIS_DD={usdPerPip:0.1, harianPct:3, bulanPct:6, channel:[{g:'XAUUSD', nama:'Datuk EURUSD', modal:4920},{g:'FOREX', nama:'Datuk Crypto 89', modal:1450}]};
+const ANALIS_DD={usdPerPip:0.1, harianPct:3, bulanPct:6, channel:[{g:'XAUUSD', nama:'Datuk EURUSD', modal:5000},{g:'FOREX', nama:'Datuk Crypto 89', modal:1450}]};
 function hitungDDAnalis(g, modal){
   const rows=[];
   (cachedSinyalAnalis[g]||[]).forEach(r=>{
