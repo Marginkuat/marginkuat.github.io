@@ -16097,6 +16097,8 @@ function remForexBatas(g,Rx){
 }
 function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const wrap=document.getElementById(wrapId); if(!wrap) return;
+  // Kartu REM FOREX & TARGET dihapus: data sudah ada di kartu investor dan Rekap per Pair.
+  wrap.innerHTML=''; return;
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
   const R=aturanBulan(bk).R, cfg=cachedBatasDD.FOREX, K=R.kanal[g], B=remForexBatas(g,R);
   const pipUsd=PIP_VALUE_USD_PER_0_01_LOT*(cfg.lot/0.01);
