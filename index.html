@@ -16093,7 +16093,7 @@ function renderStrategiInvestor(){
       baris(`<b>Modal minimal agar rugi maksimal ≤ 6% per bulan</b> (lot ${lot.toFixed(2)}): ${nmX} <b>$${minX.toLocaleString('id-ID')}</b> · ${nmF} <b>$${minF.toLocaleString('id-ID')}</b> · keduanya <b>$${minAll.toLocaleString('id-ID')}</b>. ${statusModal}`)+
       baris(`Lot minimal 0,01. Kerugian dibatasi aturan: jatah order, ${R.maxLossHari?'maksimal '+R.maxLossHari+' loss per hari, ':''}dan stop gabungan.`))}
     ${kotak(nmX+' — Emas (XAUUSD, H4)',
-      baris(`<b>Strategi:</b> sampai 4 Nov: SL ${E.sl} / TP ${E.tp} pips (RR 1:1), titik impas win rate 50%. Mulai 5 Nov 2026: SL 100 / TP 200 pips (RR 1:2), titik impas win rate 33%.`)+
+      baris(`<b>Strategi XAUUSD:</b><br><b>Aturan v1</b> (sampai 4 Nov 2026): SL ${E.sl} / TP ${E.tp} pips (RR 1:1). Impas kalau tiap 2 order ada 1 menang.<br><b>Aturan v2</b> (mulai 5 Nov 2026): SL 100 / TP 200 pips (RR 1:2). Impas kalau tiap 3 order ada 1 menang.<br><b>Mana yang lebih ringan untuk impas:</b> v2 (1 menang dari 3 order).`)+
       baris(`<b>Jatah open:</b> ${E.jatah} order per bulan (untung atau rugi). Setelah ${E.jatah} order, stop sampai bulan depan.${aturanSekarang().v==='v2'?' Stop saat untung bersih +500 pips.':''}`)+
       baris(`<b>Rugi per order:</b> ${chip(emasRisk)}`)+
       baris(`<b>Rugi maksimal sebulan</b> (${E.jatah} order semuanya kena SL): ${chip(emasMaks)}`))}
