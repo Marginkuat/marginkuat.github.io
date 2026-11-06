@@ -5089,6 +5089,8 @@ function toggleDaftarSinyal(){
   daftarSinyalExpanded=!daftarSinyalExpanded;
   renderDaftarSinyal();
 }
+let filterTglRiwayat = '';
+function setFilterTglRiwayat(v){ filterTglRiwayat = v || ''; renderDaftarSinyal(); }
 function renderDaftarSinyal(){
   const wrap=document.getElementById('daftarSinyalWrap');
   if(!wrap)return;
@@ -5101,6 +5103,7 @@ function renderDaftarSinyal(){
     wrap.innerHTML=`<div style="font-size:9px;color:#E5E7EB;text-align:center;padding:8px">Belum ada sinyal tercatat.</div>`;
     return;
   }
+  const listTampil = filterTglRiwayat ? list.filter(r=>r.tanggal===filterTglRiwayat) : list;
   const jumlahTercocok=list.filter(r=>r.cocok).length;
   const ringkasanCocokHtml=`<div style="font-size:9px;color:#E5E7EB;text-align:right;margin-bottom:4px">✅ Dicocokkan: ${jumlahTercocok}/${list.length}</div>`;
   // Tanda pelanggaran aturan per sinyal (hasil Audit Kepatuhan): ❌ melanggar · ⚠️ indikasi · 🕰️ sebelum aturan berlaku
@@ -5130,7 +5133,7 @@ function renderDaftarSinyal(){
   const nowD=new Date();
   const bulanSekarang=nowD.getFullYear()+'-'+String(nowD.getMonth()+1).padStart(2,'0');
   const perBulan={};
-  list.forEach(r=>{ const k=bulanKeyOf(r.tanggal); (perBulan[k]=perBulan[k]||[]).push(r); });
+  listTampil.forEach(r=>{ const k=bulanKeyOf(r.tanggal); (perBulan[k]=perBulan[k]||[]).push(r); });
   const urutBulan=Object.keys(perBulan).sort().reverse();
   const baris=urutBulan.map(k=>{
     const arr=perBulan[k];
@@ -5147,7 +5150,14 @@ function renderDaftarSinyal(){
       ${buka?arr.map(barisHtml).join(''):''}
     </div>`;
   }).join('');
-  wrap.innerHTML=ringkasanCocokHtml+baris;
+  const filterHtml = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+    <input type="date" value="${filterTglRiwayat}" onchange="setFilterTglRiwayat(this.value)" style="flex:1;padding:6px;font-size:11px;background:var(--bg0);color:#FFFFFF;border:1px solid var(--border);border-radius:6px">
+    ${filterTglRiwayat?`<button class="btn" onclick="setFilterTglRiwayat('')" style="padding:6px 8px;font-size:10px">Semua tanggal</button>`:''}
+  </div>`;
+  const kosongTgl = filterTglRiwayat && listTampil.length===0;
+  wrap.innerHTML = filterHtml + ringkasanCocokHtml + (kosongTgl
+    ? `<div style="font-size:10px;color:#E5E7EB;text-align:center;padding:10px">Tidak ada transaksi di tanggal ini.</div>`
+    : baris);
   renderDaftarRunning();
   renderRingkasanBatch();
 }
