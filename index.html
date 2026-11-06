@@ -5543,18 +5543,19 @@ function renderProyeksiBufferRunning(g, list){
       </div>
       <div style="font-size:10px;margin-top:6px;line-height:1.6">${untungInfo}</div>
     </div>` : '';
+  const barisTargetVp = (vp) => {
+    const k300 = 300 - vp, k80 = ambangVpBerlaku - vp;
+    const b = (label, kurang) => kurang>0
+      ? `<div>${label}: <b style="color:#F87171">kurang ${kurang.toFixed(2)} VP</b></div>`
+      : `<div>${label}: <b style="color:#4ADE80">sudah tercapai ✅</b></div>`;
+    return b('Target VP 300', k300) + b('Target 80% ('+ambangVpBerlaku.toFixed(2)+' VP)', k80);
+  };
   const kontrolHtml = `<div style="background:${kontrolWarna}15;border:1.5px solid ${kontrolWarna};border-radius:9px;padding:9px 11px;margin-bottom:10px">
-    <div style="font-size:9px;color:${kontrolWarna};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Kejar VP — Skenario Semua Running LOSS</div>
-    <div style="font-size:9px;color:#FFFFFF;font-weight:700;line-height:1.7">
-      VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> | Pips fix sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
-      Ambang minimal bulan ini: <b>${ambangVpBerlaku.toFixed(2)} VP</b><br>
-      Potensi kalau ${list.length} sinyal running semua Loss: <b style="color:#F87171">${totalLossVp.toFixed(2)} VP / ${totalLossPips.toFixed(1)} pips</b><br>
-      → VP fix jadi: <b style="color:#FFFFFF">${vpFixKalauSemuaLos.toFixed(2)}</b> | Pips fix jadi: <b style="color:#FFFFFF">${pipsFixKalauSemuaLos.toFixed(1)}</b>
+    <div style="font-size:12px;font-weight:800;color:#FFFFFF;line-height:1.8">
+      Kalah semua: <b style="color:#F87171">${vpFixKalauSemuaLos.toFixed(2)} VP</b> · <b style="color:#F87171">${pipsFixKalauSemuaLos.toFixed(1)} pips</b>
     </div>
-    <div style="font-size:12px;font-weight:800;color:${kontrolWarna};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
-      ${kekuranganKejar>0
-        ? `⚠️ Masih perlu kejar +${kekuranganKejar.toFixed(2)} VP lagi lewat sinyal baru buat nutup ke ambang minimal`
-        : `✅ Masih di atas ambang minimal walau semua running ini Loss — gak perlu buru-buru buka sinyal tambahan`}
+    <div style="font-size:11px;font-weight:700;color:#FFFFFF;line-height:1.8;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+      ${barisTargetVp(vpFixKalauSemuaLos)}
     </div>
     ${remBlok}
   </div>`;
@@ -5567,7 +5568,6 @@ function renderProyeksiBufferRunning(g, list){
     ? `<div>${label}: <b style="color:#F87171">kurang ${kurang.toFixed(2)} VP</b></div>`
     : `<div>${label}: <b style="color:#4ADE80">sudah tercapai ✅</b></div>`;
   const kontrolWinHtml = `<div style="background:${warnaWin}15;border:1.5px solid ${warnaWin};border-radius:9px;padding:9px 11px;margin-bottom:10px">
-    <div style="font-size:9px;color:${warnaWin};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Total VP — Menang Semua</div>
     <div style="font-size:12px;font-weight:800;color:#FFFFFF;line-height:1.8">
       Menang semua: <b style="color:${warnaWin}">${vpFixKalauSemuaWin.toFixed(2)} VP</b> · <b style="color:${warnaWin}">${pipsFixKalauSemuaWin.toFixed(1)} pips</b>
     </div>
