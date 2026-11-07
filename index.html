@@ -572,19 +572,10 @@ function toggleKamusGrup(btn){
     <label class="lbl">Pilih Pair</label>
     <select class="inp" id="calcPairSelect2" style="margin-bottom:0">
       <optgroup label="XAUUSD">
-        <option value="50|150">XAUUSD KERDIL SL 50 PIPS</option>
-        <option value="100|300">XAUUSD KERDIL 2 SL 100 PIPS</option>
-        <option value="200|400">XAUUSD STANDAR SL 200 PIPS</option>
-        <option value="200|600" selected>XAUUSD STANDAR LAMA SL 200 PIPS</option>
-        <option value="250|750">XAUUSD MEDIUM SL 250 PIPS</option>
+        <option value="50|100">XAUUSD KERDIL SL 50 PIPS</option>
+        <option value="100|200" selected>XAUUSD STANDAR SL 100 PIPS</option>
+        <option value="200|400">XAUUSD MEDIUM SL 200 PIPS</option>
         <option value="500|500">XAUUSD HARD SL 500 PIPS</option>
-        <option value="300|300">XAUUSD SL 300 PIPS / TP 300</option>
-        <option value="300|400">XAUUSD SL 300 PIPS / TP 400</option>
-        <option value="300|500">XAUUSD SL 300 PIPS / TP 500</option>
-        <option value="400|400">XAUUSD SL 400 PIPS / TP 400</option>
-        <option value="400|500">XAUUSD SL 400 PIPS / TP 500</option>
-        <option value="200|500">XAUUSD SL 200 PIPS / TP 500</option>
-        <option value="315|500">XAUUSD SL 315 PIPS / TP 500</option>
       </optgroup>
       <optgroup label="Forex Standar (SL 10 pips)">
         <option value="10|30">AUDUSD Standar (10 pips)</option>
@@ -674,6 +665,7 @@ function toggleKamusGrup(btn){
         <option value="120|240">USDJPY Hard 2 (120/240, RR 1:2)</option>
       </optgroup>
     </select>
+      <div id="xauNote2" style="font-size:9px;color:#E5E7EB;margin-top:4px;display:none"></div>
 
     <div class="calc-row" style="margin-top:12px">
       <div>
@@ -751,7 +743,21 @@ function toggleRingkasRows(uid){
   btn.textContent = willShow ? '🔼 Sembunyikan' : `👇 Lihat semua ${total} baris`;
 }
 </script>
-<script>
+<script>// Catatan RR untuk preset XAUUSD di kalkulator
+const XAU_TP_SETS={
+  50:[50,100,150],    // KERDIL: RR 1:1, 1:2, 1:3
+  100:[100,200,300],  // STANDAR: RR 1:1, 1:2, 1:3
+  200:[200,400],      // MEDIUM: RR 1:1, 1:2
+  500:[500]           // HARD: RR 1:1
+};
+const XAU_NOTE_RR={'50':'Pilihan RR: 1:1 · 1:2 · 1:3','100':'Pilihan RR: 1:1 · 1:2 · 1:3','200':'Pilihan RR: 1:1 · 1:2','500':'Pilihan RR: 1:1'};
+function updXauNote(sel,id){
+  const el=document.getElementById(id); if(!el||!sel) return;
+  const sl=(sel.value||'').split('|')[0];
+  const t=XAU_NOTE_RR[sl];
+  el.textContent=t||''; el.style.display=t?'block':'none';
+}
+
 (function(){
   const slEl2=document.getElementById('calcSL2'), tpEl2=document.getElementById('calcTP2'),
         pipvalueEl2=document.getElementById('calcPipValue2'),
@@ -764,6 +770,8 @@ function toggleRingkasRows(uid){
     slEl2.value=sl; tpEl2.value=tp;
     computeFlat2();
   });
+  pairSelectEl2.addEventListener('change', ()=>updXauNote(pairSelectEl2,'xauNote2'));
+  updXauNote(pairSelectEl2,'xauNote2');
 
   function fmtPct2(n){return (n*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
 
@@ -852,10 +860,6 @@ function toggleRingkasRows(uid){
     }
   }
 
-  // Default XAUUSD Standar pindah ke 200/400 (RR 1:2) mulai 9 November 2026; sebelum itu tetap 200/600.
-  if(new Date()>=new Date(2026,10,9) && pairSelectEl2.querySelector('option[value="200|400"]')){
-    pairSelectEl2.value='200|400'; slEl2.value='200'; tpEl2.value='400';
-  }
   modalEl2.addEventListener('input', computeFlat2);
   slEl2.addEventListener('input', computeFlat2);
   tpEl2.addEventListener('input', computeFlat2);
@@ -914,18 +918,10 @@ function toggleRingkasRows(uid){
     <label class="lbl">Pilih Pair</label>
     <select class="inp" id="calcPairSelect" style="margin-bottom:0">
       <optgroup label="XAUUSD">
-        <option value="50|150">XAUUSD KERDIL SL 50 PIPS</option>
-        <option value="100|300">XAUUSD KERDIL 2 SL 100 PIPS</option>
-        <option value="200|600" selected>XAUUSD STANDAR SL 200 PIPS</option>
-        <option value="250|750">XAUUSD MEDIUM SL 250 PIPS</option>
+        <option value="50|100">XAUUSD KERDIL SL 50 PIPS</option>
+        <option value="100|200" selected>XAUUSD STANDAR SL 100 PIPS</option>
+        <option value="200|400">XAUUSD MEDIUM SL 200 PIPS</option>
         <option value="500|500">XAUUSD HARD SL 500 PIPS</option>
-        <option value="300|300">XAUUSD SL 300 PIPS / TP 300</option>
-        <option value="300|400">XAUUSD SL 300 PIPS / TP 400</option>
-        <option value="300|500">XAUUSD SL 300 PIPS / TP 500</option>
-        <option value="400|400">XAUUSD SL 400 PIPS / TP 400</option>
-        <option value="400|500">XAUUSD SL 400 PIPS / TP 500</option>
-        <option value="200|500">XAUUSD SL 200 PIPS / TP 500</option>
-        <option value="315|500">XAUUSD SL 315 PIPS / TP 500</option>
       </optgroup>
       <optgroup label="Forex Standar (SL 10 pips)">
         <option value="10|30">AUDUSD Standar (10 pips)</option>
@@ -1015,6 +1011,7 @@ function toggleRingkasRows(uid){
         <option value="120|240">USDJPY Hard 2 (120/240, RR 1:2)</option>
       </optgroup>
     </select>
+      <div id="xauNote1" style="font-size:9px;color:#E5E7EB;margin-top:4px;display:none"></div>
 
     <div class="calc-row" style="margin-top:12px">
       <div>
@@ -1178,11 +1175,7 @@ function toggleRingkasRows(uid){
     </div>`;
 
     // Set TP custom per SL tertentu (XAUUSD). Kalau SL tidak ada di daftar, pakai default x1/x2.
-    const CUSTOM_TP_SETS = {
-      200: [200, 400, 600],
-      250: [250, 500, 750],
-      500: [500]
-    };
+    const CUSTOM_TP_SETS = XAU_TP_SETS;
     // Forex: semua level (Standar/Medium/Hard) selalu tampil RR 1:1, 1:2.
     const tpList = (pairName==='XAUUSD' && CUSTOM_TP_SETS[slPips]) ? CUSTOM_TP_SETS[slPips] : [slPips*1, slPips*2];   // semua pair: RR 1:1 & 1:2 (Hard 500 emas tetap 1:1)
 
@@ -1210,6 +1203,8 @@ function toggleRingkasRows(uid){
     slEl.value=sl; tpEl.value=tp;
     calcRun();
   });
+  pairSelectEl.addEventListener('change', ()=>updXauNote(pairSelectEl,'xauNote1'));
+  updXauNote(pairSelectEl,'xauNote1');
 
   function fmtUSD(n){return '$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
   function fmtPct(n){return (n*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
@@ -1483,7 +1478,7 @@ function initEntryPriceCalcGeneric(suffix){
       <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#F87171;margin-top:2px">≈ -$${slUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
     </div>`;
 
-    const CUSTOM_TP_SETS = { 200: [200, 600], 250: [250, 750], 500: [500] };
+    const CUSTOM_TP_SETS = XAU_TP_SETS;
     const tpList = (pairName==='XAUUSD' && CUSTOM_TP_SETS[slPips]) ? CUSTOM_TP_SETS[slPips] : [slPips*1, slPips*2];   // semua pair: RR 1:1 & 1:2 (Hard 500 emas tetap 1:1)
 
     tpList.forEach(tpPips=>{
