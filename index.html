@@ -1510,6 +1510,13 @@ const MT4_PROP={dailyPct:3, maxPct:6};
 // Basis (sesuai aturan kamu): modal awal bulan = saldo awal bulan.
 // DD per hari = 3% dari saldo awal hari itu. DD max bulan = 6% dari puncak saldo dalam bulan itu (mulai dari modal awal bulan).
 // Batas ¢ ikut saldo: saldo naik ke 2000 di tengah bulan → per hari ≈ ¢60, max bulan ≈ ¢120. Deposit/WD tidak dihitung sebagai rugi.
+// Satu sumber untuk persen bulanan: saldo awal bulan (sama dengan kotak Pertumbuhan Bulan Ini)
+function bulanPctNow(bk){
+  try{ const pf=hitungPerformaMt4(); const b=pf.bulan.find(x=>x.periode===bk); return b ? b.pct : 0; }catch(e){ return 0; }
+}
+function saldoAwalBulanNow(bk){
+  try{ const pf=hitungPerformaMt4(); const b=pf.bulan.find(x=>x.periode===bk); return b ? b.saldoAwalBulan : null; }catch(e){ return null; }
+}
 function aturanPropMt4(){
   const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4)) && r.profit!=null && isFinite(parseFloat(r.profit)))
     .sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
@@ -1548,12 +1555,12 @@ function aturanPropMt4(){
   let bulanTerburuk='', ddBulanTerburuk=0;
   Object.keys(bulanMaxDD).forEach(bk=>{ if(bulanMaxDD[bk]>ddBulanTerburuk){ ddBulanTerburuk=bulanMaxDD[bk]; bulanTerburuk=bk; } });
   const bkNow=bulanTerakhir;
-  const awalBlnNow=awalBulan[bkNow]||baseNow;
+  const awalBlnNow=saldoAwalBulanNow(bkNow)||awalBulan[bkNow]||baseNow;
   const limitHarian=MT4_PROP.dailyPct/100*baseNow, limitBulan=MT4_PROP.maxPct/100*baseNow;
   const dailyRoom=Math.max(0, limitHarian - Math.max(0,-pHari));
   const monthRoom=Math.max(0, eqNow - baseNow*(1-MT4_PROP.maxPct/100));
   const batas=monthRoom;   // v3: hanya batas bulanan
-  return {modal, eqNow, baseNow, awalBlnNow, naik: baseNow>awalBlnNow+1e-9, persenNaik:(baseNow/awalBlnNow-1)*100,
+  return {modal, eqNow, baseNow, awalBlnNow, naik: baseNow>awalBlnNow+1e-9, persenNaik:bulanPctNow(bkNow),
           baseHarian, maxHarian, tglHarian,
           ddHariIni: Math.max(0,-pHari)/baseNow*100, ddBulanIni: bulanMaxDD[bkNow]||0, bulanTerakhir: bkNow,
           ddBulanTerburuk, bulanTerburuk, pelanggaran, batas, batasPct: eqNow>0?batas/eqNow*100:0,
@@ -1629,7 +1636,7 @@ function renderLabelProfilRisiko(){
   el.innerHTML=`<div style="background:linear-gradient(135deg,${p.warna1},${p.warna2});border:2px solid ${p.border};border-radius:12px;padding:14px;text-align:center">
     <div style="font-size:16px;font-weight:900;color:${p.teks};letter-spacing:.3px;line-height:1.4">⚠️ ${p.judul}<br>${p.sub}</div>
     <div style="font-size:10px;color:${p.subteks};margin-top:6px;line-height:1.5">${p.ket}</div>
-    ${auto?aturanPropHtml(p,auto):''}
+    
     ${opsiAdmin}
 
   </div>`;
@@ -3878,6 +3885,8 @@ async function catatPelanggaranMt4(list){
   const baru = list.filter(v=>!pelanggaranMt4Cache[v.key]);
   if(!baru.length) return;
   baru.forEach(v=>{ pelanggaranMt4Cache[v.key] = { jenis:v.jenis, periode:v.periode, nilai:+v.nilai.toFixed(2), satuan:v.satuan||'%', tercatat:new Date().toISOString() }; });
+  // Bulan yang masih berjalan: nilai ikut diperbarui ke angka saldo awal bulan terbaru
+  list.forEach(v=>{ const e=pelanggaranMt4Cache[v.key]; if(e && e.periode===String(v.periode) && Math.abs(e.nilai-(+v.nilai.toFixed(2)))>0.005 && String(v.periode).slice(0,7)===new Date().toISOString().slice(0,7)){ e.nilai=+v.nilai.toFixed(2); } });
   if(!isAdmin) return;
   try{
     const payload = JSON.stringify(pelanggaranMt4Cache);
@@ -3917,6 +3926,8 @@ function renderPertumbuhanBulanan(){
   const okProfit = bulanIni.pct < ATURAN_PROFIT_BULAN;
   const okOrderHari = hariIni.order <= ATURAN_ORDER_HARI;
   const okOrderBulan = bulanIni.order <= ATURAN_ORDER_BULAN;
+  const riskCent = MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);   // ¢ per trade (SL 100 pips, lot 0,01)
+  const riskPct = bulanIni.saldoAwalBulan>0 ? riskCent/bulanIni.saldoAwalBulan*100 : 0;
   const baris = (label, nilai, ok, catatan) => `
     <div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:11px">
       <div><div style="color:#FFFFFF;font-weight:700">${label}</div><div style="font-size:9px;color:#E5E7EB">${catatan}</div></div>
@@ -3943,6 +3954,7 @@ function renderPertumbuhanBulanan(){
 
     <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:10px">Aturan Anda</div>
     ${baris('Loss per hari (maks 3%)', f(hariIni.pctHari)+' ('+rp(hariIni.profit)+')', okLossHari, 'Hari terakhir tercatat, dari saldo awal hari itu')}
+    ${baris('Risk per trade (SL '+MT4_RISIKO.slPips+' pips, lot 0,01)', '¢'+riskCent.toFixed(2)+' ('+riskPct.toFixed(2)+'%)', true, 'Dari saldo awal bulan, satu nilai untuk semua kotak')}
     ${baris('Order per hari', hariIni.order+' order', true, 'Tanpa batas jatah, dibatasi rem')}
     ${baris('Loss per bulan (maks 6%)', f(bulanIni.pct)+' ('+rp(bulanIni.profit)+')', okLossBulan, 'Bulan ini, dari saldo awal bulan')}
     ${baris('Order per bulan', bulanIni.order+' order', true, 'Tanpa batas jatah, dibatasi rem')}
