@@ -1529,7 +1529,7 @@ const MT4_PROP={dailyPct:3, maxPct:6};
 // DD per hari = 3% dari saldo awal hari itu. DD max bulan = 6% dari puncak saldo dalam bulan itu (mulai dari modal awal bulan).
 // Batas ¢ ikut saldo: saldo naik ke 2000 di tengah bulan → per hari ≈ ¢60, max bulan ≈ ¢120. Deposit/WD tidak dihitung sebagai rugi.
 function aturanPropMt4(){
-  const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4)) && r.profit!=null && isFinite(parseFloat(r.profit)))
+  const rows=(getRowsAkunRealXauusd()||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4)) && r.profit!=null && isFinite(parseFloat(r.profit)))
     .sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
   if(!rows.length) return null;
   const modal=parseFloat(rows[0].saldo_mt4)-parseFloat(rows[0].profit);
@@ -1551,8 +1551,9 @@ function aturanPropMt4(){
     const eq=modal+cum;
     if(eq>puncakBulan[bk]) puncakBulan[bk]=eq;
     const lossHari=p<0?-p:0;
-    const pctHari=lossHari/base*100;
+    const pctHari=lossHari/awal*100;
     if(pctHari>maxHarian){ maxHarian=pctHari; tglHarian=t; }
+    if(p<0 && pctHari>MT4_PROP.dailyPct) pelanggaran.push({tgl:t, jenis:'Loss per hari melewati '+MT4_PROP.dailyPct+'%', pct:pctHari, batas:MT4_PROP.dailyPct});
     // v3: batas harian dihapus (aturan hanya 6% per bulan)
     const pk=puncakBulan[bk];
     const ddBulan=Math.max(0, pk-eq)/pk*100;
@@ -1680,7 +1681,7 @@ function profilOtomatisMt4(){
 const MT4_BATAS_RUGI_BULAN_PCT=6;
 function syaratModalMt4Html(a){
   const f1=v=>(Math.round(v*100)/100).toFixed(2).replace('.',','), id=v=>Math.ceil(v).toLocaleString('id-ID');
-  const B=MT4_BATAS_RUGI_BULAN_PCT, J=MT4_RISIKO.jatah, rugiBulan=a.risk*J, pctBulan=rugiBulan/a.saldo*100;
+  const B=MT4_BATAS_RUGI_BULAN_PCT, J=1, rugiBulan=a.risk*J, pctBulan=rugiBulan/a.saldo*100;
   const nBatas=Math.floor((a.saldo*B/100)/a.risk+1e-9), perluSaldo=rugiBulan/(B/100), lolos=pctBulan<=B+1e-9;
   const w=lolos?'#4ADE80':'#F87171', bg=lolos?'rgba(20,83,45,.45)':'rgba(0,0,0,.35)';
   const isi=lolos
@@ -1689,7 +1690,7 @@ function syaratModalMt4Html(a){
   return `<div style="margin:10px 10px 0;padding:10px 12px;border:1px solid ${w};border-radius:10px;background:${bg};font-size:12px;line-height:1.6;color:#FFFFFF;text-align:left">${isi}</div>`;
 }
 function profilTinggiMeta(a){
-  const f1=v=>(Math.round(v*10)/10).toString().replace('.',','), J=MT4_RISIKO.jatah, habis=Math.max(1,Math.floor(a.saldo/a.risk)), bln=Math.max(1,Math.ceil(habis/J));
+  const f1=v=>(Math.round(v*10)/10).toString().replace('.',','), J=1, habis=Math.max(1,Math.floor(a.saldo/a.risk)), bln=Math.max(1,Math.ceil(habis/J));
   return {judul:'AKUN INI BERISIKO TINGGI', sub:'RISK '+f1(a.pct)+'% PER TRADE', warna1:'#7F1D1D', warna2:'#450A0A', border:'#F87171', teks:'#FECACA', subteks:'#FEE2E2',
     ket:`Di atas batas Agresif 5%. Dari modal MT4 sekarang, 1 order (SL ${MT4_RISIKO.slPips} pips) ≈ ${f1(a.pct)}% saldo. Kalau loss ${habis}× berturut-turut saldo habis dan bisa kena margin call. Dihitung harian dari saldo MT4 terakhir.`};
 }
@@ -3862,14 +3863,28 @@ function hitungPerformaMt4(){
   return { hari, bulan };
 }
 
+// DD bulan dari puncak (peak-to-trough) dalam satu bulan, dibanding saldo awal bulan itu.
+function ddMaksBulanMt4(perf, periode){
+  const rows = perf.hari.filter(h=>h.tgl.slice(0,7)===periode);
+  if(!rows.length || !(rows[0].start>0)) return 0;
+  const base = rows[0].start;
+  let puncak = base, maks = 0;
+  rows.forEach(h=>{ puncak = Math.max(puncak, h.end); const dd = (puncak-h.end)/base*100; if(dd>maks) maks = dd; });
+  return maks;
+}
 function daftarPelanggaranMt4(perf){
   const out = [];
   perf.hari.forEach(h=>{
-    if(h.pctHari <= ATURAN_LOSS_HARIAN) out.push({ key:'harian_'+h.tgl, jenis:'Loss per hari melewati 3%', periode:h.tgl, nilai:h.pctHari });
+    if(h.pctHari <= -MT4_DD_HARIAN_MAKS) out.push({ key:'harian_'+h.tgl, jenis:'Loss per hari melewati '+MT4_DD_HARIAN_MAKS+'%', periode:h.tgl, nilai:h.pctHari });
   });
   perf.bulan.forEach(b=>{
-    if(b.pct <= ATURAN_LOSS_BULAN) out.push({ key:'bulan_loss_'+b.periode, jenis:'Loss per bulan melewati 6%', periode:b.periode, nilai:b.pct });
-    if(b.pct >= ATURAN_PROFIT_BULAN) out.push({ key:'bulan_profit_'+b.periode, jenis:'Profit per bulan melewati target 10%', periode:b.periode, nilai:b.pct });
+    // saldo awal bulan di bawah modal minimal = saldo tidak cukup (saldo dicatat dalam ¢, 100 ¢ = $1)
+    const awalUsd = b.start/100;
+    if(b.start>0 && awalUsd < MT4_MODAL_MIN_USD) out.push({ key:'modal_'+b.periode, jenis:'Saldo awal bulan di bawah modal minimal $'+MT4_MODAL_MIN_USD+' (saldo tidak cukup)', periode:b.periode, nilai:(awalUsd/MT4_MODAL_MIN_USD*100-100) });
+    if(b.pct <= ATURAN_LOSS_BULAN) out.push({ key:'bulan_loss_'+b.periode, jenis:'Loss per bulan melewati '+MT4_DD_BULAN_MAKS+'%', periode:b.periode, nilai:b.pct });
+    const ddB = ddMaksBulanMt4(perf, b.periode);
+    if(ddB >= MT4_DD_BULAN_MAKS) out.push({ key:'bulan_dd_'+b.periode, jenis:'DD bulan dari puncak melewati '+MT4_DD_BULAN_MAKS+'%', periode:b.periode, nilai:-ddB });
+    if(b.pct >= MT4_TARGET_PROFIT_BULAN) out.push({ key:'bulan_profit_'+b.periode, jenis:'Profit per bulan melewati target '+MT4_TARGET_PROFIT_BULAN+'%', periode:b.periode, nilai:b.pct });
   });
   return out;
 }
@@ -3970,7 +3985,7 @@ function renderKalender(){
   const isThisMonth = today.getFullYear()===calYear && today.getMonth()===calMonth;
 
   const byDate={};
-  saldoData.forEach(r=>{byDate[r.tanggal]=r;});
+  getRowsAkunRealXauusd().forEach(r=>{byDate[r.tanggal]=r;});
 
   for(let i=0;i<firstDay;i++){
     const c=document.createElement('div');c.className='cal-cell empty';grid.appendChild(c);
@@ -4066,7 +4081,7 @@ function renderGraph(){
 
   // FIX: dulu ikut semua pair (termasuk Forex/sinyal analis) — sekarang dikunci XAUUSD saja,
   // karena grafik & saldo di card ini merepresentasikan akun MT4 REAL, bukan performa sinyal.
-  const rowsBulan = allSaldoData.filter(r=>{
+  const rowsBulan = getRowsAkunRealXauusd().filter(r=>{
     const d=new Date(r.tanggal);
     return (r.pair||'XAUUSD')==='XAUUSD' && d.getFullYear()===graphYear && d.getMonth()===graphMonth;
   }).sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
@@ -9255,12 +9270,12 @@ function riskZone(val, greenMax, yellowMax){
   return {color:'#F87171', label:'Bahaya', code:'red'};
 }
 function getRiskMeterData(){
-  const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const rows=getRowsAkunRealXauusd().slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
   if(!rows.length) return null;
 
   // ── Current Drawdown (real-time, %) — sama seperti perhitungan di Score Dashboard ──
   const now=new Date();
-  const cutoff=new Date(now.getFullYear(), now.getMonth()-5, 1); // 6 bulan terakhir
+  const cutoff=new Date(now.getFullYear(), now.getMonth(), 1); // bulan berjalan saja (saldo bisa naik/turun tiap hari)
   const r6=rows.filter(r=>new Date(r.tanggal)>=cutoff);
   let peak=0, cumPL=0, currentDd=0;
   r6.forEach(r=>{
@@ -9268,7 +9283,7 @@ function getRiskMeterData(){
     if(cumPL>peak)peak=cumPL;
     currentDd=peak-cumPL;
   });
-  const modalUntukDd = r6.length ? parseFloat(r6[r6.length-1].saldo_mt4||0) : parseFloat(rows[rows.length-1].saldo_mt4||0);
+  const modalUntukDd = r6.length ? (parseFloat(r6[0].saldo_mt4||0)-parseFloat(r6[0].profit||0)) : parseFloat(rows[rows.length-1].saldo_mt4||0);   // saldo awal bulan berjalan
   const ddPct = modalUntukDd>0 ? (currentDd/modalUntukDd*100) : 0;
 
   // ── Risk of Ruin (%) — formula klasik, sama seperti section Risk of Ruin Calculator ──
@@ -9324,7 +9339,7 @@ function renderRiskMeter(){
     el.innerHTML='<div style="text-align:center;padding:14px;color:#E5E7EB;font-size:12px">Belum ada data Saldo Harian.</div>';
     return;
   }
-  const ddZone=riskZone(data.ddPct, 15, 35);
+  const ddZone=riskZone(data.ddPct, MT4_DD_HARIAN_MAKS, MT4_DD_BULAN_MAKS);
   const rorZone=data.hasEnoughData ? riskZone(data.ror, 10, 40) : null;
   const riskZoneVal = data.hasRiskInput ? riskZone(data.riskPct, 2, 5) : null;
 
@@ -9340,7 +9355,7 @@ function renderRiskMeter(){
       <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Status Risiko Akun</div>
       <div style="font-size:20px;font-weight:800;color:${overallColor}">${overallDot} ${overallLabel}</div>
     </div>
-    ${riskMeterLampRow('Current Drawdown', data.ddPct.toFixed(1)+'%', ddZone, 'Jarak equity ke puncak tertinggi, 6 bulan terakhir')}
+    ${riskMeterLampRow('Current Drawdown', data.ddPct.toFixed(1)+'%', ddZone, 'Jarak equity ke puncak tertinggi bulan ini, dibanding saldo awal bulan')}
     ${rorZone ? riskMeterLampRow('Risk of Ruin', data.ror.toFixed(1)+'%', rorZone, 'Peluang teoretis akun habis, dari win rate & RR historis') : `
     <div style="padding:10px 0;text-align:center;font-size:10px;color:#E5E7EB;border-bottom:1px solid var(--bg2)">Risk of Ruin belum bisa dihitung — butuh minimal 5 hari data dengan profit &amp; loss.</div>`}
     ${riskZoneVal ? riskMeterLampRow('Risk per Trade', data.riskPct.toFixed(2)+'%', riskZoneVal, 'Dari Kalkulator Risiko — % modal dipertaruhkan per entry') : `
@@ -12669,7 +12684,7 @@ async function loadRiskOfRuin(){
   const el=document.getElementById('riskOfRuin');
   if(!el)return;
   try{
-    const rows=allSaldoData||[];
+    const rows=getRowsAkunRealXauusd()||[];
     const profits=rows.map(r=>parseFloat(r.profit||0));
     const gains=profits.filter(p=>p>0);
     const losses=profits.filter(p=>p<0);
@@ -16523,7 +16538,7 @@ function renderAturanMt4(){
   el.innerHTML=`<div style="margin-top:12px;background:${stop?'#2A0F0F':'var(--bg2)'};border:1px solid ${stop?'#7F1D1D':'var(--border)'};border-radius:12px;padding:12px 14px;text-align:left">
     <div style="font-size:9px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🎯 Aturan Emas Akun MT4 — sama seperti Datuk EURUSD (ditetapkan 26 Okt 2026, dinilai mundur sejak 1 Okt 2026)</div>
     <div style="font-size:13px;font-weight:800;color:${warna};line-height:1.4">${status}</div>
-    <div style="font-size:10px;color:#FFFFFF;margin-top:6px;line-height:1.7">Order bulan ini: <b>${nAll}</b> (${n} selesai + ${ber} berjalan) <br>SL 500 / TP 500 pips (RR 1:1).</div>
+    <div style="font-size:10px;color:#FFFFFF;margin-top:6px;line-height:1.7">Order bulan ini: <b>${nAll}</b> (${n} selesai + ${ber} berjalan) <br>SL 200 / TP 400 pips (RR 1:2).</div>
     ${langgar.length?`<div style="font-size:10px;color:${uji?'#FACC15':'#F87171'};margin-top:8px;line-height:1.6">${uji?'⚠️ Indikasi menyalahi aturan (uji coba)':'❌ Menyalahi aturan'}:<br>${langgar.slice(0,6).map(t=>'• '+t+(t.indexOf('🕰️')===0?' <i>(aturan dibuat 26 Okt 2026, dinilai mundur)</i>':'')).join('<br>')}</div>`:''}
     <div style="font-size:8px;color:#E5E7EB;margin-top:6px;line-height:1.5"><div style="margin-top:8px;font-size:10px;color:#FFFFFF;line-height:1.7">Sejak aturan (1 Okt): <b style="color:${pSejak>=0?'#4ADE80':'#F87171'}">${fmtC(pSejak)}</b> · Sebelum aturan (tidak dinilai): <b>${fmtC(pPra)}</b> · Total bulan ini: <b>${fmtC(pSejak+pPra)}</b><br><span style="font-size:9px;color:#E5E7EB">Status STOP dihitung hanya dari data sejak aturan berlaku, bukan dari total bulan.</span></div>
     <div style="margin-top:8px;font-size:10px;color:#FFFFFF">Order berjalan (belum kena SL/TP): <span onclick="mt4UbahBerjalan(-1)" style="cursor:pointer;padding:2px 11px;border:1px solid #7A5D1F;border-radius:6px">−</span> <b style="margin:0 4px">${ber}</b> <span onclick="mt4UbahBerjalan(1)" style="cursor:pointer;padding:2px 11px;border:1px solid #7A5D1F;border-radius:6px">+</span></div>
@@ -16535,14 +16550,16 @@ function renderAturanMt4(){
 
 // ══ PERINGATAN RISIKO MODAL AKUN MT4 (kartu terpisah; aturan emas TIDAK diubah) ══
 // Membandingkan risiko aturan emas (SL 500 pips, jatah 5 order/bulan) dengan saldo terakhir. Hanya persentase ditampilkan (nominal saldo privat).
-const MT4_RISIKO={slPips:500, lot:0.01, centPerPip:0.1, jatah:5};
+const MT4_RISIKO={slPips:200, tpPips:400, rr:'1:2', lot:0.01, centPerPip:0.1};
+const MT4_MODAL_MIN_USD=5000;   // modal minimal akun MT4 (USD). Saldo MT4 dicatat dalam ¢: 100 ¢ = $1
+const MT4_DD_HARIAN_MAKS=3, MT4_DD_BULAN_MAKS=6, MT4_TARGET_PROFIT_BULAN=10;
 function renderRisikoModalMt4(){
   const el=document.getElementById('mt4RisikoWrap'); if(!el) return;
   const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4))).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
   const saldo=saldoAcuanBulanMt4();
   if(!(saldo>0)){ el.innerHTML=''; return; }
   const risk=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);   // risiko 1 order (sen) — tidak ditampilkan sebagai nominal
-  const J=MT4_RISIKO.jatah, pct=risk/saldo*100, pctBulan=Math.min(100,risk*J/saldo*100);
+  const J=1, pct=risk/saldo*100, pctBulan=Math.min(100,risk*J/saldo*100);
   const kali=saldo/risk, orderHabis=Math.floor(kali), bulanHabis=Math.max(1,Math.ceil(orderHabis/J));
   const f1=v=>(Math.round(v*10)/10).toString().replace('.',',');
   const lvl=pct>5?'bahaya':(pct>2?'waspada':'wajar');
@@ -16558,7 +16575,7 @@ function renderRisikoModalMt4(){
     ${li(`Kalau loss terus, saldo habis setelah ±<b style="color:${T.w}">${orderHabis}</b> order (±<b style="color:${T.w}">bulan ke-${bulanHabis}</b>) dan margin call bisa terjadi lebih cepat.`)}
     ${li(`Modal acuan bulan ini ≈ <b>${f1(kali)}×</b> risiko 1 order. Agar risiko ≤5% per order, saldo perlu ≥ 20×; agar ≤2%, ≥ 50×.`)}
     ${pct>5?li(`Catatan: banner "Kalkulator Agresif 5%" hanyalah profil kalkulator. Risiko nyata aturan emas ini ≈ ${f1(pct)}% per order, <b>lebih tinggi dari 5%</b>.`):''}
-    <div style="font-size:9px;color:#9CA3AF;margin-top:8px;line-height:1.5">Perhitungan kasar dari saldo terakhir, SL aturan 500 pips, dan lot yang dipakai. Bukan jaminan dan bukan saran keuangan.</div>
+    <div style="font-size:9px;color:#9CA3AF;margin-top:8px;line-height:1.5">Perhitungan kasar dari saldo terakhir, SL aturan 200 pips, dan lot yang dipakai. Bukan jaminan dan bukan saran keuangan.</div>
   </div>`;
 }
 (function(){ const _rg2=renderGraph; renderGraph=function(){ _rg2.apply(this,arguments); try{ renderRisikoModalMt4(); renderLabelProfilRisiko(); if(!(risikoBulanCache&&risikoBulanCache.bulan===bulanIniKeyMt4()) && saldoTerakhirMt4()>0) muatRisikoBulanMt4(); }catch(e){ console.error('risikoMt4', e); } }; })();
