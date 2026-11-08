@@ -7730,7 +7730,7 @@ function renderProfitBulanan(){
     const flowTxt=(b.dep>0||b.wd>0)?`<div style="font-size:9px;color:#E5E7EB;margin-top:2px">Setoran ${fc(b.dep)} · WD ${fc(b.wd)}</div>`:'';
     const selisih=b.end-(b.start+b.sumProf+b.dep-b.wd);
     const warnTxt=Math.abs(selisih)>=1?`<div style="font-size:9px;color:#F87171;margin-top:2px">⚠️ selisih ${fc(selisih)} (setoran/WD belum tercatat)</div>`:'';
-    return `<div class="pb-item">
+    return `<div class="pb-item" data-q="${(bulanNama[parseInt(m,10)-1]+' '+y+' '+b.sumProf.toFixed(2)).toLowerCase()}">
         <div>
           <div class="pb-bulan">${bulanNama[parseInt(m,10)-1]} ${y}</div>
           <div class="pb-signal">${b.jumlahOrder} Signal · ${b.jumlahHari} Hari Trading</div>${flowTxt}${warnTxt}
@@ -7741,7 +7741,11 @@ function renderProfitBulanan(){
         </div>
       </div>`;
   }).join('');
-  el.innerHTML = ringkasBln + `<details><summary style="cursor:pointer;font-size:11px;font-weight:800;color:#4ADE80;padding:8px 0">📂 Lihat semua bulan (${perf.bulan.length})</summary>${listSemua}</details>`;
+  el.innerHTML = ringkasBln + `<input type="text" id="pbCari" placeholder="Cari bulan atau nominal" oninput="filterPbList(this.value)" style="width:100%;padding:8px 10px;border-radius:8px;background:#0D0F0A;color:#FFFFFF;border:1px solid var(--border);font-size:12px;margin-bottom:6px;box-sizing:border-box"><details><summary style="cursor:pointer;font-size:11px;font-weight:800;color:#4ADE80;padding:8px 0">📂 Lihat semua bulan (${perf.bulan.length})</summary>${listSemua}</details>`;
+}
+function filterPbList(v){
+  const q=(v||'').trim().toLowerCase();
+  document.querySelectorAll('#profitBulananList [data-q]').forEach(el=>{ el.style.display = (!q || el.getAttribute('data-q').indexOf(q)>=0) ? '' : 'none'; });
 }
 // Isi kolom setoran/WD + selisih di Riwayat Harian dari sumber tunggal (FOREX tidak ikut)
 let riwayatMt4Semua = [];
@@ -7781,6 +7785,7 @@ function siapkanFilterRiwayatMt4(){
       <select id="rfTahun" onchange="setFilterRiwayatMt4()" ${sel}>${optTahun}</select>
       <input type="date" id="rfTgl" value="${f.tgl}" onchange="setFilterRiwayatMt4()" ${sel}>
     </div>
+    <input type="text" id="rfCari" value="${f.cari||''}" placeholder="Cari tanggal, bulan, atau nominal" oninput="setFilterRiwayatMt4()" style="width:100%;padding:8px 10px;border-radius:8px;background:#0D0F0A;color:#FFFFFF;border:1px solid var(--border);font-size:12px;margin-bottom:6px;box-sizing:border-box">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">
       <button type="button" onclick="resetFilterRiwayatMt4()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg1);color:#FFFFFF;font-size:10px;font-weight:700;cursor:pointer">Tampilkan semua</button>
       <div id="rfRingkas" style="font-size:10px;color:#E5E7EB;text-align:right"></div>
@@ -7789,13 +7794,16 @@ function siapkanFilterRiwayatMt4(){
 function setFilterRiwayatMt4(tanpaUbah){
   if(!tanpaUbah){
     const b=document.getElementById('rfBulan'), t=document.getElementById('rfTahun'), g=document.getElementById('rfTgl');
-    if(b && t && g) riwayatMt4Filter = { bulan:b.value, tahun:t.value, tgl:g.value };
+    const cr=document.getElementById('rfCari');
+    if(b && t && g) riwayatMt4Filter = { bulan:b.value, tahun:t.value, tgl:g.value, cari:cr?cr.value:'' };
   }
   const f = riwayatMt4Filter || {bulan:'',tahun:'',tgl:''};
+  const q=(f.cari||'').trim().toLowerCase();
   const hasil = riwayatMt4Semua.filter(r=>
     (!f.tahun || r.tanggal.slice(0,4)===f.tahun) &&
     (!f.bulan || r.tanggal.slice(5,7)===f.bulan) &&
-    (!f.tgl || r.tanggal===f.tgl));
+    (!f.tgl || r.tanggal===f.tgl) &&
+    (!q || (r.tanggal+' '+NAMA_BULAN_RIWAYAT[parseInt(r.tanggal.slice(5,7),10)-1]+' '+r.tanggal.slice(0,4)+' '+(parseFloat(r.profit)||0).toFixed(2)+' '+(parseFloat(r.saldo_mt4)||0).toFixed(2)).toLowerCase().indexOf(q)>=0));
   renderRiwayatRows(hasil, false);
   // Ringkasan di atas: hanya hari terakhir. Daftar lengkap dilipat di bawah.
   const elList=document.getElementById('riwayatList');
@@ -8193,7 +8201,7 @@ function setFilterKasList(tanpaBaca){
   const el=document.getElementById('kasList');
   if(el){
     el.innerHTML = hasil.length
-      ? hasil.map(itemKasHtml).join('')
+      ? `<details${q?' open':''}><summary style="cursor:pointer;font-size:11px;font-weight:800;color:#4ADE80;padding:8px 0">📂 Lihat catatan (${hasil.length})</summary>${hasil.map(itemKasHtml).join('')}</details>`
       : '<div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Tidak ada catatan untuk filter ini</div>';
   }
   const rg=document.getElementById('kfRingkas');
