@@ -3792,7 +3792,16 @@ async function fetchSharedSaldoData(){
 // sekarang"/"saldo terakhir" WAJIB filter pair='XAUUSD' dulu, supaya sinyal Forex gak pernah
 // nyelip jadi "saldo MT4 sekarang" cuma karena kebetulan itu baris paling akhir tersimpan. ──
 function getRowsAkunRealXauusd(){
-  return (allSaldoData||[]).filter(r=>(r.pair||'XAUUSD')==='XAUUSD');
+  // Akun MT4 = semua instrumen (XAUUSD, BTCUSD, pair lain). Baris FOREX milik akun analis, tidak ikut.
+  // Satu baris per tanggal: yang paling baru (id terbesar), supaya impor ulang tidak dobel.
+  const best = {};
+  (allSaldoData||[]).forEach(r=>{
+    if(String(r.pair||'')==='FOREX') return;
+    const t = String(r.tanggal||'').slice(0,10);
+    const cur = best[t];
+    if(!cur || (Number(r.id)||0) > (Number(cur.id)||0)) best[t] = r;
+  });
+  return Object.values(best).map(r=>({ ...r, tanggal: String(r.tanggal||'').slice(0,10) }));
 }
 function getSaldoMt4Sekarang(){
   const rows=getRowsAkunRealXauusd().slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
@@ -3813,13 +3822,13 @@ async function loadBalance(){
     lastSaldoAwal = rowsXauUrut.length ? parseFloat(rowsXauUrut[0].saldo_mt4||0) : 0;
     lastSaldoAwalTanggal = rowsXauUrut.length ? (rowsXauUrut[0].tanggal||'') : '';
 
-    const hariProfit = allSh.filter(r=>parseFloat(r.profit||0)>0).length;
-    const hariTotal = hitungPerformaMt4().hariTrading;
-    const winRate = hariTotal ? (hariProfit/hariTotal*100) : 0;
+    // Sumber tunggal: hari trading (ada order atau profit), sama dengan kartu Aturan MT4 dan Risk of Ruin
+    const stDash = statistikHariMt4();
+    const winRate = stDash.winRate;
     set('bWinRate', winRate.toFixed(1)+'%');
-    set('bHari', hariTotal);
+    set('bHari', stDash.hari);
 
-    const totalProfit = allSh.reduce((s,r)=>s+parseFloat(r.profit||0),0);
+    const totalProfit = stDash.totalProfit;
     lastTotalProfitAll=totalProfit;
 
     renderBalanceHero();
@@ -3870,6 +3879,26 @@ function peluangBangkrutRR(p, a, buffer){
   for(let i=0;i<200;i++){ const mid=(lo+hi)/2; if(f(mid)>0) lo=mid; else hi=mid; }
   return Math.pow((lo+hi)/2, Math.max(1,Math.floor(buffer))) * 100;
 }
+// Statistik hari trading MT4 — satu sumber untuk win rate, profit, rata-rata, dan saldo.
+// Hari dihitung kalau ada order (jumlah_signal > 0) atau ada profit. Deposit/penarikan TIDAK masuk profit.
+// Saldo dalam ¢ (sen): 100 ¢ = $1.
+function statistikHariMt4(){
+  const perf = hitungPerformaMt4();
+  const hariTrade = perf.hari.filter(h=>h.jumlahOrder>0 || Math.abs(h.prof)>0.0001);
+  const menang = hariTrade.filter(h=>h.prof>0), kalah = hariTrade.filter(h=>h.prof<0);
+  const n = hariTrade.length;
+  const totalProfit = hariTrade.reduce((a,h)=>a+h.prof,0);
+  const sumMenang = menang.reduce((a,h)=>a+h.prof,0), sumKalah = kalah.reduce((a,h)=>a+h.prof,0);
+  const arus = arusMt4PerTanggal();
+  const totalFlow = Object.values(arus).reduce((a,b)=>a+b,0);
+  const saldoAwalData = perf.hari.length ? perf.hari[0].start : 0;
+  return { hari:n, menang:menang.length, kalah:kalah.length,
+    winRate: n ? menang.length/n*100 : 0,
+    totalProfit, rataMenang: menang.length ? sumMenang/menang.length : 0,
+    rataKalah: kalah.length ? sumKalah/kalah.length : 0,
+    totalFlow, saldoAwalData, saldoAkhir: saldoTerakhirMt4(),
+    saldoCek: saldoAwalData + totalProfit + totalFlow };
+}
 function hitungPerformaMt4(){
   const rows = getRowsAkunRealXauusd().slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
   const arus = arusMt4PerTanggal();
@@ -3878,7 +3907,9 @@ function hitungPerformaMt4(){
     const end = parseFloat(r.saldo_mt4||0), prof = parseFloat(r.profit||0);
     const flow = arus[tgl]||0;
     const start = end - prof - flow;           // saldo awal hari, sudah tanpa setoran/penarikan
-    return { tgl, start, end, prof, flow, pctHari: start>0 ? prof/start*100 : 0 };
+    const jumlahOrder = parseInt(r.jumlah_signal||0,10) || 0;
+    const jumlahLoss = parseInt(r.jumlah_loss||0,10) || 0;
+    return { tgl, start, end, prof, flow, jumlahOrder, jumlahLoss, pctHari: start>0 ? prof/start*100 : 0 };
   });
   const map = {};
   hari.forEach(h=>{
@@ -3933,6 +3964,11 @@ function daftarPelanggaranMt4(perf){
     const risiko = MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);   // ¢ per kalah
     if(lastH.end < risiko) out.push({ key:'buffer_habis_'+lastH.tgl, jenis:'Saldo di bawah 1 kali risiko per kalah (buffer habis)', periode:lastH.tgl, nilai:lastH.end/risiko*100 });
   }
+  // Aturan 8 Nov 2026: maks 5 KALAH per hari. Lebih dari 5 kalah = pelanggaran; 5 atau kurang tidak dihitung.
+  // Jumlah kalah dibaca dari laporan broker (FBS). Hari yang belum punya data kalah tidak dinilai.
+  perf.hari.forEach(h=>{
+    if(h.jumlahLoss > MT4_MAKS_ORDER_HARI) out.push({ key:'loss_'+h.tgl, jenis:'Kalah '+h.jumlahLoss+'x (maks '+MT4_MAKS_ORDER_HARI+' kalah per hari)', periode:h.tgl, nilai:h.jumlahLoss });
+  });
   return out;
 }
 
@@ -3954,7 +3990,7 @@ async function catatPelanggaranMt4(list){
     const lama = pelanggaranMt4Cache[v.key];
     baruCache[v.key] = { jenis:v.jenis, periode:v.periode, nilai:+v.nilai.toFixed(2), tercatat: lama ? lama.tercatat : now };
   });
-  const prefix = /^(harian_|bulan_|modal_)/;
+  const prefix = /^(harian_|bulan_|modal_|order_|loss_|buffer_)/;
   const dibuang = Object.keys(pelanggaranMt4Cache).filter(k=>prefix.test(k) && !ids.has(k));
   const berubah = JSON.stringify(baruCache) !== JSON.stringify(pelanggaranMt4Cache) || dibuang.length>0;
   pelanggaranMt4Cache = baruCache;
@@ -3988,14 +4024,21 @@ function renderPertumbuhanBulanan(){
       <div style="text-align:right"><div style="color:${ok?'#4ADE80':'#F87171'};font-weight:800">${nilai}</div><div style="font-size:9px;color:${ok?'#4ADE80':'#F87171'}">${ok?'✅ sesuai aturan':'❌ melanggar'}</div></div>
     </div>`;
 
+  const arusBulanMap = arusMt4PerTanggal();
+  const flowBulanMt4 = bk => { let dep=0, wd=0; Object.keys(arusBulanMap).forEach(t=>{ if(t.slice(0,7)===bk){ const v=arusBulanMap[t]; if(v>=0) dep+=v; else wd+=-v; } }); return {dep, wd}; };
   const listBulan = perf.bulan.slice().reverse().map(b=>{
-    const melanggar = b.pct<=ATURAN_LOSS_BULAN || b.pct>=ATURAN_PROFIT_BULAN;
-    return `<div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;color:#FFFFFF"><span>${namaBulan(b.periode)}</span><span style="font-weight:700;color:${b.pct>=0?'#4ADE80':'#F87171'}">${f(b.pct)} ${melanggar?'❌':'✅'}</span></div>`;
+    const fl = flowBulanMt4(b.periode);
+    const selisih = b.start + b.sumProf + fl.dep - fl.wd - b.end;
+    const cekOk = Math.abs(selisih) < 1;
+    return `<div style="padding:4px 0;border-bottom:1px dashed #2A2A2A;color:#FFFFFF">
+      <div style="display:flex;justify-content:space-between;font-size:10px"><span>${namaBulan(b.periode)}</span><span style="font-weight:700;color:${b.pct>=0?'#4ADE80':'#F87171'}">${f(b.pct)} <span style="font-weight:400;color:#E5E7EB">(${b.sumProf>=0?'+':'-'}¢${Math.abs(b.sumProf).toFixed(2)})</span></span></div>
+      <div style="font-size:9px;color:#E5E7EB">Awal ¢${b.start.toFixed(2)} · Profit ${b.sumProf>=0?'+':'-'}¢${Math.abs(b.sumProf).toFixed(2)} · Setoran ¢${fl.dep.toFixed(2)} · WD ¢${fl.wd.toFixed(2)} · Akhir ¢${b.end.toFixed(2)} ${cekOk?'✓ nyambung':'⚠️ selisih ¢'+selisih.toFixed(2)}</div>
+    </div>`;
   }).join('');
 
   const tercatat = Object.values(pelanggaranMt4Cache).sort((a,b)=>String(b.tercatat).localeCompare(String(a.tercatat)));
   const listCatat = tercatat.length
-    ? tercatat.map(v=>`<div style="font-size:10px;color:#F87171;padding:3px 0">❌ ${v.jenis} — ${v.periode} (${f(v.nilai)})</div>`).join('')
+    ? tercatat.map(v=>`<div style="font-size:10px;color:#F87171;padding:3px 0">❌ ${v.jenis} — ${v.periode}${/^(Order|Kalah)/.test(String(v.jenis))?'':' ('+f(v.nilai)+')'}</div>`).join('')
     : `<div style="font-size:10px;color:#4ADE80">Belum ada pelanggaran tercatat.</div>`;
 
   wrap.innerHTML = `
@@ -4009,7 +4052,7 @@ function renderPertumbuhanBulanan(){
       Pertumbuhan bulan ini: <b style="color:${bulanIni.pct>=0?'#4ADE80':'#F87171'}">${f(bulanIni.pct)}</b><br>
       Kemerosotan bulan ini (dari puncak): <b style="color:#F87171">-${ddMaksBulanMt4(perf,bulanIni.periode).toFixed(2)}%</b><br>
       Pertumbuhan terbaik sepanjang data: <b style="color:#4ADE80">${f(Math.max(...perf.bulan.map(b=>b.pct)))}</b><br>
-      Kemerosotan terbesar sepanjang data: <b style="color:#F87171">-${Math.max(...perf.bulan.map(b=>ddMaksBulanMt4(perf,b.periode))).toFixed(2)}%</b>
+      Kemerosotan terbesar sepanjang data: <b style="color:#F87171">-${(()=>{ let m=null; perf.bulan.forEach(b=>{ const dd=ddMaksBulanMt4(perf,b.periode); if(!m||dd>m.dd) m={dd,start:b.start,p:b.periode}; }); return m ? (m.dd.toFixed(2)+'% (¢'+(m.dd/100*m.start).toFixed(2)+' dari saldo awal '+namaBulan(m.p)+')') : '0%'; })()}</b>
     </div>
 
     <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">Per Bulan</div>
@@ -9340,9 +9383,9 @@ function getRiskMeterData(){
   // Satu sumber dengan kartu Risk of Ruin di bawah Risk Meter.
   const _modalRoR = parseFloat(rows[rows.length-1].saldo_mt4||0);
   const _riskCentRoR = MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);
-  const _winsRoR = rows.filter(r=>parseFloat(r.profit||0)>0).length;
-  const _pRoR = rows.length ? _winsRoR/rows.length : 0;
-  const hasEnoughData = rows.length>=5;
+  const _stRoR = statistikHariMt4();
+  const _pRoR = _stRoR.winRate/100;
+  const hasEnoughData = _stRoR.hari>=5;
   const ror = hasEnoughData ? peluangBangkrutRR(_pRoR, MT4_RISIKO.tpPips/MT4_RISIKO.slPips, Math.floor(_modalRoR/_riskCentRoR)) : 0;
 
   // ── Risk per Trade (%) — dari Kalkulator Risiko per Pair yang aktif ──
@@ -9823,6 +9866,18 @@ const REM_SALDO_MINIMAL_USD = 1000;
 const REM_PREVIEW_LABEL_HTML = `<div style="font-size:8px;color:#FFFFFF;margin-top:8px;padding-top:6px;border-top:1px dashed #4A3C10;line-height:1.5">⚠️ <b>PREVIEW</b> dari angka manual di "Modal Kamu" — belum tersimpan resmi. Status REM asli (dashboard/beranda) tetap berlaku sampai data resmi diimport.</div>`;
 function buildRemCekHtmlGeneric(riskTradeIni, labelLot, calcKode, modalKalkulator, pairGroup){
   const g=pairGroup||'XAUUSD';
+  // MT4 emas: aturan hanya BUFFER (saldo ÷ risiko per kalah). Tidak memakai target/batas bulanan
+  // maupun pengaturan analis (target_bulanan / batas_dd / rem_pips).
+  if(g==='XAUUSD'){
+    const riskCent = MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);
+    const saldoNow = saldoTerakhirMt4();
+    const buffer = saldoNow>0 ? Math.floor(saldoNow/riskCent) : 0;
+    const waspada = buffer<=2;
+    return `<div style="background:${waspada?'#3A0F0F':'var(--bg2)'};border:${waspada?'1px solid #7F1D1D':'1px solid var(--border)'};border-radius:10px;padding:12px 14px">
+      <div style="font-size:10px;color:${waspada?'#F87171':'#4ADE80'};font-weight:700">${waspada?'⚠️':'✅'} Buffer MT4: ${buffer} kalah berurutan (saldo ¢${saldoNow.toFixed(2)} ÷ risiko ¢${riskCent.toFixed(2)})</div>
+      <div style="font-size:9px;color:#E5E7EB;margin-top:4px">Risiko per kalah ≈ ${saldoNow>0?(riskCent/saldoNow*100).toFixed(2):'0'}% dari saldo · SL ${MT4_RISIKO.slPips} · lot ${MT4_RISIKO.lot} · aturan: buffer saja</div>
+    </div>`;
+  }
   const modalCek = parseFloat(modalKalkulator)||0;
   if(typeof getStatusRemBulanIni!=='function' || typeof hitungBatasBulanan!=='function') return '';
   const status=getStatusRemBulanIni(g);
@@ -14528,7 +14583,7 @@ function groupTransaksiPerHari(transaksi){
   transaksi.forEach(t=>{
     const d=(t.closeTime||'').trim().split(' ')[0];
     if(!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
-    if(!byDate[d]) byDate[d]={gp:0, gl:0, swap:0, deposit:0, withdrawal:0, count:0, pairs:{}};
+    if(!byDate[d]) byDate[d]={gp:0, gl:0, swap:0, deposit:0, withdrawal:0, count:0, losses:0, pairs:{}};
     const p=parseNumBroker(t.profit), s=parseNumBroker(t.swap);
     if(t.type==='balance'){
       if(!isNaN(p)){ if(p>=0) byDate[d].deposit+=p; else byDate[d].withdrawal+=Math.abs(p); }
@@ -14537,16 +14592,35 @@ function groupTransaksiPerHari(transaksi){
     if(!isNaN(p)){ if(p>=0) byDate[d].gp+=p; else byDate[d].gl+=Math.abs(p); }
     if(!isNaN(s)) byDate[d].swap+=s;
     byDate[d].count++;
+    if(!isNaN(p) && p<0) byDate[d].losses++;
     if(t.item) byDate[d].pairs[t.item]=(byDate[d].pairs[t.item]||0)+1;
   });
   return byDate;
 }
 
 let __ekstrakHasil=null;
+let __ekstrakOps=null; // operasi saldo (deposit/penarikan) dari statement
 let __ekstrakRawHtml=null;
 let __ekstrakFileName=null;
 let __ekstrakTransaksi=null; // daftar transaksi mentah (dengan field 'sesi') dari ekstrak terakhir
 
+// Simpan setiap deposit/penarikan dari statement ke Arus Kas. Kunci = nomor tiket, jadi impor ulang tidak dobel.
+async function simpanArusMt4(ops){
+  let ok=0, gagal=0;
+  for(const o of (ops||[])){
+    const nilai = parseNumBroker(o.profit);
+    if(isNaN(nilai) || nilai===0 || !o.tanggal) continue;
+    const ket = 'STMT-'+o.ticket;
+    const body = { tanggal:o.tanggal, jumlah:Math.abs(nilai), keterangan:ket, kategori: nilai>0 ? 'modal_mt4' : 'wd_trading' };
+    try{
+      const ex = await api(`kas_pribadi?select=id&keterangan=eq.${encodeURIComponent(ket)}`);
+      if(ex.length) await api(`kas_pribadi?id=eq.${ex[0].id}`,'PATCH',body);
+      else await api('kas_pribadi','POST',body);
+      ok++;
+    }catch(e){ console.error('simpanArusMt4 '+ket, e); gagal++; }
+  }
+  return {ok, gagal};
+}
 function ekstrakPerHari(){
   const statusEl=document.getElementById('ekstrakStatus');
   const resultEl=document.getElementById('ekstrakResult');
@@ -14565,6 +14639,7 @@ function ekstrakPerHari(){
     if(!transaksi.length){ statusEl.textContent='⚠️ Tidak ada transaksi closed yang terbaca. Pastikan file HTML laporan broker asli (bukan screenshot/PDF).'; return; }
 
     const byDate=groupTransaksiPerHari(transaksi);
+    __ekstrakOps = transaksi.filter(t=>t.type==='balance').map(t=>({ ticket:t.ticket, tanggal:String(t.closeTime||'').slice(0,10), profit:t.profit }));
     const dates=Object.keys(byDate).sort();
     if(!dates.length){ statusEl.textContent='⚠️ Gagal baca tanggal dari transaksi di file ini.'; return; }
 
@@ -14577,7 +14652,7 @@ function ekstrakPerHari(){
       rawCumulative+=netTotal;
       if(running!=null) running=running+netTotal;
       const pairDominan=Object.keys(b.pairs).sort((a,c)=>b.pairs[c]-b.pairs[a])[0]||'XAUUSD';
-      return {tanggal:d, count:b.count, gp:b.gp, gl:b.gl, swap:b.swap, net, deposit:b.deposit, withdrawal:b.withdrawal, saldoAkhir:running, rawCumulative, pair:pairDominan};
+      return {tanggal:d, count:b.count, losses:b.losses, gp:b.gp, gl:b.gl, swap:b.swap, net, deposit:b.deposit, withdrawal:b.withdrawal, saldoAkhir:running, rawCumulative, pair:pairDominan};
     });
 
     // Kalau "Saldo Awal" dikosongkan, coba deteksi otomatis dari baris "Saldo:" yang
@@ -14740,21 +14815,24 @@ async function simpanSemuaKeDatabase(){
         gross_profit: parseFloat((d.gp+Math.max(d.swap,0)).toFixed(2)),
         gross_loss: parseFloat((d.gl+Math.max(-d.swap,0)).toFixed(2)),
         jumlah_signal: d.count,
+        jumlah_loss: d.losses||0,
         pair: d.pair
       };
-      // FIX KRITIS sama seperti simpanSaldo(): cek existing row pakai tanggal+pair, bukan tanggal saja
-      const existing=await api(`saldo_harian?select=id&tanggal=eq.${d.tanggal}&pair=eq.${encodeURIComponent(d.pair)}`);
-      if(existing.length){
-        await api(`saldo_harian?id=eq.${existing[0].id}`,'PATCH',payload);
-      }else{
-        await api('saldo_harian','POST',payload);
-      }
+      const kirim = async (pl)=>{
+        // FIX KRITIS sama seperti simpanSaldo(): cek existing row pakai tanggal+pair, bukan tanggal saja
+        const existing=await api(`saldo_harian?select=id&tanggal=eq.${d.tanggal}&pair=eq.${encodeURIComponent(d.pair)}`);
+        if(existing.length){ await api(`saldo_harian?id=eq.${existing[0].id}`,'PATCH',pl); }
+        else{ await api('saldo_harian','POST',pl); }
+      };
+      try{ await kirim(payload); }
+      catch(eKolom){ const {jumlah_loss, ...tanpaLoss} = payload; await kirim(tanpaLoss); }
       sukses++;
     }catch(e){
       console.error('Gagal simpan '+d.tanggal, e);
       gagal++;
     }
   }
+  const hasilArus = await simpanArusMt4(__ekstrakOps);
   btn.disabled=false;
   statusEl.innerHTML = gagal===0
     ? `✅ Semua ${sukses} hari berhasil tersimpan ke database! Kalender Trading, Riwayat Harian, WD/Deposit, Alokasi Dana otomatis ikut update.`
@@ -16557,19 +16635,22 @@ function renderAturanMt4(){
   const saldo=saldoTerakhirMt4();
   const riskCent=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);
   const buffer=saldo>0 ? Math.floor(saldo/riskCent) : 0;
-  const wins=perf.hari.filter(h=>h.prof>0).length, nHari=perf.hari.length;
-  const p=nHari ? wins/nHari : 0;
+  const st=statistikHariMt4(); const nHari=st.hari; const p=st.winRate/100;
+  const usd=x=>'$'+(x/100).toFixed(2);
   const RRp=MT4_RISIKO.tpPips/MT4_RISIKO.slPips;
   const pb=peluangBangkrutRR(p, RRp, buffer);
   const warna=pb<10?'#4ADE80':(pb<30?'#FACC15':'#F87171');
   el.innerHTML=`<div style="background:var(--bg0);border:1.5px solid #C8A84B;border-radius:12px;padding:12px 14px;color:#FFFFFF">
     <div style="font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">🎯 Aturan MT4 — Emas (XAUUSD)</div>
     <div style="font-size:12px;line-height:1.7;margin-top:6px">
+      Berlaku: ${MT4_ATURAN_TANGGAL}<br>
       RR 1:${RRp} (SL ${MT4_RISIKO.slPips} / TP ${MT4_RISIKO.tpPips} pips) · Lot ${MT4_RISIKO.lot}<br>
-      Risiko per kalah: ¢${riskCent.toFixed(2)}<br>
-      Buffer: <b>${buffer} kalah berurutan</b> (saldo ¢${saldo.toFixed(2)} ÷ ¢${riskCent.toFixed(2)})<br>
-      Win rate: ${(p*100).toFixed(1)}% (dari ${nHari} hari)<br>
-      Potensi bangkrut: <b style="color:${warna}">${pb.toFixed(2)}%</b> <span style="font-size:10px;color:#E5E7EB">(rumus = simulasi Monte Carlo 1.000 trade)</span>
+      Risiko per kalah: ¢${riskCent.toFixed(2)} · per trade ≈ <b>${saldo>0?(riskCent/saldo*100).toFixed(2):'0'}%</b> dari saldo<br>
+      Buffer sekarang: <b>${(saldo/riskCent).toFixed(1)}x</b> (saldo ¢${saldo.toFixed(2)} ÷ ¢${riskCent.toFixed(2)}) · ${buffer} kalah berurutan<br>
+      Target buffer ${MT4_TARGET_BUFFER_X}x: saldo ¢${(MT4_TARGET_BUFFER_X*riskCent).toFixed(2)} · sisa profit ¢${Math.max(0,MT4_TARGET_BUFFER_X*riskCent-saldo).toFixed(2)}<br>
+      Win rate: ${(p*100).toFixed(1)}% (${st.menang} hari menang dari ${nHari} hari trading)<br>
+      Profit trading: ¢${st.totalProfit.toFixed(2)} (${usd(st.totalProfit)}) · Rata menang ¢${st.rataMenang.toFixed(2)} · Rata kalah ¢${st.rataKalah.toFixed(2)}<br>
+      Saldo sekarang: ¢${saldo.toFixed(2)} (${usd(saldo)})<br>
     </div>
   </div>`;
   return;
@@ -16613,6 +16694,9 @@ function renderAturanMtLama(){
 // ══ PERINGATAN RISIKO MODAL AKUN MT4 (kartu terpisah; aturan emas TIDAK diubah) ══
 // Membandingkan risiko aturan emas (SL 500 pips, jatah 5 order/bulan) dengan saldo terakhir. Hanya persentase ditampilkan (nominal saldo privat).
 const MT4_RISIKO={slPips:200, tpPips:400, rr:'1:2', lot:0.02, centPerPip:0.1};
+const MT4_ATURAN_TANGGAL='8 November 2026';   // versi aturan MT4 yang berlaku
+const MT4_TARGET_BUFFER_X=100;
+const MT4_MAKS_ORDER_HARI=5;                   // maks order per hari (aturan 8 Nov 2026)                 // target buffer: saldo = 100 × risiko per kalah
 const MT4_MODAL_MIN_USD=5000;   // modal minimal akun MT4 (USD). Saldo MT4 dicatat dalam ¢: 100 ¢ = $1
 const MT4_DD_HARIAN_MAKS=3, MT4_DD_BULAN_MAKS=6, MT4_TARGET_PROFIT_BULAN=10;
 function renderRisikoModalMt4(){
