@@ -364,6 +364,18 @@ function toggleKamusGrup(btn){
   <button type="button" class="akun-btn" data-akun-btn="analis" onclick="setAkunTampilan('analis')">📡 Akun Analis</button>
 </div>
 <div data-akun="mt4">
+<div style="margin:12px 0 16px;padding:16px 14px;border-radius:14px;background:linear-gradient(135deg,#7F1D1D,#450A0A);border:2px solid #F87171;box-shadow:0 0 0 3px rgba(248,113,113,.15)">
+  <div style="font-size:18px;font-weight:900;color:#FFFFFF;line-height:1.3;margin-bottom:8px">⚠️ WAJIB: DATA MT4 HARUS DARI STATEMENT FBS RESMI</div>
+  <div style="font-size:13px;color:#FECACA;line-height:1.6;margin-bottom:10px">Jangan input manual <b>setoran</b>, <b>penarikan (WD)</b>, atau <b>saldo MT4</b>.<br>Input manual yang tidak sama dengan statement FBS akan membuat angka amburadul.</div>
+  <div style="font-size:12px;color:#FFFFFF;line-height:1.7;background:rgba(0,0,0,.35);border-radius:10px;padding:10px 12px">
+    <b>Cara yang benar:</b><br>
+    1️⃣ Minta laporan HTML resmi dari FBS<br>
+    2️⃣ Buka bagian <b>Ekstrak &amp; Kelompokkan</b>, pilih file itu<br>
+    3️⃣ Isi Saldo Awal <b>460.21</b> (untuk periode mulai 1 Mei 2026)<br>
+    4️⃣ Tekan <b>Ekstrak</b>, lalu <b>Simpan Semua Langsung ke Database</b>
+  </div>
+  <div style="font-size:11px;color:#FCA5A5;margin-top:10px;line-height:1.5">Entri manual setoran/WD MT4 di periode yang sudah ada statement-nya tidak dihitung. Input manual hanya untuk pengeluaran dari uang yang sudah Anda tarik.</div>
+</div>
 <!-- LABEL PERMANEN: profil risiko akun ini (SELALU tampil, otomatis ikut profil yang aktif di server) -->
 <div id="labelProfilRisiko" style="margin:0 0 14px"></div>
 
@@ -2731,6 +2743,7 @@ function renderInvCalcDisclaimer(){
     <div style="height:1px;background:var(--border);margin:16px 0"></div>
 
     <div class="ap-title" id="inpSaldoHarianTitle">⚙️ Input Saldo Harian</div>
+<div style="margin:8px 0 12px;padding:10px 12px;border-radius:10px;background:#7F1D1D;border:1.5px solid #F87171;color:#FFFFFF;font-size:12px;line-height:1.5"><b>⚠️ Jangan isi saldo MT4 secara manual.</b> Saldo harian diambil otomatis dari statement FBS resmi di bagian Ekstrak.</div>
 
     <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-bottom:16px">
       <div style="font-size:10px;color:#E5E7EB;margin-bottom:10px;line-height:1.6">📧 Auto-baca laporan harian dari email broker (file HTML) — Saldo, Tanggal, Jumlah Signal, Gross Profit/Loss &amp; Swap otomatis terisi ke form di bawah. Tetap cek dulu sebelum simpan.</div>
@@ -2830,6 +2843,7 @@ function renderInvCalcDisclaimer(){
     <div style="height:1px;background:var(--border);margin:16px 0"></div>
 
     <div class="ap-title" id="secInputAliranUang">💸 Input Aliran Uang</div>
+<div style="margin:8px 0 12px;padding:10px 12px;border-radius:10px;background:#7F1D1D;border:1.5px solid #F87171;color:#FFFFFF;font-size:12px;line-height:1.5"><b>⚠️ Jangan input setoran/WD MT4 di sini.</b> Gunakan statement FBS resmi di bagian Ekstrak. Form ini hanya untuk pengeluaran dari uang yang sudah Anda tarik.</div>
 
     <label class="lbl">Arah Transaksi</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
@@ -4145,7 +4159,7 @@ function renderPertumbuhanBulanan(){
     const selisih = b.end - (b.start + b.sumProf + b.dep - b.wd);
     const cekOk = Math.abs(selisih) < 1;
     return `<div style="padding:4px 0;border-bottom:1px dashed #2A2A2A;color:#FFFFFF">
-      <div style="display:flex;justify-content:space-between;font-size:10px"><span>${namaBulan(b.periode)}</span><span style="font-weight:700;color:${b.pct>=0?'#4ADE80':'#F87171'}">${f(b.pct)} <span style="font-weight:400;color:#E5E7EB">(${b.sumProf>=0?'+':'-'}¢${Math.abs(b.sumProf).toFixed(2)})</span></span></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px"><span>${namaBulan(b.periode)}</span><span style="font-weight:700;color:${b.pct>=0?'#4ADE80':'#F87171'}"><span style="font-weight:400;color:#E5E7EB">(${b.sumProf>=0?'+':'-'}¢${Math.abs(b.sumProf).toFixed(2)})</span></span></div>
       <div style="font-size:9px;color:#E5E7EB">Awal ¢${b.start.toFixed(2)} · Profit ${b.sumProf>=0?'+':'-'}¢${Math.abs(b.sumProf).toFixed(2)} · Setoran ¢${b.dep.toFixed(2)} · WD ¢${b.wd.toFixed(2)} · Akhir ¢${b.end.toFixed(2)} ${cekOk?'✓ nyambung':'⚠️ selisih ¢'+selisih.toFixed(2)}</div>
     </div>`;
   }).join('');
@@ -4158,15 +4172,15 @@ function renderPertumbuhanBulanan(){
   wrap.innerHTML = `
   <div style="background:var(--bg0);border:1.5px solid #4ADE80;border-radius:10px;padding:12px 14px">
     <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📅 Pertumbuhan Bulan Ini — ${namaBulan(bulanIni.periode)}</div>
-    <div style="font-size:9px;color:#E5E7EB;margin-bottom:4px">Dihitung dari saldo awal bulan ini (bukan dari awal data).</div>
-    <div style="font-size:22px;font-weight:800;color:${bulanIni.pct>=0?'#4ADE80':'#F87171'}">${f(bulanIni.pct)}</div>
+    <div style="font-size:9px;color:#E5E7EB;margin-bottom:4px">Ditampilkan dalam nominal ¢ (persentase disembunyikan sementara).</div>
+    <div style="font-size:22px;font-weight:800;color:${bulanIni.sumProf>=0?'#4ADE80':'#F87171'}">${fc(bulanIni.sumProf)}</div>
 
     <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:10px">Pertumbuhan & Kemerosotan</div>
     <div style="font-size:11px;color:#FFFFFF;line-height:1.8">
-      Pertumbuhan bulan ini: <b style="color:${bulanIni.pct>=0?'#4ADE80':'#F87171'}">${f(bulanIni.pct)}</b><br>
-      Kemerosotan bulan ini (dari puncak): <b style="color:#F87171">-${ddPuncakMt4(perf,bulanIni.periode).pct.toFixed(2)}%</b><br>
-      Pertumbuhan terbaik sepanjang data: <b style="color:#4ADE80">${f(Math.max(...perf.bulan.map(b=>b.pct)))}</b><br>
-      Kemerosotan terbesar sepanjang data: <b style="color:#F87171">-${(()=>{ let m=null; perf.bulan.forEach(b=>{ const x=ddPuncakMt4(perf,b.periode); if(!m||x.pct>m.dd) m={dd:x.pct,cent:x.cent,p:b.periode}; }); return m ? (m.dd.toFixed(2)+'% (¢'+m.cent.toFixed(2)+' dari puncak '+namaBulan(m.p)+')') : '0%'; })()}</b>
+      Profit bulan ini: <b style="color:${bulanIni.sumProf>=0?'#4ADE80':'#F87171'}">${fc(bulanIni.sumProf)}</b><br>
+      Kemerosotan bulan ini (dari puncak): <b style="color:#F87171">-¢${ddPuncakMt4(perf,bulanIni.periode).cent.toFixed(2)}</b><br>
+      Pertumbuhan terbaik sepanjang data: <b style="color:#4ADE80">${fc(Math.max(...perf.bulan.map(b=>b.sumProf)))}</b><br>
+      Kemerosotan terbesar sepanjang data: <b style="color:#F87171">-${(()=>{ let m=null; perf.bulan.forEach(b=>{ const x=ddPuncakMt4(perf,b.periode); if(!m||x.pct>m.dd) m={dd:x.pct,cent:x.cent,p:b.periode}; }); return m ? ('¢'+m.cent.toFixed(2)+' dari puncak '+namaBulan(m.p)) : '0%'; })()}</b>
     </div>
 
     <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">Per Bulan</div>
@@ -7688,7 +7702,7 @@ function renderProfitBulanan(){
         </div>
         <div style="text-align:right">
           <div class="pb-profit" style="color:${pColor}">${b.sumProf>=0?'+':''}${fc(b.sumProf)}</div>
-          <div style="font-size:11px;font-weight:700;color:${pColor};margin-top:2px">${pctStr}</div>
+          <div style="font-size:11px;font-weight:700;color:${pColor};margin-top:2px"></div>
         </div>
       </div>`;
   }).join('');
@@ -9079,32 +9093,44 @@ function renderLapSaya(){
   const contentEl=document.getElementById('lapSayaContent');
   if(!contentEl)return;
   if(labelEl) labelEl.textContent=bulanNamaFull[lapSayaMonth]+' '+lapSayaYear;
-
-  const BEBAN_PRIBADI=['kebutuhan_harian','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar','pakai_kebutuhan_harian','pakai_hiburan']; // 'dana_darurat', 'investasi', 'beli_aset', 'pakai_dana_darurat', 'pakai_investasi' SENGAJA tidak dimasukkan — uangnya tetap jadi milik sendiri / realokasi antar kantong, bukan hilang. 'pakai_kebutuhan_harian' & 'pakai_hiburan' DIMASUKKAN karena itu pemakaian nyata (uang beneran keluar/habis).
-  const rows=(allKasData||[]).filter(r=>{
-    const d=new Date(r.tanggal);
-    return d.getFullYear()===lapSayaYear && d.getMonth()===lapSayaMonth;
+  const BEBAN_PRIBADI=['kebutuhan_harian','kebutuhan_pokok','utilitas','kesehatan','gaya_hidup','cicilan_utang','sewa_bayar','pakai_kebutuhan_harian','pakai_hiburan'];
+  const bk = lapSayaYear+'-'+String(lapSayaMonth+1).padStart(2,'0');
+  const perf = hitungPerformaMt4();
+  // Kekayaan = saldo MT4 + rekening pribadi + aset (investasi & dana darurat).
+  // Yang mengubah kekayaan: profit trading MT4 (dari statement), gaji masuk ke rekening, dan pengeluaran.
+  // Setoran/WD MT4, investasi, dan dana darurat hanya pindah tempat, jadi tidak mengubah kekayaan.
+  const awalData = perf.bulan.length ? perf.bulan[0].start : 0;   // saldo MT4 awal data; rekening awal diasumsikan Rp0
+  const isGaji = r => r.kategori==='gaji' && String(r.ke||'').toLowerCase().indexOf('mt4')<0;
+  const isBeban = r => BEBAN_PRIBADI.includes(r.kategori);
+  const bulanOf = r => String(r.tanggal||'').slice(0,7);
+  let sebelumProf=0, sebelumGaji=0, sebelumBeban=0;
+  perf.bulan.forEach(b=>{ if(b.periode<bk) sebelumProf+=b.sumProf; });
+  (allKasData||[]).forEach(r=>{
+    if(!(bulanOf(r)<bk)) return;
+    const jml=parseFloat(r.jumlah||0)||0;
+    if(isGaji(r)) sebelumGaji+=jml; else if(isBeban(r)) sebelumBeban+=jml;
   });
-
-  if(!rows.length){
-    contentEl.innerHTML=`<div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Belum ada catatan Aliran Uang di bulan ini.</div>`;
+  const kekayaanAwal = awalData + sebelumProf + sebelumGaji - sebelumBeban;
+  const bulanIniPerf = perf.bulan.find(b=>b.periode===bk);
+  const bulanRows = (allKasData||[]).filter(r=>bulanOf(r)===bk);
+  if(!bulanIniPerf && !bulanRows.length){
+    contentEl.innerHTML=`<div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Belum ada catatan di bulan ini.</div>`;
     return;
   }
-
-  const batasLap=batasStatementMt4();
-  const modalPribadi=rows.filter(r=>r.kategori==='gaji' && String(r.ke||'').toLowerCase().indexOf('mt4')<0).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
-  const profitMt4=rows.filter(r=>((arusMt4Sah(r,batasLap))||{}).arah==='wd').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
-  const pengeluaran=rows.filter(r=>BEBAN_PRIBADI.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
-  const totalMasuk=modalPribadi+profitMt4;
-  const tabungan=totalMasuk-pengeluaran;
-
+  const profit = bulanIniPerf ? bulanIniPerf.sumProf : 0;
+  const gaji = bulanRows.filter(isGaji).reduce((a,r)=>a+(parseFloat(r.jumlah)||0),0);
+  const beban = bulanRows.filter(isBeban).reduce((a,r)=>a+(parseFloat(r.jumlah)||0),0);
+  const kekayaanAkhir = kekayaanAwal + profit + gaji - beban;
+  const selisihKekayaan = kekayaanAkhir - kekayaanAwal;
+  const saldoMt4Akhir = bulanIniPerf ? bulanIniPerf.end : null;
+  const baris=(label,nilai,warna)=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px dashed var(--border)"><span style="color:#E5E7EB">${label}</span><span style="color:${warna}">${nilai}</span></div>`;
   contentEl.innerHTML=`
-    <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#60A5FA">💰 Modal Pribadi</span><span style="color:#60A5FA">+${fc(modalPribadi)}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#4ADE80">📈 Profit MT4 (ditarik)</span><span style="color:#4ADE80">+${fc(profitMt4)}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px dashed var(--border);margin-top:2px;font-weight:700"><span style="color:#E5E7EB">Total Dana Masuk</span><span style="color:#FFFFFF">${fc(totalMasuk)}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;margin-top:8px"><span style="color:#F87171">🧾 Pengeluaran (Kebutuhan + Cicilan)</span><span style="color:#F87171">-${fc(pengeluaran)}</span></div>
-    <div class="bal-box" style="background:var(--bg2);margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${tabungan>=0?'#4ADE80':'#F87171'}">${tabungan>=0?'+':''}${fc(tabungan)}</div><div class="bal-box-lbl">💵 TABUNGAN BULAN INI = Dana Masuk − Pengeluaran</div></div>
-    <div style="font-size:9px;color:#E5E7EB;margin-top:10px;text-align:center">Modal Pribadi & Profit MT4 dihitung dari kategori "Modal Pribadi" dan "Profit MT4" di Aliran Uang. Pengeluaran dari kategori Belanja/Utilitas/Kesehatan/Gaya Hidup/Cicilan Utang.</div>`;
+    ${baris('🏦 Kekayaan awal bulan', fc(kekayaanAwal), '#FFFFFF')}
+    ${baris('📈 Profit trading MT4', (profit>=0?'+':'')+fc(profit), profit>=0?'#4ADE80':'#F87171')}
+    ${baris('💰 Gaji masuk rekening', '+'+fc(gaji), '#60A5FA')}
+    ${baris('🧾 Pengeluaran (kebutuhan, kesehatan, hiburan, cicilan)', '-'+fc(beban), '#F87171')}
+    <div class="bal-box" style="background:var(--bg2);margin-top:14px"><div class="bal-box-val" style="font-size:20px;color:${selisihKekayaan>=0?'#4ADE80':'#F87171'}">${fc(kekayaanAkhir)}</div><div class="bal-box-lbl">💵 KEKAYAAN AKHIR BULAN (${selisihKekayaan>=0?'+':''}${fc(selisihKekayaan)} dibanding awal bulan)</div></div>
+    <div style="font-size:10px;color:#E5E7EB;margin-top:10px;line-height:1.6;text-align:center">Saldo MT4 akhir bulan: ${saldoMt4Akhir!=null?fc(saldoMt4Akhir):'-'}<br>Kekayaan = saldo MT4 + rekening pribadi + investasi & dana darurat.<br>Setoran/WD MT4, investasi, dan dana darurat tidak mengubah kekayaan. Modal investor tidak dihitung.</div>`;
 }
 // Rata-rata profit trading per bulan (dari Saldo Harian)
 function getRataRataProfitBulanan(){
