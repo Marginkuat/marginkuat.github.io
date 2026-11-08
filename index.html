@@ -14905,7 +14905,7 @@ async function simpanSemuaKeDatabase(){
   if(!confirm(`Simpan ${__ekstrakHasil.length} hari ini langsung ke database? Kalau tanggal+pair yang sama udah ada, datanya akan DITIMPA dengan angka baru ini (pair lain di tanggal yang sama TIDAK akan kesenggol).`)) return;
 
   btn.disabled=true;
-  let sukses=0, gagal=0;
+  let sukses=0, gagal=0; const gagalTgl=[];
   for(let i=0;i<__ekstrakHasil.length;i++){
     const d=__ekstrakHasil[i];
     statusEl.textContent=`⏳ Menyimpan ${i+1}/${__ekstrakHasil.length} (${d.tanggal})...`;
@@ -14931,14 +14931,14 @@ async function simpanSemuaKeDatabase(){
       sukses++;
     }catch(e){
       console.error('Gagal simpan '+d.tanggal, e);
-      gagal++;
+      gagal++; gagalTgl.push(d.tanggal);
     }
   }
   const hasilArus = await simpanArusMt4(__ekstrakOps);
   btn.disabled=false;
   statusEl.innerHTML = gagal===0
     ? `✅ Semua ${sukses} hari berhasil tersimpan ke database! Kalender Trading, Riwayat Harian, WD/Deposit, Alokasi Dana otomatis ikut update.`
-    : `⚠️ ${sukses} berhasil, ${gagal} gagal. Cek koneksi lalu coba lagi buat yang gagal.`;
+    : `⚠️ ${sukses} berhasil, ${gagal} gagal: ${gagalTgl.join(', ')}. Tekan Simpan lagi (aman, data yang sama akan ditimpa).`;
   toast(gagal===0 ? '✅ Semua data tersimpan ke database' : '⚠️ Sebagian gagal tersimpan');
 
   // Simpan tiap transaksi individual ke trade_log (buat Analisis Sesi Waktu Asia/London/New York)
