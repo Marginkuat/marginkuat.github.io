@@ -3877,11 +3877,27 @@ function klasifikasiArusMt4(r){
   if(r.kategori==='wd_trading' || r.kategori==='tarik_dana') return {arah:'wd', jumlah};
   return null;
 }
+// Baris dari statement resmi FBS (dibuat otomatis saat impor) — sumber utama arus MT4
+function isStmtRow(r){ return String(r.keterangan||'').indexOf('STMT-')===0; }
+// Tanggal terakhir yang tercakup statement = tanggal saldo terbaru dari impor
+function batasStatementMt4(){
+  const rows=getRowsAkunRealXauusd();
+  return rows.length ? rows.map(r=>String(r.tanggal||'').slice(0,10)).sort().slice(-1)[0] : '';
+}
+// Arus MT4 yang SAH: statement selalu sah; entri manual hanya sah SETELAH tanggal statement terakhir.
+function arusMt4Sah(r, batas){
+  const f=klasifikasiArusMt4(r); if(!f) return null;
+  if(isStmtRow(r)) return f;
+  const tgl=String(r.tanggal||'').slice(0,10);
+  if(batas && tgl<=batas) return null;   // sudah tercakup statement → entri manual diabaikan
+  return f;
+}
 // Setoran & WD per tanggal: { 'YYYY-MM-DD': {dep, wd} }
 function arusMt4Detail(){
+  const batas = batasStatementMt4();
   const flows = [];
   (allKasData||[]).forEach(r=>{
-    const f = klasifikasiArusMt4(r); if(!f) return;
+    const f = arusMt4Sah(r, batas); if(!f) return;
     flows.push({ tgl:String(r.tanggal||'').slice(0,10), arah:f.arah, jumlah:f.jumlah,
       stmt:String(r.keterangan||'').indexOf('STMT-')===0 });
   });
@@ -9075,8 +9091,9 @@ function renderLapSaya(){
     return;
   }
 
-  const modalPribadi=rows.filter(r=>r.kategori==='gaji').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
-  const profitMt4=rows.filter(r=>(klasifikasiArusMt4(r)||{}).arah==='wd').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const batasLap=batasStatementMt4();
+  const modalPribadi=rows.filter(r=>r.kategori==='gaji' && String(r.ke||'').toLowerCase().indexOf('mt4')<0).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
+  const profitMt4=rows.filter(r=>((arusMt4Sah(r,batasLap))||{}).arah==='wd').reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const pengeluaran=rows.filter(r=>BEBAN_PRIBADI.includes(r.kategori)).reduce((s,r)=>s+parseFloat(r.jumlah||0),0);
   const totalMasuk=modalPribadi+profitMt4;
   const tabungan=totalMasuk-pengeluaran;
