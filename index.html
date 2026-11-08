@@ -3315,7 +3315,6 @@ const SEARCH_MENU=[
   {id:'mt4RisikoWrap', icon:'⚠️', label:'Peringatan Risiko Modal MT4', desc:'Risiko per order vs saldo, perkiraan margin call', kw:'peringatan risiko modal margin call bahaya saldo habis 5% risiko per order berbahaya', cat:'performa'},
   {id:'inpSaldoHarianTitle', icon:'⚙️', label:'Input Saldo Harian', desc:'Isi saldo MT4, profit, dan jumlah signal tiap hari (butuh login admin)', kw:'input saldo harian data harian catatan harian isi tambah simpan saldo mt4 profit jumlah signal tanggal edit', cat:'input'},
   {id:'secInputSinyal', icon:'📝', label:'Input Sinyal Analis', desc:'Catat sinyal Datuk EURUSD / Datuk Crypto 89: pair, jam buka & tutup, pips, SL/TP rencana', kw:'input sinyal analis datuk eurusd crypto 89 order closed buka tutup pips simpan sinyal forex emas', cat:'input'},
-  {id:'mt4AturanWrap', icon:'🎯', label:'Aturan Emas MT4 & Order Berjalan', desc:'Cek order emas, tombol order berjalan', kw:'aturan emas mt4 order berjalan stop open posisi emas boleh open', cat:'input'},
   {id:'secInputAliranUang', icon:'💸', label:'Input Aliran Uang', desc:'Catat deposit, modal pribadi, pengeluaran, kas (butuh login admin)', kw:'input aliran uang deposit modal pribadi pengeluaran kas catat uang masuk keluar', cat:'input'},
   {id:'secVerifikasiBroker', icon:'🔎', label:'Verifikasi Data vs Laporan Broker', desc:'Cocokkan data situs dengan laporan/statement broker FBS', kw:'verifikasi laporan broker statement fbs email cocokkan cek data', cat:'input'},
   {id:'secEkstrakTransaksi', icon:'🧾', label:'Ekstrak & Kelompokkan Transaksi per Hari', desc:'Tempel statement, situs mengelompokkan transaksi per hari', kw:'ekstrak kelompokkan transaksi per hari statement html tempel laporan broker', cat:'input'},
@@ -4159,52 +4158,60 @@ function renderPertumbuhanBulanan(){
   if(!perf.hari.length){ wrap.innerHTML=''; return; }
   const viol = daftarPelanggaranMt4(perf);
   catatPelanggaranMt4(viol);
-
-  const f = v => (v>=0?'+':'') + v.toFixed(2) + '%';
   const namaBulan = p => { const [y,m]=p.split('-'); return new Date(+y,+m-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'}); };
-  const hariIni = perf.hari.filter(h=>h.adaSaldo).slice(-1)[0] || perf.hari[perf.hari.length-1];
   const bulanIni = perf.bulan[perf.bulan.length-1];
-  const lossHariOk = hariIni.pctHari > ATURAN_LOSS_HARIAN;
-  const lossBulanOk = bulanIni.pct > ATURAN_LOSS_BULAN;
-  const profitOk = bulanIni.pct < ATURAN_PROFIT_BULAN;
-  const baris = (label, nilai, ok, catatan) => `
-    <div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:11px">
-      <div><div style="color:#FFFFFF;font-weight:700">${label}</div><div style="font-size:9px;color:#E5E7EB">${catatan}</div></div>
-      <div style="text-align:right"><div style="color:${ok?'#4ADE80':'#F87171'};font-weight:800">${nilai}</div><div style="font-size:9px;color:${ok?'#4ADE80':'#F87171'}">${ok?'✅ sesuai aturan':'❌ melanggar'}</div></div>
-    </div>`;
-
+  const warna = v => v>=0?'#4ADE80':'#F87171';
+  const baris=(label,nilai,w)=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:6px 0;border-bottom:1px dashed var(--border)"><span style="color:#E5E7EB">${label}</span><span style="color:${w||'#FFFFFF'};font-weight:700">${nilai}</span></div>`;
+  const judul=t=>`<div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">${t}</div>`;
+  const adaInv = Math.abs(bulanIni.poolI1)+Math.abs(bulanIni.profI)+Math.abs(bulanIni.depI)>0.005;
+  const cek = (bulanIni.poolS1+bulanIni.poolI1) - bulanIni.end;
+  const cekOk = Math.abs(cek) < 1;
+  const dd = ddPuncakMt4(perf, bulanIni.periode);
+  let worst=null; perf.bulan.forEach(b=>{ const x=ddPuncakMt4(perf,b.periode); if(!worst||x.cent>worst.cent) worst={cent:x.cent,p:b.periode}; });
+  const maksProfit = perf.bulan.reduce((a,b)=> (!a||b.sumProf>a.sumProf)?b:a, null);
   const listBulan = perf.bulan.slice().reverse().map(b=>{
-    const selisih = b.end - (b.start + b.sumProf + b.dep - b.wd);
-    const cekOk = Math.abs(selisih) < 1;
-    return `<div style="padding:4px 0;border-bottom:1px dashed #2A2A2A;color:#FFFFFF">
-      <div style="display:flex;justify-content:space-between;font-size:10px"><span>${namaBulan(b.periode)}</span><span style="font-weight:700;color:${b.pct>=0?'#4ADE80':'#F87171'}"><span style="font-weight:400;color:#E5E7EB">(${b.sumProf>=0?'+':'-'}¢${Math.abs(b.sumProf).toFixed(2)})</span></span></div>
-      <div style="font-size:9px;color:#E5E7EB">Awal ¢${b.start.toFixed(2)} · Profit ${b.sumProf>=0?'+':'-'}¢${Math.abs(b.sumProf).toFixed(2)} · Setoran ¢${b.dep.toFixed(2)} · WD ¢${b.wd.toFixed(2)} · Akhir ¢${b.end.toFixed(2)} ${cekOk?'✓ nyambung':'⚠️ selisih ¢'+selisih.toFixed(2)}</div>
+    const sel = b.end-(b.start+b.sumProf+b.dep-b.wd);
+    const ok = Math.abs(sel)<1;
+    return `<div style="padding:6px 0;border-bottom:1px dashed #2A2A2A;color:#FFFFFF">
+      <div style="display:flex;justify-content:space-between;font-size:11px"><span>${namaBulan(b.periode)}</span><span style="font-weight:700;color:${warna(b.sumProf)}">${b.sumProf>=0?'+':'-'}¢${Math.abs(b.sumProf).toFixed(2)}</span></div>
+      <div style="font-size:9px;color:#E5E7EB;line-height:1.6">Saldo awal ¢${b.start.toFixed(2)} · DP ¢${b.dep.toFixed(2)} · WD ¢${b.wd.toFixed(2)} · Saldo akhir ¢${b.end.toFixed(2)} ${ok?'✓':'⚠️ selisih ¢'+sel.toFixed(2)}<br>Kekayaan Anda akhir ¢${b.poolS1.toFixed(2)}${Math.abs(b.poolI1)>0.005?' · Investor ¢'+b.poolI1.toFixed(2):''}</div>
     </div>`;
   }).join('');
-
   const tercatat = Object.values(pelanggaranMt4Cache).sort((a,b)=>String(b.tercatat).localeCompare(String(a.tercatat)));
   const listCatat = tercatat.length
-    ? tercatat.map(v=>`<div style="font-size:10px;color:#F87171;padding:3px 0">❌ ${v.jenis} — ${v.periode}${/^(Order|Kalah)/.test(String(v.jenis))?'':' ('+f(v.nilai)+')'}</div>`).join('')
+    ? tercatat.map(v=>`<div style="font-size:10px;color:#F87171;padding:3px 0">❌ ${v.jenis} — ${v.periode}</div>`).join('')
     : `<div style="font-size:10px;color:#4ADE80">Belum ada pelanggaran tercatat.</div>`;
 
   wrap.innerHTML = `
   <div style="background:var(--bg0);border:1.5px solid #4ADE80;border-radius:10px;padding:12px 14px">
     <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📅 Pertumbuhan Bulan Ini — ${namaBulan(bulanIni.periode)}</div>
-    <div style="font-size:9px;color:#E5E7EB;margin-bottom:4px">Ditampilkan dalam nominal ¢ (persentase disembunyikan sementara).</div>
-    <div style="font-size:22px;font-weight:800;color:${bulanIni.sumProf>=0?'#4ADE80':'#F87171'}">${fc(bulanIni.sumProf)}</div>
+    <div style="font-size:22px;font-weight:800;color:${warna(bulanIni.sumProf)};margin-top:4px">${fc(bulanIni.sumProf)}</div>
+    <div style="font-size:9px;color:#E5E7EB">Profit trading bulan ini (termasuk komisi & swap)</div>
 
-    <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:10px">Pertumbuhan & Kemerosotan</div>
-    <div style="font-size:11px;color:#FFFFFF;line-height:1.8">
-      Profit bulan ini: <b style="color:${bulanIni.sumProf>=0?'#4ADE80':'#F87171'}">${fc(bulanIni.sumProf)}</b><br>
-      Kemerosotan bulan ini (dari puncak): <b style="color:#F87171">-¢${ddPuncakMt4(perf,bulanIni.periode).cent.toFixed(2)}</b><br>
-      Pertumbuhan terbaik sepanjang data: <b style="color:#4ADE80">${fc(Math.max(...perf.bulan.map(b=>b.sumProf)))}</b><br>
-      Kemerosotan terbesar sepanjang data: <b style="color:#F87171">-${(()=>{ let m=null; perf.bulan.forEach(b=>{ const x=ddPuncakMt4(perf,b.periode); if(!m||x.pct>m.dd) m={dd:x.pct,cent:x.cent,p:b.periode}; }); return m ? ('¢'+m.cent.toFixed(2)+' dari puncak '+namaBulan(m.p)) : '0%'; })()}</b>
-    </div>
+    ${judul('Ringkasan audit')}
+    ${baris('Saldo awal bulan', fc(bulanIni.start))}
+    ${baris(adaInv?'DP (deposit) — bagian Anda':'DP (deposit)', '+'+fc(bulanIni.depS), '#60A5FA')}
+    ${adaInv?baris('DP (deposit) — bagian investor','+'+fc(bulanIni.depI),'#C4B5FD'):''}
+    ${baris(adaInv?'Profit & rugi — bagian Anda':'Profit & rugi', (bulanIni.profS>=0?'+':'')+fc(bulanIni.profS), warna(bulanIni.profS))}
+    ${adaInv?baris('Profit & rugi — bagian investor',(bulanIni.profI>=0?'+':'')+fc(bulanIni.profI), warna(bulanIni.profI)):''}
+    ${baris('WD (keluar ke rekening)', '-'+fc(bulanIni.wd), '#F87171')}
+    ${baris('Saldo akhir bulan', fc(bulanIni.end))}
 
-    <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">Per Bulan</div>
+    ${judul('Kekayaan & pembagian')}
+    ${baris('💵 Kekayaan Anda (saldo bagian Anda)', fc(bulanIni.poolS1), '#4ADE80')}
+    ${adaInv?baris('Total dibagi ke investor (saldo)', fc(bulanIni.poolI1), '#C4B5FD'):''}
+    <div style="font-size:11px;margin-top:6px;color:${cekOk?'#4ADE80':'#F87171'}">${cekOk?'✓ Sesuai saldo statement FBS':'⚠️ Selisih '+fc(cek)+' — cek impor statement atau tujuan WD'}</div>
+
+    ${judul('Pertumbuhan & kemerosotan')}
+    ${baris('Pertumbuhan bulan ini', fc(bulanIni.sumProf), warna(bulanIni.sumProf))}
+    ${baris('Kemerosotan bulan ini (dari puncak)', '-¢'+dd.cent.toFixed(2), '#F87171')}
+    ${maksProfit?baris('Pertumbuhan terbaik sepanjang data', fc(maksProfit.sumProf)+' ('+namaBulan(maksProfit.periode)+')', '#4ADE80'):''}
+    ${worst?baris('Kemerosotan terbesar sepanjang data', '-¢'+worst.cent.toFixed(2)+' ('+namaBulan(worst.p)+')', '#F87171'):''}
+
+    ${judul('Per bulan')}
     ${listBulan}
 
-    <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">Pelanggaran Tercatat</div>
+    ${judul('Pelanggaran tercatat')}
     ${listCatat}
   </div>`;
 }
@@ -16945,6 +16952,7 @@ function mt4UbahBerjalan(d){
 }
 function renderAturanMt4(){
   const el=document.getElementById('mt4AturanWrap'); if(!el) return;
+  el.innerHTML=''; el.style.display='none'; return;   // kartu dihapus atas permintaan
   const perf=hitungPerformaMt4();
   const saldo=saldoTerakhirMt4();
   const riskCent=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);
