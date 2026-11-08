@@ -3987,14 +3987,18 @@ function hitungPerformaMt4(){
   const map = {};
   hari.forEach(h=>{
     const k = h.tgl.slice(0,7);
-    if(!map[k]) map[k] = { periode:k, start:h.start, end:h.end, sumProf:0, dep:0, wd:0, jumlahHari:0, jumlahOrder:0 };
+    if(!map[k]) map[k] = { periode:k, start:h.start, end:h.end, sumProf:0, dep:0, wd:0, wFlow:0, jumlahHari:0, jumlahOrder:0 };
     const m = map[k];
+    // Setoran/WD dibobot menurut sisa hari di bulan itu (Modified Dietz), supaya setoran tengah bulan tidak membesarkan %
+    const hariBulan = new Date(+h.tgl.slice(0,4), +h.tgl.slice(5,7), 0).getDate();
+    const tglKe = parseInt(h.tgl.slice(8,10),10) || 1;
+    m.wFlow += (h.dep - h.wd) * (hariBulan - tglKe + 1) / hariBulan;
     m.end = h.end; m.sumProf += h.prof; m.dep += h.dep; m.wd += h.wd;
     m.jumlahOrder += h.jumlahOrder;
     if(h.adaSaldo) m.jumlahHari++;
   });
   // pct bulan = profit trading bulan itu dibagi saldo awal bulan (setoran/WD tidak dihitung sebagai profit)
-  const bulan = Object.values(map).map(b=>({ ...b, pct: b.start>0 ? b.sumProf/b.start*100 : 0 }));
+  const bulan = Object.values(map).map(b=>{ const modal = b.start + b.wFlow; return { ...b, pct: modal>0 ? b.sumProf/modal*100 : 0 }; });
   // Bulan tertutup: angka SELALU dihitung ulang dari data terbaru. Snapshot lama hanya diperbarui oleh admin
   // kalau memang beda (dulu snapshot membeku dan bikin angka tidak sama dengan bagian lain).
   const d = new Date(); const nowBk = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
