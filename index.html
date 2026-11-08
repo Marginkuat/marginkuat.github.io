@@ -3807,26 +3807,19 @@ async function fetchSharedSaldoData(){
 // sekarang"/"saldo terakhir" WAJIB filter pair='XAUUSD' dulu, supaya sinyal Forex gak pernah
 // nyelip jadi "saldo MT4 sekarang" cuma karena kebetulan itu baris paling akhir tersimpan. ──
 function getRowsAkunRealXauusd(){
-  // Akun MT4 = semua instrumen di akun yang sama (XAUUSD, BTCUSD, dst). Baris FOREX milik akun analis, tidak ikut.
-  // Satu hari bisa punya beberapa pair. Profit DIJUMLAH dari semua pair (supaya profit BTCUSD tidak hilang),
-  // tapi per pair hanya diambil baris terbaru (id terbesar), supaya impor ulang tidak dobel.
-  // Saldo akun hanya satu, jadi diambil dari baris terbaru di hari itu.
-  const perHari = {};
+  // Ekstrak menulis SATU baris per tanggal yang sudah berisi total seluruh pair di hari itu.
+  // Impor ulang bisa menghasilkan baris kedua untuk tanggal yang sama (label pair berbeda), jadi JANGAN dijumlahkan.
+  // Ambil baris terbaru (id terbesar) per tanggal. FOREX (akun analis) tidak ikut.
+  const terbaru = {};
   (allSaldoData||[]).forEach(r=>{
     if(String(r.pair||'')==='FOREX') return;
     const t = String(r.tanggal||'').slice(0,10);
-    const pair = String(r.pair||'XAUUSD');
-    if(!perHari[t]) perHari[t] = {};
-    const cur = perHari[t][pair];
-    if(!cur || (Number(r.id)||0) > (Number(cur.id)||0)) perHari[t][pair] = r;
+    if(!terbaru[t] || (Number(r.id)||0) > (Number(terbaru[t].id)||0)) terbaru[t] = r;
   });
-  return Object.keys(perHari).map(t=>{
-    const perPair = Object.values(perHari[t]);
-    const terbaru = perPair.reduce((a,b)=> (Number(b.id)||0) > (Number(a.id)||0) ? b : a);
-    const profit = perPair.reduce((s,r)=> s + (parseFloat(r.profit)||0), 0);
-    const signal = perPair.reduce((s,r)=> s + (parseInt(r.jumlah_signal||0,10)||0), 0);
-    const loss   = perPair.reduce((s,r)=> s + (parseInt(r.jumlah_loss||0,10)||0), 0);
-    return { ...terbaru, tanggal:t, profit:+profit.toFixed(2), jumlah_signal:signal, jumlah_loss:loss };
+  return Object.keys(terbaru).map(t=>{
+    const r = terbaru[t];
+    return { ...r, tanggal:t, profit: parseFloat(r.profit)||0,
+      jumlah_signal: parseInt(r.jumlah_signal||0,10)||0, jumlah_loss: parseInt(r.jumlah_loss||0,10)||0 };
   });
 }
 function getSaldoMt4Sekarang(){
