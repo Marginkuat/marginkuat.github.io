@@ -2578,6 +2578,7 @@ function renderInvCalcDisclaimer(){
 <div class="section" data-akun="mt4" id="secRiwayat">
   <div class="sec-title">📋 Riwayat Harian</div>
   <div id="riwayatSaldoWrap">
+    <div id="riwayatFilterMt4"></div>
     <div id="riwayatList"><div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Memuat...</div></div>
     <button class="btn btn-ghost" id="btnMuatLebihRiwayat" onclick="loadMoreRiwayat()" style="display:none;margin-top:10px">⬇️ Muat 30 Catatan Lebih Lama</button>
     <div id="riwayatLoadStatus" style="font-size:10px;color:#E5E7EB;text-align:center;margin-top:6px"></div>
@@ -7671,18 +7672,73 @@ function renderProfitBulanan(){
   }).join('');
 }
 // Isi kolom setoran/WD + selisih di Riwayat Harian dari sumber tunggal (FOREX tidak ikut)
+let riwayatMt4Semua = [];
+let riwayatMt4Filter = null;   // {bulan, tahun, tgl}; null = belum dipilih (default: bulan terbaru)
 function tempelRiwayatMt4(){
   if(typeof riwayatCache==='undefined' || !riwayatCache || !riwayatCache.length) return;
   const perf=hitungPerformaMt4();
   const rawPerTgl={}; riwayatCache.forEach(r=>{ rawPerTgl[String(r.tanggal||'').slice(0,10)]=r; });
-  // Satu baris per tanggal, angka dari sumber tunggal (sudah digabung semua pair, FOREX tidak ikut)
-  const list = perf.hari.filter(h=>h.adaSaldo).slice().reverse().map(h=>{
+  // Semua hari (bukan hanya 30 terakhir) — pencarian dilakukan di sisi browser
+  riwayatMt4Semua = perf.hari.filter(h=>h.adaSaldo).slice().reverse().map(h=>{
     const raw = rawPerTgl[h.tgl] || {};
     return { ...raw, tanggal:h.tgl, saldo_mt4:h.end, profit:h.prof,
       _mt4:{dep:h.dep, wd:h.wd, selisih:h.selisih} };
   });
-  renderRiwayatRows(list, false);
+  const btn=document.getElementById('btnMuatLebihRiwayat'); if(btn) btn.style.display='none';
+  const st=document.getElementById('riwayatLoadStatus'); if(st) st.textContent='';
+  siapkanFilterRiwayatMt4();
+  setFilterRiwayatMt4(true);
 }
+const NAMA_BULAN_RIWAYAT=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function siapkanFilterRiwayatMt4(){
+  const wrap=document.getElementById('riwayatFilterMt4'); if(!wrap) return;
+  const tahunList=[...new Set(riwayatMt4Semua.map(r=>r.tanggal.slice(0,4)))].sort().reverse();
+  if(!riwayatMt4Filter){
+    const terbaru = riwayatMt4Semua[0] ? riwayatMt4Semua[0].tanggal : '';
+    riwayatMt4Filter = { bulan: terbaru.slice(5,7), tahun: terbaru.slice(0,4), tgl:'' };
+  }
+  const f = riwayatMt4Filter;
+  const optBulan = ['<option value="">Semua bulan</option>']
+    .concat(NAMA_BULAN_RIWAYAT.map((n,i)=>`<option value="${String(i+1).padStart(2,'0')}" ${f.bulan===String(i+1).padStart(2,'0')?'selected':''}>${n}</option>`)).join('');
+  const optTahun = ['<option value="">Semua tahun</option>']
+    .concat(tahunList.map(y=>`<option value="${y}" ${f.tahun===y?'selected':''}>${y}</option>`)).join('');
+  const sel='style="flex:1;min-width:110px;padding:8px 6px;border-radius:8px;background:var(--bg0);color:#FFFFFF;border:1px solid var(--border);font-size:11px"';
+  wrap.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+      <select id="rfBulan" onchange="setFilterRiwayatMt4()" ${sel}>${optBulan}</select>
+      <select id="rfTahun" onchange="setFilterRiwayatMt4()" ${sel}>${optTahun}</select>
+      <input type="date" id="rfTgl" value="${f.tgl}" onchange="setFilterRiwayatMt4()" ${sel}>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">
+      <button type="button" onclick="resetFilterRiwayatMt4()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg1);color:#FFFFFF;font-size:10px;font-weight:700;cursor:pointer">Tampilkan semua</button>
+      <div id="rfRingkas" style="font-size:10px;color:#E5E7EB;text-align:right"></div>
+    </div>`;
+}
+function setFilterRiwayatMt4(tanpaUbah){
+  if(!tanpaUbah){
+    const b=document.getElementById('rfBulan'), t=document.getElementById('rfTahun'), g=document.getElementById('rfTgl');
+    if(b && t && g) riwayatMt4Filter = { bulan:b.value, tahun:t.value, tgl:g.value };
+  }
+  const f = riwayatMt4Filter || {bulan:'',tahun:'',tgl:''};
+  const hasil = riwayatMt4Semua.filter(r=>
+    (!f.tahun || r.tanggal.slice(0,4)===f.tahun) &&
+    (!f.bulan || r.tanggal.slice(5,7)===f.bulan) &&
+    (!f.tgl || r.tanggal===f.tgl));
+  renderRiwayatRows(hasil, false);
+  const ringkas=document.getElementById('rfRingkas');
+  if(ringkas){
+    const profit = hasil.reduce((a,r)=>a+(parseFloat(r.profit)||0),0);
+    const dep = hasil.reduce((a,r)=>a+((r._mt4&&r._mt4.dep)||0),0);
+    const wd  = hasil.reduce((a,r)=>a+((r._mt4&&r._mt4.wd)||0),0);
+    ringkas.innerHTML = `${hasil.length} hari · Profit <b style="color:${profit>=0?'#4ADE80':'#F87171'}">${profit>=0?'+':''}${fc(profit)}</b><br>Setoran ${fc(dep)} · WD ${fc(wd)}`;
+  }
+}
+function resetFilterRiwayatMt4(){
+  riwayatMt4Filter = { bulan:'', tahun:'', tgl:'' };
+  siapkanFilterRiwayatMt4();
+  setFilterRiwayatMt4(true);
+}
+
 // Satu pintu refresh: setiap kali Aliran Uang / Saldo berubah, semua tampilan MT4 ikut berubah bersamaan
 function refreshMt4Semua(){
   try{ renderProfitBulanan(); }catch(e){ console.error('profitBulanan', e); }
