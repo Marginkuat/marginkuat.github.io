@@ -16952,6 +16952,11 @@ function renderAturanMt4(){
   const riskCent=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);
   const buffer=saldo>0 ? Math.floor(saldo/riskCent) : 0;
   const st=statistikHariMt4(); const nHari=st.hari; const p=st.winRate/100;
+  // Aturan harian: maks 5 transaksi per hari (menang/kalah dihitung), dihitung setelah close
+  const hAk=perf.hari.filter(h=>h.adaSaldo).slice(-1)[0]; const tglAk=hAk?hAk.tgl:'-'; const cntAk=hAk?hAk.jumlahOrder:0;
+  // Aturan bulanan: maks 100 transaksi per bulan (dihitung setelah close), bulan = bulan hari terakhir
+  const blnAk = tglAk!=='-' ? tglAk.slice(0,7) : '';
+  const cntBlnAk = perf.hari.filter(h=>h.tgl.slice(0,7)===blnAk).reduce((x,h)=>x+(h.jumlahOrder||0),0);
   const usd=x=>'$'+(x/100).toFixed(2);
   const RRp=MT4_RISIKO.tpPips/MT4_RISIKO.slPips;
   const pb=peluangBangkrutRR(p, RRp, buffer);
@@ -16964,6 +16969,10 @@ function renderAturanMt4(){
       Risiko per kalah: ¢${riskCent.toFixed(2)} · per trade ≈ <b>${saldo>0?(riskCent/saldo*100).toFixed(2):'0'}%</b> dari saldo<br>
       Buffer sekarang: <b>${(saldo/riskCent).toFixed(1)}x</b> (saldo ¢${saldo.toFixed(2)} ÷ ¢${riskCent.toFixed(2)}) · ${buffer} kalah berurutan<br>
       Target buffer ${MT4_TARGET_BUFFER_X}x: saldo ¢${(MT4_TARGET_BUFFER_X*riskCent).toFixed(2)} · sisa profit ¢${Math.max(0,MT4_TARGET_BUFFER_X*riskCent-saldo).toFixed(2)}<br>
+      Maks 5 transaksi per hari (menang atau kalah dihitung, setelah close)<br>
+      Hari terakhir (${tglAk}): ${cntAk} dari 5${cntAk>=5?' ⚠️ batas harian tercapai':''}<br>
+      Maks 100 transaksi per bulan (dihitung setelah close)<br>
+      Bulan ini (${blnAk||'-'}): ${cntBlnAk} dari 100${cntBlnAk>=100?' ⚠️ batas bulanan tercapai':''}<br>
     </div>
   </div>`;
   return;
