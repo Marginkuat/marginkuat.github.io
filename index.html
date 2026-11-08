@@ -4032,6 +4032,18 @@ function tglDdTembusMt4(perf, periode, batasPct){
   return null;
 }
 // DD bulan dari puncak (peak-to-trough) dalam satu bulan, dibanding saldo awal bulan itu.
+// Kemerosotan dari PUNCAK equity bulan itu (persen = turun dari puncak ÷ puncak). Setoran/WD tidak dihitung.
+function ddPuncakMt4(perf, periode){
+  const rows = perf.hari.filter(h=>h.tgl.slice(0,7)===periode);
+  if(!rows.length) return {pct:0, cent:0};
+  let eq = rows[0].start, puncak = eq, maks = {pct:0, cent:0};
+  rows.forEach(h=>{
+    eq += h.prof; puncak = Math.max(puncak, eq);
+    const cent = puncak - eq, pct = puncak>0 ? cent/puncak*100 : 0;
+    if(cent > maks.cent) maks = {pct, cent};
+  });
+  return maks;
+}
 function ddMaksBulanMt4(perf, periode){
   const rows = perf.hari.filter(h=>h.tgl.slice(0,7)===periode);
   if(!rows.length || !(rows[0].start>0)) return 0;
@@ -4132,9 +4144,9 @@ function renderPertumbuhanBulanan(){
     <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:10px">Pertumbuhan & Kemerosotan</div>
     <div style="font-size:11px;color:#FFFFFF;line-height:1.8">
       Pertumbuhan bulan ini: <b style="color:${bulanIni.pct>=0?'#4ADE80':'#F87171'}">${f(bulanIni.pct)}</b><br>
-      Kemerosotan bulan ini (dari puncak): <b style="color:#F87171">-${ddMaksBulanMt4(perf,bulanIni.periode).toFixed(2)}%</b><br>
+      Kemerosotan bulan ini (dari puncak): <b style="color:#F87171">-${ddPuncakMt4(perf,bulanIni.periode).pct.toFixed(2)}%</b><br>
       Pertumbuhan terbaik sepanjang data: <b style="color:#4ADE80">${f(Math.max(...perf.bulan.map(b=>b.pct)))}</b><br>
-      Kemerosotan terbesar sepanjang data: <b style="color:#F87171">-${(()=>{ let m=null; perf.bulan.forEach(b=>{ const dd=ddMaksBulanMt4(perf,b.periode); if(!m||dd>m.dd) m={dd,start:b.start,p:b.periode}; }); return m ? (m.dd.toFixed(2)+'% (¢'+(m.dd/100*m.start).toFixed(2)+' dari saldo awal '+namaBulan(m.p)+')') : '0%'; })()}</b>
+      Kemerosotan terbesar sepanjang data: <b style="color:#F87171">-${(()=>{ let m=null; perf.bulan.forEach(b=>{ const x=ddPuncakMt4(perf,b.periode); if(!m||x.pct>m.dd) m={dd:x.pct,cent:x.cent,p:b.periode}; }); return m ? (m.dd.toFixed(2)+'% (¢'+m.cent.toFixed(2)+' dari puncak '+namaBulan(m.p)+')') : '0%'; })()}</b>
     </div>
 
     <div style="font-size:9px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">Per Bulan</div>
