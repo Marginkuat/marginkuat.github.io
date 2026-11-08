@@ -1,1 +1,0 @@
-console.table(getRowsAkunRealXauusd().map(r=>({tanggal:r.tanggal, pair:r.pair, profit:r.profit, saldo:r.saldo_mt4, id:r.id})))
