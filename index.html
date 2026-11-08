@@ -17225,5 +17225,40 @@ function setAkunTampilan(a){
 }
 document.addEventListener('DOMContentLoaded',()=>{ setAkunTampilan('mt4'); loadRiwayatTutup().then(()=>{ try{ if(typeof renderPertumbuhanBulanan==='function') renderPertumbuhanBulanan(); }catch(e){} }); });
 </script>
+<script>
+// Tampilan ringkas: hanya Saldo MT4, Audit (Laporan Keuangan Saya), dan Pertumbuhan yang tampil penuh.
+// Bagian lain (kalkulator, riwayat, dan seterusnya) hanya tampil judulnya dengan tombol untuk membuka.
+// Bagian Akun Analis tidak diubah sama sekali.
+(function(){
+  const TAMPIL_PENUH = ['Laporan Bulanan','Keuangan Saya','Pertumbuhan'];
+  function ringkaskan(){
+    document.querySelectorAll('.section').forEach(sec=>{
+      if(sec.dataset.ringkas==='1') return;
+      if(sec.id==='secAnalisBlok' || sec.closest('[data-akun="analis"]') || sec.getAttribute('data-akun')==='analis') return;
+      const t=sec.querySelector(':scope > .sec-title') || sec.querySelector('.sec-title');
+      if(!t) return;
+      const judul=t.textContent.trim();
+      if(/analis|sinyal/i.test(judul)) return;
+      sec.dataset.ringkas='1';
+      if(TAMPIL_PENUH.some(k=>judul.includes(k))) return;
+      const det=document.createElement('details');
+      det.className='sec-collapse';
+      det.style.cssText='margin:6px 0';
+      const sum=document.createElement('summary');
+      sum.style.cssText='cursor:pointer;list-style:none;padding:12px 14px;border-radius:12px;background:var(--bg1);border:1px solid var(--border);color:#FFFFFF;font-size:12px;font-weight:800;letter-spacing:.4px';
+      sum.textContent=judul+'  ▸ tampilkan';
+      det.appendChild(sum);
+      [...sec.childNodes].forEach(n=>{ if(n!==t) det.appendChild(n); });
+      t.style.display='none';
+      sec.appendChild(det);
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ringkaskan);
+  else ringkaskan();
+  // Bagian yang dibuat nanti (setelah data dimuat) juga ikut diringkas
+  setTimeout(ringkaskan, 1500);
+  setTimeout(ringkaskan, 4000);
+})();
+</script>
 </body>
 </html>
