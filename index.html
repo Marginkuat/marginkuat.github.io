@@ -3877,12 +3877,24 @@ function klasifikasiArusMt4(r){
 }
 // Setoran & WD per tanggal: { 'YYYY-MM-DD': {dep, wd} }
 function arusMt4Detail(){
-  const out = {};
+  const flows = [];
   (allKasData||[]).forEach(r=>{
     const f = klasifikasiArusMt4(r); if(!f) return;
-    const t = String(r.tanggal||'').slice(0,10);
-    if(!out[t]) out[t] = {dep:0, wd:0};
-    if(f.arah==='dep') out[t].dep += f.jumlah; else out[t].wd += f.jumlah;
+    flows.push({ tgl:String(r.tanggal||'').slice(0,10), arah:f.arah, jumlah:f.jumlah,
+      stmt:String(r.keterangan||'').indexOf('STMT-')===0 });
+  });
+  // Transfer yang sama bisa tercatat dua kali: otomatis dari statement (STMT-tiket) dan manual di Aliran Uang.
+  // Statement dipakai sebagai sumber utama; entri manual dengan tanggal, arah & jumlah yang sama dilewati.
+  const stmt = flows.filter(f=>f.stmt);
+  const manualKept = flows.filter(f=>!f.stmt).filter(m=>{
+    const s = stmt.find(x=>!x.dipakai && x.tgl===m.tgl && x.arah===m.arah && Math.abs(x.jumlah-m.jumlah)<0.01);
+    if(s){ s.dipakai = true; return false; }
+    return true;
+  });
+  const out = {};
+  stmt.concat(manualKept).forEach(f=>{
+    if(!out[f.tgl]) out[f.tgl] = {dep:0, wd:0};
+    if(f.arah==='dep') out[f.tgl].dep += f.jumlah; else out[f.tgl].wd += f.jumlah;
   });
   return out;
 }
@@ -3951,7 +3963,7 @@ function hitungPerformaMt4(){
     const r = rowMap[tgl];
     const ar = detail[tgl] || {dep:0, wd:0};
     const flow = ar.dep - ar.wd;
-    const adaSaldo = !!r && r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4));
+    const adaSaldo = !!r && r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4)) && parseFloat(r.saldo_mt4)!==0;
     if(!adaSaldo){
       // Hari yang cuma punya arus kas (tanpa baris saldo): saldo ikut arus. Dilewati kalau belum ada saldo awal.
       if(prevEnd===null) return;
@@ -14880,7 +14892,7 @@ async function simpanSemuaKeDatabase(){
   const statusEl=document.getElementById('simpanSemuaDBStatus');
   const missingSaldo=__ekstrakHasil.some(d=>d.saldoAkhir==null);
   if(missingSaldo){
-    if(!confirm('Kolom "Saldo Awal" tadi gak diisi, jadi Saldo MT4 per hari akan kosong (0). Lanjutkan simpan? (Bisa edit saldo manual nanti per hari lewat Riwayat Harian)')) return;
+    if(!confirm('Kolom "Saldo Awal" tadi gak diisi, saldo MT4 lama tetap dipakai (tidak ditimpa 0). Lanjutkan simpan? (Bisa edit saldo manual nanti per hari lewat Riwayat Harian)')) return;
   }
   if(!confirm(`Simpan ${__ekstrakHasil.length} hari ini langsung ke database? Kalau tanggal+pair yang sama udah ada, datanya akan DITIMPA dengan angka baru ini (pair lain di tanggal yang sama TIDAK akan kesenggol).`)) return;
 
@@ -14892,7 +14904,7 @@ async function simpanSemuaKeDatabase(){
     try{
       const payload={
         tanggal:d.tanggal,
-        saldo_mt4: d.saldoAkhir!=null ? parseFloat(d.saldoAkhir.toFixed(2)) : 0,
+        ...(d.saldoAkhir!=null ? { saldo_mt4: parseFloat(d.saldoAkhir.toFixed(2)) } : {}),   // tanpa saldo awal: saldo lama TIDAK ditimpa
         profit: parseFloat(d.net.toFixed(2)),
         gross_profit: parseFloat((d.gp+Math.max(d.swap,0)).toFixed(2)),
         gross_loss: parseFloat((d.gl+Math.max(-d.swap,0)).toFixed(2)),
