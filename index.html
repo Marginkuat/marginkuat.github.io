@@ -4158,7 +4158,7 @@ function renderPertumbuhanBulanan(){
   const judul=t=>`<div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">${t}</div>`;
   const adaInv = Math.abs(bulanIni.poolI1)+Math.abs(bulanIni.profI)+Math.abs(bulanIni.depI)>0.005;
   const cek = (bulanIni.poolS1+bulanIni.poolI1) - bulanIni.end;
-  const cekOk = Math.abs(cek) < 0.005;   // tepat sampai sen, tanpa toleransi
+  const cekOk = Math.abs(cek) < 0.005;
   const dd = ddPuncakMt4(perf, bulanIni.periode);
   let worst=null; perf.bulan.forEach(b=>{ const x=ddPuncakMt4(perf,b.periode); if(!worst||x.cent>worst.cent) worst={cent:x.cent,p:b.periode}; });
   const maksProfit = perf.bulan.reduce((a,b)=> (!a||b.sumProf>a.sumProf)?b:a, null);
@@ -4168,7 +4168,7 @@ function renderPertumbuhanBulanan(){
     const gapK = (b.poolS1+b.poolI1)-b.end;
     return `<div style="padding:6px 0;border-bottom:1px dashed #2A2A2A;color:#FFFFFF">
       <div style="display:flex;justify-content:space-between;font-size:11px"><span>${namaBulan(b.periode)}</span><span style="font-weight:700;color:${warna(b.sumProf)}">${isAdmin?'':((b.pct>=0?'+':'')+b.pct.toFixed(2)+'% · ')}${b.sumProf>=0?'+':'-'}¢${Math.abs(b.sumProf).toFixed(2)}</span></div>
-      <div style="font-size:9px;color:#E5E7EB;line-height:1.6">Saldo awal ¢${b.start.toFixed(2)} · DP ¢${b.dep.toFixed(2)} · WD ¢${b.wd.toFixed(2)} · Saldo akhir ¢${b.end.toFixed(2)} ${ok?'✓':'⚠️ selisih ¢'+sel.toFixed(2)}<br>Kekayaan Anda akhir ¢${b.poolS1.toFixed(2)}${Math.abs(b.poolI1)>0.005?' · Investor ¢'+b.poolI1.toFixed(2):''}${Math.abs(gapK)>=0.005?'<br><span style="color:#F87171">⚠️ Kekayaan beda ¢'+gapK.toFixed(2)+' dari saldo statement</span>':''}</div>
+      <div style="font-size:9px;color:#E5E7EB;line-height:1.6">Saldo awal ¢${b.start.toFixed(2)} · DP ¢${b.dep.toFixed(2)} · WD ¢${b.wd.toFixed(2)} · Saldo akhir ¢${b.end.toFixed(2)} ${ok?'✓':'⚠️ selisih ¢'+sel.toFixed(2)}${isAdmin?`<br>Kekayaan Anda akhir ¢${b.poolS1.toFixed(2)}${Math.abs(b.poolI1)>0.005?' · Investor ¢'+b.poolI1.toFixed(2):''}`:''}${(isAdmin && Math.abs(gapK)>=0.005)?`<br><span style="color:#F87171">⚠️ Kekayaan beda ¢${gapK.toFixed(2)} dari saldo statement</span>`:''}</div>
     </div>`;
   }).join('');
   const tercatat = Object.values(pelanggaranMt4Cache).sort((a,b)=>String(b.tercatat).localeCompare(String(a.tercatat)));
@@ -4176,38 +4176,46 @@ function renderPertumbuhanBulanan(){
     ? tercatat.map(v=>`<div style="font-size:10px;color:#F87171;padding:3px 0">❌ ${v.jenis} — ${v.periode}</div>`).join('')
     : `<div style="font-size:10px;color:#4ADE80">Belum ada pelanggaran tercatat.</div>`;
 
+  // Bagian atas: hanya ringkasan (admin). Detail lengkap dilipat di bawah.
+  const ringkas = isAdmin ? `
+    ${judul('Ringkasan')}
+    ${baris('Saldo awal bulan', fc(bulanIni.start))}
+    ${baris('DP bulan ini', '+'+fc(bulanIni.dep), '#60A5FA')}
+    ${baris('Profit & rugi bulan ini', (bulanIni.sumProf>=0?'+':'')+fc(bulanIni.sumProf), warna(bulanIni.sumProf))}
+    ${baris('WD bulan ini', '-'+fc(bulanIni.wd), '#F87171')}
+    ${baris('Saldo akhir bulan', fc(bulanIni.end))}
+    ${baris('💵 Kekayaan Anda', fc(bulanIni.poolS1), '#4ADE80')}
+    ${adaInv?baris('Bagian investor', fc(bulanIni.poolI1), '#C4B5FD'):''}
+    <div style="font-size:11px;margin-top:6px;color:${cekOk?'#4ADE80':'#F87171'}">${cekOk?'✓ Tepat sama dengan saldo statement FBS':'⚠️ Kekayaan beda '+fc(cek)+' dari saldo statement FBS'}</div>`
+  : '';
+
+  const detail = `
+    ${isAdmin ? judul('DP & profit per pemilik') +
+      baris('DP sendiri', '+'+fc(bulanIni.depS), '#60A5FA') +
+      (adaInv ? baris('DP investor', '+'+fc(bulanIni.depI), '#C4B5FD') : '') +
+      baris(adaInv?'Profit & rugi — bagian Anda':'Profit & rugi', (bulanIni.profS>=0?'+':'')+fc(bulanIni.profS), warna(bulanIni.profS)) +
+      (adaInv ? baris('Profit & rugi — investor', (bulanIni.profI>=0?'+':'')+fc(bulanIni.profI), warna(bulanIni.profI)) : '')
+      : ''}
+    ${judul('Pertumbuhan & kemerosotan')}
+    ${isAdmin ? baris('Pertumbuhan bulan ini', fc(bulanIni.sumProf), warna(bulanIni.sumProf)) : baris('Pertumbuhan bulan ini', (bulanIni.pct>=0?'+':'')+bulanIni.pct.toFixed(2)+'%', warna(bulanIni.pct))}
+    ${baris('Kemerosotan bulan ini (dari puncak)', '-¢'+dd.cent.toFixed(2), '#F87171')}
+    ${maksProfit?baris('Pertumbuhan terbaik sepanjang data', fc(maksProfit.sumProf)+' ('+namaBulan(maksProfit.periode)+')', '#4ADE80'):''}
+    ${worst?baris('Kemerosotan terbesar sepanjang data', '-¢'+worst.cent.toFixed(2)+' ('+namaBulan(worst.p)+')', '#F87171'):''}
+    ${judul('Per bulan')}
+    ${listBulan}
+    ${judul('Pelanggaran tercatat')}
+    ${listCatat}`;
+
   wrap.innerHTML = `
   <div style="background:var(--bg0);border:1.5px solid #4ADE80;border-radius:10px;padding:12px 14px">
     <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📅 Pertumbuhan Bulan Ini — ${namaBulan(bulanIni.periode)}</div>
     <div style="font-size:22px;font-weight:800;color:${warna(isAdmin?bulanIni.sumProf:bulanIni.pct)};margin-top:4px">${isAdmin?fc(bulanIni.sumProf):((bulanIni.pct>=0?'+':'')+bulanIni.pct.toFixed(2)+'%')}</div>
     <div style="font-size:9px;color:#E5E7EB">${isAdmin?'Profit trading bulan ini (termasuk komisi &amp; swap)':'Pertumbuhan bulan ini (persen)'}</div>
-
-    ${!isAdmin?'':`${judul('Ringkasan audit')}
-    ${baris('Saldo awal bulan', fc(bulanIni.start))}
-    ${baris(adaInv?'DP (deposit) — bagian Anda':'DP (deposit)', '+'+fc(bulanIni.depS), '#60A5FA')}
-    ${adaInv?baris('DP (deposit) — bagian investor','+'+fc(bulanIni.depI),'#C4B5FD'):''}
-    ${baris(adaInv?'Profit & rugi — bagian Anda':'Profit & rugi', (bulanIni.profS>=0?'+':'')+fc(bulanIni.profS), warna(bulanIni.profS))}
-    ${adaInv?baris('Profit & rugi — bagian investor',(bulanIni.profI>=0?'+':'')+fc(bulanIni.profI), warna(bulanIni.profI)):''}
-    ${baris('WD (keluar ke rekening)', '-'+fc(bulanIni.wd), '#F87171')}
-    ${baris('Saldo akhir bulan', fc(bulanIni.end))}
-
-    ${judul('Kekayaan & pembagian')}
-    ${baris('💵 Kekayaan Anda (saldo bagian Anda)', fc(bulanIni.poolS1), '#4ADE80')}
-    ${adaInv?baris('Total dibagi ke investor (saldo)', fc(bulanIni.poolI1), '#C4B5FD'):''}
-    <div style="font-size:11px;margin-top:6px;color:${cekOk?'#4ADE80':'#F87171'}">${cekOk?'✓ Tepat sama dengan saldo statement FBS':'⚠️ Kekayaan beda '+fc(cek)+' dari saldo statement FBS (cek komisi/swap di hari yang berselisih)'}</div>
-
-    ${judul('Pertumbuhan & kemerosotan')}
-    ${baris('Pertumbuhan bulan ini', fc(bulanIni.sumProf), warna(bulanIni.sumProf))}
-    ${baris('Kemerosotan bulan ini (dari puncak)', '-¢'+dd.cent.toFixed(2), '#F87171')}
-    ${maksProfit?baris('Pertumbuhan terbaik sepanjang data', fc(maksProfit.sumProf)+' ('+namaBulan(maksProfit.periode)+')', '#4ADE80'):''}
-    ${worst?baris('Kemerosotan terbesar sepanjang data', '-¢'+worst.cent.toFixed(2)+' ('+namaBulan(worst.p)+')', '#F87171'):''}
-
-`}
-    ${judul('Per bulan')}
-    ${listBulan}
-
-    ${judul('Pelanggaran tercatat')}
-    ${listCatat}
+    ${ringkas}
+    <details style="margin-top:12px">
+      <summary style="cursor:pointer;font-size:11px;font-weight:800;color:#4ADE80;padding:8px 0">📂 Lihat detail lengkap</summary>
+      ${detail}
+    </details>
   </div>`;
 }
 
@@ -7708,7 +7716,14 @@ function renderProfitBulanan(){
   const perf=hitungPerformaMt4();
   if(!perf.bulan.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Belum ada catatan</div>'; return; }
   const bulanNama=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  el.innerHTML = perf.bulan.slice().reverse().map(b=>{
+  const bulanTerbaru = perf.bulan[perf.bulan.length-1];
+  const ringkasBln = (()=>{ const b=bulanTerbaru; const [y,m]=b.periode.split('-'); const pc=b.sumProf>=0?'#4ADE80':'#F87171';
+    return `<div style="padding:12px 14px;border-radius:12px;background:var(--bg0);border:1.5px solid ${pc};margin-bottom:8px">
+      <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">Bulan ini · ${bulanNama[parseInt(m,10)-1]} ${y}</div>
+      <div style="font-size:20px;font-weight:800;color:${pc};margin-top:4px">${b.sumProf>=0?'+':''}${fc(b.sumProf)}</div>
+      <div style="font-size:10px;color:#E5E7EB">${b.jumlahOrder} transaksi · ${b.jumlahHari} hari trading</div>
+    </div>`; })();
+  const listSemua = perf.bulan.slice().reverse().map(b=>{
     const [y,m]=b.periode.split('-');
     const pColor=b.sumProf>0?'#4ADE80':(b.sumProf<0?'#F87171':'#E5E7EB');
     const pctStr=(b.pct>=0?'+':'')+b.pct.toFixed(1)+'%';
@@ -7726,6 +7741,7 @@ function renderProfitBulanan(){
         </div>
       </div>`;
   }).join('');
+  el.innerHTML = ringkasBln + `<details><summary style="cursor:pointer;font-size:11px;font-weight:800;color:#4ADE80;padding:8px 0">📂 Lihat semua bulan (${perf.bulan.length})</summary>${listSemua}</details>`;
 }
 // Isi kolom setoran/WD + selisih di Riwayat Harian dari sumber tunggal (FOREX tidak ikut)
 let riwayatMt4Semua = [];
@@ -7781,6 +7797,18 @@ function setFilterRiwayatMt4(tanpaUbah){
     (!f.bulan || r.tanggal.slice(5,7)===f.bulan) &&
     (!f.tgl || r.tanggal===f.tgl));
   renderRiwayatRows(hasil, false);
+  // Ringkasan di atas: hanya hari terakhir. Daftar lengkap dilipat di bawah.
+  const elList=document.getElementById('riwayatList');
+  if(elList && hasil.length){
+    const h=hasil[0];
+    const profitH=parseFloat(h.profit)||0;
+    const ringkasHari=`<div style="padding:12px 14px;border-radius:12px;background:var(--bg0);border:1.5px solid ${profitH>=0?'#4ADE80':'#F87171'};margin-bottom:8px">
+      <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">Hari terakhir · ${h.tanggal}</div>
+      <div style="font-size:20px;font-weight:800;color:${profitH>=0?'#4ADE80':'#F87171'};margin-top:4px">${profitH>=0?'+':''}${fc(profitH)}</div>
+      <div style="font-size:10px;color:#E5E7EB">Saldo akhir ${fc(h.saldo_mt4)}${h._mt4&&h._mt4.dep>0?' · DP '+fc(h._mt4.dep):''}${h._mt4&&h._mt4.wd>0?' · WD '+fc(h._mt4.wd):''}</div>
+    </div>`;
+    elList.innerHTML = ringkasHari + `<details><summary style="cursor:pointer;font-size:11px;font-weight:800;color:#4ADE80;padding:8px 0">📂 Lihat semua catatan (${hasil.length} hari)</summary>${elList.innerHTML}</details>`;
+  }
   const ringkas=document.getElementById('rfRingkas');
   if(ringkas){
     const profit = hasil.reduce((a,r)=>a+(parseFloat(r.profit)||0),0);
@@ -9147,7 +9175,7 @@ function renderLapSaya(){
     ${baris(adaInv ? '↳ Bagian Anda' : 'Profit & rugi', (z.profS>=0?'+':'')+fc(z.profS), warnaP(z.profS))}
     ${adaInv ? baris('↳ Bagian investor', (z.profI>=0?'+':'')+fc(z.profI), warnaP(z.profI)) : ''}
     ${judul('WD / TARIK BULAN INI, PER TUJUAN')}
-    ${tujuanHtml}
+    <details><summary style="cursor:pointer;font-size:11px;font-weight:800;color:#4ADE80;padding:6px 0">📂 Rincian WD per tujuan</summary>${tujuanHtml}</details>
     ${baris('Total WD', '-'+fc(z.wd), '#F87171')}
     ${judul('SALDO AKHIR BULAN')}
     ${baris('Saldo MT4', fc(z.end), '#FFFFFF')}
