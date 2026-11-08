@@ -16947,29 +16947,6 @@ function mt4UbahBerjalan(d){
 function renderAturanMt4(){
   const el=document.getElementById('mt4AturanWrap'); if(!el) return;
   el.innerHTML=''; el.style.display='none'; return;   // kartu dihapus atas permintaan
-  const perf=hitungPerformaMt4();
-  const saldo=saldoTerakhirMt4();
-  const riskCent=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);
-  const buffer=saldo>0 ? Math.floor(saldo/riskCent) : 0;
-  const st=statistikHariMt4(); const nHari=st.hari; const p=st.winRate/100;
-  const usd=x=>'$'+(x/100).toFixed(2);
-  const RRp=MT4_RISIKO.tpPips/MT4_RISIKO.slPips;
-  const pb=peluangBangkrutRR(p, RRp, buffer);
-  const warna=pb<10?'#4ADE80':(pb<30?'#FACC15':'#F87171');
-  el.innerHTML=`<div style="background:var(--bg0);border:1.5px solid #C8A84B;border-radius:12px;padding:12px 14px;color:#FFFFFF">
-    <div style="font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">🎯 Aturan MT4 — Emas (XAUUSD)</div>
-    <div style="font-size:12px;line-height:1.7;margin-top:6px">
-      Berlaku: ${MT4_ATURAN_TANGGAL}<br>
-      RR 1:${RRp} (SL ${MT4_RISIKO.slPips} / TP ${MT4_RISIKO.tpPips} pips) · Lot ${MT4_RISIKO.lot}<br>
-      Risiko per kalah: ¢${riskCent.toFixed(2)} · per trade ≈ <b>${saldo>0?(riskCent/saldo*100).toFixed(2):'0'}%</b> dari saldo<br>
-      Buffer sekarang: <b>${(saldo/riskCent).toFixed(1)}x</b> (saldo ¢${saldo.toFixed(2)} ÷ ¢${riskCent.toFixed(2)}) · ${buffer} kalah berurutan<br>
-      Target buffer ${MT4_TARGET_BUFFER_X}x: saldo ¢${(MT4_TARGET_BUFFER_X*riskCent).toFixed(2)} · sisa profit ¢${Math.max(0,MT4_TARGET_BUFFER_X*riskCent-saldo).toFixed(2)}<br>
-      Win rate: ${(p*100).toFixed(1)}% (${st.menang} hari menang dari ${nHari} hari trading)<br>
-      Profit trading: ¢${st.totalProfit.toFixed(2)} (${usd(st.totalProfit)}) · Rata menang ¢${st.rataMenang.toFixed(2)} · Rata kalah ¢${st.rataKalah.toFixed(2)}<br>
-      Saldo sekarang: ¢${saldo.toFixed(2)} (${usd(saldo)})<br>
-    </div>
-  </div>`;
-  return;
 }
 function renderAturanMtLama(){
   const el=document.getElementById('mt4AturanWrap'); if(!el) return;
