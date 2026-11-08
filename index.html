@@ -17235,9 +17235,11 @@ document.addEventListener('DOMContentLoaded',()=>{ setAkunTampilan('mt4'); loadR
     document.querySelectorAll('.section').forEach(sec=>{
       if(sec.dataset.ringkas==='1') return;
       if(sec.id==='secAnalisBlok' || sec.closest('[data-akun="analis"]') || sec.getAttribute('data-akun')==='analis') return;
-      const t=sec.querySelector(':scope > .sec-title') || sec.querySelector('.sec-title');
-      if(!t) return;
-      const judul=t.textContent.trim();
+      let t=sec.querySelector(':scope > .sec-title') || sec.querySelector('.sec-title');
+      let judul;
+      if(t){ judul=t.textContent.trim(); }
+      else if(sec.id==='secAdmin'){ judul='⚙️ Panel Admin (input, import, backup)'; }
+      else return;
       if(/analis|sinyal/i.test(judul)) return;
       sec.dataset.ringkas='1';
       if(TAMPIL_PENUH.some(k=>judul.includes(k))) return;
@@ -17249,7 +17251,7 @@ document.addEventListener('DOMContentLoaded',()=>{ setAkunTampilan('mt4'); loadR
       sum.textContent=judul+'  ▸ tampilkan';
       det.appendChild(sum);
       [...sec.childNodes].forEach(n=>{ if(n!==t) det.appendChild(n); });
-      t.style.display='none';
+      if(t) t.style.display='none';
       sec.appendChild(det);
     });
   }
