@@ -2078,7 +2078,7 @@ function renderInvCalcDisclaimer(){
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#132D0E"></div>Profit</div>
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:#2D0E0E"></div>Loss</div>
       <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--bg1)"></div>Tidak Trading</div>
-      <div class="cal-leg-item">% di tiap tanggal = risk per trade ÷ saldo hari itu</div>
+      <div class="cal-leg-item">% = estimasi risiko per trade (¢40 ÷ saldo awal hari). Bukan kerugian riil; kerugian riil ada di nilai ¢ pada kotak tanggal.</div>
     </div>
     <div class="cal-legend" style="margin-top:6px">
       
@@ -9392,7 +9392,7 @@ function renderRiskMeter(){
       <div style="font-size:20px;font-weight:800;color:${overallColor}">${overallDot} ${overallLabel}</div>
     </div>
     ${riskMeterLampRow('Current Drawdown', data.ddPct.toFixed(1)+'%', ddZone, 'Jarak equity ke puncak tertinggi bulan ini, dibanding saldo awal bulan')}
-    ${rorZone ? riskMeterLampRow('Risk of Ruin', data.ror.toFixed(1)+'%', rorZone, 'Peluang teoretis akun habis, dari win rate & RR historis') : `
+    ${rorZone ? riskMeterLampRow('Risk of Ruin', data.ror.toFixed(2)+'%', rorZone, 'Peluang teoretis akun habis, rencana RR 1:2 · lot 0,02 · buffer saldo ÷ ¢40') : `
     <div style="padding:10px 0;text-align:center;font-size:10px;color:#E5E7EB;border-bottom:1px solid var(--bg2)">Risk of Ruin belum bisa dihitung — butuh minimal 5 hari data dengan profit &amp; loss.</div>`}
     ${riskZoneVal ? riskMeterLampRow('Risk per Trade', data.riskPct.toFixed(2)+'%', riskZoneVal, 'Dari Kalkulator Risiko — % modal dipertaruhkan per entry') : `
     <div style="padding:10px 0;text-align:center;font-size:10px;color:#E5E7EB">Risk per Trade belum terhitung — isi SL &amp; Lot di <span onclick="document.getElementById('secKalkulator').scrollIntoView({behavior:'smooth'})" style="color:#FFFFFF;text-decoration:underline;cursor:pointer">Kalkulator Agresif 5%</span> dulu.</div>`}
@@ -12790,7 +12790,7 @@ async function loadRiskOfRuin(){
         </div>
       </div>
       <div style="font-size:9px;color:#E5E7EB;line-height:1.6">
-        Win Rate: ${(p*100).toFixed(1)}% · Avg Win: ${fc(avgWin)} · Avg Loss: -${fc(avgLoss)}<br>
+        Win Rate: ${(p*100).toFixed(1)}% · Avg Win: ${fc(avgWin)} · Avg Loss: -${fc(avgLoss)}<br>Ekspektansi riil per hari: <b style="color:${(p*avgWin-(1-p)*avgLoss)>=0?'#4ADE80':'#F87171'}">${fc(p*avgWin-(1-p)*avgLoss)}</b>${(p*avgWin-(1-p)*avgLoss)<0?' — riil negatif: angka rencana belum terbukti di data':''}<br>
         ${edgeInfo}<br>
       </div>`;
   }catch(e){
