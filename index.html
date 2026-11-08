@@ -17230,7 +17230,7 @@ document.addEventListener('DOMContentLoaded',()=>{ setAkunTampilan('mt4'); loadR
 // Bagian lain (kalkulator, riwayat, dan seterusnya) hanya tampil judulnya dengan tombol untuk membuka.
 // Bagian Akun Analis tidak diubah sama sekali.
 (function(){
-  const TAMPIL_PENUH = ['Laporan Bulanan','Keuangan Saya','Pertumbuhan'];
+  const TAMPIL_PENUH = ['Pertumbuhan'];
   function ringkaskan(){
     document.querySelectorAll('.section').forEach(sec=>{
       if(sec.dataset.ringkas==='1') return;
