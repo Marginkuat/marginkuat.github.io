@@ -2130,6 +2130,7 @@ function renderInvCalcDisclaimer(){
       <span onclick="editKasThreshold()" style="font-size:9px;color:#E5E7EB;cursor:pointer;text-decoration:underline">Atur batas peringatan</span>
     </div>
   </div>
+  <div id="kasFilter"></div>
   <div id="kasList"><div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Memuat...</div></div>
 </div>
 
@@ -7743,6 +7744,7 @@ function resetFilterRiwayatMt4(){
 function refreshMt4Semua(){
   try{ renderProfitBulanan(); }catch(e){ console.error('profitBulanan', e); }
   try{ renderPertumbuhanBulanan(); }catch(e){ console.error('pertumbuhan', e); }
+  try{ renderKasListFilter(); }catch(e){ console.error('kasFilter', e); }
   try{ tempelRiwayatMt4(); }catch(e){ console.error('riwayat', e); }
 }
 (function(){
@@ -8031,13 +8033,10 @@ async function hapusKasEntry(id){
   }
 }
 
-async function loadKas(){
-  try{
-    const rows=await api('kas_pribadi?select=*&order=tanggal.desc,created_at.desc&limit=50');
+// ══ FILTER RIWAYAT ARUS KAS (bulan / tahun / tanggal / cari) — pakai SEMUA data, bukan 50 terbaru ══
+let kasFilterState = null;
+function itemKasHtml(r){
 
-    const el=document.getElementById('kasList');
-    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Belum ada catatan</div>';return;}
-    const itemsHtml=rows.map(r=>{
       let kursHtml='';
       if(r.nominal_asli && r.mata_uang_asli){
         const nominalFmt = r.mata_uang_asli==='IDR'
@@ -8060,8 +8059,78 @@ async function loadKas(){
           ${isAdmin ? `<span onclick="editKasEntry(${r.id})" style="cursor:pointer;font-size:11px" title="Edit">✏️</span><span onclick="hapusKasEntry(${r.id})" style="cursor:pointer;font-size:11px" title="Hapus">🗑️</span>` : ''}
         </div>
       </div>`;
-    });
-    el.innerHTML=wrapCollapsibleListHtml(itemsHtml, {previewCount:5});
+}
+function renderKasListFilter(){
+  const wrap=document.getElementById('kasFilter'), el=document.getElementById('kasList');
+  if(!wrap||!el) return;
+  const semua=(allKasData||[]).slice().sort((x,y)=> String(y.tanggal).localeCompare(String(x.tanggal)) || (Number(y.id)||0)-(Number(x.id)||0));
+  if(!semua.length){ wrap.innerHTML=''; el.innerHTML='<div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Belum ada catatan</div>'; return; }
+  if(!kasFilterState){ const t=String(semua[0].tanggal); kasFilterState={bulan:t.slice(5,7), tahun:t.slice(0,4), tgl:'', cari:''}; }
+  const f=kasFilterState;
+  const tahunList=[...new Set(semua.map(r=>String(r.tanggal).slice(0,4)))].sort().reverse();
+  const NB=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const optBulan=['<option value="">Semua bulan</option>'].concat(NB.map((n,i)=>{const v=String(i+1).padStart(2,'0'); return `<option value="${v}" ${f.bulan===v?'selected':''}>${n}</option>`;})).join('');
+  const optTahun=['<option value="">Semua tahun</option>'].concat(tahunList.map(y=>`<option value="${y}" ${f.tahun===y?'selected':''}>${y}</option>`)).join('');
+  const sel='style="flex:1;min-width:100px;padding:8px 6px;border-radius:8px;background:#0D0F0A;color:#FFFFFF;border:1px solid var(--border);font-size:12px;color-scheme:dark"';
+  wrap.innerHTML=`
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+      <select id="kfBulan" onchange="setFilterKasList()" ${sel}>${optBulan}</select>
+      <select id="kfTahun" onchange="setFilterKasList()" ${sel}>${optTahun}</select>
+      <input type="date" id="kfTgl" value="${f.tgl}" onchange="setFilterKasList()" ${sel}>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <input type="text" id="kfCari" value="${escapeHtml(f.cari)}" placeholder="Cari keterangan / kategori / dari / ke" oninput="setFilterKasList()" ${sel.replace('flex:1;min-width:100px;','flex:1;')}>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">
+      <button type="button" onclick="resetFilterKasList()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg1);color:#FFFFFF;font-size:10px;font-weight:700;cursor:pointer">Tampilkan semua</button>
+      <div id="kfRingkas" style="font-size:10px;color:#E5E7EB;text-align:right"></div>
+    </div>`;
+  setFilterKasList(true);
+}
+function setFilterKasList(tanpaBaca){
+  if(!tanpaBaca){
+    const b=document.getElementById('kfBulan'), t=document.getElementById('kfTahun'), g=document.getElementById('kfTgl'), c=document.getElementById('kfCari');
+    if(b&&t&&g&&c) kasFilterState={bulan:b.value, tahun:t.value, tgl:g.value, cari:c.value};
+  }
+  const f=kasFilterState||{bulan:'',tahun:'',tgl:'',cari:''};
+  const q=(f.cari||'').trim().toLowerCase();
+  const semua=(allKasData||[]).slice().sort((x,y)=> String(y.tanggal).localeCompare(String(x.tanggal)) || (Number(y.id)||0)-(Number(x.id)||0));
+  const hasil=semua.filter(r=>{
+    const t=String(r.tanggal||'').slice(0,10);
+    if(f.tahun && t.slice(0,4)!==f.tahun) return false;
+    if(f.bulan && t.slice(5,7)!==f.bulan) return false;
+    if(f.tgl && t!==f.tgl) return false;
+    if(q){
+      const km=kategoriMeta[r.kategori];
+      const teks=[r.keterangan, km?km.label:'', r.kategori, r.dari, r.ke, r.jumlah].map(v=>String(v||'').toLowerCase()).join(' ');
+      if(teks.indexOf(q)<0) return false;
+    }
+    return true;
+  });
+  const el=document.getElementById('kasList');
+  if(el){
+    el.innerHTML = hasil.length
+      ? hasil.map(itemKasHtml).join('')
+      : '<div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Tidak ada catatan untuk filter ini</div>';
+  }
+  const rg=document.getElementById('kfRingkas');
+  if(rg){
+    let masuk=0, keluar=0;
+    hasil.forEach(r=>{ const a=kasArah(r); const j=parseFloat(r.jumlah)||0; if(a==='masuk') masuk+=j; else if(a==='keluar') keluar+=j; });
+    rg.innerHTML=`${hasil.length} catatan · Masuk <b style="color:#4ADE80">${fc(masuk)}</b><br>Keluar <b style="color:#F87171">${fc(keluar)}</b>`;
+  }
+}
+function resetFilterKasList(){
+  kasFilterState={bulan:'', tahun:'', tgl:'', cari:''};
+  renderKasListFilter();
+}
+async function loadKas(){
+  try{
+    const rows=await api('kas_pribadi?select=*&order=tanggal.desc,created_at.desc&limit=50');
+
+    const el=document.getElementById('kasList');
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Belum ada catatan</div>';return;}
+    renderKasListFilter();
   }catch(e){console.error(e);}
 }
 function setMataUang(mata){
