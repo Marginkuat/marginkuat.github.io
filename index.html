@@ -4167,7 +4167,7 @@ function renderPertumbuhanBulanan(){
     const ok = Math.abs(sel)<0.005;
     const gapK = (b.poolS1+b.poolI1)-b.end;
     return `<div style="padding:6px 0;border-bottom:1px dashed #2A2A2A;color:#FFFFFF">
-      <div style="display:flex;justify-content:space-between;font-size:11px"><span>${namaBulan(b.periode)}</span><span style="font-weight:700;color:${warna(b.sumProf)}">${b.sumProf>=0?'+':'-'}¢${Math.abs(b.sumProf).toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px"><span>${namaBulan(b.periode)}</span><span style="font-weight:700;color:${warna(b.sumProf)}">${isAdmin?'':((b.pct>=0?'+':'')+b.pct.toFixed(2)+'% · ')}${b.sumProf>=0?'+':'-'}¢${Math.abs(b.sumProf).toFixed(2)}</span></div>
       <div style="font-size:9px;color:#E5E7EB;line-height:1.6">Saldo awal ¢${b.start.toFixed(2)} · DP ¢${b.dep.toFixed(2)} · WD ¢${b.wd.toFixed(2)} · Saldo akhir ¢${b.end.toFixed(2)} ${ok?'✓':'⚠️ selisih ¢'+sel.toFixed(2)}<br>Kekayaan Anda akhir ¢${b.poolS1.toFixed(2)}${Math.abs(b.poolI1)>0.005?' · Investor ¢'+b.poolI1.toFixed(2):''}${Math.abs(gapK)>=0.005?'<br><span style="color:#F87171">⚠️ Kekayaan beda ¢'+gapK.toFixed(2)+' dari saldo statement</span>':''}</div>
     </div>`;
   }).join('');
@@ -4179,10 +4179,10 @@ function renderPertumbuhanBulanan(){
   wrap.innerHTML = `
   <div style="background:var(--bg0);border:1.5px solid #4ADE80;border-radius:10px;padding:12px 14px">
     <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📅 Pertumbuhan Bulan Ini — ${namaBulan(bulanIni.periode)}</div>
-    <div style="font-size:22px;font-weight:800;color:${warna(bulanIni.sumProf)};margin-top:4px">${fc(bulanIni.sumProf)}</div>
-    <div style="font-size:9px;color:#E5E7EB">Profit trading bulan ini (termasuk komisi & swap)</div>
+    <div style="font-size:22px;font-weight:800;color:${warna(isAdmin?bulanIni.sumProf:bulanIni.pct)};margin-top:4px">${isAdmin?fc(bulanIni.sumProf):((bulanIni.pct>=0?'+':'')+bulanIni.pct.toFixed(2)+'%')}</div>
+    <div style="font-size:9px;color:#E5E7EB">${isAdmin?'Profit trading bulan ini (termasuk komisi &amp; swap)':'Pertumbuhan bulan ini (persen)'}</div>
 
-    ${judul('Ringkasan audit')}
+    ${!isAdmin?'':`${judul('Ringkasan audit')}
     ${baris('Saldo awal bulan', fc(bulanIni.start))}
     ${baris(adaInv?'DP (deposit) — bagian Anda':'DP (deposit)', '+'+fc(bulanIni.depS), '#60A5FA')}
     ${adaInv?baris('DP (deposit) — bagian investor','+'+fc(bulanIni.depI),'#C4B5FD'):''}
@@ -4202,6 +4202,7 @@ function renderPertumbuhanBulanan(){
     ${maksProfit?baris('Pertumbuhan terbaik sepanjang data', fc(maksProfit.sumProf)+' ('+namaBulan(maksProfit.periode)+')', '#4ADE80'):''}
     ${worst?baris('Kemerosotan terbesar sepanjang data', '-¢'+worst.cent.toFixed(2)+' ('+namaBulan(worst.p)+')', '#F87171'):''}
 
+`}
     ${judul('Per bulan')}
     ${listBulan}
 
