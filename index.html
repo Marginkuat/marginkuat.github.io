@@ -3957,29 +3957,32 @@ function hitungPerformaMt4(){
   getRowsAkunRealXauusd().forEach(r=>{ rowMap[String(r.tanggal||'').slice(0,10)] = r; });
   const detail = arusMt4Detail();
   const semuaTgl = Array.from(new Set([...Object.keys(rowMap), ...Object.keys(detail)])).sort();
-  let prevEnd = null;
+  let prevEnd = null, prevNyata = false;
   const hari = [];
   semuaTgl.forEach(tgl=>{
     const r = rowMap[tgl];
     const ar = detail[tgl] || {dep:0, wd:0};
     const flow = ar.dep - ar.wd;
+    const prof = r ? (parseFloat(r.profit||0) || 0) : 0;
+    const jumlahOrder = r ? (parseInt(r.jumlah_signal||0,10) || 0) : 0;
+    const jumlahLoss = r ? (parseInt(r.jumlah_loss||0,10) || 0) : 0;
     const adaSaldo = !!r && r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4)) && parseFloat(r.saldo_mt4)!==0;
     if(!adaSaldo){
-      // Hari yang cuma punya arus kas (tanpa baris saldo): saldo ikut arus. Dilewati kalau belum ada saldo awal.
-      if(prevEnd===null) return;
-      hari.push({ tgl, start:prevEnd, end:prevEnd+flow, prof:0, flow, dep:ar.dep, wd:ar.wd, selisih:0,
-        adaSaldo:false, jumlahOrder:0, jumlahLoss:0, pctHari:0 });
-      prevEnd = prevEnd + flow;
+      // Saldo belum tercatat: profit & arus TETAP dihitung (saldo relatif). Saldo hari ini tidak dianggap nyata.
+      const start = prevEnd!==null ? prevEnd : 0;
+      const end = start + prof + flow;
+      prevEnd = end; prevNyata = false;
+      hari.push({ tgl, start, end, prof, flow, dep:ar.dep, wd:ar.wd, selisih:0, adaSaldo:false,
+        jumlahOrder, jumlahLoss, pctHari: start>0 ? prof/start*100 : 0 });
       return;
     }
-    const prof = parseFloat(r.profit||0), end = parseFloat(r.saldo_mt4);
-    const start = prevEnd!==null ? prevEnd : end - prof - flow;   // baris pertama: mundur dari saldo akhir
-    const selisih = end - (start + prof + flow);
-    prevEnd = end;
+    const end = parseFloat(r.saldo_mt4);
+    const sambung = prevEnd!==null && prevNyata;
+    const start = sambung ? prevEnd : end - prof - flow;   // baris pertama yang punya saldo: mundur dari saldo akhir
+    const selisih = sambung ? end - (start + prof + flow) : 0;
+    prevEnd = end; prevNyata = true;
     hari.push({ tgl, start, end, prof, flow, dep:ar.dep, wd:ar.wd, selisih, adaSaldo:true,
-      jumlahOrder: parseInt(r.jumlah_signal||0,10) || 0,
-      jumlahLoss:  parseInt(r.jumlah_loss||0,10) || 0,
-      pctHari: start>0 ? prof/start*100 : 0 });
+      jumlahOrder, jumlahLoss, pctHari: start>0 ? prof/start*100 : 0 });
   });
   const map = {};
   hari.forEach(h=>{
@@ -7563,6 +7566,7 @@ async function loadRiwayat(){
     const rows = riwayatHasMore ? fetched.slice(0,RIWAYAT_PAGE_SIZE) : fetched;
     riwayatCache=rows;
     renderRiwayatRows(rows, false);
+    try{ tempelRiwayatMt4(); }catch(e){ console.error('tempelRiwayat', e); }
     const btn=document.getElementById('btnMuatLebihRiwayat');
     const status=document.getElementById('riwayatLoadStatus');
     if(btn) btn.style.display = riwayatHasMore ? 'block' : 'none';
