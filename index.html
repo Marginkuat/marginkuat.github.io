@@ -6869,7 +6869,7 @@ function renderRemPipsCard(){
   if(!wrap)return;
   const potongan=['XAUUSD','FOREX'].map(g=>{
     const labelGrup=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
-    const batasRugi=((typeof remPipsAturan==='function')?remPipsAturan()[g]:cachedRemPips[g])||0, tMin=cachedTargetMin[g]||0, tMax=cachedTargetMax[g]||0;
+    const batasRugi=(REM_TAMPIL_V3[g]!=null)?REM_TAMPIL_V3[g]:(((typeof remPipsAturan==='function')?remPipsAturan()[g]:cachedRemPips[g])||0), tMin=(REM_TARGET_V3[g]!=null)?REM_TARGET_V3[g].min:(cachedTargetMin[g]||0), tMax=(REM_TARGET_V3[g]!=null)?REM_TARGET_V3[g].max:(cachedTargetMax[g]||0);
     const now=new Date();
     const rowsBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>{
       const d=new Date(r.tanggal);
@@ -16049,11 +16049,16 @@ function hitungBatasDD(g, bulanKey){
   }catch(e){}
   return {cfg, n:rows.length, win, loss, cum, peak, maxDD, curDD, kenaIdx, setelahKena, hariMelanggar, runningN, runningLossUsd};
 }
+// Nilai v3 (tampilan), hanya untuk Datuk Crypto 89 (FOREX): rem 6.000, target 6.000/6.000, DD tidak berlaku (buffer). Datuk EURUSD (XAUUSD) belum diubah.
+// remPipsAturan() tidak diubah karena ikut dihitung untuk sidik jari v2 yang sudah tersimpan.
+const DD_NONAKTIF_V3 = { FOREX:true };   // hanya Datuk Crypto 89 (XAUUSD = Datuk EURUSD, belum diubah)
+const REM_TAMPIL_V3 = { FOREX:6000 };   // hanya Datuk Crypto 89
+const REM_TARGET_V3 = { FOREX:{ min:6000, max:6000 } };
 function renderBatasDDCard(){
   const wrap=document.getElementById('batasDDWrap'); if(!wrap) return;
   _bdPilihBulanOpsi();
   const bulanKey=batasDDBulanDipilih;
-  const html=['XAUUSD','FOREX'].map((g,idx)=>{
+  const html=['XAUUSD','FOREX'].filter(g=>!DD_NONAKTIF_V3[g]).map((g,idx)=>{
     const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
     const h=hitungBatasDD(g,bulanKey), c=h.cfg;
     const pct=v=>(v/c.modal*100).toFixed(1)+'%';
@@ -16829,7 +16834,11 @@ function aturanUntuk(g,nm,AA){ AA=AA||AUDIT_ATURAN;
 // Aturan: maks 5 order per hari (menang & kalah, dihitung saat close), maks 100 order per bulan,
 // RR: XAUUSD SL 200 / TP 400 pips; forex SL per pair (kalkulator Hard), TP = 2 × SL. Jatah per pair dihapus.
 // Versi per sinyal: dibuka 1–8 Nov = v3.1; dibuka 9 Nov dst = v3.
-function versiV3UntukSinyal(r){
+// Tabel SL Crypto 89 (aturan v3, kalkulator Hard). TP = 2 × SL.
+const CRYPTO89_SL_V3={GBPUSD:45,NZDJPY:45,USDCAD:45,CHFJPY:60,EURJPY:60,EURNZD:60,GBPJPY:60,USDJPY:60};
+// Versi aturan ditentukan dari TANGGAL BUKA. Crypto 89 hanya punya v3 (tanpa v3.1).
+function versiV3UntukSinyal(r,g){
+  if(g==='FOREX') return 'v3 Crypto 89';
   const buka=String(r.tanggalBuka||r.tanggal||'');
   return buka.slice(0,10)<='2026-11-08' ? 'v3.1' : 'v3';
 }
@@ -16843,7 +16852,7 @@ function auditChannelV3(g,bk){
     if(!f){ f={r:x.r,nm:x.nm,sev:'indikasi',masalah:[],pra:false,retro:false}; hasil.flags.push(f); }
     const rank={indikasi:1,kuat:2,pasti:3};
     if(rank[sev]>rank[f.sev]) f.sev=sev;
-    f.masalah.push({sev, retroDet:'', aturan, detail:detail+' · Penilaian '+versiV3UntukSinyal(x.r)});
+    f.masalah.push({sev, retroDet:'', aturan, detail:detail+' · Penilaian '+versiV3UntukSinyal(x.r,g)});
   };
   // 1. Maks 5 order per hari (dihitung saat close): order ke-6 dst pada hari yang sama
   const perHari={};
@@ -16859,10 +16868,12 @@ function auditChannelV3(g,bk){
   L.forEach(x=>{
     const r=x.r, sl=parseFloat(r.slPips), tp=parseFloat(r.tpPips);
     if(!isFinite(sl) || !isFinite(tp)) return;
+    if(g==='FOREX' && String(r.tanggalBuka||'').slice(0,10) < '2026-11-01') return;   // dibuka sebelum 1 Nov → v2
     hasil.rencana++;
     let slA=null, tpA=null, label='';
     if(x.nm==='XAUUSD'){ slA=200; tpA=400; label='XAUUSD 200/400'; }
-    else if(FOREX_SL_PAIR[x.nm]!=null){ slA=FOREX_SL_PAIR[x.nm]; tpA=2*slA; label=x.nm+' SL '+slA+' / TP '+tpA; }
+    else if(g==='FOREX' && CRYPTO89_SL_V3[x.nm]!=null){ slA=CRYPTO89_SL_V3[x.nm]; tpA=2*slA; label='Crypto 89 '+x.nm+' SL '+slA+' / TP '+tpA; }
+    else if(g!=='FOREX' && FOREX_SL_PAIR[x.nm]!=null){ slA=FOREX_SL_PAIR[x.nm]; tpA=2*slA; label=x.nm+' SL '+slA+' / TP '+tpA; }
     if(slA==null) return;
     if(Math.abs(sl-slA)>0.5 || Math.abs(tp-tpA)>0.5)
       tambah(x,'pasti','RR melebihi/kurang — SL/TP tidak sesuai aturan v3', `Rencana tercatat SL ${sl} / TP ${tp}; aturan ${label} (RR 1:2)`);
@@ -17622,8 +17633,7 @@ function sembunyikanKartuDDEurusd(){
     el.style.display='none';
   });
 }
-setTimeout(sembunyikanKartuDDEurusd, 2300);
-setTimeout(sembunyikanKartuDDEurusd, 4600);
+
 </script>
 <script>
 // Aturan Resmi v3 Datuk Crypto 89 (forex) — blok terpisah dari v3 EURUSD dan v2.
@@ -17673,8 +17683,8 @@ function sembunyikanKartuDDCrypto89(){
     if((el.textContent||'').length>1200) return; el.style.display='none';
   });
 }
-setTimeout(()=>{ pasangV3C(); terapkanRemCrypto89(); sembunyikanKartuDDCrypto89(); }, 2500);
-setTimeout(()=>{ pasangV3C(); terapkanRemCrypto89(); sembunyikanKartuDDCrypto89(); }, 5000);
+setTimeout(pasangV3C, 2500);
+setTimeout(pasangV3C, 5000);
 </script>
 </body>
 </html>
