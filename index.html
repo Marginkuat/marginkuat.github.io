@@ -17272,19 +17272,17 @@ document.addEventListener('DOMContentLoaded',()=>{ setAkunTampilan('mt4'); loadR
 <script>
 // Tampilan ringkas: hanya Saldo MT4, Audit (Laporan Keuangan Saya), dan Pertumbuhan yang tampil penuh.
 // Bagian lain (kalkulator, riwayat, dan seterusnya) hanya tampil judulnya dengan tombol untuk membuka.
-// Bagian Akun Analis tidak diubah sama sekali.
+// Akun Analis juga dilipat: hanya tampilan (tombol tampilkan), angka dan logika tidak diubah.
 (function(){
   const TAMPIL_PENUH = ['Pertumbuhan'];
   function ringkaskan(){
     document.querySelectorAll('.section').forEach(sec=>{
       if(sec.dataset.ringkas==='1') return;
-      if(sec.id==='secAnalisBlok' || sec.closest('[data-akun="analis"]') || sec.getAttribute('data-akun')==='analis') return;
       let t=sec.querySelector(':scope > .sec-title') || sec.querySelector('.sec-title');
       let judul;
       if(t){ judul=t.textContent.trim(); }
       else if(sec.id==='secAdmin'){ judul='⚙️ Panel Admin (input, import, backup)'; }
       else return;
-      if(/analis|sinyal/i.test(judul)) return;
       sec.dataset.ringkas='1';
       if(TAMPIL_PENUH.some(k=>judul.includes(k))) return;
       const det=document.createElement('details');
