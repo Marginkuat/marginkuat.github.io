@@ -16825,7 +16825,52 @@ function aturanUntuk(g,nm,AA){ AA=AA||AUDIT_ATURAN;
   if(nm==='XAUUSD'){ const A=AA.emas; return {jenis:'emas', sl:A.sl, tp:A.tp, rr:A.rr, rrTeks:'1:1', rrSalah:3, masukChannel:(g==='XAUUSD')}; }
   const sl=slPair(nm,AA.slKali); return {jenis:'forex', sl, tp:sl*AA.forexRR, rr:AA.forexRR, rrTeks:'1:'+AA.forexRR, rrSalah:(AA.forexRR===2?[3,1]:1), masukChannel:FOREX_REM.kanal[g].pairs.includes(nm)};
 }
+// ── PENILAIAN v3 / v3.1 (November 2026) ──
+// Aturan: maks 5 order per hari (menang & kalah, dihitung saat close), maks 100 order per bulan,
+// RR: XAUUSD SL 200 / TP 400 pips; forex SL per pair (kalkulator Hard), TP = 2 × SL. Jatah per pair dihapus.
+// Versi per sinyal: dibuka 1–8 Nov = v3.1; dibuka 9 Nov dst = v3.
+function versiV3UntukSinyal(r){
+  const buka=String(r.tanggalBuka||r.tanggal||'');
+  return buka.slice(0,10)<='2026-11-08' ? 'v3.1' : 'v3';
+}
+function auditChannelV3(g,bk){
+  const hasil={flags:[], n:0, rencana:0, belakangan:[], diaudit:true};
+  const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk);
+  hasil.n=rows.length;
+  const L=rows.map(r=>({r, nm:(r.simbol||'(tanpa nama)').toUpperCase()}));
+  const tambah=(x,sev,aturan,detail)=>{
+    let f=hasil.flags.find(z=>z.r===x.r);
+    if(!f){ f={r:x.r,nm:x.nm,sev:'indikasi',masalah:[],pra:false,retro:false}; hasil.flags.push(f); }
+    const rank={indikasi:1,kuat:2,pasti:3};
+    if(rank[sev]>rank[f.sev]) f.sev=sev;
+    f.masalah.push({sev, retroDet:'', aturan, detail:detail+' · Penilaian '+versiV3UntukSinyal(x.r)});
+  };
+  // 1. Maks 5 order per hari (dihitung saat close): order ke-6 dst pada hari yang sama
+  const perHari={};
+  L.slice().sort((a,b)=>String(a.r.tanggal).localeCompare(String(b.r.tanggal))||String(a.r.jam||'').localeCompare(String(b.r.jam||''))).forEach(x=>{
+    const k=String(x.r.tanggal).slice(0,10); perHari[k]=(perHari[k]||0)+1;
+    if(perHari[k]>5) tambah(x,'pasti','Jatah melebihi — maks 5 order per hari (menang & kalah)', `Order ke-${perHari[k]} pada ${k} (maks 5)`);
+  });
+  // 2. Maks 100 order per bulan (dihitung saat close)
+  L.slice().sort((a,b)=>String(a.r.tanggal).localeCompare(String(b.r.tanggal))||String(a.r.jam||'').localeCompare(String(b.r.jam||''))).forEach((x,idx)=>{
+    if(idx+1>100) tambah(x,'pasti','Jatah melebihi — maks 100 order per bulan', `Order ke-${idx+1} bulan ini (maks 100)`);
+  });
+  // 3. RR sesuai aturan v3
+  L.forEach(x=>{
+    const r=x.r, sl=parseFloat(r.slPips), tp=parseFloat(r.tpPips);
+    if(!isFinite(sl) || !isFinite(tp)) return;
+    hasil.rencana++;
+    let slA=null, tpA=null, label='';
+    if(x.nm==='XAUUSD'){ slA=200; tpA=400; label='XAUUSD 200/400'; }
+    else if(FOREX_SL_PAIR[x.nm]!=null){ slA=FOREX_SL_PAIR[x.nm]; tpA=2*slA; label=x.nm+' SL '+slA+' / TP '+tpA; }
+    if(slA==null) return;
+    if(Math.abs(sl-slA)>0.5 || Math.abs(tp-tpA)>0.5)
+      tambah(x,'pasti','RR melebihi/kurang — SL/TP tidak sesuai aturan v3', `Rencana tercatat SL ${sl} / TP ${tp}; aturan ${label} (RR 1:2)`);
+  });
+  return hasil;
+}
 function auditChannel(g,bk){
+ if(String(bk)>='2026-11') return auditChannelV3(g,bk);
   const V=aturanBulan(bk), AA=V.AA, R=V.R, hasil={flags:[], n:0, rencana:0, belakangan:[], diaudit:true};
   const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk && String(r.tanggal)>=awalAturan(bk));
   hasil.ujiN=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk && String(r.tanggal)<awalAturan(bk)).length;
