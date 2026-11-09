@@ -17148,13 +17148,18 @@ function aturanResmiV3(){
       aturan:['hanya mengandalkan buffer','RR 1:2 (SL 200 / TP 400 pips) kalkulator XAUUSD Medium','maks 5 order per hari dihitung saat close','maks 100 order per bulan dihitung saat close','modal $6000 (3 bulan order loss semua akun MC)','order melanggar aturan 2,3,4 dianggap melanggar'] },
     totalModalUsd:7200 };
 }
+// Aturan Resmi v3.1 — koreksi dari v3. Isi sama dengan v3; tanggal berlaku 1 Nov 2026 00:00 (berlaku mundur).
+// v3 tetap tersimpan utuh sebagai riwayat dan tidak diubah.
+function aturanResmiV31(){
+  return Object.assign({}, aturanResmiV3(), { versi:'v3.1', ditetapkan:'1 November 2026', berlakuSejak:'2026-11-01T00:00', koreksiDari:'v3', berlakuMundur:true });
+}
 async function kunciAturanResmi(ver){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk mengunci aturan');return;}
-  const A=(ver==='v3'?aturanResmiV3():(ver==='v2'?aturanResmiV2():aturanResmiV1()));
+  const A=(ver==='v3.1'?aturanResmiV31():(ver==='v3'?aturanResmiV3():(ver==='v2'?aturanResmiV2():aturanResmiV1())));
   if(cachedAturanKunci.riwayat.some(x=>x.versi===A.versi)){ toast('🔒 Versi '+A.versi+' sudah terkunci. Perubahan aturan harus lewat versi baru.'); return; }
   const hash=await hitungSidikJariAturan(A);
   if(!hash){ toast('❌ Browser ini tidak mendukung SHA-256 (perlu HTTPS). Kunci dibatalkan.'); return; }
-  const alasan=prompt(`Kunci Aturan Resmi ${A.versi}\nDitetapkan ${A.ditetapkan}.\nSidik jari: ${hash}\n\nTulis keterangan (boleh kosong), lalu OK untuk mengunci. Setelah terkunci tidak bisa dihapus dari layar situs:`, (ver==='v2'?'Aturan v2: forex RR 1:2, jatah 2 order per pair, win langsung stop, order berurutan; ditetapkan 26 Okt 2026, dinilai mundur sejak 1 Okt 2026':(ver==='v3'?'Aturan Resmi v3 Datuk EURUSD, berlaku 9 Nov 2026':'Aturan awal strategi analis')));
+  const alasan=prompt(`Kunci Aturan Resmi ${A.versi}\nDitetapkan ${A.ditetapkan}.\nSidik jari: ${hash}\n\nTulis keterangan (boleh kosong), lalu OK untuk mengunci. Setelah terkunci tidak bisa dihapus dari layar situs:`, (ver==='v2'?'Aturan v2: forex RR 1:2, jatah 2 order per pair, win langsung stop, order berurutan; ditetapkan 26 Okt 2026, dinilai mundur sejak 1 Okt 2026':(ver==='v3.1'?'Aturan Resmi v3.1 (koreksi dari v3), berlaku 1 Nov 2026 - berlaku mundur':(ver==='v3'?'Aturan Resmi v3 Datuk EURUSD, berlaku 9 Nov 2026':'Aturan awal strategi analis'))));
   if(alasan===null) return;
   const lama=cachedAturanKunci;
   const baru={ versi:A.versi, ditetapkan:A.ditetapkan, hash, dikunciPada:new Date().toISOString(), alasan:(alasan||'').trim(), aturan:A };
@@ -17485,6 +17490,43 @@ async function perbaruiStatusV3(){
 }
 async function kunciV3(){ await kunciAturanResmi('v3'); await perbaruiStatusV3(); }
 setTimeout(()=>{ if(typeof perbaruiStatusV3==='function') perbaruiStatusV3(); }, 2000);
+</script>
+<script>
+// Aturan Resmi v3.1 — koreksi dari v3 (berlaku 1 Nov 2026, berlaku mundur). Blok terpisah di bawah v3.
+const ISI_ATURAN_V31 = [
+ ['FOREX', ['Hanya mengandalkan buffer.','RR forex 1:2, memakai kalkulator Hard.','Maksimal 5 order per hari, dihitung saat close (baik kena SL maupun TP).','Maksimal 100 order per bulan, dihitung saat close.','Modal $1.200 (3 bulan order loss semua, akun MC), dengan SL rata-rata 40 pips dan lot 0,01.','Tidak ada jatah order per pair. Order yang melanggar aturan 2, 3, atau 4 dianggap melanggar.']],
+ ['XAUUSD', ['Hanya mengandalkan buffer.','RR 1:2 (SL 200 / TP 400 pips), memakai kalkulator XAUUSD Medium.','Maksimal 5 order per hari, dihitung saat close (baik kena SL maupun TP).','Maksimal 100 order per bulan, dihitung saat close.','Modal $6.000 (3 bulan order loss semua, akun MC), lot 0,01 (1 pip = $0,10).','Order yang melanggar aturan 2, 3, atau 4 dianggap melanggar.']]
+];
+function pasangV31(){
+  if(document.getElementById('aturanResmiV31')) return;
+  const v3=document.getElementById('aturanResmiV3'); if(!v3) return;
+  const isi = ISI_ATURAN_V31.map(([judul,butir])=>`<div style="font-weight:800;margin-top:10px">${judul}</div><ol style="padding-left:18px;margin:4px 0">${butir.map(b=>`<li>${b}</li>`).join('')}</ol>`).join('');
+  const box=document.createElement('div');
+  box.id='aturanResmiV31'; box.style.cssText='margin:12px 0';
+  box.innerHTML=`
+  <details open style="border:1.5px solid #60A5FA;border-radius:12px;background:var(--bg0);padding:0 12px">
+    <summary style="cursor:pointer;list-style:none;padding:12px 0;font-size:12px;font-weight:800;color:#60A5FA;letter-spacing:.4px">📜 ATURAN RESMI V3.1 — DATUK EURUSD (koreksi dari v3) · berlaku 1 Nov 2026, berlaku mundur ▸</summary>
+    <div style="font-size:11px;color:#FFFFFF;line-height:1.7;padding-bottom:12px">
+      <div style="font-size:10px;color:#E5E7EB;margin-bottom:8px">Koreksi dari v3 karena sinyal analis sudah berjalan sebelum tanggal berlaku v3 (9 Nov). Tanggal berlaku v3.1 adalah 1 November 2026 00:00, dan aturan ini berlaku mundur. v3 tetap tersimpan utuh sebagai riwayat dan tidak diubah.</div>
+      <div style="font-size:10px;color:#E5E7EB;margin-bottom:8px">Sinyal yang dibuka 1–8 November 2026 dinilai dengan v3.1. Sinyal yang dibuka sebelum 1 November tetap dinilai dengan v2. Aturan MT4 adalah akun terpisah dan tidak disinkronkan.</div>
+      ${isi}
+      <div style="font-size:10px;color:#E5E7EB;margin-top:10px">Pelanggaran dicek otomatis setiap kali data dimasukkan ke situs, dan dicatat di bagian pelanggaran.</div>
+      <div id="v31StatusKunci" style="margin-top:10px"></div>
+    </div>
+  </details>`;
+  v3.parentNode.insertBefore(box, v3.nextSibling);
+  perbaruiStatusV31();
+}
+async function perbaruiStatusV31(){
+  const el=document.getElementById('v31StatusKunci'); if(!el) return;
+  try{ if(typeof loadAturanKunci==='function') await loadAturanKunci(); }catch(e){}
+  const c=((cachedAturanKunci&&cachedAturanKunci.riwayat)||[]).find(x=>x.versi==='v3.1');
+  if(c){ el.innerHTML=`<div style="font-size:11px;color:#4ADE80;font-weight:800">🔒 Terkunci pada ${new Date(c.dikunciPada).toLocaleString('id-ID')}</div><div style="font-size:9px;color:#E5E7EB;word-break:break-all">Sidik jari: ${c.hash}</div>`; return; }
+  el.innerHTML=`<div style="font-size:11px;color:#FACC15;font-weight:800">❗ Belum dikunci di server.</div>${isAdmin?`<button onclick="kunciV31()" style="margin-top:6px;padding:8px 12px;border-radius:8px;border:1px solid #60A5FA;background:transparent;color:#FFFFFF;font-weight:800;cursor:pointer">🔒 Kunci Aturan Resmi v3.1</button>`:''}`;
+}
+async function kunciV31(){ await kunciAturanResmi('v3.1'); await perbaruiStatusV31(); }
+setTimeout(pasangV31, 1600);
+setTimeout(pasangV31, 4200);
 </script>
 </body>
 </html>
