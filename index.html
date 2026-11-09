@@ -17414,5 +17414,53 @@ document.addEventListener('DOMContentLoaded',()=>{ setAkunTampilan('mt4'); loadR
   setInterval(sync, 2500);
 })();
 </script>
+<script>
+// ATURAN RESMI V3 — Datuk EURUSD. Blok terpisah dari v2 (v2 tetap utuh sebagai pembanding).
+// Berlaku mulai Senin 9 November 2026 00:00. Teks ini hanya tampilan; penguncian dilakukan admin lewat tombol kunci.
+(function(){
+  function pasangV3(){
+    if(document.getElementById('aturanResmiV3')) return;
+    const host=document.querySelector('[data-akun="analis"]');
+    if(!host) return;
+    const box=document.createElement('div');
+    box.id='aturanResmiV3';
+    box.style.cssText='margin:12px 0';
+    box.innerHTML=`
+    <details style="border:1.5px solid #FACC15;border-radius:12px;background:var(--bg0);padding:0 12px">
+      <summary style="cursor:pointer;list-style:none;padding:12px 0;font-size:12px;font-weight:800;color:#FACC15;letter-spacing:.4px">📜 ATURAN RESMI V3 — DATUK EURUSD (berlaku 9 Nov 2026) ▸ tampilkan</summary>
+      <div style="font-size:11px;color:#FFFFFF;line-height:1.7;padding-bottom:12px">
+        <div style="font-size:10px;color:#E5E7EB;margin-bottom:8px">Aturan v2 tetap tersimpan utuh sebagai pembanding dan tidak dicampur dengan v3. Order sebelum 9 Nov 2026 dinilai dengan v2, order sesudahnya dengan v3. Aturan MT4 adalah akun terpisah dan tidak disinkronkan.</div>
+        <div style="font-weight:800;margin-top:6px">FOREX</div>
+        <ol style="padding-left:18px;margin:4px 0">
+          <li>Hanya mengandalkan buffer.</li>
+          <li>RR forex 1:2, memakai kalkulator Hard.</li>
+          <li>Maksimal 5 order per hari, dihitung saat close (baik kena SL maupun TP).</li>
+          <li>Maksimal 100 order per bulan, dihitung saat close.</li>
+          <li>Modal $1.200 (3 bulan order loss semua, akun MC), dengan SL rata-rata 40 pips dan lot 0,01.</li>
+          <li>Tidak ada jatah order per pair. Order yang melanggar aturan 2, 3, atau 4 dianggap melanggar.</li>
+        </ol>
+        <div style="font-size:10px;color:#E5E7EB">Pair: AUDUSD, NZDUSD, USDCHF (SL 30 / TP 60 pips); AUDJPY, CADJPY, EURUSD (SL 45 / TP 90 pips). EURGBP tidak termasuk.</div>
+        <div style="font-weight:800;margin-top:10px">XAUUSD</div>
+        <ol style="padding-left:18px;margin:4px 0">
+          <li>Hanya mengandalkan buffer.</li>
+          <li>RR 1:2 (SL 200 / TP 400 pips), memakai kalkulator XAUUSD Medium.</li>
+          <li>Maksimal 5 order per hari, dihitung saat close (baik kena SL maupun TP).</li>
+          <li>Maksimal 100 order per bulan, dihitung saat close.</li>
+          <li>Modal $6.000 (3 bulan order loss semua, akun MC), lot 0,01 (1 pip = $0,10).</li>
+          <li>Order yang melanggar aturan 2, 3, atau 4 dianggap melanggar.</li>
+        </ol>
+        <div style="font-weight:800;margin-top:10px">Total modal mengikuti analis ini: $7.200</div>
+        <div style="font-size:10px;color:#E5E7EB;margin-top:6px">Pelanggaran dicek otomatis setiap kali data dimasukkan ke situs, dan dicatat di bagian pelanggaran.</div>
+      </div>
+    </details>`;
+    const pertama=[...host.children].find(el=>el.classList && el.classList.contains('section'));
+    if(pertama) host.insertBefore(box, pertama); else host.appendChild(box);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', pasangV3);
+  else pasangV3();
+  setTimeout(pasangV3, 1500);
+  setTimeout(pasangV3, 4000);
+})();
+</script>
 </body>
 </html>
