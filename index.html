@@ -3861,6 +3861,7 @@ const ATURAN_LOSS_HARIAN = -3;   // loss per hari maksimal 3% (dari saldo awal h
 const ATURAN_LOSS_BULAN  = -6;   // loss per bulan maksimal 6% (dari saldo awal bulan)
 const ATURAN_PROFIT_BULAN = 10;  // profit per bulan target 10%, lewat dari itu = melanggar (harus stop)
 let pelanggaranMt4Cache = {};
+let rrMt4Cache = {};   // pelanggaran RR per tiket: { tiket: {tgl, slP, tpP} }
 
 // Saldo awal hari = saldo akhir hari dikurangi profit hari itu. Saldo awal bulan = saldo awal hari pertama bulan itu.
 // Arus dana MT4 per tanggal (¢): setoran (+) dan penarikan (−). Tidak dihitung sebagai profit/loss.
@@ -4107,10 +4108,47 @@ function daftarPelanggaranMt4(perf){
   }
   // Aturan 8 Nov 2026: maks 5 KALAH per hari. Lebih dari 5 kalah = pelanggaran; 5 atau kurang tidak dihitung.
   // Jumlah kalah dibaca dari laporan broker (FBS). Hari yang belum punya data kalah tidak dinilai.
+  // Aturan: maks 5 transaksi per hari, menang maupun kalah dihitung (setelah close).
   perf.hari.forEach(h=>{
-    if(h.jumlahLoss > MT4_MAKS_ORDER_HARI) out.push({ key:'loss_'+h.tgl, jenis:'Kalah '+h.jumlahLoss+'x (maks '+MT4_MAKS_ORDER_HARI+' kalah per hari)', periode:h.tgl, nilai:h.jumlahLoss });
+    if(h.jumlahOrder > MT4_MAKS_ORDER_HARI) out.push({ key:'order_'+h.tgl, jenis:'Transaksi '+h.jumlahOrder+'x (maks '+MT4_MAKS_ORDER_HARI+' per hari, menang & kalah)', periode:h.tgl, nilai:h.jumlahOrder });
+  });
+  // Aturan RR: XAUUSD harus SL 200 pips dan TP 400 pips. Pelanggaran dikelompokkan per hari tutup.
+  const rrPerTgl={};
+  Object.values(rrMt4Cache||{}).forEach(v=>{ (rrPerTgl[v.tgl]=rrPerTgl[v.tgl]||[]).push(v); });
+  Object.keys(rrPerTgl).sort().forEach(t=>{
+    const n=rrPerTgl[t].length;
+    out.push({ key:'rr_'+t, jenis:'RR tidak sesuai: '+n+' transaksi (wajib SL '+MT4_RISIKO.slPips+' / TP '+MT4_RISIKO.tpPips+' pips)', periode:t, nilai:n });
   });
   return out;
+}
+
+// Pelanggaran RR dari statement: SL harus 200 pips, TP 400 pips (1 pip XAUUSD = 0,1 harga).
+function hitungRrPelanggaran(list){
+  const viol={}, semua=[];
+  (list||[]).forEach(t=>{
+    if(String(t.item||'').toUpperCase()!=='XAUUSD') return;
+    const tgl=String(t.closeTime||'').slice(0,10); if(!tgl) return;
+    const tiket=String(t.ticket||''); if(!tiket) return;
+    semua.push(tiket);
+    const slP = (isFinite(t.sl) && isFinite(t.openPrice)) ? Math.round(Math.abs(t.openPrice-t.sl)*10) : null;
+    const tpP = (isFinite(t.tp) && isFinite(t.openPrice)) ? Math.round(Math.abs(t.tp-t.openPrice)*10) : null;
+    if(!(slP===MT4_RISIKO.slPips && tpP===MT4_RISIKO.tpPips)) viol[tiket]={tgl, slP, tpP};
+  });
+  return {viol, semua};
+}
+async function simpanRrMt4(viol, semua){
+  if(!isAdmin) return;
+  const next={...rrMt4Cache};
+  // Tiket dari impor ini yang sekarang sudah sesuai aturan dibuang dari daftar pelanggaran
+  (semua||[]).forEach(t=>{ if(!viol[t]) delete next[t]; });
+  Object.assign(next, viol||{});
+  rrMt4Cache = next;
+  const payload = JSON.stringify(rrMt4Cache);
+  try{
+    const ex = await api('app_settings?select=key&key=eq.rr_mt4');
+    if(ex.length) await api('app_settings?key=eq.rr_mt4','PATCH',{value:payload});
+    else await api('app_settings','POST',{key:'rr_mt4', value:payload});
+  }catch(e){ console.error('simpanRrMt4', e); }
 }
 
 async function loadPelanggaranMt4(){
@@ -4118,6 +4156,10 @@ async function loadPelanggaranMt4(){
     const r = await api('app_settings?select=value&key=eq.pelanggaran_mt4');
     if(r && r.length && r[0].value) pelanggaranMt4Cache = JSON.parse(r[0].value) || {};
   }catch(e){ console.error('loadPelanggaranMt4', e); }
+  try{
+    const rr = await api('app_settings?select=value&key=eq.rr_mt4');
+    if(rr && rr.length && rr[0].value) rrMt4Cache = JSON.parse(rr[0].value) || {};
+  }catch(e){ console.error('loadRrMt4', e); }
 }
 
 // Pelanggaran baru dicatat sekali dan tidak dicatat ulang. Hanya admin yang bisa menulis.
@@ -4131,7 +4173,7 @@ async function catatPelanggaranMt4(list){
     const lama = pelanggaranMt4Cache[v.key];
     baruCache[v.key] = { jenis:v.jenis, periode:v.periode, nilai:+v.nilai.toFixed(2), tercatat: lama ? lama.tercatat : now };
   });
-  const prefix = /^(harian_|bulan_|modal_|order_|loss_|buffer_)/;
+  const prefix = /^(harian_|bulan_|modal_|order_|loss_|buffer_|rr_)/;
   const dibuang = Object.keys(pelanggaranMt4Cache).filter(k=>prefix.test(k) && !ids.has(k));
   const berubah = JSON.stringify(baruCache) !== JSON.stringify(pelanggaranMt4Cache) || dibuang.length>0;
   pelanggaranMt4Cache = baruCache;
@@ -14990,6 +15032,7 @@ function ekstrakPerHari(){
     catch(e){ statusEl.textContent='❌ Gagal membaca file: '+(e.message||''); return; }
     if(!transaksi.length){ statusEl.textContent='⚠️ Tidak ada transaksi closed yang terbaca. Pastikan file HTML laporan broker asli (bukan screenshot/PDF).'; return; }
 
+    window.__rrHasil = hitungRrPelanggaran(transaksi);
     const byDate=groupTransaksiPerHari(transaksi);
     __ekstrakOps = transaksi.filter(t=>t.type==='balance').map(t=>({ ticket:t.ticket, tanggal:String(t.closeTime||'').slice(0,10), profit:t.profit }));
     const dates=Object.keys(byDate).sort();
@@ -15185,6 +15228,7 @@ async function simpanSemuaKeDatabase(){
     }
   }
   const hasilArus = await simpanArusMt4(__ekstrakOps);
+  if(window.__rrHasil) await simpanRrMt4(window.__rrHasil.viol, window.__rrHasil.semua);
   btn.disabled=false;
   statusEl.innerHTML = gagal===0
     ? `✅ Semua ${sukses} hari berhasil tersimpan ke database! Kalender Trading, Riwayat Harian, WD/Deposit, Alokasi Dana otomatis ikut update.`
@@ -17260,6 +17304,88 @@ document.addEventListener('DOMContentLoaded',()=>{ setAkunTampilan('mt4'); loadR
   // Bagian yang dibuat nanti (setelah data dimuat) juga ikut diringkas
   setTimeout(ringkaskan, 1500);
   setTimeout(ringkaskan, 4000);
+})();
+</script>
+<script>
+// BANNER ATAS AKUN ANALIS (hanya tampilan). Menyalin salinan bagian yang sudah ada di bawah:
+// skenario semua win, skenario semua loss, dan ringkasan DD tiap Datuk. Data & perhitungan tidak diubah.
+(function(){
+  function leafByText(root, re){
+    const all=root.querySelectorAll('*');
+    for(const el of all){ if(el.childElementCount===0 && re.test((el.textContent||'').trim())) return el; }
+    return null;
+  }
+  function kotakBerbingkai(el){
+    let cur=el;
+    for(let i=0;i<10 && cur && cur!==document.body;i++){
+      const cs=getComputedStyle(cur);
+      if(parseFloat(cs.borderTopWidth)>0 && cur.offsetWidth>240) return cur;
+      cur=cur.parentElement;
+    }
+    return el;
+  }
+  function namaDatuk(el){
+    let cur=el;
+    for(let i=0;i<8 && cur;i++){
+      const hit=[...cur.querySelectorAll('*')].find(x=>x.childElementCount===0 && /^Datuk\b/i.test((x.textContent||'').trim()));
+      if(hit) return hit.textContent.trim();
+      cur=cur.parentElement;
+    }
+    return '';
+  }
+  function salin(el){
+    const c=el.cloneNode(true);
+    c.querySelectorAll('[id]').forEach(x=>x.removeAttribute('id'));
+    c.style.margin='0 0 10px 0';
+    return c;
+  }
+  function sync(){
+    const host=document.querySelector('[data-akun="analis"]');
+    if(!host) return;
+    let ban=document.getElementById('bannerAnalisTop');
+    if(!ban){
+      ban=document.createElement('div');
+      ban.id='bannerAnalisTop';
+      ban.style.cssText='margin:6px 0 14px 0;padding:10px;border-radius:12px;background:#1a0d0d;border:2px solid #F87171';
+      host.insertBefore(ban, host.firstChild);
+    }
+    const isi=[];
+    // 1. Skenario semua win / semua loss
+    [/^🎯?\s*KONTROL TOTAL VP/i, /^🎯?\s*KONTROL KEJAR VP/i].forEach(re=>{
+      const lbl=leafByText(host, re);
+      if(lbl){ const kotak=kotakBerbingkai(lbl); isi.push(salin(kotak)); }
+    });
+    // 2. Ringkasan DD tiap Datuk (kotak Hasil bersih / Puncak / DD sekarang + bilah)
+    const labelDD=[...host.querySelectorAll('*')].filter(x=>x.childElementCount===0 && /^DD SEKARANG$/i.test((x.textContent||'').trim()));
+    const sudah=new Set();
+    labelDD.forEach(lbl=>{
+      const box=lbl.parentElement; if(!box) return;
+      const baris=box.parentElement; if(!baris) return;
+      const nama=namaDatuk(baris)||'Datuk';
+      if(sudah.has(nama)) return; sudah.add(nama);
+      const wrap=document.createElement('div');
+      wrap.style.cssText='margin:0 0 10px 0;padding:8px;border-radius:10px;background:#111;border:1px solid #444';
+      const judul=document.createElement('div');
+      judul.style.cssText='font-size:12px;font-weight:800;color:#FFFFFF;margin-bottom:6px';
+      judul.textContent='📊 '+nama+' — DD sekarang';
+      wrap.appendChild(judul);
+      wrap.appendChild(salin(baris));
+      const bilah=baris.nextElementSibling;
+      if(bilah && bilah.offsetHeight<40) wrap.appendChild(salin(bilah));
+      isi.push(wrap);
+    });
+    ban.innerHTML='';
+    if(!isi.length){ ban.style.display='none'; return; }
+    ban.style.display='';
+    const judulBan=document.createElement('div');
+    judulBan.style.cssText='font-size:13px;font-weight:900;color:#F87171;margin-bottom:8px';
+    judulBan.textContent='🛑 REM DD — ringkasan (salinan, sumber sama dengan di bawah)';
+    ban.appendChild(judulBan);
+    isi.forEach(x=>ban.appendChild(x));
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', sync);
+  else sync();
+  setInterval(sync, 2500);
 })();
 </script>
 </body>
