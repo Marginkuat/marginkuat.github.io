@@ -17297,11 +17297,39 @@ document.addEventListener('DOMContentLoaded',()=>{ setAkunTampilan('mt4'); loadR
       sec.appendChild(det);
     });
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ringkaskan);
-  else ringkaskan();
+  // Data sinyal running & pending, serta form input sinyal: dilipat dengan tombol tampilkan
+  function buatLipat(judul){
+    const det=document.createElement('details'); det.className='sec-collapse'; det.style.cssText='margin:8px 0';
+    const sum=document.createElement('summary');
+    sum.style.cssText='cursor:pointer;list-style:none;padding:12px 14px;border-radius:12px;background:var(--bg1);border:1px solid var(--border);color:#FFFFFF;font-size:12px;font-weight:800;letter-spacing:.4px';
+    sum.textContent=judul+'  ▸ tampilkan';
+    det.appendChild(sum);
+    return det;
+  }
+  function ringkasSinyal(){
+    const daftar=document.getElementById('daftarSinyalWrap');
+    if(daftar && !daftar.dataset.ringkas){
+      daftar.dataset.ringkas='1';
+      const det=buatLipat('📋 Data sinyal running & pending');
+      daftar.parentNode.insertBefore(det, daftar);
+      det.appendChild(daftar);
+    }
+    const head=document.getElementById('secInputSinyal');
+    if(head && !head.dataset.ringkas){
+      head.dataset.ringkas='1';
+      const P=head.parentElement;
+      const det=buatLipat('📝 Input sinyal (running, pending, close)');
+      let n=head.nextSibling;
+      while(n){ const nx=n.nextSibling; det.appendChild(n); n=nx; }
+      head.style.display='none';
+      P.appendChild(det);
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ()=>{ ringkaskan(); ringkasSinyal(); });
+  else { ringkaskan(); ringkasSinyal(); }
   // Bagian yang dibuat nanti (setelah data dimuat) juga ikut diringkas
-  setTimeout(ringkaskan, 1500);
-  setTimeout(ringkaskan, 4000);
+  setTimeout(()=>{ ringkaskan(); ringkasSinyal(); }, 1500);
+  setTimeout(()=>{ ringkaskan(); ringkasSinyal(); }, 4000);
 })();
 </script>
 <script>
