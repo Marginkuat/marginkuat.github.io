@@ -15958,7 +15958,7 @@ loadTahunanPengelolaProfil();
 // Setting disimpan di app_settings key 'batas_dd_XAUUSD' / 'batas_dd_FOREX' (JSON).
 // ══════════════════════════════════════════════════════════════════════
 const BATAS_DD_DEFAULT={
-  XAUUSD:{modal:5000, lot:0.01, stopUsd:300, warnUsd:150, riskLossUsd:50, maxLossPerHari:1},   // Datuk EURUSD: acuan $5.000, stop 6% = $300 = 3000 pips   // stop 6% dari $1.000 = $60 = 600 pips (1 pip = $0,10)
+  XAUUSD:{modal:7200, lot:0.01, stopUsd:432, warnUsd:216, riskLossUsd:50, maxLossPerHari:1},   // Datuk EURUSD (Aturan v3): modal $7.200 (emas $6.000 + forex $1.200), stop 6% = $432, peringatan 3% = $216   // stop 6% dari $1.000 = $60 = 600 pips (1 pip = $0,10)
   FOREX: {modal:5000, lot:0.01, stopUsd:300, warnUsd:150, riskLossUsd:5.5, maxLossPerHari:1}   // Datuk Crypto 89: acuan $5.000, stop 6% = $300 = 3000 pips
 };
 let cachedBatasDD={XAUUSD:Object.assign({},BATAS_DD_DEFAULT.XAUUSD), FOREX:Object.assign({},BATAS_DD_DEFAULT.FOREX)};
@@ -17527,6 +17527,29 @@ async function perbaruiStatusV31(){
 async function kunciV31(){ await kunciAturanResmi('v3.1'); await perbaruiStatusV31(); }
 setTimeout(pasangV31, 1600);
 setTimeout(pasangV31, 4200);
+</script>
+<script>
+// Datuk EURUSD (Aturan v3): kotak "DD sekarang" tidak berlaku lagi, karena v3 hanya mengandalkan buffer.
+// Hanya tampilan. Stop 6% dan peringatan 3% tetap dipakai.
+function sembunyikanDDSekarangEurusd(){
+  document.querySelectorAll('*').forEach(el=>{
+    if(el.childElementCount!==0) return;
+    if(!/^DD SEKARANG$/i.test((el.textContent||'').trim())) return;
+    let card=el;
+    for(let k=0;k<8 && card && card.parentElement;k++){
+      card=card.parentElement;
+      const teks=card.textContent||'';
+      if(/Datuk EURUSD/i.test(teks) && !/Datuk Crypto/i.test(teks)) break;
+    }
+    if(!card) return;
+    if(!/Datuk EURUSD/i.test(card.textContent||'') || /Datuk Crypto/i.test(card.textContent||'')) return;
+    let tile=el;
+    while(tile.parentElement && tile.parentElement!==card && tile.parentElement.children.length<=3) tile=tile.parentElement;
+    tile.style.display='none';
+  });
+}
+setTimeout(sembunyikanDDSekarangEurusd, 2200);
+setTimeout(sembunyikanDDSekarangEurusd, 4500);
 </script>
 </body>
 </html>
