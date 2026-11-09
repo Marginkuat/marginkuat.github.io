@@ -5961,11 +5961,11 @@ function renderProyeksiBufferRunning(g, list){
       <div style="font-size:10px;margin-top:6px;line-height:1.6">${untungInfo}</div>
     </div>` : '';
   const kontrolHtml = `<div style="background:${kontrolWarna}15;border:1.5px solid ${kontrolWarna};border-radius:9px;padding:9px 11px;margin-bottom:10px">
-    <div style="font-size:9px;color:${kontrolWarna};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Kejar VP — Skenario Semua Running LOSS</div>
+    <div style="font-size:9px;color:${kontrolWarna};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Kejar VP — Skenario Semua Running + Pending LOSS</div>
     <div style="font-size:9px;color:#FFFFFF;font-weight:700;line-height:1.7">
       VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> | Pips fix sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
       Ambang minimal bulan ini: <b>${ambangVpBerlaku.toFixed(2)} VP</b><br>
-      Potensi kalau ${list.length} sinyal running semua Loss: <b style="color:#F87171">${totalLossVp.toFixed(2)} VP / ${totalLossPips.toFixed(1)} pips</b><br>
+      Potensi kalau ${list.filter(x=>x.status!=='pending').length} running + ${list.filter(x=>x.status==='pending').length} pending semua Loss: <b style="color:#F87171">${totalLossVp.toFixed(2)} VP / ${totalLossPips.toFixed(1)} pips</b><br>
       → VP fix jadi: <b style="color:#FFFFFF">${vpFixKalauSemuaLos.toFixed(2)}</b> | Pips fix jadi: <b style="color:#FFFFFF">${pipsFixKalauSemuaLos.toFixed(1)}</b>
     </div>
     <div style="font-size:12px;font-weight:800;color:${kontrolWarna};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
@@ -5978,10 +5978,10 @@ function renderProyeksiBufferRunning(g, list){
   const vpFixKalauSemuaWin = totalVpBulanIni + totalWinVp;
   const pipsFixKalauSemuaWin = totalPipsBulanIni + totalWinPips;
   const kontrolWinHtml = `<div style="background:${warnaWin}15;border:1.5px solid ${warnaWin};border-radius:9px;padding:9px 11px;margin-bottom:10px">
-    <div style="font-size:9px;color:${warnaWin};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Total VP — Skenario Semua Running WIN</div>
+    <div style="font-size:9px;color:${warnaWin};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Total VP — Skenario Semua Running + Pending WIN</div>
     <div style="font-size:9px;color:#FFFFFF;font-weight:700;line-height:1.7">
       VP fix tercatat sekarang: <b>${totalVpBulanIni.toFixed(2)}</b> | Pips fix sekarang: <b>${totalPipsBulanIni.toFixed(1)}</b><br>
-      Potensi tambahan kalau ${list.length} sinyal running semua Win: <b style="color:#4ADE80">+${totalWinVp.toFixed(2)} VP / +${totalWinPips.toFixed(1)} pips</b>
+      Potensi tambahan kalau ${list.filter(x=>x.status!=='pending').length} running + ${list.filter(x=>x.status==='pending').length} pending semua Win: <b style="color:#4ADE80">+${totalWinVp.toFixed(2)} VP / +${totalWinPips.toFixed(1)} pips</b>
     </div>
     <div style="font-size:12px;font-weight:800;color:${warnaWin};margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
       ✅ VP fix jadi: ${vpFixKalauSemuaWin.toFixed(2)} | Pips fix jadi: ${pipsFixKalauSemuaWin.toFixed(1)}
