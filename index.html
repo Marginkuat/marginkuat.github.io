@@ -17195,12 +17195,20 @@ function aturanResmiV3(){
 }
 // Aturan Resmi v3.1 — koreksi dari v3. Isi sama dengan v3; tanggal berlaku 1 Nov 2026 00:00 (berlaku mundur).
 // v3 tetap tersimpan utuh sebagai riwayat dan tidak diubah.
+// Aturan Resmi v3 Datuk Crypto 89 (forex). Berlaku 1 Nov 2026 00:00. Dipisah dari v3 Datuk EURUSD.
+function aturanResmiV3C(){
+  return { versi:'v3-crypto89', ditetapkan:'1 November 2026', berlakuSejak:'2026-11-01T00:00', kanal:'FOREX',
+    rr:'1:2', kalkulator:'Hard', maxOrderHari:5, maxOrderBulan:100, modalUsd:1800, lot:0.01, nilaiPipUsd:0.1,
+    pair:{ GBPUSD:{sl:45,tp:90}, NZDJPY:{sl:45,tp:90}, USDCAD:{sl:45,tp:90}, CHFJPY:{sl:60,tp:120}, EURJPY:{sl:60,tp:120}, EURNZD:{sl:60,tp:120}, GBPJPY:{sl:60,tp:120}, USDJPY:{sl:60,tp:120} },
+    rem:{ batasRugiPips:6000, targetBolehStopPips:6000, targetMaksimalPips:6000 },
+    aturan:['hanya mengandalkan buffer','RR forex 1:2 kalkulator Hard','maks 5 order per hari dihitung saat close (baik kena SL maupun TP)','maks 100 order per bulan dihitung saat close','modal $1800 (3 bulan order loss semua akun MC)','lot 0,01 (1 pip = $0,10)','order melanggar aturan 2,3,4 dianggap melanggar dan dicatat di aturan situs'] };
+}
 function aturanResmiV31(){
   return Object.assign({}, aturanResmiV3(), { versi:'v3.1', ditetapkan:'1 November 2026', berlakuSejak:'2026-11-01T00:00', koreksiDari:'v3', berlakuMundur:true });
 }
 async function kunciAturanResmi(ver){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk mengunci aturan');return;}
-  const A=(ver==='v3.1'?aturanResmiV31():(ver==='v3'?aturanResmiV3():(ver==='v2'?aturanResmiV2():aturanResmiV1())));
+  const A=(ver==='v3-crypto89'?aturanResmiV3C():(ver==='v3.1'?aturanResmiV31():(ver==='v3'?aturanResmiV3():(ver==='v2'?aturanResmiV2():aturanResmiV1()))));
   if(cachedAturanKunci.riwayat.some(x=>x.versi===A.versi)){ toast('🔒 Versi '+A.versi+' sudah terkunci. Perubahan aturan harus lewat versi baru.'); return; }
   const hash=await hitungSidikJariAturan(A);
   if(!hash){ toast('❌ Browser ini tidak mendukung SHA-256 (perlu HTTPS). Kunci dibatalkan.'); return; }
@@ -17595,6 +17603,78 @@ function sembunyikanDDSekarangEurusd(){
 }
 setTimeout(sembunyikanDDSekarangEurusd, 2200);
 setTimeout(sembunyikanDDSekarangEurusd, 4500);
+</script>
+<script>
+// Datuk EURUSD (Aturan v3): kartu DD (stop 6%, peringatan 3%) tidak berlaku, karena v3 hanya mengandalkan buffer.
+// Hanya tampilan: kartu DD Datuk EURUSD disembunyikan. Rem pips tetap tampil dan diatur lewat Ubah Batas di kartu REM PIPS.
+function sembunyikanKartuDDEurusd(){
+  const cocok = el => {
+    const t = (el.textContent||'');
+    if(!/Datuk EURUSD/i.test(t) || /Datuk Crypto/i.test(t)) return false;
+    return /Modal acuan/i.test(t) || /Datuk EURUSD\s*[—-]\s*DD sekarang/i.test(t) || /DD SEKARANG/i.test(t);
+  };
+  document.querySelectorAll('div').forEach(el=>{
+    if(!cocok(el)) return;
+    const anakCocok = [...el.children].some(c=>cocok(c));
+    if(anakCocok) return;            // ambil yang paling dalam (kartu itu sendiri)
+    if(el.style.display==='none') return;
+    if((el.textContent||'').length > 1200) return;   // jangan sembunyikan seluruh bagian analis
+    el.style.display='none';
+  });
+}
+setTimeout(sembunyikanKartuDDEurusd, 2300);
+setTimeout(sembunyikanKartuDDEurusd, 4600);
+</script>
+<script>
+// Aturan Resmi v3 Datuk Crypto 89 (forex) — blok terpisah dari v3 EURUSD dan v2.
+const ISI_ATURAN_V3C = [
+ ['FOREX (Datuk Crypto 89)', ['Hanya mengandalkan buffer.','RR forex 1:2, memakai kalkulator Hard.','Maksimal 5 order per hari, dihitung saat close (baik kena SL maupun TP).','Maksimal 100 order per bulan, dihitung saat close.','Modal $1.800 (3 bulan order loss semua, akun MC).','Lot 0,01 (1 pip = $0,10).','Order yang melanggar aturan 2, 3, atau 4 dianggap melanggar dan dicatat di aturan situs.']],
+ ['PAIR DAN SL (kalkulator Hard)', ['SL 45 pips, TP 90 pips: GBPUSD, NZDJPY, USDCAD.','SL 60 pips, TP 120 pips: CHFJPY, EURJPY, EURNZD, GBPJPY, USDJPY.']],
+ ['REM BULANAN', ['Batas rugi per bulan (wajib stop): 6.000 pips (= $600).','Target untung boleh stop: 6.000 pips.','Target untung maksimal: 6.000 pips.']]
+];
+function pasangV3C(){
+  if(document.getElementById('aturanResmiV3C')) return;
+  const sisip = document.getElementById('aturanResmiV31') || document.getElementById('aturanResmiV3');
+  if(!sisip) return;
+  const isi = ISI_ATURAN_V3C.map(([judul,butir])=>`<div style="font-weight:800;margin-top:10px">${judul}</div><ol style="padding-left:18px;margin:4px 0">${butir.map(b=>`<li>${b}</li>`).join('')}</ol>`).join('');
+  const box=document.createElement('div');
+  box.id='aturanResmiV3C'; box.style.cssText='margin:12px 0';
+  box.innerHTML=`
+  <details open style="border:1.5px solid #34D399;border-radius:12px;background:var(--bg0);padding:0 12px">
+    <summary style="cursor:pointer;list-style:none;padding:12px 0;font-size:12px;font-weight:800;color:#34D399;letter-spacing:.4px">📜 ATURAN RESMI V3 — DATUK CRYPTO 89 (FOREX) · berlaku 1 Nov 2026 ▸</summary>
+    <div style="font-size:11px;color:#FFFFFF;line-height:1.7;padding-bottom:12px">
+      <div style="font-size:10px;color:#E5E7EB;margin-bottom:8px">Aturan ini berlaku mulai 1 November 2026, 00:00. Dipisah dari aturan v3 Datuk EURUSD dan dari v2 (v2 tetap utuh sebagai pembanding). Aturan MT4 adalah akun terpisah dan tidak disinkronkan.</div>
+      ${isi}
+      <div style="font-size:10px;color:#E5E7EB;margin-top:10px">Rem di kartu REM PIPS mengikuti angka di atas. Pelanggaran dicek otomatis setiap kali data dimasukkan ke situs.</div>
+      <div id="v3CStatusKunci" style="margin-top:10px"></div>
+    </div>
+  </details>`;
+  sisip.parentNode.insertBefore(box, sisip.nextSibling);
+  perbaruiStatusV3C();
+}
+async function perbaruiStatusV3C(){
+  const el=document.getElementById('v3CStatusKunci'); if(!el) return;
+  try{ if(typeof loadAturanKunci==='function') await loadAturanKunci(); }catch(e){}
+  const c=((cachedAturanKunci&&cachedAturanKunci.riwayat)||[]).find(x=>x.versi==='v3-crypto89');
+  if(c){ el.innerHTML=`<div style="font-size:11px;color:#4ADE80;font-weight:800">🔒 Terkunci pada ${new Date(c.dikunciPada).toLocaleString('id-ID')}</div><div style="font-size:9px;color:#E5E7EB;word-break:break-all">Sidik jari: ${c.hash}</div>`; return; }
+  el.innerHTML=`<div style="font-size:11px;color:#FACC15;font-weight:800">❗ Belum dikunci di server.</div>${isAdmin?`<button onclick="kunciV3C()" style="margin-top:6px;padding:8px 12px;border-radius:8px;border:1px solid #34D399;background:transparent;color:#FFFFFF;font-weight:800;cursor:pointer">🔒 Kunci Aturan Resmi v3 Crypto 89</button>`:''}`;
+}
+async function kunciV3C(){ await kunciAturanResmi('v3-crypto89'); await perbaruiStatusV3C(); }
+
+// Rem Crypto 89 (aturan v3): tampilan kartu memakai 6.000 pips. Tidak mengubah aturan v2 yang terkunci.
+function terapkanRemCrypto89(){
+  try{ if(typeof cachedRemPips!=='undefined'){ cachedRemPips.FOREX = 6000; if(typeof renderRemPipsCard==='function') renderRemPipsCard(); } }catch(e){ console.error('rem crypto', e); }
+}
+// Kartu DD Crypto 89 tidak berlaku lagi (aturan v3 hanya mengandalkan buffer). Hanya tampilan.
+function sembunyikanKartuDDCrypto89(){
+  const cocok = el => { const t=el.textContent||''; if(!/Datuk Crypto 89/i.test(t)||/Datuk EURUSD/i.test(t)) return false; return /Modal acuan/i.test(t)||/DD SEKARANG/i.test(t); };
+  document.querySelectorAll('div').forEach(el=>{
+    if(!cocok(el)) return; if([...el.children].some(c=>cocok(c))) return;
+    if((el.textContent||'').length>1200) return; el.style.display='none';
+  });
+}
+setTimeout(()=>{ pasangV3C(); terapkanRemCrypto89(); sembunyikanKartuDDCrypto89(); }, 2500);
+setTimeout(()=>{ pasangV3C(); terapkanRemCrypto89(); sembunyikanKartuDDCrypto89(); }, 5000);
 </script>
 </body>
 </html>
