@@ -17794,52 +17794,6 @@ function pasangRrVersiCrypto(){
 setTimeout(pasangRrVersiCrypto, 3500);
 setTimeout(pasangRrVersiCrypto, 6000);
 </script>
-<script>
-// Akun Analis dipisah per channel: Datuk EURUSD dan Datuk Crypto 89. Hanya tampilan.
-// Blok yang hanya menyebut satu channel disembunyikan saat channel lain dipilih.
-// Blok umum (tanpa nama channel) tetap tampil.
-let kanalAnalisAktif = 'EURUSD';
-function kelasKanal(teks){
-  const eu=/Datuk EURUSD/i.test(teks), cr=/Datuk Crypto 89/i.test(teks);
-  if(eu && !cr) return 'EURUSD';
-  if(cr && !eu) return 'CRYPTO';
-  return 'UMUM';
-}
-function tampilkanKanalAnalis(k){
-  kanalAnalisAktif = k;
-  const host=document.querySelector('[data-akun="analis"]'); if(!host) return;
-  const kandidat=[];
-  [...host.children].forEach(el=>{
-    if(el.id==='tabKanalAnalis') return;
-    if(el.classList && el.classList.contains('section')){
-      [...el.children].forEach(c=>kandidat.push(c));
-    } else kandidat.push(el);
-  });
-  kandidat.forEach(el=>{
-    const kls=kelasKanal(el.textContent||'');
-    el.style.display = (kls==='UMUM' || kls===k) ? '' : 'none';
-  });
-  document.querySelectorAll('#tabKanalAnalis button').forEach(b=>{
-    const aktif = b.dataset.kanal===k;
-    b.style.background = aktif ? '#34D399' : 'transparent';
-    b.style.color = aktif ? '#0D0F0A' : '#FFFFFF';
-  });
-}
-function pasangTabKanalAnalis(){
-  const host=document.querySelector('[data-akun="analis"]'); if(!host) return;
-  if(document.getElementById('tabKanalAnalis')) return;
-  const bar=document.createElement('div');
-  bar.id='tabKanalAnalis';
-  bar.style.cssText='display:flex;gap:8px;margin:10px 0;padding:0 2px';
-  bar.innerHTML=`
-    <button data-kanal="EURUSD" onclick="tampilkanKanalAnalis('EURUSD')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid #34D399;font-weight:800;font-size:12px;cursor:pointer">📡 Datuk EURUSD</button>
-    <button data-kanal="CRYPTO" onclick="tampilkanKanalAnalis('CRYPTO')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid #34D399;font-weight:800;font-size:12px;cursor:pointer">📡 Datuk Crypto 89</button>`;
-  host.insertBefore(bar, host.firstChild);
-  tampilkanKanalAnalis(kanalAnalisAktif);
-}
-setTimeout(pasangTabKanalAnalis, 2000);
-setTimeout(()=>{ pasangTabKanalAnalis(); tampilkanKanalAnalis(kanalAnalisAktif); }, 4500);
-setTimeout(()=>{ tampilkanKanalAnalis(kanalAnalisAktif); }, 8000);
-</script>
+
 </body>
 </html>
