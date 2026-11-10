@@ -1807,7 +1807,8 @@ function renderInvCalcDisclaimer(){
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px" id="secBatasDD">
       <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">🛡️ Cek Batas Kerugian (Syarat Investor)</div>
       <div data-chan="FOREX" style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.5">Aturan v3 Datuk Crypto 89 (dikunci 10 November 2026): hanya mengandalkan buffer. REM bulanan 6.000 pips (= $600 pada lot 0,01), modal investor $1.800 (3 bulan loss semua). Otomatis dari sinyal closed yang di-input di bawah; loss dihitung berdasarkan tanggal <b>Closed at</b>. Investor & admin sama-sama bisa cek; angka aturan sudah terkunci.</div>
-<div data-chan="XAUUSD" style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.5">Modal acuan = modal MINIMAL agar kerugian maksimal 1 bulan tidak lebih dari 6% (dihitung otomatis dari aturan v2), TIDAK memakai saldo akun/sen di situs ini. Otomatis dari sinyal closed yang di-input di bawah. Dihitung dalam $ (pips × nilai pip lot acuan), drawdown (DD) diukur dari PUNCAK bersih bulan itu. Loss dihitung berdasarkan tanggal <b>Closed at</b>. Investor & admin sama-sama bisa cek; hanya admin yang bisa ubah batas.</div>
+<div data-chan="XAUUSD" style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.5">Aturan v4 Datuk EURUSD (dikunci 10 November 2026): hanya mengandalkan buffer. REM bulanan forex 4.500 pips ($450) dan XAUUSD 20.000 pips ($2.000) pada lot 0,01; modal investor $7.350 (forex $1.350 + emas $6.000, 3 bulan order loss semua). Otomatis dari sinyal closed yang di-input di bawah; loss dihitung berdasarkan tanggal <b>Closed at</b>. Investor &amp; admin sama-sama bisa cek; angka aturan sudah terkunci.</div>
+<div data-chan="V2OFF" style="display:none !important">Modal acuan = modal MINIMAL agar kerugian maksimal 1 bulan tidak lebih dari 6% (dihitung otomatis dari aturan v2), TIDAK memakai saldo akun/sen di situs ini. Otomatis dari sinyal closed yang di-input di bawah. Dihitung dalam $ (pips × nilai pip lot acuan), drawdown (DD) diukur dari PUNCAK bersih bulan itu. Loss dihitung berdasarkan tanggal <b>Closed at</b>. Investor & admin sama-sama bisa cek; hanya admin yang bisa ubah batas.</div>
       <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
         <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🧮 Masukkan Modal Anda di Sini</div>
         <div style="font-size:9px;color:#E5E7EB;margin-bottom:8px;line-height:1.5">Ketik modal Anda, lalu batas kerugian, drawdown (DD), dan sisa ruang untuk modal Anda muncul di bawahnya. Lot boleh dikosongkan (otomatis dihitung sebanding dengan acuan minimal per channel (Datuk EURUSD $5.000, Datuk Crypto 89 $1.800 sesuai aturan v3)). Hanya simulasi di layar Anda, tidak disimpan ke server dan tidak mengubah batas analis.</div>
@@ -5958,7 +5959,7 @@ function renderProyeksiBufferRunning(g, list){
     : (remMin>0 && totalPipsBulanIni >= remMin
       ? `<div style="color:#FACC15;font-weight:800">⚠️ Pips fix sudah ≥ target MINIMAL (${remMin}) — boleh berhenti, sisanya bonus</div>`
       : `<div style="color:#E5E7EB">Target minimal ${remMin} pips belum tercapai (fix sekarang ${totalPipsBulanIni.toFixed(1)})</div>`);
-  const remBlok = batasRugiPips>0 ? `
+  let remBlok = batasRugiPips>0 ? `
     <div style="margin-top:9px;padding:9px 10px;border:1.5px solid ${remJebol?'#F87171':'#4ADE80'};border-radius:8px;background:var(--bg0)">
       <div style="font-size:9px;color:#FFFFFF;font-weight:800;text-transform:uppercase;letter-spacing:.5px">🛑 REM Pips bulan ini — batas rugi ${batasRugiPips} pips</div>
       <div style="font-size:10px;color:#FFFFFF;line-height:1.7;margin-top:4px">
@@ -5972,6 +5973,29 @@ function renderProyeksiBufferRunning(g, list){
       </div>
       <div style="font-size:10px;margin-top:6px;line-height:1.6">${untungInfo}</div>
     </div>` : '';
+  // Aturan v3 (Crypto 89) dan v4 (Datuk EURUSD): REM per segmen mengikuti angka yang dikunci, bukan 3000 pips lama.
+  if(typeof V4_REM!=='undefined' && (g==='XAUUSD' || (g==='FOREX' && typeof REM_TAMPIL_V3!=='undefined'))){
+    const _bk=bulanKeyOf(new Date().toISOString().slice(0,10));
+    const _rowsF=(cachedSinyalAnalis[g]||[]).filter(r=>bulanKeyOf(r.tanggal)===_bk && r.status!=='running');
+    const _isAu=x=>((x.simbol||'').toUpperCase()==='XAUUSD');
+    const _defs = g==='FOREX'
+      ? [{nama:'Datuk Crypto 89 (aturan v3)', rem:REM_TAMPIL_V3.FOREX, min:REM_TARGET_V3.FOREX.min, max:REM_TARGET_V3.FOREX.max, pick:()=>true}]
+      : [{nama:'Forex (6 pair), aturan v4', rem:V4_REM.FX.rem, min:V4_REM.FX.min, max:V4_REM.FX.max, pick:x=>!_isAu(x)},
+         {nama:'XAUUSD, aturan v4', rem:V4_REM.AU.rem, min:V4_REM.AU.min, max:V4_REM.AU.max, pick:_isAu}];
+    remBlok=_defs.map(d=>{
+      const fix=_rowsF.filter(d.pick).reduce((a,r)=>a+parseFloat(r.pips||0),0);
+      let los=0; list.forEach(item=>{ if(!d.pick(item)) return; const e=estimasiPotensiVpSatuSinyal(g,item); if(e && e.potensiLossPips!=null) los+=e.potensiLossPips; });
+      const fixLos=fix+los, sisa=d.rem+fixLos, jebol=fixLos<=-d.rem;
+      const info = fix>=d.max ? '<div style="color:#F87171;font-weight:800">🛑 Pips fix sudah ≥ target MAKSIMAL ('+d.max+'), WAJIB berhenti, jangan buka sinyal baru</div>'
+        : (fix>=d.min ? '<div style="color:#FACC15;font-weight:800">⚠️ Pips fix sudah ≥ target boleh stop ('+d.min+'), boleh berhenti</div>'
+        : '<div style="color:#E5E7EB">Target boleh stop '+d.min+' pips belum tercapai (fix sekarang '+fix.toFixed(1)+')</div>');
+      return '<div style="margin-top:9px;padding:9px 10px;border:1.5px solid '+(jebol?'#F87171':'#4ADE80')+';border-radius:8px;background:var(--bg0)">'
+        +'<div style="font-size:9px;color:#FFFFFF;font-weight:800;text-transform:uppercase;letter-spacing:.5px">🛑 REM Pips bulan ini · '+d.nama+' · batas rugi '+d.rem+' pips</div>'
+        +'<div style="font-size:10px;color:#FFFFFF;line-height:1.7;margin-top:4px">Pips fix sekarang: <b>'+fix.toFixed(1)+'</b> · Kalau semua running Loss: <b style="color:'+(jebol?'#F87171':'#FFFFFF')+'">'+fixLos.toFixed(1)+'</b><br>Sisa ruang rugi sebelum rem: <b style="color:'+(sisa>0?'#4ADE80':'#F87171')+'">'+sisa.toFixed(1)+' pips</b></div>'
+        +'<div style="font-size:11px;font-weight:800;color:'+(jebol?'#F87171':'#4ADE80')+';margin-top:5px">'+(jebol?'❌ REM JEBOL kalau semua running Loss, total akan lewat -'+d.rem+' pips. STOP, jangan buka sinyal baru.':'✅ Masih dalam REM. Sinyal baru + sisa running Loss tidak boleh melebihi '+sisa.toFixed(0)+' pips.')+'</div>'
+        +'<div style="font-size:10px;margin-top:6px;line-height:1.6">'+info+'</div></div>';
+    }).join('');
+  }
   const kontrolHtml = `<div style="background:${kontrolWarna}15;border:1.5px solid ${kontrolWarna};border-radius:9px;padding:9px 11px;margin-bottom:10px">
     <div style="font-size:9px;color:${kontrolWarna};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🎯 Kontrol Kejar VP — Skenario Semua Running + Pending LOSS</div>
     <div style="font-size:9px;color:#FFFFFF;font-weight:700;line-height:1.7">
@@ -6911,7 +6935,7 @@ function renderRemPipsCard(){
     <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:${g==='XAUUSD'?'10px':'0'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div style="font-size:10px;font-weight:700;color:#E5E7EB">${labelGrup}</div>
-        <span onclick="editRemPips('${g}')" style="font-size:9px;color:#FFFFFF;cursor:pointer;text-decoration:underline">Ubah Batas</span>
+        <span onclick="editRemPips('${g}')" style="font-size:9px;color:#FFFFFF;cursor:pointer;text-decoration:underline">${(S.seg||(typeof REM_TAMPIL_V3!=='undefined'&&REM_TAMPIL_V3[g]!=null))?'🔒 dikunci aturan':'Ubah Batas'}</span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:9px;color:#E5E7EB;margin-bottom:4px">
         <span style="color:#F87171">-${batasRugi} (stop)</span>
@@ -16872,8 +16896,7 @@ const CRYPTO89_SL_V3={GBPUSD:45,NZDJPY:45,USDCAD:45,CHFJPY:60,EURJPY:60,EURNZD:6
 // Versi aturan ditentukan dari TANGGAL BUKA. Crypto 89 hanya punya v3 (tanpa v3.1).
 function versiV3UntukSinyal(r,g){
   if(g==='FOREX') return 'v3 Crypto 89';
-  const buka=String(r.tanggalBuka||r.tanggal||'');
-  return buka.slice(0,10)<='2026-11-08' ? 'v3.1' : 'v3';
+  return 'v4 Datuk EURUSD';   // v4 menggantikan v3 dan v3.1, berlaku 1 Nov 2026
 }
 function auditChannelV3(g,bk){
   const hasil={flags:[], n:0, rencana:0, belakangan:[], diaudit:true};
@@ -16888,14 +16911,18 @@ function auditChannelV3(g,bk){
     f.masalah.push({sev, retroDet:'', aturan, detail:detail+' · Penilaian '+versiV3UntukSinyal(x.r,g)});
   };
   // 1. Maks 5 order per hari (dihitung saat close): order ke-6 dst pada hari yang sama
+  const _seg=x=>(g==='XAUUSD')?(x.nm==='XAUUSD'?'XAUUSD':'Forex'):'';
+  const _segTxt=x=>_seg(x)?` (${_seg(x)})`:'';
   const perHari={};
   L.slice().sort((a,b)=>String(a.r.tanggal).localeCompare(String(b.r.tanggal))||String(a.r.jam||'').localeCompare(String(b.r.jam||''))).forEach(x=>{
-    const k=String(x.r.tanggal).slice(0,10); perHari[k]=(perHari[k]||0)+1;
-    if(perHari[k]>5) tambah(x,'pasti','Jatah melebihi — maks 5 order per hari (menang & kalah)', `Order ke-${perHari[k]} pada ${k} (maks 5)`);
+    const k=String(x.r.tanggal).slice(0,10), kk=k+'|'+_seg(x); perHari[kk]=(perHari[kk]||0)+1;
+    if(perHari[kk]>5) tambah(x,'pasti','Jatah melebihi — maks 5 order per hari (menang & kalah)', `Order ke-${perHari[kk]}${_segTxt(x)} pada ${k} (maks 5)`);
   });
   // 2. Maks 100 order per bulan (dihitung saat close)
-  L.slice().sort((a,b)=>String(a.r.tanggal).localeCompare(String(b.r.tanggal))||String(a.r.jam||'').localeCompare(String(b.r.jam||''))).forEach((x,idx)=>{
-    if(idx+1>100) tambah(x,'pasti','Jatah melebihi — maks 100 order per bulan', `Order ke-${idx+1} bulan ini (maks 100)`);
+  const perBulan={};
+  L.slice().sort((a,b)=>String(a.r.tanggal).localeCompare(String(b.r.tanggal))||String(a.r.jam||'').localeCompare(String(b.r.jam||''))).forEach(x=>{
+    const sg=_seg(x); perBulan[sg]=(perBulan[sg]||0)+1;
+    if(perBulan[sg]>100) tambah(x,'pasti','Jatah melebihi — maks 100 order per bulan', `Order ke-${perBulan[sg]}${_segTxt(x)} bulan ini (maks 100)`);
   });
   // 3. RR sesuai aturan v3
   L.forEach(x=>{
@@ -16909,7 +16936,7 @@ function auditChannelV3(g,bk){
     else if(g!=='FOREX' && FOREX_SL_PAIR[x.nm]!=null){ slA=FOREX_SL_PAIR[x.nm]; tpA=2*slA; label=x.nm+' SL '+slA+' / TP '+tpA; }
     if(slA==null) return;
     if(Math.abs(sl-slA)>0.5 || Math.abs(tp-tpA)>0.5)
-      tambah(x,'pasti','RR melebihi/kurang — SL/TP tidak sesuai aturan v3', `Rencana tercatat SL ${sl} / TP ${tp}; aturan ${label} (RR 1:2)`);
+      tambah(x,'pasti','RR melebihi/kurang — SL/TP tidak sesuai aturan '+(g==='FOREX'?'v3':'v4'), `Rencana tercatat SL ${sl} / TP ${tp}; aturan ${label} (RR 1:2)`);
   });
   return hasil;
 }
