@@ -214,12 +214,20 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:#FFFFFF;min-heig
 .akun-switch{display:flex;gap:8px;margin:12px 12px 4px;position:sticky;top:0;z-index:50;background:var(--bg0,#111);padding:8px 0}
 .akun-btn{flex:1;padding:10px 6px;border-radius:10px;border:1.5px solid var(--border,#333);background:var(--bg1,#1a1a1a);color:#FFFFFF;font-weight:800;font-size:12px;cursor:pointer}
 .akun-btn.aktif{border-color:#C8A84B;background:#2A230F}
-body[data-akun="mt4"] [data-akun="analis"]{display:none !important}
-body[data-akun="analis"] [data-akun="mt4"]{display:none !important}
+body[data-akun="mt4"] [data-akun="analis"], body[data-akun="mt4"] [data-akun="crypto89"], body[data-akun="mt4"] [data-akun="analis-crypto"]{display:none !important}
+body[data-akun="analis"] [data-akun="mt4"], body[data-akun="analis"] [data-akun="crypto89"]{display:none !important}
+body[data-akun="crypto89"] [data-akun="mt4"], body[data-akun="crypto89"] [data-akun="analis"]{display:none !important}
+/* tiap channel hanya tampil di akunnya sendiri */
+body[data-akun="analis"] [data-chan="FOREX"], body[data-akun="crypto89"] [data-chan="XAUUSD"]{display:none !important}
+body[data-akun="analis"] #inpSinyalPairTabs, body[data-akun="analis"] #daftarSinyalPairTabs, body[data-akun="crypto89"] #inpSinyalPairTabs, body[data-akun="crypto89"] #daftarSinyalPairTabs{display:none !important}
+.akun-btn{font-size:11px}
 </style>
 
 </head>
 <body data-akun="mt4">
+<script>
+function kanalTampil(){ var a=document.body&&document.body.getAttribute('data-akun'); return a==='analis'?['XAUUSD']:a==='crypto89'?['FOREX']:['XAUUSD','FOREX']; }
+</script>
 <script>(function(){try{if(localStorage.getItem('mk_theme')==='light')document.body.classList.add('light-theme');}catch(e){}})();</script>
 
 <div id="loading">
@@ -361,7 +369,8 @@ function toggleKamusGrup(btn){
 
 <div id="akunSwitch" class="akun-switch">
   <button type="button" class="akun-btn" data-akun-btn="mt4" onclick="setAkunTampilan('mt4')">📈 Akun MT4</button>
-  <button type="button" class="akun-btn" data-akun-btn="analis" onclick="setAkunTampilan('analis')">📡 Akun Analis</button>
+  <button type="button" class="akun-btn" data-akun-btn="analis" onclick="setAkunTampilan('analis')">📡 Akun Datuk EURUSD</button>
+  <button type="button" class="akun-btn" data-akun-btn="crypto89" onclick="setAkunTampilan('crypto89')">🪙 Akun Datuk Crypto 89</button>
 </div>
 <div data-akun="mt4">
 <div style="margin:12px 0 16px;padding:16px 14px;border-radius:14px;background:linear-gradient(135deg,#7F1D1D,#450A0A);border:2px solid #F87171;box-shadow:0 0 0 3px rgba(248,113,113,.15)">
@@ -1776,7 +1785,8 @@ function renderInvCalcDisclaimer(){
 </div>
 
 <!-- BLOK ANALIS (dipisah dari grafik MT4) -->
-<div class="section" data-akun="analis" id="secAnalisBlok">
+<div class="section" data-akun="crypto89" id="secCrypto89Host"></div>
+<div class="section" data-akun="analis-crypto" id="secAnalisBlok">
   <div class="sec-title">📡 Akun Analis — Skor, Batas Kerugian & Sinyal</div>
   <div class="graph-card" id="secSkorChannel" style="margin-top:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -1798,22 +1808,22 @@ function renderInvCalcDisclaimer(){
       <div style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.5">Modal acuan = modal MINIMAL agar kerugian maksimal 1 bulan tidak lebih dari 6% (dihitung otomatis dari aturan v2), TIDAK memakai saldo akun/sen di situs ini. Otomatis dari sinyal closed yang di-input di bawah. Dihitung dalam $ (pips × nilai pip lot acuan), drawdown (DD) diukur dari PUNCAK bersih bulan itu. Loss dihitung berdasarkan tanggal <b>Closed at</b>. Investor & admin sama-sama bisa cek; hanya admin yang bisa ubah batas.</div>
       <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
         <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🧮 Masukkan Modal Anda di Sini</div>
-        <div style="font-size:9px;color:#E5E7EB;margin-bottom:8px;line-height:1.5">Ketik modal Anda, lalu batas kerugian, drawdown (DD), dan sisa ruang untuk modal Anda muncul di bawahnya. Lot boleh dikosongkan (otomatis dihitung sebanding dengan acuan minimal per channel (Datuk EURUSD $5.000, Datuk Crypto 89 $5.000)). Hanya simulasi di layar Anda, tidak disimpan ke server dan tidak mengubah batas analis.</div>
+        <div style="font-size:9px;color:#E5E7EB;margin-bottom:8px;line-height:1.5">Ketik modal Anda, lalu batas kerugian, drawdown (DD), dan sisa ruang untuk modal Anda muncul di bawahnya. Lot boleh dikosongkan (otomatis dihitung sebanding dengan acuan minimal per channel (Datuk EURUSD $5.000, Datuk Crypto 89 $1.800 sesuai aturan v3)). Hanya simulasi di layar Anda, tidak disimpan ke server dan tidak mengubah batas analis.</div>
         <div style="display:flex;gap:8px">
           <div style="flex:1"><label class="lbl">Modal Anda ($)</label><input class="inp" type="number" step="any" min="1" id="batasDDModalInv" placeholder="mis. 1000" oninput="renderBatasDDSim()"></div>
           <div style="flex:1"><label class="lbl">Lot (minimal 0,01)</label><input class="inp" type="number" step="0.01" min="0.01" id="batasDDLotInv" placeholder="otomatis" oninput="renderBatasDDSim()"></div>
         </div>
-        <div id="batasDDStrategiWrap" style="margin-top:8px"></div>
+        <div id="batasDDStrategiWrap" data-chan="XAUUSD" style="margin-top:8px"></div>
         <div id="batasDDSimWrap" style="margin-top:8px"></div>
       </div>
-      <div id="batasDDAturanWrap" style="margin-bottom:12px"></div>
+      <div id="batasDDAturanWrap" data-chan="XAUUSD" style="margin-bottom:12px"></div>
       <select class="inp" id="batasDDBulan" onchange="batasDDBulanDipilih=this.value;renderBatasDDCard()" style="margin-bottom:10px"></select>
-      <div id="batasDDMetodeWrap"></div>
+      <div id="batasDDMetodeWrap" data-chan="XAUUSD"></div>
       <div id="batasDDWrap"><div style="font-size:11px;color:#E5E7EB;text-align:center;padding:6px">Memuat...</div></div>
-      <div id="batasDDLossKotorEmasWrap" style="margin-top:10px"></div>
-      <div id="batasDDLossKotorWrap" style="margin-top:10px"></div>
-      <div id="batasDDRemForexEmasWrap" style="margin-top:10px"></div>
-      <div id="batasDDRemForexWrap" style="margin-top:10px"></div>
+      <div id="batasDDLossKotorEmasWrap" data-chan="XAUUSD" style="margin-top:10px"></div>
+      <div id="batasDDLossKotorWrap" data-chan="FOREX" style="margin-top:10px"></div>
+      <div id="batasDDRemForexEmasWrap" data-chan="XAUUSD" style="margin-top:10px"></div>
+      <div id="batasDDRemForexWrap" data-chan="FOREX" style="margin-top:10px"></div>
       <div id="batasDDRekonWrap" style="margin-top:10px"></div>
       <div id="batasDDPairListWrap" style="margin-top:10px"></div>
       <div id="batasDDAuditWrap" style="margin-top:10px"></div>
@@ -6846,6 +6856,7 @@ async function simpanSettingRem(key,val){
 }
 async function editRemPips(g){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah REM Pips');return;}
+  if(typeof REM_TAMPIL_V3!=='undefined' && REM_TAMPIL_V3[g]!=null){ toast('🔒 REM Datuk Crypto 89 dipatenkan aturan v3: rugi '+REM_TAMPIL_V3[g]+' pips, target boleh stop/maksimal '+REM_TARGET_V3[g].min+'/'+REM_TARGET_V3[g].max+'. Perubahan harus lewat versi aturan baru.'); return; }
   const labelGrup=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||(g==='FOREX'?'Forex':g);
   const cur=cachedRemPips[g]+','+cachedTargetMin[g]+','+cachedTargetMax[g];
   const input=prompt(`[${labelGrup}] Isi 3 angka (PIPS) dipisah koma:\nBATAS RUGI, TARGET BOLEH STOP, TARGET MAKSIMAL\n\nContoh: 1000,1000,2000\n= rugi 1000 pip WAJIB stop; untung 1000 pip boleh stop; untung 2000 pip wajib stop.`, cur);
@@ -6867,7 +6878,7 @@ async function editRemPips(g){
 function renderRemPipsCard(){
   const wrap=document.getElementById('remPipsWrap');
   if(!wrap)return;
-  const potongan=['XAUUSD','FOREX'].map(g=>{
+  const potongan=kanalTampil().map(g=>{
     const labelGrup=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
     const batasRugi=(REM_TAMPIL_V3[g]!=null)?REM_TAMPIL_V3[g]:(((typeof remPipsAturan==='function')?remPipsAturan()[g]:cachedRemPips[g])||0), tMin=(REM_TARGET_V3[g]!=null)?REM_TARGET_V3[g].min:(cachedTargetMin[g]||0), tMax=(REM_TARGET_V3[g]!=null)?REM_TARGET_V3[g].max:(cachedTargetMax[g]||0);
     const now=new Date();
@@ -7366,7 +7377,7 @@ function renderSatuChannelScore(g){
     ${liveBlok}
     ${medalBlokHtml}
     ${levelBlokHtml}
-    <div data-akun="analis" style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:center">
+    <div data-akun="analis-crypto" style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:center">
       <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Rekomendasi Harga Channel</div>
       <div style="font-size:15px;font-weight:800;color:#FFFFFF">${isLevelRendah ? fmtRupiah(range.min) : `${fmtRupiah(range.min)} – ${fmtRupiah(range.max)}`}</div>
       ${isLevelRendah?`<div style="font-size:8px;color:#E5E7EB;margin-top:3px">Level ${meta.level} → harga channel di TF cuma bisa 1 angka (bukan range), jadi pakai harga MINIMUM ini — atau digratiskan (Free)</div>`:''}
@@ -7387,7 +7398,7 @@ function renderScoreCard(){
   const wrap=document.getElementById('scoreCardWrap');
   if(!wrap) return;
   syncSemuaLabelChannel();
-  wrap.innerHTML = renderSatuChannelScore('XAUUSD') + renderSatuChannelScore('FOREX');
+  wrap.innerHTML = kanalTampil().map(g=>renderSatuChannelScore(g)).join('');
   pasangRunningTool();
 }
 // Pindahkan blok 'Sinyal Sedang Running' ke slot di kartu skor. Node yang sama dipakai
@@ -16058,7 +16069,7 @@ function renderBatasDDCard(){
   const wrap=document.getElementById('batasDDWrap'); if(!wrap) return;
   _bdPilihBulanOpsi();
   const bulanKey=batasDDBulanDipilih;
-  const html=['XAUUSD','FOREX'].filter(g=>!DD_NONAKTIF_V3[g]).map((g,idx)=>{
+  const html=kanalTampil().filter(g=>!DD_NONAKTIF_V3[g]).map((g,idx)=>{
     const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
     const h=hitungBatasDD(g,bulanKey), c=h.cfg;
     const pct=v=>(v/c.modal*100).toFixed(1)+'%';
@@ -16132,19 +16143,20 @@ function renderBatasDDSim(){
   const wrap=document.getElementById('batasDDSimWrap'); if(!wrap) return;
   const mEl=document.getElementById('batasDDModalInv'), lEl=document.getElementById('batasDDLotInv');
   try{ if(mEl && mEl.dataset.init!=='1'){ mEl.dataset.init='1'; const sm=localStorage.getItem('bdd_modal_inv'), sl=localStorage.getItem('bdd_lot_inv'); if(sm&&!mEl.value) mEl.value=sm; if(sl&&lEl&&!lEl.value) lEl.value=sl; } }catch(e){}
-  const modal=parseFloat(mEl&&mEl.value); const lotAuto=Math.max(0.01,Math.floor(modal/batasAturanV2('XAUUSD').modal+1e-9)*0.01); const lot=Math.max(0.01,parseFloat(lEl&&lEl.value)||(isFinite(modal)?lotAuto:0.01));
+  const modal=parseFloat(mEl&&mEl.value); const _kt=kanalTampil(); const _acuan=(_kt.length===1&&_kt[0]==='FOREX')?aturanResmiV3C().modalUsd:batasAturanV2('XAUUSD').modal; const lotAuto=Math.max(0.01,Math.floor(modal/_acuan+1e-9)*0.01); const lot=Math.max(0.01,parseFloat(lEl&&lEl.value)||(isFinite(modal)?lotAuto:0.01));
   try{ if(isFinite(modal)&&modal>0){ localStorage.setItem('bdd_modal_inv',String(modal)); localStorage.setItem('bdd_lot_inv',String(lot)); } }catch(e){}
   if(!isFinite(modal)||modal<=0){ wrap.innerHTML='<div style="font-size:10px;color:#E5E7EB;text-align:center">Isi modal Anda untuk melihat risikonya.</div>'; return; }
   if(lot<=0){ wrap.innerHTML='<div style="font-size:10px;color:#F87171">Lot tidak valid.</div>'; return; }
   const bulanKey=batasDDBulanDipilih;
   const nilai=(pct)=> pct<=5?['#3E9142','konservatif']:pct<=10?['#C99A2E','sedang-agresif']:pct<=15?['#D9534F','tinggi']:['#D9534F','sangat berat'];
-  const rows=['XAUUSD','FOREX'].map(g=>{
+  const rows=kanalTampil().map(g=>{
     const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
     const h=hitungBatasDD(g,bulanKey), c=h.cfg, k=lot/c.lot;
-    const stop=c.stopUsd*k, loss1=c.riskLossUsd*k, ddNow=h.curDD*k, ddMax=h.maxDD*k, cum=h.cum*k;
+    const _v3=(typeof DD_NONAKTIF_V3!=='undefined'&&DD_NONAKTIF_V3[g]);
+    const stop=(_v3?REM_TAMPIL_V3[g]*0.1:c.stopUsd)*k, loss1=c.riskLossUsd*k, ddNow=h.curDD*k, ddMax=h.maxDD*k, cum=h.cum*k;
     const pStop=stop/modal*100, pLoss=loss1/modal*100, pNow=ddNow/modal*100, pMax=ddMax/modal*100;
     const [wr,tx]=nilai(pStop);
-    const minM=batasAturanV2(g).modal, syaratOk=modal>=minM;
+    const minM=_v3?aturanResmiV3C().modalUsd:batasAturanV2(g).modal, syaratOk=modal>=minM;
     return `<div style="background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:6px">
       <div style="font-size:10px;font-weight:800;color:#E5E7EB;margin-bottom:3px">${label}</div>
       <div style="font-size:10px;color:#E5E7EB;line-height:1.7">
@@ -16278,6 +16290,7 @@ function bdBarisSinyal(r, tandai){
 }
 function renderLossKotor(g, wrapId){
   const wrap=document.getElementById(wrapId); if(!wrap) return;
+  if(typeof DD_NONAKTIF_V3!=='undefined' && DD_NONAKTIF_V3[g]){ wrap.innerHTML=''; return; }   // v3: batas DD v2 tidak berlaku
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
   const cfg=hitungBatasDD(g,bk).cfg; // untuk emas ikut metode bulan (H4/D1/W1)
   const pipUsd=PIP_VALUE_USD_PER_0_01_LOT*(cfg.lot/0.01);
@@ -16405,7 +16418,7 @@ function renderRekonCard(){
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
   const fmt=v=>(Math.round(v*10)/10).toString();
   const sg=v=>(v>0?'+':'')+fmt(v);
-  const html=['XAUUSD','FOREX'].map((g,idx)=>{
+  const html=kanalTampil().map((g,idx)=>{
     const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
     const cfg=hitungBatasDD(g,bk).cfg;
     const pipUsd=PIP_VALUE_USD_PER_0_01_LOT*(cfg.lot/0.01);
@@ -16557,7 +16570,7 @@ function renderDaftarPair(){
   const hariAkhir=new Date(parseInt(yy,10),bln,0).getDate();
   const urutPair=(a,b)=> a==='XAUUSD'?-1 : b==='XAUUSD'?1 : a.localeCompare(b);
   const namaPair=r=>(r.simbol||'(tanpa nama)').toUpperCase();
-  const blok=['XAUUSD','FOREX'].map(g=>{
+  const blok=kanalTampil().map(g=>{
     const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
     const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bk);
     // ── (1) Rekap harian per pair ──
@@ -16655,6 +16668,7 @@ function remForexBatas(g,Rx){
 }
 function renderRemForexGen(g, wrapId, sebagaiForexSaja){
   const wrap=document.getElementById(wrapId); if(!wrap) return;
+  if(typeof DD_NONAKTIF_V3!=='undefined' && DD_NONAKTIF_V3[g]){ wrap.innerHTML=''; return; }   // v3: batas DD v2 tidak berlaku
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
   const R=aturanBulan(bk).R, cfg=cachedBatasDD.FOREX, K=R.kanal[g], B=remForexBatas(g,R);
   const pipUsd=PIP_VALUE_USD_PER_0_01_LOT*(cfg.lot/0.01);
@@ -16966,7 +16980,7 @@ function renderAudit(){
   const efektifTeks='1 Okt 2026';
   const itemHtml=f=>{ const r=f.r, pp=parseFloat(r.pips||0);
     return `<div style="border-top:1px solid var(--border);padding:6px 0"><div style="font-size:10px;color:#E5E7EB;line-height:1.5"><b>${f.nm}</b> · buka ${fmtT(r.tanggalBuka||r.tanggal,r.jamBuka)} → tutup ${fmtT(r.tanggal,r.jam)} · <b style="color:${pp<0?'#F87171':'#4ADE80'}">${pp>0?'+':''}${Math.round(pp*10)/10} pips</b>${r.slPips!=null?` · rencana SL ${r.slPips}/TP ${r.tpPips}`:''}${f.pra?` <span style="color:#E5E7EB">🕰️ sebelum ${efektifTeks}</span>`:''}</div>${f.masalah.map(m=>`<div style="font-size:10px;line-height:1.5;padding-left:8px"><b style="color:${warnaSev[m.sev]}">${ikon[m.sev]}</b> ${m.aturan}<br><span style="color:#E5E7EB">${m.detail}</span></div>`).join('')}</div>`; };
-  const blok=['XAUUSD','FOREX'].map(g=>{
+  const blok=kanalTampil().map(g=>{
     const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g, h=auditChannel(g,bk);
     const baru=h.flags.filter(f=>!f.pra), retro=h.flags.filter(f=>f.pra);
     const pelBaru=baru.filter(f=>f.sev!=='indikasi').length, indBaru=baru.length-pelBaru;
@@ -17234,7 +17248,7 @@ function remPipsAturan(){ return { XAUUSD:3000, FOREX:3000 }; }   // Datuk EURUS
 async function samakanRemPips(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const t=remPipsAturan();
-  try{ for(const g of ['XAUUSD','FOREX']){ await simpanSettingRem('rem_pips_'+g, t[g]); cachedRemPips[g]=t[g]; } toast('✅ REM Pips disamakan dengan aturan'); renderRemPipsCard(); }
+  try{ for(const g of ['XAUUSD','FOREX']){ if(typeof REM_TAMPIL_V3!=='undefined' && REM_TAMPIL_V3[g]!=null) continue; await simpanSettingRem('rem_pips_'+g, t[g]); cachedRemPips[g]=t[g]; } toast('✅ REM Pips disamakan dengan aturan'); renderRemPipsCard(); }
   catch(e){ console.error(e); toast('❌ Gagal menyimpan REM Pips: '+(e.message||'').slice(0,100)); }
 }
 editBatasDD=async function(){ toast('🔒 Aturan Resmi v1 terkunci. Batas tidak bisa diubah dari layar; perubahan harus lewat versi baru yang tercatat di riwayat.'); };
@@ -17318,7 +17332,7 @@ function renderBannerDDAnalis(){
   const f1=v=>(Math.round(v*10)/10).toString().replace('.',',');
   const tglF=t=>String(t).split('-').reverse().join('/');
   let blok='', adaBulanIni=false, adaData=false;
-  ANALIS_DD.channel.forEach(c=>{
+  ANALIS_DD.channel.filter(c=>kanalTampil().includes(c.g)).forEach(c=>{
     const h=hitungDDAnalis(c.g, c.modal); if(!h.n) return;
     adaData=true;
     const bulanIni=h.pelanggaran.filter(x=>x.tgl.slice(0,7)===h.bulanNow);
@@ -17341,8 +17355,22 @@ function renderBannerDDAnalis(){
 </script>
 <script>
 function setAkunTampilan(a){
-  if(a!=='mt4' && a!=='analis') a='mt4';
+  if(a!=='mt4' && a!=='analis' && a!=='crypto89') a='mt4';
   document.body.setAttribute('data-akun',a);
+  try{
+    var g = a==='analis' ? 'XAUUSD' : a==='crypto89' ? 'FOREX' : null;
+    var jd=document.querySelector('#secAnalisBlok .sec-title');
+    if(jd) jd.textContent = a==='crypto89' ? '🪙 Akun Datuk Crypto 89 — Skor, Batas Kerugian & Sinyal' : a==='analis' ? '📡 Akun Datuk EURUSD — Skor, Batas Kerugian & Sinyal' : '📡 Akun Analis — Skor, Batas Kerugian & Sinyal';
+    var sel=document.getElementById('inpRunningChannel');
+    if(sel){ [].forEach.call(sel.options,function(o){ o.hidden = !!(g && o.value && o.value!==g); }); if(g) sel.value=g; }
+    if(g){ if(typeof setInputSinyalPairGroup==='function') setInputSinyalPairGroup(g); if(typeof daftarSinyalPairGroup!=='undefined' && typeof setDaftarSinyalPairGroup==='function') setDaftarSinyalPairGroup(g); }
+    var _awal=!window._akunSudahInit; window._akunSudahInit=1;
+    if(!_awal) ['renderScoreCard','renderRemPipsCard','renderBatasDDCard','renderBatasDDSim','renderRekonCard','renderDaftarPair','renderAudit','renderDaftarSinyal','renderRingkasV3C'].forEach(function(fn){
+      try{ if(typeof window[fn]==='function') window[fn](); }catch(e){ console.warn('rerender',fn,e); }
+    });
+    try{ if(typeof pasangPilihanVersiCrypto==='function') pasangPilihanVersiCrypto(); }catch(e){}
+    try{ if(typeof pasangRrVersiCrypto==='function') pasangRrVersiCrypto(); }catch(e){}
+  }catch(e){ console.warn('setAkunTampilan',e); }
   document.querySelectorAll('[data-akun-btn]').forEach(b=>b.classList.toggle('aktif', b.getAttribute('data-akun-btn')===a));
   try{ window.scrollTo(0,0); }catch(e){}
 }
@@ -17644,7 +17672,7 @@ const ISI_ATURAN_V3C = [
 ];
 function pasangV3C(){
   if(document.getElementById('aturanResmiV3C')) return;
-  const sisip = document.getElementById('aturanResmiV31') || document.getElementById('aturanResmiV3');
+  const sisip = document.getElementById('secCrypto89Host');
   if(!sisip) return;
   const isi = ISI_ATURAN_V3C.map(([judul,butir])=>`<div style="font-weight:800;margin-top:10px">${judul}</div><ol style="padding-left:18px;margin:4px 0">${butir.map(b=>`<li>${b}</li>`).join('')}</ol>`).join('');
   const box=document.createElement('div');
@@ -17659,7 +17687,7 @@ function pasangV3C(){
       <div id="v3CStatusKunci" style="margin-top:10px"></div>
     </div>
   </details>`;
-  sisip.parentNode.insertBefore(box, sisip.nextSibling);
+  sisip.appendChild(box);
   perbaruiStatusV3C();
 }
 async function perbaruiStatusV3C(){
@@ -17711,7 +17739,7 @@ async function simpanVersiTampil(kanal, bulan, versi){
   pasangPilihanVersiCrypto();
 }
 function pasangPilihanVersiCrypto(){
-  const host=document.querySelector('[data-akun="analis"]');
+  const host=document.getElementById('secCrypto89Host');
   if(!host) return;
   let box=document.getElementById('pilihVersiCrypto');
   if(!box){
@@ -17771,7 +17799,7 @@ function rrPerVersiCrypto(){
   return hasil;
 }
 function pasangRrVersiCrypto(){
-  const host=document.querySelector('[data-akun="analis"]'); if(!host) return;
+  const host=document.getElementById('secCrypto89Host'); if(!host) return;
   let box=document.getElementById('rrVersiCrypto');
   if(!box){
     box=document.createElement('div'); box.id='rrVersiCrypto';
@@ -17795,5 +17823,34 @@ setTimeout(pasangRrVersiCrypto, 3500);
 setTimeout(pasangRrVersiCrypto, 6000);
 </script>
 
+<script>
+// Ringkasan aturan v3 Datuk Crypto 89 (hanya tampilan): order hari ini, order bulan ini, loss kotor vs REM, modal.
+function renderRingkasV3C(){
+  const host=document.getElementById('secCrypto89Host'); if(!host) return;
+  let box=document.getElementById('ringkasV3C');
+  if(!box){ box=document.createElement('div'); box.id='ringkasV3C'; box.style.cssText='margin:12px 0'; host.appendChild(box); }
+  const A=aturanResmiV3C();
+  const pad=n=>String(n).padStart(2,'0'), now=new Date();
+  const hari=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate()), bln=hari.slice(0,7);
+  const rb=(cachedSinyalAnalis.FOREX||[]).filter(r=>r.status!=='running' && String(r.tanggal).slice(0,7)===bln && String(r.tanggal).slice(0,10)>='2026-11-01');
+  const nHari=rb.filter(r=>String(r.tanggal).slice(0,10)===hari).length, nBulan=rb.length;
+  const lossKotor=rb.reduce((s,r)=>{ const p=parseFloat(r.pips||0); return p<0? s-p : s; },0);
+  const rem=A.rem.batasRugiPips, f1=v=>(Math.round(v*10)/10).toString().replace('.',',');
+  const w=(v,mx)=> v>mx?'#F87171':(v>=mx*0.8?'#FACC15':'#4ADE80');
+  const baris=(n,v,t,c)=>'<tr><td style="padding:5px 0;color:#E5E7EB">'+n+'</td><td style="padding:5px 0;text-align:right;font-weight:800;color:'+c+'">'+v+'</td><td style="padding:5px 0 5px 10px;text-align:right;color:#E5E7EB">'+t+'</td></tr>';
+  box.innerHTML='<div style="padding:12px 14px;border-radius:12px;background:var(--bg0);border:1.5px solid #34D399">'
+    +'<div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px">📋 RINGKAS ATURAN V3 — DATUK CRYPTO 89 · BULAN INI</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px">'
+    +baris('Order close hari ini', nHari, 'maks '+A.maxOrderHari, w(nHari,A.maxOrderHari))
+    +baris('Order close bulan ini', nBulan, 'maks '+A.maxOrderBulan, w(nBulan,A.maxOrderBulan))
+    +baris('Loss kotor bulan ini', f1(lossKotor)+' pips', 'REM '+rem+' pips ($'+(rem*A.nilaiPipUsd)+')', w(lossKotor,rem))
+    +baris('Modal investor', '$'+A.modalUsd, '3 bulan × $'+(rem*A.nilaiPipUsd), '#FFFFFF')
+    +'</table>'
+    +'<div style="font-size:9px;color:#E5E7EB;margin-top:6px;line-height:1.5">Rata-rata SL 8 pair = 54,375 → dibulatkan 60 pips. 100 order × 60 pips = 6.000 pips ($600). Loss kotor = pips order yang kena SL saja (win tidak mengurangi).</div>'
+    +'</div>';
+}
+(function(){ const _r=renderBatasDDCard; renderBatasDDCard=function(){ _r.apply(this,arguments); try{ renderRingkasV3C(); }catch(e){ console.error('ringkasV3C',e); } }; })();
+setTimeout(()=>{ try{ renderRingkasV3C(); }catch(e){} }, 3800);
+</script>
 </body>
 </html>
