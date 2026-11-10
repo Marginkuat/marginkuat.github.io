@@ -17747,20 +17747,25 @@ const VERSI_RR_CRYPTO = [
   { versi:'v3', mulai:'2026-11-01', rr:2 }
 ];
 function rrPerVersiCrypto(){
+  // Dinilai dari HASIL CLOSE. Win (+pips) harus = RR × SL Hard. Loss (−pips) harus = SL Hard. Toleransi 2 pips (slippage).
+  const TOL_PIPS = 2;
   const hasil=[];
   (cachedSinyalAnalis.FOREX||[]).forEach(r=>{
     if(r.status==='running' || r.status==='pending') return;
     const nm=String(r.simbol||'').toUpperCase();
     const sl=CRYPTO89_SL_V3[nm];
     if(sl==null) return;                       // pair di luar daftar Crypto 89
-    const slIn=parseFloat(r.slPips), tpIn=parseFloat(r.tpPips);
-    if(!isFinite(slIn) || !isFinite(tpIn)) return;
+    const pips=parseFloat(r.pips);
+    if(!isFinite(pips) || pips===0) return;
     const tutup=String(r.tanggal||'').slice(0,10);
+    const buka=String(r.tanggalBuka||'').slice(0,10);
     VERSI_RR_CRYPTO.forEach(v=>{
       if(tutup < v.mulai) return;              // versi belum berlaku saat sinyal tutup
-      const tpWajib = v.rr*sl;
-      const ok = (Math.abs(slIn-sl)<0.5) && (Math.abs(tpIn-tpWajib)<0.5);
-      hasil.push({ tgl:tutup, buka:String(r.tanggalBuka||'').slice(0,10), pair:nm, versi:v.versi, slIn, tpIn, slWajib:sl, tpWajib, ok });
+      const menang = pips>0;
+      const wajib = menang ? v.rr*sl : sl;     // win → TP wajib; loss → SL wajib
+      const dinilai = Math.abs(pips)>0 ? Math.abs(pips) : 0;
+      const ok = Math.abs(dinilai - wajib) <= TOL_PIPS;
+      hasil.push({ tgl:tutup, buka, pair:nm, versi:v.versi, menang, pipsHasil:pips, wajib, slWajib:sl, rr:v.rr, ok });
     });
   });
   return hasil;
@@ -17777,7 +17782,7 @@ function pasangRrVersiCrypto(){
   const semua=rrPerVersiCrypto();
   const salah=semua.filter(x=>!x.ok).sort((a,b)=>b.tgl.localeCompare(a.tgl));
   const isi = salah.length
-    ? salah.map(x=>`<div style="padding:6px 0;border-bottom:1px dashed var(--border);font-size:11px;color:#FFFFFF"><b style="color:#F87171">❌ ${x.versi} melanggar</b> · ${x.pair} · dibuka ${x.buka} · tutup ${x.tgl}<br><span style="color:#E5E7EB">SL input ${x.slIn} (wajib ${x.slWajib}) · TP input ${x.tpIn} (wajib ${x.tpWajib}, RR 1:${VERSI_RR_CRYPTO.find(v=>v.versi===x.versi).rr})</span></div>`).join('')
+    ? salah.map(x=>`<div style="padding:6px 0;border-bottom:1px dashed var(--border);font-size:11px;color:#FFFFFF"><b style="color:#F87171">❌ ${x.versi} melanggar</b> · ${x.pair} · dibuka ${x.buka} · tutup ${x.tgl}<br><span style="color:#E5E7EB">${x.menang?`Win ${x.pipsHasil>0?'+':''}${x.pipsHasil} pips (TP wajib +${x.wajib}, RR 1:${x.rr})`:`Loss ${x.pipsHasil} pips (SL wajib -${x.wajib})`}</span></div>`).join('')
     : `<div style="font-size:11px;color:#4ADE80">Tidak ada pelanggaran RR per versi.</div>`;
   box.innerHTML = `
     <div style="padding:12px 14px;border-radius:12px;background:var(--bg0);border:1.5px solid #F87171">
