@@ -17737,5 +17737,57 @@ function pasangPilihanVersiCrypto(){
 muatVersiTampil().then(()=>pasangPilihanVersiCrypto());
 setTimeout(()=>{ muatVersiTampil().then(pasangPilihanVersiCrypto); }, 3000);
 </script>
+<script>
+// Pencatatan RR per versi untuk Datuk Crypto 89. Setiap versi menilai sinyal dengan aturannya sendiri.
+// Versi berlaku bila sinyal sudah tutup pada/sesudah tanggal mulai versi itu.
+// SL dari tabel Crypto 89 (kalkulator Hard). TP wajib = rr × SL. Hanya sinyal yang sudah close.
+const VERSI_RR_CRYPTO = [
+  { versi:'v1', mulai:'2026-10-24', rr:3 },
+  { versi:'v2', mulai:'2026-10-01', rr:2 },
+  { versi:'v3', mulai:'2026-11-01', rr:2 }
+];
+function rrPerVersiCrypto(){
+  const hasil=[];
+  (cachedSinyalAnalis.FOREX||[]).forEach(r=>{
+    if(r.status==='running' || r.status==='pending') return;
+    const nm=String(r.simbol||'').toUpperCase();
+    const sl=CRYPTO89_SL_V3[nm];
+    if(sl==null) return;                       // pair di luar daftar Crypto 89
+    const slIn=parseFloat(r.slPips), tpIn=parseFloat(r.tpPips);
+    if(!isFinite(slIn) || !isFinite(tpIn)) return;
+    const tutup=String(r.tanggal||'').slice(0,10);
+    VERSI_RR_CRYPTO.forEach(v=>{
+      if(tutup < v.mulai) return;              // versi belum berlaku saat sinyal tutup
+      const tpWajib = v.rr*sl;
+      const ok = (Math.abs(slIn-sl)<0.5) && (Math.abs(tpIn-tpWajib)<0.5);
+      hasil.push({ tgl:tutup, buka:String(r.tanggalBuka||'').slice(0,10), pair:nm, versi:v.versi, slIn, tpIn, slWajib:sl, tpWajib, ok });
+    });
+  });
+  return hasil;
+}
+function pasangRrVersiCrypto(){
+  const host=document.querySelector('[data-akun="analis"]'); if(!host) return;
+  let box=document.getElementById('rrVersiCrypto');
+  if(!box){
+    box=document.createElement('div'); box.id='rrVersiCrypto';
+    box.style.cssText='margin:12px 0';
+    const sisip=document.getElementById('pilihVersiCrypto');
+    if(sisip) sisip.parentNode.insertBefore(box, sisip.nextSibling); else host.insertBefore(box, host.firstChild);
+  }
+  const semua=rrPerVersiCrypto();
+  const salah=semua.filter(x=>!x.ok).sort((a,b)=>b.tgl.localeCompare(a.tgl));
+  const isi = salah.length
+    ? salah.map(x=>`<div style="padding:6px 0;border-bottom:1px dashed var(--border);font-size:11px;color:#FFFFFF"><b style="color:#F87171">❌ ${x.versi} melanggar</b> · ${x.pair} · dibuka ${x.buka} · tutup ${x.tgl}<br><span style="color:#E5E7EB">SL input ${x.slIn} (wajib ${x.slWajib}) · TP input ${x.tpIn} (wajib ${x.tpWajib}, RR 1:${VERSI_RR_CRYPTO.find(v=>v.versi===x.versi).rr})</span></div>`).join('')
+    : `<div style="font-size:11px;color:#4ADE80">Tidak ada pelanggaran RR per versi.</div>`;
+  box.innerHTML = `
+    <div style="padding:12px 14px;border-radius:12px;background:var(--bg0);border:1.5px solid #F87171">
+      <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px">⚠️ PELANGGARAN RR PER VERSI — DATUK CRYPTO 89</div>
+      <div style="font-size:10px;color:#E5E7EB;margin:4px 0 8px">Dicatat otomatis dari data close. Setiap versi menilai dengan aturannya sendiri.</div>
+      <details><summary style="cursor:pointer;font-size:11px;font-weight:800;color:#4ADE80;padding:6px 0">📂 Lihat catatan (${salah.length} pelanggaran dari ${semua.length} penilaian)</summary>${isi}</details>
+    </div>`;
+}
+setTimeout(pasangRrVersiCrypto, 3500);
+setTimeout(pasangRrVersiCrypto, 6000);
+</script>
 </body>
 </html>
