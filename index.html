@@ -226,6 +226,7 @@ body[data-akun="analis"] #inpSinyalPairTabs, body[data-akun="analis"] #daftarSin
 </head>
 <body data-akun="mt4">
 <script>
+var V4_REM={FX:{rem:4500,min:4500,max:4500},AU:{rem:20000,min:20000,max:20000}}, V4_MODAL={FX:1350,AU:6000,TOTAL:7350}, V4_REM_USD_TOTAL=2450;
 function kanalTampil(){ var a=document.body&&document.body.getAttribute('data-akun'); return a==='analis'?['XAUUSD']:a==='crypto89'?['FOREX']:['XAUUSD','FOREX']; }
 </script>
 <script>(function(){try{if(localStorage.getItem('mk_theme')==='light')document.body.classList.add('light-theme');}catch(e){}})();</script>
@@ -6857,6 +6858,7 @@ async function simpanSettingRem(key,val){
 }
 async function editRemPips(g){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk ubah REM Pips');return;}
+  if(g==='XAUUSD' && typeof V4_REM!=='undefined'){ toast('🔒 REM Datuk EURUSD dipatenkan aturan v4: forex '+V4_REM.FX.rem+' pips, XAUUSD '+V4_REM.AU.rem+' pips. Perubahan harus lewat versi aturan baru.'); return; }
   if(typeof REM_TAMPIL_V3!=='undefined' && REM_TAMPIL_V3[g]!=null){ toast('🔒 REM Datuk Crypto 89 dipatenkan aturan v3: rugi '+REM_TAMPIL_V3[g]+' pips, target boleh stop/maksimal '+REM_TARGET_V3[g].min+'/'+REM_TARGET_V3[g].max+'. Perubahan harus lewat versi aturan baru.'); return; }
   const labelGrup=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||(g==='FOREX'?'Forex':g);
   const cur=cachedRemPips[g]+','+cachedTargetMin[g]+','+cachedTargetMax[g];
@@ -6879,12 +6881,14 @@ async function editRemPips(g){
 function renderRemPipsCard(){
   const wrap=document.getElementById('remPipsWrap');
   if(!wrap)return;
-  const potongan=kanalTampil().map(g=>{
-    const labelGrup=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
-    const batasRugi=(REM_TAMPIL_V3[g]!=null)?REM_TAMPIL_V3[g]:(((typeof remPipsAturan==='function')?remPipsAturan()[g]:cachedRemPips[g])||0), tMin=(REM_TARGET_V3[g]!=null)?REM_TARGET_V3[g].min:(cachedTargetMin[g]||0), tMax=(REM_TARGET_V3[g]!=null)?REM_TARGET_V3[g].max:(cachedTargetMax[g]||0);
+  const _segs=[]; kanalTampil().forEach(g=>{ if(g==='XAUUSD' && typeof V4_REM!=='undefined'){ _segs.push({g:g,seg:'FX'},{g:g,seg:'AU'}); } else _segs.push({g:g}); });
+  const potongan=_segs.map(S=>{ const g=S.g;
+    const labelGrup=((cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g)+(S.seg==='FX'?' · Forex (6 pair)':(S.seg==='AU'?' · XAUUSD':''));
+    const batasRugi=S.seg?V4_REM[S.seg].rem:(REM_TAMPIL_V3[g]!=null)?REM_TAMPIL_V3[g]:(((typeof remPipsAturan==='function')?remPipsAturan()[g]:cachedRemPips[g])||0), tMin=S.seg?V4_REM[S.seg].min:(REM_TARGET_V3[g]!=null)?REM_TARGET_V3[g].min:(cachedTargetMin[g]||0), tMax=S.seg?V4_REM[S.seg].max:(REM_TARGET_V3[g]!=null)?REM_TARGET_V3[g].max:(cachedTargetMax[g]||0);
     const now=new Date();
     const rowsBulanIni=(cachedSinyalAnalis[g]||[]).filter(r=>{
       const d=new Date(r.tanggal);
+      if(S.seg){ const au=((r.simbol||'').toUpperCase()==='XAUUSD'); if((S.seg==='AU')!==au) return false; }
       return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
     });
     const total=rowsBulanIni.reduce((s,r)=>s+parseFloat(r.pips||0),0);
@@ -16063,7 +16067,7 @@ function hitungBatasDD(g, bulanKey){
 }
 // Nilai v3 (tampilan), hanya untuk Datuk Crypto 89 (FOREX): rem 6.000, target 6.000/6.000, DD tidak berlaku (buffer). Datuk EURUSD (XAUUSD) belum diubah.
 // remPipsAturan() tidak diubah karena ikut dihitung untuk sidik jari v2 yang sudah tersimpan.
-const DD_NONAKTIF_V3 = { FOREX:true };   // hanya Datuk Crypto 89 (XAUUSD = Datuk EURUSD, belum diubah)
+const DD_NONAKTIF_V3 = { FOREX:true, XAUUSD:true };   // Datuk Crypto 89 (v3) dan Datuk EURUSD (v4): hanya mengandalkan buffer
 const REM_TAMPIL_V3 = { FOREX:6000 };   // hanya Datuk Crypto 89
 const REM_TARGET_V3 = { FOREX:{ min:6000, max:6000 } };
 function renderBatasDDCard(){
@@ -16144,7 +16148,7 @@ function renderBatasDDSim(){
   const wrap=document.getElementById('batasDDSimWrap'); if(!wrap) return;
   const mEl=document.getElementById('batasDDModalInv'), lEl=document.getElementById('batasDDLotInv');
   try{ if(mEl && mEl.dataset.init!=='1'){ mEl.dataset.init='1'; const sm=localStorage.getItem('bdd_modal_inv'), sl=localStorage.getItem('bdd_lot_inv'); if(sm&&!mEl.value) mEl.value=sm; if(sl&&lEl&&!lEl.value) lEl.value=sl; } }catch(e){}
-  const modal=parseFloat(mEl&&mEl.value); const _kt=kanalTampil(); const _acuan=(_kt.length===1&&_kt[0]==='FOREX')?aturanResmiV3C().modalUsd:batasAturanV2('XAUUSD').modal; const lotAuto=Math.max(0.01,Math.floor(modal/_acuan+1e-9)*0.01); const lot=Math.max(0.01,parseFloat(lEl&&lEl.value)||(isFinite(modal)?lotAuto:0.01));
+  const modal=parseFloat(mEl&&mEl.value); const _kt=kanalTampil(); const _acuan=(_kt.length===1&&_kt[0]==='FOREX')?aturanResmiV3C().modalUsd:((_kt.length===1&&_kt[0]==='XAUUSD')?V4_MODAL.TOTAL:batasAturanV2('XAUUSD').modal); const lotAuto=Math.max(0.01,Math.floor(modal/_acuan+1e-9)*0.01); const lot=Math.max(0.01,parseFloat(lEl&&lEl.value)||(isFinite(modal)?lotAuto:0.01));
   try{ if(isFinite(modal)&&modal>0){ localStorage.setItem('bdd_modal_inv',String(modal)); localStorage.setItem('bdd_lot_inv',String(lot)); } }catch(e){}
   if(!isFinite(modal)||modal<=0){ wrap.innerHTML='<div style="font-size:10px;color:#E5E7EB;text-align:center">Isi modal Anda untuk melihat risikonya.</div>'; return; }
   if(lot<=0){ wrap.innerHTML='<div style="font-size:10px;color:#F87171">Lot tidak valid.</div>'; return; }
@@ -16154,21 +16158,21 @@ function renderBatasDDSim(){
     const label=(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
     const h=hitungBatasDD(g,bulanKey), c=h.cfg, k=lot/c.lot;
     const _v3=(typeof DD_NONAKTIF_V3!=='undefined'&&DD_NONAKTIF_V3[g]);
-    const stop=(_v3?REM_TAMPIL_V3[g]*0.1:c.stopUsd)*k, loss1=c.riskLossUsd*k, ddNow=h.curDD*k, ddMax=h.maxDD*k, cum=h.cum*k;
+    const stop=(_v3?(g==='FOREX'?REM_TAMPIL_V3[g]*0.1:V4_REM_USD_TOTAL):c.stopUsd)*k, loss1=c.riskLossUsd*k, ddNow=h.curDD*k, ddMax=h.maxDD*k, cum=h.cum*k;
     const pStop=stop/modal*100, pLoss=loss1/modal*100, pNow=ddNow/modal*100, pMax=ddMax/modal*100;
     const [wr,tx]=nilai(pStop);
-    const minM=_v3?aturanResmiV3C().modalUsd:batasAturanV2(g).modal, syaratOk=modal>=minM;
+    const minM=_v3?(g==='FOREX'?aturanResmiV3C().modalUsd:V4_MODAL.TOTAL):batasAturanV2(g).modal, syaratOk=modal>=minM;
     if(_v3){
       const rowsV=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bulanKey && String(r.tanggal)>='2026-11-01');
       const netP=rowsV.reduce((x,r)=>x+parseFloat(r.pips||0),0), lossP=rowsV.reduce((x,r)=>{const q=parseFloat(r.pips||0);return q<0?x-q:x;},0);
       const netU=netP*0.1*k, lossU=lossP*0.1*k, sisaU=Math.max(0,stop-lossU), kena=lossU>=stop-1e-9, bln=modal/stop;
       return `<div style="background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:6px">
-        <div style="font-size:10px;font-weight:800;color:#E5E7EB;margin-bottom:3px">${label} · aturan v3</div>
+        <div style="font-size:10px;font-weight:800;color:#E5E7EB;margin-bottom:3px">${label} · aturan ${g==='FOREX'?'v3':'v4'}</div>
         <div style="font-size:10px;color:#E5E7EB;line-height:1.7">
           Hasil bersih bulan ini: <b style="color:${netU<0?'#F87171':'#4ADE80'}">${netU>=0?'+':''}${_bdFmt(netU)}</b> (${(netU/modal*100).toFixed(1)}%)<br>
-          Loss kotor bulan ini: <b style="color:#F87171">${_bdFmt(-lossU)}</b> (${(Math.round(lossP*10)/10)} pips) · batas REM <b>${_bdFmt(-stop)}</b> (${REM_TAMPIL_V3[g]} pips)<br>
+          Loss kotor bulan ini: <b style="color:#F87171">${_bdFmt(-lossU)}</b> (${(Math.round(lossP*10)/10)} pips) · batas REM <b>${_bdFmt(-stop)}</b>${g==='FOREX'?' ('+REM_TAMPIL_V3[g]+' pips)':' (forex 4.500 + emas 20.000 pips)'}<br>
           Sisa ruang sebelum REM: <b>${_bdFmt(sisaU)}</b> · REM = ${pStop.toFixed(1)}% modal, modal Anda cukup untuk <b>${bln.toFixed(1)} bulan</b> loss semua<br>
-          ${syaratOk?'':`<div style="margin-top:4px;padding:6px 8px;border-radius:6px;background:#7F1D1D;border:1px solid #F87171;color:#FECACA;font-weight:800">❌ Modal di bawah acuan aturan v3: minimal $${minM} (3 bulan × $600 untuk lot 0,01).</div>`}
+          ${syaratOk?'':`<div style="margin-top:4px;padding:6px 8px;border-radius:6px;background:#7F1D1D;border:1px solid #F87171;color:#FECACA;font-weight:800">❌ Modal di bawah acuan aturan ${g==='FOREX'?'v3':'v4'}: minimal $${minM} (3 bulan order loss semua untuk lot 0,01).</div>`}
           Status: <b style="color:${kena?'#F87171':'#4ADE80'}">${rowsV.length===0?'belum ada sinyal bulan ini':(kena?'🛑 REM kena, wajib stop':'✅ aman')}</b>
         </div></div>`;
     }
@@ -16183,9 +16187,9 @@ function renderBatasDDSim(){
         Status: <b style="color:${h.n===0?'#E5E7EB':(h.curDD>=c.stopUsd-1e-9?'#F87171':(h.curDD>=c.warnUsd-1e-9?'#FACC15':'#4ADE80'))}">${h.n===0?'belum ada sinyal bulan ini':(h.curDD>=c.stopUsd-1e-9?'🛑 batas kena, stop':(h.curDD>=c.warnUsd-1e-9?'⚠️ peringatan, pilih entry paling jelas':'✅ aman'))}</b>
       </div></div>`;
   }).join('');
-  const _cry=(_kt.length===1&&_kt[0]==='FOREX'); const lotSama=modal/(_cry?_acuan:5000)*0.01; const lotDipakaiTxt=`Lot dipakai: <b>${lot.toFixed(2)}</b>${(lEl&&parseFloat(lEl.value))?'':' (otomatis)'}. `;
-  const _acTxt='$'+(_cry?_acuan:5000); const lotTxt = lotSama>=0.01 ? `Supaya persen risikonya sama dengan acuan ${_acTxt}, lot ≈ <b>${(Math.floor(lotSama*100+1e-9)/100).toFixed(2)}</b>.` : `Lot terkecil 0,01 sudah lebih besar dari proporsi acuan ${_acTxt} untuk modal ini, jadi risikonya otomatis lebih berat dari yang dicontohkan analis.`;
-  wrap.innerHTML=rows+`<div style="font-size:9px;color:#E5E7EB;line-height:1.5">${lotDipakaiTxt}${lotTxt} ${_cry?'Aturan v3 Crypto 89: REM $600 per bulan, modal acuan $1.800 (3 bulan loss semua).':'Batas: rugi maksimal 6% dari modal per bulan; di atasnya berisiko tinggi.'} Hasil masa lalu bukan jaminan.</div>`;
+  const _cry=(_kt.length===1); const lotSama=modal/(_cry?_acuan:5000)*0.01; const lotDipakaiTxt=`Lot dipakai: <b>${lot.toFixed(2)}</b>${(lEl&&parseFloat(lEl.value))?'':' (otomatis)'}. `;
+  const _acTxt='$'+(_cry?_acuan:5000).toLocaleString('id-ID'); const lotTxt = lotSama>=0.01 ? `Supaya persen risikonya sama dengan acuan ${_acTxt}, lot ≈ <b>${(Math.floor(lotSama*100+1e-9)/100).toFixed(2)}</b>.` : `Lot terkecil 0,01 sudah lebih besar dari proporsi acuan ${_acTxt} untuk modal ini, jadi risikonya otomatis lebih berat dari yang dicontohkan analis.`;
+  wrap.innerHTML=rows+`<div style="font-size:9px;color:#E5E7EB;line-height:1.5">${lotDipakaiTxt}${lotTxt} ${_cry?(_kt[0]==='FOREX'?'Aturan v3 Crypto 89: REM $600 per bulan, modal acuan $1.800 (3 bulan loss semua).':'Aturan v4 Datuk EURUSD: REM forex $450 + emas $2.000 per bulan, modal acuan $7.350 (3 bulan loss semua).'):'Batas: rugi maksimal 6% dari modal per bulan; di atasnya berisiko tinggi.'} Hasil masa lalu bukan jaminan.</div>`;
 }
 (function(){
   const _r=renderBatasDDCard;
@@ -17022,6 +17026,7 @@ function renderAudit(){
   wrap.innerHTML=`<div style="background:var(--bg0);border:1.5px solid #C8A84B;border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🔍 Audit Kepatuhan Aturan — untuk investor & pihak ketiga</div>
     ${(kanalTampil().length===1&&kanalTampil()[0]==='FOREX')?`<div style="font-size:9px;color:#E5E7EB;line-height:1.5;margin-bottom:8px">Sinyal mulai <b>1 November 2026</b> diperiksa otomatis dengan <b>Aturan Resmi v3 Datuk Crypto 89</b> (dikunci 10 November 2026): forex RR 1:2 kalkulator Hard, SL 45 pips (GBPUSD, NZDJPY, USDCAD) atau 60 pips (CHFJPY, EURJPY, EURNZD, GBPJPY, USDJPY), TP 2× SL; maksimal 5 order per hari dan 100 order per bulan (dihitung saat close). Hanya mengandalkan buffer: tidak ada jatah per pair dan tidak ada win langsung stop. Hanya <b>dua kategori menyimpang</b>: <b>jatah melebihi</b> dan <b>RR melebihi / kurang</b>. <b>❌ PASTI</b> = data tercatat jelas melanggar. Yang bisa diaudit hanya data yang diinput; cocokkan juga dengan riwayat TF.</div>`:`<div style="font-size:9px;color:#E5E7EB;line-height:1.5;margin-bottom:8px">Sinyal mulai <b>1 Oktober 2026</b> diperiksa otomatis dengan <b>Aturan Resmi v2</b>: emas SL 500 / TP 500 (RR 1:1), ; forex SL Hard 2 per pair (60 / 90 / 120 pips), TP 2× SL (RR 1:2), jatah 2 order per pair per bulan, win pertama langsung stop; timeframe bebas (H4, D1, W1); satu order per pair, order berikutnya setelah order sebelumnya kena SL. <b>Aturan ini dibuat dan ditetapkan pada 26 Oktober 2026</b>, jadi sinyal 1–25 Oktober dinilai mundur (retroaktif) dan diberi tanda 🕰️. Sinyal sebelum 1 Oktober 2026 tidak dinilai. Hanya <b>dua kategori menyimpang</b>: <b>jatah melebihi</b> dan <b>RR melebihi / kurang</b>. Tidak menyimpang: order pertama win lalu stop; emas loss, win, win lalu stop; forex loss, win lalu stop. <b>❌ PASTI</b> = data tercatat jelas melanggar. <b>❌ KUAT</b> = hasilnya sama dengan RR yang salah. <b>⚠️ INDIKASI</b> = janggal, perlu dikonfirmasi. Yang bisa diaudit hanya data yang diinput; cocokkan juga dengan riwayat TF.</div>`}
+    ${(kanalTampil().length===1&&kanalTampil()[0]==='XAUUSD')?`<div style="font-size:9px;color:#E5E7EB;line-height:1.5;margin-bottom:8px"><b>Mulai 1 November 2026</b> sinyal diperiksa dengan <b>Aturan Resmi v4 Datuk EURUSD</b>: forex RR 1:2 kalkulator Hard (AUDUSD, NZDUSD, USDCHF SL 30 / TP 60; AUDJPY, CADJPY, EURUSD SL 45 / TP 90), XAUUSD RR 1:2 (SL 200 / TP 400, kalkulator Standar); maksimal 5 order per hari dan 100 order per bulan untuk masing-masing (dihitung saat close). Hanya mengandalkan buffer, tidak ada jatah per pair. Sebelum 1 November tetap dinilai dengan v2 seperti di atas.</div>`:''}
     ${blok}
   </div>`;
 }
@@ -17248,11 +17253,11 @@ function aturanResmiV31(){
 }
 async function kunciAturanResmi(ver){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk mengunci aturan');return;}
-  const A=(ver==='v3-crypto89'?aturanResmiV3C():(ver==='v3.1'?aturanResmiV31():(ver==='v3'?aturanResmiV3():(ver==='v2'?aturanResmiV2():aturanResmiV1()))));
+  const A=(ver==='v4'?aturanResmiV4():ver==='v3-crypto89'?aturanResmiV3C():(ver==='v3.1'?aturanResmiV31():(ver==='v3'?aturanResmiV3():(ver==='v2'?aturanResmiV2():aturanResmiV1()))));
   if(cachedAturanKunci.riwayat.some(x=>x.versi===A.versi)){ toast('🔒 Versi '+A.versi+' sudah terkunci. Perubahan aturan harus lewat versi baru.'); return; }
   const hash=await hitungSidikJariAturan(A);
   if(!hash){ toast('❌ Browser ini tidak mendukung SHA-256 (perlu HTTPS). Kunci dibatalkan.'); return; }
-  const alasan=prompt(`Kunci Aturan Resmi ${A.versi}\nDitetapkan ${A.ditetapkan}.\nSidik jari: ${hash}\n\nTulis keterangan (boleh kosong), lalu OK untuk mengunci. Setelah terkunci tidak bisa dihapus dari layar situs:`, (ver==='v2'?'Aturan v2: forex RR 1:2, jatah 2 order per pair, win langsung stop, order berurutan; ditetapkan 26 Okt 2026, dinilai mundur sejak 1 Okt 2026':(ver==='v3.1'?'Aturan Resmi v3.1 (koreksi dari v3), berlaku 1 Nov 2026 - berlaku mundur':(ver==='v3'?'Aturan Resmi v3 Datuk EURUSD, berlaku 9 Nov 2026':'Aturan awal strategi analis'))));
+  const alasan=prompt(`Kunci Aturan Resmi ${A.versi}\nDitetapkan ${A.ditetapkan}.\nSidik jari: ${hash}\n\nTulis keterangan (boleh kosong), lalu OK untuk mengunci. Setelah terkunci tidak bisa dihapus dari layar situs:`, (ver==='v2'?'Aturan v2: forex RR 1:2, jatah 2 order per pair, win langsung stop, order berurutan; ditetapkan 26 Okt 2026, dinilai mundur sejak 1 Okt 2026':(ver==='v3.1'?'Aturan Resmi v3.1 (koreksi dari v3), berlaku 1 Nov 2026 - berlaku mundur':(ver==='v3'?'Aturan Resmi v3 Datuk EURUSD, berlaku 9 Nov 2026':(ver==='v4'?'Aturan v4 Datuk EURUSD, berlaku 1 Nov 2026: forex REM 4.500 pips modal $1.350; XAUUSD SL 200/TP 400 REM 20.000 pips modal $6.000':'Aturan awal strategi analis')))));
   if(alasan===null) return;
   const lama=cachedAturanKunci;
   const baru={ versi:A.versi, ditetapkan:A.ditetapkan, hash, dikunciPada:new Date().toISOString(), alasan:(alasan||'').trim(), aturan:A };
@@ -17263,7 +17268,7 @@ function remPipsAturan(){ return { XAUUSD:3000, FOREX:3000 }; }   // Datuk EURUS
 async function samakanRemPips(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const t=remPipsAturan();
-  try{ for(const g of ['XAUUSD','FOREX']){ if(typeof REM_TAMPIL_V3!=='undefined' && REM_TAMPIL_V3[g]!=null) continue; await simpanSettingRem('rem_pips_'+g, t[g]); cachedRemPips[g]=t[g]; } toast('✅ REM Pips disamakan dengan aturan'); renderRemPipsCard(); }
+  try{ for(const g of ['XAUUSD','FOREX']){ if(g==='XAUUSD' && typeof V4_REM!=='undefined') continue; if(typeof REM_TAMPIL_V3!=='undefined' && REM_TAMPIL_V3[g]!=null) continue; await simpanSettingRem('rem_pips_'+g, t[g]); cachedRemPips[g]=t[g]; } toast('✅ REM Pips disamakan dengan aturan'); renderRemPipsCard(); }
   catch(e){ console.error(e); toast('❌ Gagal menyimpan REM Pips: '+(e.message||'').slice(0,100)); }
 }
 editBatasDD=async function(){ toast('🔒 Aturan Resmi v1 terkunci. Batas tidak bisa diubah dari layar; perubahan harus lewat versi baru yang tercatat di riwayat.'); };
@@ -17866,6 +17871,83 @@ function renderRingkasV3C(){
 }
 (function(){ const _r=renderBatasDDCard; renderBatasDDCard=function(){ _r.apply(this,arguments); try{ renderRingkasV3C(); }catch(e){ console.error('ringkasV3C',e); } }; })();
 setTimeout(()=>{ try{ renderRingkasV3C(); }catch(e){} }, 3800);
+</script>
+<script>
+// ATURAN RESMI V4 — Datuk EURUSD. Menggantikan v3/v3.1 (keduanya tetap tersimpan sebagai riwayat). Berlaku 1 Nov 2026 00:00.
+function aturanResmiV4(){
+  const pair={ AUDUSD:{sl:30,tp:60}, NZDUSD:{sl:30,tp:60}, USDCHF:{sl:30,tp:60}, AUDJPY:{sl:45,tp:90}, CADJPY:{sl:45,tp:90}, EURUSD:{sl:45,tp:90} };
+  return { versi:'v4', ditetapkan:'10 November 2026', berlakuSejak:'2026-11-01T00:00', kanal:'XAUUSD', menggantikan:'v3.1',
+    forex:{ rr:'1:2', kalkulator:'Hard', maxOrderHari:5, maxOrderBulan:100, modalUsd:1350, slRataPips:45, lot:0.01, nilaiPipUsd:0.1, pair:pair,
+      rem:{ batasRugiPips:4500, targetBolehStopPips:4500, targetMaksimalPips:4500 } },
+    xauusd:{ rr:'1:2', slPips:200, tpPips:400, kalkulator:'XAUUSD Standar', maxOrderHari:5, maxOrderBulan:100, modalUsd:6000, lot:0.01, nilaiPipUsd:0.1,
+      rem:{ batasRugiPips:20000, targetBolehStopPips:20000, targetMaksimalPips:20000 } },
+    totalModalUsd:7350, totalRemUsd:2450,
+    aturan:['hanya mengandalkan buffer','RR 1:2 (forex kalkulator Hard, XAUUSD SL 200 / TP 400 kalkulator Standar)','maks 5 order per hari dihitung saat close','maks 100 order per bulan dihitung saat close','modal forex $1350, XAUUSD $6000, total $7350 (3 bulan order loss semua akun MC)','lot 0,01 (1 pip = $0,10)','REM forex 4500 pips ($450), XAUUSD 20000 pips ($2000), target 1:1','order melanggar aturan 2, 3, atau 4 dianggap melanggar'] };
+}
+const ISI_ATURAN_V4=[
+ ['FOREX (6 pair)',['Hanya mengandalkan buffer.','RR forex 1:2, memakai kalkulator Hard.','Maksimal 5 order per hari, dihitung saat close (baik kena SL maupun TP).','Maksimal 100 order per bulan, dihitung saat close.','Modal $1.350 (3 bulan order loss semua, akun MC). SL rata-rata 37,5 pips dibulatkan 45 pips, 100 order × 45 pips = 4.500 pips = $450 per bulan.','Lot 0,01 (1 pip = $0,10).','Order yang melanggar aturan 2, 3, atau 4 dianggap melanggar dan dicatat di aturan situs.']],
+ ['PAIR FOREX DAN SL (kalkulator Hard)',['SL 30 pips, TP 60 pips: AUDUSD, NZDUSD, USDCHF.','SL 45 pips, TP 90 pips: AUDJPY, CADJPY, EURUSD.']],
+ ['XAUUSD',['Hanya mengandalkan buffer.','RR 1:2: SL 200 pips, TP 400 pips, memakai kalkulator XAUUSD Standar.','Maksimal 5 order per hari dan 100 order per bulan, dihitung saat close.','Modal $6.000 (3 bulan order loss semua, akun MC). 100 order × 200 pips = 20.000 pips = $2.000 per bulan, lot 0,01.','Order yang melanggar aturan 2, 3, atau 4 dianggap melanggar.']],
+ ['REM BULANAN (target 1:1 dengan batas rugi)',['Forex: batas rugi per bulan (wajib stop) 4.500 pips (= $450). Target untung boleh stop 4.500 pips, maksimal 4.500 pips.','XAUUSD: batas rugi per bulan (wajib stop) 20.000 pips (= $2.000). Target untung boleh stop 20.000 pips, maksimal 20.000 pips.']]
+];
+function pasangV4(){
+  if(document.getElementById('aturanResmiV4')) return;
+  const sisip=document.getElementById('aturanResmiV31')||document.getElementById('aturanResmiV3'); if(!sisip) return;
+  const isi=ISI_ATURAN_V4.map(([judul,butir])=>'<div style="font-weight:800;margin-top:10px">'+judul+'</div><ol style="padding-left:18px;margin:4px 0">'+butir.map(b=>'<li>'+b+'</li>').join('')+'</ol>').join('');
+  const box=document.createElement('div'); box.id='aturanResmiV4'; box.style.cssText='margin:12px 0';
+  box.innerHTML='<details open style="border:1.5px solid #34D399;border-radius:12px;background:var(--bg0);padding:0 12px">'
+   +'<summary style="cursor:pointer;list-style:none;padding:12px 0;font-size:12px;font-weight:800;color:#34D399;letter-spacing:.4px">📜 ATURAN RESMI V4 — DATUK EURUSD · berlaku 1 Nov 2026 ▸</summary>'
+   +'<div style="font-size:11px;color:#FFFFFF;line-height:1.7;padding-bottom:12px">'
+   +'<div style="font-size:10px;color:#E5E7EB;margin-bottom:8px">Aturan ini berlaku mulai 1 November 2026, 00:00, dan menggantikan v3 serta v3.1 untuk penilaian sinyal. v3 dan v3.1 tetap tersimpan utuh sebagai riwayat dan tidak diubah. Dipisah dari v3 Datuk Crypto 89. Aturan MT4 adalah akun terpisah dan tidak disinkronkan.</div>'
+   +isi
+   +'<div style="font-weight:800;margin-top:10px">Total modal mengikuti analis ini: $7.350 · total REM per bulan $2.450</div>'
+   +'<div style="font-size:10px;color:#E5E7EB;margin-top:6px">Rem di kartu REM PIPS mengikuti angka di atas. Pelanggaran dicek otomatis setiap kali data dimasukkan ke situs.</div>'
+   +'<div id="v4StatusKunci" style="margin-top:10px"></div></div></details>';
+  sisip.parentNode.insertBefore(box, sisip.nextSibling);
+  perbaruiStatusV4();
+}
+async function perbaruiStatusV4(){
+  const el=document.getElementById('v4StatusKunci'); if(!el) return;
+  try{ if(typeof loadAturanKunci==='function') await loadAturanKunci(); }catch(e){}
+  const c=((cachedAturanKunci&&cachedAturanKunci.riwayat)||[]).find(x=>x.versi==='v4');
+  if(c){ el.innerHTML='<div style="font-size:11px;color:#4ADE80;font-weight:800">🔒 Terkunci pada '+new Date(c.dikunciPada).toLocaleString('id-ID')+'</div><div style="font-size:9px;color:#E5E7EB;word-break:break-all">Sidik jari: '+c.hash+'</div>'; return; }
+  el.innerHTML='<div style="font-size:11px;color:#FACC15;font-weight:800">❗ Belum dikunci di server.</div>'+(isAdmin?'<button onclick="kunciV4()" style="margin-top:6px;padding:8px 12px;border-radius:8px;border:1px solid #34D399;background:transparent;color:#FFFFFF;font-weight:800;cursor:pointer">🔒 Kunci Aturan Resmi v4 Datuk EURUSD</button>':'');
+}
+async function kunciV4(){ await kunciAturanResmi('v4'); await perbaruiStatusV4(); }
+setTimeout(pasangV4, 2200); setTimeout(pasangV4, 4600); setTimeout(pasangV4, 7000);
+
+// Ringkasan aturan v4 (tampilan): order hari ini/bulan ini dan loss kotor, forex dan emas dihitung terpisah.
+function renderRingkasV4(){
+  const sisip=document.getElementById('aturanResmiV4'); if(!sisip) return;
+  let box=document.getElementById('ringkasV4');
+  if(!box){ box=document.createElement('div'); box.id='ringkasV4'; box.style.cssText='margin:12px 0'; sisip.parentNode.insertBefore(box, sisip.nextSibling); }
+  const pad=n=>String(n).padStart(2,'0'), now=new Date();
+  const hari=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate()), bln=hari.slice(0,7);
+  const rb=(cachedSinyalAnalis.XAUUSD||[]).filter(r=>r.status!=='running' && String(r.tanggal).slice(0,7)===bln && String(r.tanggal).slice(0,10)>='2026-11-01');
+  const isAu=r=>((r.simbol||'').toUpperCase()==='XAUUSD');
+  const f1=v=>(Math.round(v*10)/10).toString().replace('.',','), w=(v,mx)=> v>mx?'#F87171':(v>=mx*0.8?'#FACC15':'#4ADE80');
+  const baris=(n,v,t,c)=>'<tr><td style="padding:5px 0;color:#E5E7EB">'+n+'</td><td style="padding:5px 0;text-align:right;font-weight:800;color:'+c+'">'+v+'</td><td style="padding:5px 0 5px 10px;text-align:right;color:#E5E7EB">'+t+'</td></tr>';
+  const seg=(judul,rows,rem,modal)=>{
+    const nH=rows.filter(r=>String(r.tanggal).slice(0,10)===hari).length, nB=rows.length;
+    const loss=rows.reduce((x,r)=>{ const q=parseFloat(r.pips||0); return q<0? x-q : x; },0);
+    return '<tr><td colspan="3" style="padding:8px 0 2px;font-weight:800;color:#FFFFFF">'+judul+'</td></tr>'
+      +baris('Order close hari ini', nH, 'maks 5', w(nH,5))
+      +baris('Order close bulan ini', nB, 'maks 100', w(nB,100))
+      +baris('Loss kotor bulan ini', f1(loss)+' pips', 'REM '+rem.toLocaleString('id-ID')+' pips ($'+(rem*0.1)+')', w(loss,rem))
+      +baris('Modal', '$'+modal.toLocaleString('id-ID'), '3 bulan × $'+(rem*0.1), '#FFFFFF');
+  };
+  box.innerHTML='<div style="padding:12px 14px;border-radius:12px;background:var(--bg0);border:1.5px solid #34D399">'
+    +'<div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px">📋 RINGKAS ATURAN V4 — DATUK EURUSD · BULAN INI</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:4px">'
+    +seg('Forex (6 pair)', rb.filter(r=>!isAu(r)), V4_REM.FX.rem, V4_MODAL.FX)
+    +seg('XAUUSD', rb.filter(isAu), V4_REM.AU.rem, V4_MODAL.AU)
+    +'</table>'
+    +'<div style="font-size:9px;color:#E5E7EB;margin-top:6px;line-height:1.5">Total modal $7.350, total REM per bulan $2.450. Forex: rata-rata SL 37,5 dibulatkan 45 pips, 100 order × 45 pips = 4.500 pips ($450). XAUUSD: 100 order × 200 pips = 20.000 pips ($2.000). Loss kotor = pips order yang kena SL saja.</div>'
+    +'</div>';
+}
+(function(){ const _r=renderBatasDDCard; renderBatasDDCard=function(){ _r.apply(this,arguments); try{ renderRingkasV4(); }catch(e){ console.error('ringkasV4',e); } }; })();
+setTimeout(()=>{ try{ renderRingkasV4(); }catch(e){} }, 4000);
+setTimeout(()=>{ try{ renderRingkasV4(); }catch(e){} }, 7500);
 </script>
 </body>
 </html>
