@@ -17686,5 +17686,56 @@ function sembunyikanKartuDDCrypto89(){
 setTimeout(pasangV3C, 2500);
 setTimeout(pasangV3C, 5000);
 </script>
+<script>
+// Pilihan versi yang tampil per bulan, per channel. Hanya admin yang bisa memilih. Tidak mengubah penilaian.
+// Saat ini untuk Datuk Crypto 89 (kunci FOREX).
+let versiTampilCache = {};
+async function muatVersiTampil(){
+  try{
+    const r = await api('app_settings?select=value&key=eq.versi_tampil');
+    if(r && r.length && r[0].value) versiTampilCache = JSON.parse(r[0].value) || {};
+  }catch(e){ console.error('muatVersiTampil', e); }
+}
+async function simpanVersiTampil(kanal, bulan, versi){
+  if(!isAdmin){ toast('❌ Harus masuk sebagai Admin'); return; }
+  versiTampilCache = versiTampilCache || {};
+  versiTampilCache[kanal] = versiTampilCache[kanal] || {};
+  versiTampilCache[kanal][bulan] = versi;
+  const payload = JSON.stringify(versiTampilCache);
+  try{
+    const ex = await api('app_settings?select=key&key=eq.versi_tampil');
+    if(ex.length) await api('app_settings?key=eq.versi_tampil','PATCH',{value:payload});
+    else await api('app_settings','POST',{key:'versi_tampil', value:payload});
+    toast('✅ Aturan tampil disimpan');
+  }catch(e){ console.error(e); toast('❌ Gagal menyimpan aturan tampil'); }
+  pasangPilihanVersiCrypto();
+}
+function pasangPilihanVersiCrypto(){
+  const host=document.querySelector('[data-akun="analis"]');
+  if(!host) return;
+  let box=document.getElementById('pilihVersiCrypto');
+  if(!box){
+    box=document.createElement('div');
+    box.id='pilihVersiCrypto';
+    box.style.cssText='margin:12px 0;padding:12px 14px;border-radius:12px;background:var(--bg0);border:1.5px solid #34D399';
+    host.insertBefore(box, host.firstChild);
+  }
+  const bulan='2026-11';
+  const aktif=(versiTampilCache.FOREX&&versiTampilCache.FOREX[bulan])||'v3';
+  box.innerHTML=`
+    <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px">🗂 ATURAN TAMPIL — DATUK CRYPTO 89</div>
+    <div style="font-size:12px;color:#34D399;font-weight:800;margin-top:6px">Aturan aktif bulan November 2026: ${aktif}</div>
+    <div style="font-size:10px;color:#E5E7EB;margin-top:4px">Hanya tampilan. Penilaian sinyal tidak berubah. v1, v2, dan v3 tetap tercatat.</div>
+    ${isAdmin?`<div style="display:flex;gap:6px;margin-top:8px;align-items:center">
+      <select id="pilihVersiCryptoSel" style="flex:1;padding:8px;border-radius:8px;background:#0D0F0A;color:#FFFFFF;border:1px solid var(--border)">
+        <option value="v2" ${aktif==='v2'?'selected':''}>v2</option>
+        <option value="v3" ${aktif==='v3'?'selected':''}>v3</option>
+      </select>
+      <button onclick="simpanVersiTampil('FOREX','${bulan}', document.getElementById('pilihVersiCryptoSel').value)" style="padding:8px 12px;border-radius:8px;border:1px solid #34D399;background:transparent;color:#FFFFFF;font-weight:800;cursor:pointer">Simpan</button>
+    </div>`:''}`;
+}
+muatVersiTampil().then(()=>pasangPilihanVersiCrypto());
+setTimeout(()=>{ muatVersiTampil().then(pasangPilihanVersiCrypto); }, 3000);
+</script>
 </body>
 </html>
