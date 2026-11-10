@@ -1805,7 +1805,8 @@ function renderInvCalcDisclaimer(){
 
     <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px" id="secBatasDD">
       <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">🛡️ Cek Batas Kerugian (Syarat Investor)</div>
-      <div style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.5">Modal acuan = modal MINIMAL agar kerugian maksimal 1 bulan tidak lebih dari 6% (dihitung otomatis dari aturan v2), TIDAK memakai saldo akun/sen di situs ini. Otomatis dari sinyal closed yang di-input di bawah. Dihitung dalam $ (pips × nilai pip lot acuan), drawdown (DD) diukur dari PUNCAK bersih bulan itu. Loss dihitung berdasarkan tanggal <b>Closed at</b>. Investor & admin sama-sama bisa cek; hanya admin yang bisa ubah batas.</div>
+      <div data-chan="FOREX" style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.5">Aturan v3 Datuk Crypto 89 (dikunci 10 November 2026): hanya mengandalkan buffer. REM bulanan 6.000 pips (= $600 pada lot 0,01), modal investor $1.800 (3 bulan loss semua). Otomatis dari sinyal closed yang di-input di bawah; loss dihitung berdasarkan tanggal <b>Closed at</b>. Investor & admin sama-sama bisa cek; angka aturan sudah terkunci.</div>
+<div data-chan="XAUUSD" style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.5">Modal acuan = modal MINIMAL agar kerugian maksimal 1 bulan tidak lebih dari 6% (dihitung otomatis dari aturan v2), TIDAK memakai saldo akun/sen di situs ini. Otomatis dari sinyal closed yang di-input di bawah. Dihitung dalam $ (pips × nilai pip lot acuan), drawdown (DD) diukur dari PUNCAK bersih bulan itu. Loss dihitung berdasarkan tanggal <b>Closed at</b>. Investor & admin sama-sama bisa cek; hanya admin yang bisa ubah batas.</div>
       <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
         <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🧮 Masukkan Modal Anda di Sini</div>
         <div style="font-size:9px;color:#E5E7EB;margin-bottom:8px;line-height:1.5">Ketik modal Anda, lalu batas kerugian, drawdown (DD), dan sisa ruang untuk modal Anda muncul di bawahnya. Lot boleh dikosongkan (otomatis dihitung sebanding dengan acuan minimal per channel (Datuk EURUSD $5.000, Datuk Crypto 89 $1.800 sesuai aturan v3)). Hanya simulasi di layar Anda, tidak disimpan ke server dan tidak mengubah batas analis.</div>
@@ -16157,6 +16158,20 @@ function renderBatasDDSim(){
     const pStop=stop/modal*100, pLoss=loss1/modal*100, pNow=ddNow/modal*100, pMax=ddMax/modal*100;
     const [wr,tx]=nilai(pStop);
     const minM=_v3?aturanResmiV3C().modalUsd:batasAturanV2(g).modal, syaratOk=modal>=minM;
+    if(_v3){
+      const rowsV=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && bulanKeyOf(r.tanggal)===bulanKey && String(r.tanggal)>='2026-11-01');
+      const netP=rowsV.reduce((x,r)=>x+parseFloat(r.pips||0),0), lossP=rowsV.reduce((x,r)=>{const q=parseFloat(r.pips||0);return q<0?x-q:x;},0);
+      const netU=netP*0.1*k, lossU=lossP*0.1*k, sisaU=Math.max(0,stop-lossU), kena=lossU>=stop-1e-9, bln=modal/stop;
+      return `<div style="background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:6px">
+        <div style="font-size:10px;font-weight:800;color:#E5E7EB;margin-bottom:3px">${label} · aturan v3</div>
+        <div style="font-size:10px;color:#E5E7EB;line-height:1.7">
+          Hasil bersih bulan ini: <b style="color:${netU<0?'#F87171':'#4ADE80'}">${netU>=0?'+':''}${_bdFmt(netU)}</b> (${(netU/modal*100).toFixed(1)}%)<br>
+          Loss kotor bulan ini: <b style="color:#F87171">${_bdFmt(-lossU)}</b> (${(Math.round(lossP*10)/10)} pips) · batas REM <b>${_bdFmt(-stop)}</b> (${REM_TAMPIL_V3[g]} pips)<br>
+          Sisa ruang sebelum REM: <b>${_bdFmt(sisaU)}</b> · REM = ${pStop.toFixed(1)}% modal, modal Anda cukup untuk <b>${bln.toFixed(1)} bulan</b> loss semua<br>
+          ${syaratOk?'':`<div style="margin-top:4px;padding:6px 8px;border-radius:6px;background:#7F1D1D;border:1px solid #F87171;color:#FECACA;font-weight:800">❌ Modal di bawah acuan aturan v3: minimal $${minM} (3 bulan × $600 untuk lot 0,01).</div>`}
+          Status: <b style="color:${kena?'#F87171':'#4ADE80'}">${rowsV.length===0?'belum ada sinyal bulan ini':(kena?'🛑 REM kena, wajib stop':'✅ aman')}</b>
+        </div></div>`;
+    }
     return `<div style="background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:6px">
       <div style="font-size:10px;font-weight:800;color:#E5E7EB;margin-bottom:3px">${label}</div>
       <div style="font-size:10px;color:#E5E7EB;line-height:1.7">
@@ -16168,9 +16183,9 @@ function renderBatasDDSim(){
         Status: <b style="color:${h.n===0?'#E5E7EB':(h.curDD>=c.stopUsd-1e-9?'#F87171':(h.curDD>=c.warnUsd-1e-9?'#FACC15':'#4ADE80'))}">${h.n===0?'belum ada sinyal bulan ini':(h.curDD>=c.stopUsd-1e-9?'🛑 batas kena, stop':(h.curDD>=c.warnUsd-1e-9?'⚠️ peringatan, pilih entry paling jelas':'✅ aman'))}</b>
       </div></div>`;
   }).join('');
-  const lotSama=modal/5000*0.01; const lotDipakaiTxt=`Lot dipakai: <b>${lot.toFixed(2)}</b>${(lEl&&parseFloat(lEl.value))?'':' (otomatis)'}. `;
-  const lotTxt = lotSama>=0.01 ? `Supaya persen risikonya sama dengan acuan $5000, lot ≈ <b>${(Math.floor(lotSama*100+1e-9)/100).toFixed(2)}</b>.` : `Lot terkecil 0,01 sudah lebih besar dari proporsi acuan $5000 untuk modal ini, jadi risikonya otomatis lebih berat dari yang dicontohkan analis.`;
-  wrap.innerHTML=rows+`<div style="font-size:9px;color:#E5E7EB;line-height:1.5">${lotDipakaiTxt}${lotTxt} Batas: rugi maksimal 6% dari modal per bulan; di atasnya berisiko tinggi. Hasil masa lalu bukan jaminan.</div>`;
+  const _cry=(_kt.length===1&&_kt[0]==='FOREX'); const lotSama=modal/(_cry?_acuan:5000)*0.01; const lotDipakaiTxt=`Lot dipakai: <b>${lot.toFixed(2)}</b>${(lEl&&parseFloat(lEl.value))?'':' (otomatis)'}. `;
+  const _acTxt='$'+(_cry?_acuan:5000); const lotTxt = lotSama>=0.01 ? `Supaya persen risikonya sama dengan acuan ${_acTxt}, lot ≈ <b>${(Math.floor(lotSama*100+1e-9)/100).toFixed(2)}</b>.` : `Lot terkecil 0,01 sudah lebih besar dari proporsi acuan ${_acTxt} untuk modal ini, jadi risikonya otomatis lebih berat dari yang dicontohkan analis.`;
+  wrap.innerHTML=rows+`<div style="font-size:9px;color:#E5E7EB;line-height:1.5">${lotDipakaiTxt}${lotTxt} ${_cry?'Aturan v3 Crypto 89: REM $600 per bulan, modal acuan $1.800 (3 bulan loss semua).':'Batas: rugi maksimal 6% dari modal per bulan; di atasnya berisiko tinggi.'} Hasil masa lalu bukan jaminan.</div>`;
 }
 (function(){
   const _r=renderBatasDDCard;
@@ -16977,7 +16992,7 @@ function renderAudit(){
   const bk=batasDDBulanDipilih; if(!bk){ wrap.innerHTML=''; return; }
   const ikon={pasti:'❌ PASTI',kuat:'❌ KUAT',indikasi:'⚠️ INDIKASI'}, warnaSev={pasti:'#F87171',kuat:'#F87171',indikasi:'#FACC15'};
   const fmtT=(t,j)=>t?`${t.slice(8)}/${t.slice(5,7)}${j?' '+j:''}`:'-';
-  const efektifTeks='1 Okt 2026';
+  const efektifTeks=(kanalTampil().length===1&&kanalTampil()[0]==='FOREX')?'1 Nov 2026':'1 Okt 2026';
   const itemHtml=f=>{ const r=f.r, pp=parseFloat(r.pips||0);
     return `<div style="border-top:1px solid var(--border);padding:6px 0"><div style="font-size:10px;color:#E5E7EB;line-height:1.5"><b>${f.nm}</b> · buka ${fmtT(r.tanggalBuka||r.tanggal,r.jamBuka)} → tutup ${fmtT(r.tanggal,r.jam)} · <b style="color:${pp<0?'#F87171':'#4ADE80'}">${pp>0?'+':''}${Math.round(pp*10)/10} pips</b>${r.slPips!=null?` · rencana SL ${r.slPips}/TP ${r.tpPips}`:''}${f.pra?` <span style="color:#E5E7EB">🕰️ sebelum ${efektifTeks}</span>`:''}</div>${f.masalah.map(m=>`<div style="font-size:10px;line-height:1.5;padding-left:8px"><b style="color:${warnaSev[m.sev]}">${ikon[m.sev]}</b> ${m.aturan}<br><span style="color:#E5E7EB">${m.detail}</span></div>`).join('')}</div>`; };
   const blok=kanalTampil().map(g=>{
@@ -17006,7 +17021,7 @@ function renderAudit(){
   }).join('');
   wrap.innerHTML=`<div style="background:var(--bg0);border:1.5px solid #C8A84B;border-radius:10px;padding:12px">
     <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:4px">🔍 Audit Kepatuhan Aturan — untuk investor & pihak ketiga</div>
-    <div style="font-size:9px;color:#E5E7EB;line-height:1.5;margin-bottom:8px">Sinyal mulai <b>1 Oktober 2026</b> diperiksa otomatis dengan <b>Aturan Resmi v2</b>: emas SL 500 / TP 500 (RR 1:1), ; forex SL Hard 2 per pair (60 / 90 / 120 pips), TP 2× SL (RR 1:2), jatah 2 order per pair per bulan, win pertama langsung stop; timeframe bebas (H4, D1, W1); satu order per pair, order berikutnya setelah order sebelumnya kena SL. <b>Aturan ini dibuat dan ditetapkan pada 26 Oktober 2026</b>, jadi sinyal 1–25 Oktober dinilai mundur (retroaktif) dan diberi tanda 🕰️. Sinyal sebelum 1 Oktober 2026 tidak dinilai. Hanya <b>dua kategori menyimpang</b>: <b>jatah melebihi</b> dan <b>RR melebihi / kurang</b>. Tidak menyimpang: order pertama win lalu stop; emas loss, win, win lalu stop; forex loss, win lalu stop. <b>❌ PASTI</b> = data tercatat jelas melanggar. <b>❌ KUAT</b> = hasilnya sama dengan RR yang salah. <b>⚠️ INDIKASI</b> = janggal, perlu dikonfirmasi. Yang bisa diaudit hanya data yang diinput; cocokkan juga dengan riwayat TF.</div>
+    ${(kanalTampil().length===1&&kanalTampil()[0]==='FOREX')?`<div style="font-size:9px;color:#E5E7EB;line-height:1.5;margin-bottom:8px">Sinyal mulai <b>1 November 2026</b> diperiksa otomatis dengan <b>Aturan Resmi v3 Datuk Crypto 89</b> (dikunci 10 November 2026): forex RR 1:2 kalkulator Hard, SL 45 pips (GBPUSD, NZDJPY, USDCAD) atau 60 pips (CHFJPY, EURJPY, EURNZD, GBPJPY, USDJPY), TP 2× SL; maksimal 5 order per hari dan 100 order per bulan (dihitung saat close). Hanya mengandalkan buffer: tidak ada jatah per pair dan tidak ada win langsung stop. Hanya <b>dua kategori menyimpang</b>: <b>jatah melebihi</b> dan <b>RR melebihi / kurang</b>. <b>❌ PASTI</b> = data tercatat jelas melanggar. Yang bisa diaudit hanya data yang diinput; cocokkan juga dengan riwayat TF.</div>`:`<div style="font-size:9px;color:#E5E7EB;line-height:1.5;margin-bottom:8px">Sinyal mulai <b>1 Oktober 2026</b> diperiksa otomatis dengan <b>Aturan Resmi v2</b>: emas SL 500 / TP 500 (RR 1:1), ; forex SL Hard 2 per pair (60 / 90 / 120 pips), TP 2× SL (RR 1:2), jatah 2 order per pair per bulan, win pertama langsung stop; timeframe bebas (H4, D1, W1); satu order per pair, order berikutnya setelah order sebelumnya kena SL. <b>Aturan ini dibuat dan ditetapkan pada 26 Oktober 2026</b>, jadi sinyal 1–25 Oktober dinilai mundur (retroaktif) dan diberi tanda 🕰️. Sinyal sebelum 1 Oktober 2026 tidak dinilai. Hanya <b>dua kategori menyimpang</b>: <b>jatah melebihi</b> dan <b>RR melebihi / kurang</b>. Tidak menyimpang: order pertama win lalu stop; emas loss, win, win lalu stop; forex loss, win lalu stop. <b>❌ PASTI</b> = data tercatat jelas melanggar. <b>❌ KUAT</b> = hasilnya sama dengan RR yang salah. <b>⚠️ INDIKASI</b> = janggal, perlu dikonfirmasi. Yang bisa diaudit hanya data yang diinput; cocokkan juga dengan riwayat TF.</div>`}
     ${blok}
   </div>`;
 }
@@ -17276,9 +17291,9 @@ function renderRekapSemuaBulan(){
   const wrap=document.getElementById('batasDDAuditWrap'); if(!wrap) return;
   const nmB=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   const namaCh=g=>(cachedScoreMeta[g]&&cachedScoreMeta[g].namaChannel)||g;
-  const bulanSet=new Set(); ['XAUUSD','FOREX'].forEach(g=>(cachedSinyalAnalis[g]||[]).forEach(r=>{ if(r.status!=='running') bulanSet.add(bulanKeyOf(r.tanggal)); }));
+  const bulanSet=new Set(); kanalTampil().forEach(g=>(cachedSinyalAnalis[g]||[]).forEach(r=>{ if(r.status!=='running') bulanSet.add(bulanKeyOf(r.tanggal)); }));
   const baris=Array.from(bulanSet).sort().reverse().map(b=>{
-    const sel=['XAUUSD','FOREX'].map(g=>{ const h=auditChannel(g,b); if(!h.n) return null;
+    const sel=kanalTampil().map(g=>{ const h=auditChannel(g,b); if(!h.n) return null;
       const pB=h.flags.filter(f=>f.sev!=='indikasi'&&!f.pra).length, pR=h.flags.filter(f=>f.sev!=='indikasi'&&f.pra).length, ind=h.flags.filter(f=>f.sev==='indikasi').length;
       const t=(pB?`❌ ${pB} `:'')+(pR?`🕰️ ${pR} `:'')+(ind?`⚠️ ${ind} `:'');
       return `${namaCh(g)}: <b style="color:${pB?'#F87171':(pR?'#FACC15':(ind?'#FACC15':'#4ADE80'))}">${t.trim()||'✅ sesuai'}</b> (${h.n} sinyal)`; }).filter(Boolean).join(' · ');
@@ -17332,7 +17347,7 @@ function renderBannerDDAnalis(){
   const f1=v=>(Math.round(v*10)/10).toString().replace('.',',');
   const tglF=t=>String(t).split('-').reverse().join('/');
   let blok='', adaBulanIni=false, adaData=false;
-  ANALIS_DD.channel.filter(c=>kanalTampil().includes(c.g)).forEach(c=>{
+  ANALIS_DD.channel.filter(c=>kanalTampil().includes(c.g) && !(typeof DD_NONAKTIF_V3!=='undefined' && DD_NONAKTIF_V3[c.g])).forEach(c=>{
     const h=hitungDDAnalis(c.g, c.modal); if(!h.n) return;
     adaData=true;
     const bulanIni=h.pelanggaran.filter(x=>x.tgl.slice(0,7)===h.bulanNow);
