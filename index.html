@@ -18173,7 +18173,7 @@ setTimeout(()=>{ try{ bangunDropdownPair(); }catch(e){} }, 2000);
 // ══ KURVA KUMULATIF: tampil di Akun MT4, Datuk EURUSD, dan Datuk Crypto 89 ══
 // Rentang waktu 3M/6M/1Y/3Y/5Y, filter simbol, dengan penjelasan titik tertinggi dan terendah.
 let kurvaRange='3M', kurvaSimbol='ALL', kurvaTutup=false;
-const KURVA_RANGE=[['3M',3],['6M',6],['1Y',12],['3Y',36],['5Y',60]];
+const KURVA_RANGE=[['1D',0],['1M',1],['3M',3],['6M',6],['1Y',12],['3Y',36],['5Y',60]]; // 1D = hari trading terakhir yang tercatat
 function setKurvaRange(r){ kurvaRange=r; renderKurvaAkun(); }
 function setKurvaSimbol(v){ kurvaSimbol=v; renderKurvaAkun(); }
 function toggleKurva(){ kurvaTutup=!kurvaTutup; renderKurvaAkun(); }
@@ -18200,10 +18200,16 @@ function kurvaAmbilData(akun,admin){
   return {baris, satuan:'pips', simbol, nama:(g==='FOREX'?'Datuk Crypto 89':'Datuk EURUSD'), mt4:false, admin};
 }
 function kurvaBangun(data,rangeKey,simbol){
-  const bulan=(KURVA_RANGE.find(x=>x[0]===rangeKey)||KURVA_RANGE[0])[1];
+  const bulan=(KURVA_RANGE.find(x=>x[0]===rangeKey)||KURVA_RANGE[2])[1];
   const mulai=new Date(); mulai.setMonth(mulai.getMonth()-bulan); mulai.setHours(0,0,0,0);
   const iso=mulai.getFullYear()+'-'+String(mulai.getMonth()+1).padStart(2,'0')+'-'+String(mulai.getDate()).padStart(2,'0');
-  let b=data.baris.filter(x=>x.tgl>=iso);
+  let b;
+  if(rangeKey==='1D'){
+    // 1 hari = hari trading terakhir yang ada datanya (bukan 'kemarin', supaya tidak kosong saat akhir pekan atau belum ada data baru)
+    let semua=data.baris; if(simbol!=='ALL') semua=semua.filter(x=>x.sim===simbol);
+    const terakhir=semua.reduce((m,x)=>x.tgl>m?x.tgl:m,'');
+    b=terakhir?semua.filter(x=>x.tgl===terakhir):[];
+  } else { b=data.baris.filter(x=>x.tgl>=iso); }
   if(simbol!=='ALL') b=b.filter(x=>x.sim===simbol);
   if(!b.length) return null;
   // deret kumulatif: titik 0 = awal rentang
@@ -18252,7 +18258,7 @@ function renderKurvaAkun(){
   if(kurvaSimbol!=='ALL' && data.simbol.indexOf(kurvaSimbol)<0) kurvaSimbol='ALL';
   const optSim='<option value="ALL"'+(kurvaSimbol==='ALL'?' selected':'')+'>Semua simbol</option>'+data.simbol.map(s=>'<option value="'+s+'"'+(s===kurvaSimbol?' selected':'')+'>'+s+'</option>').join('');
   const h=kurvaBangun(data,kurvaRange,kurvaSimbol);
-  const judulRange={'3M':'3 bulan terakhir','6M':'6 bulan terakhir','1Y':'1 tahun terakhir','3Y':'3 tahun terakhir','5Y':'5 tahun terakhir'}[kurvaRange];
+  const judulRange={'1D':'Hari trading terakhir','1M':'1 bulan terakhir','3M':'3 bulan terakhir','6M':'6 bulan terakhir','1Y':'1 tahun terakhir','3Y':'3 tahun terakhir','5Y':'5 tahun terakhir'}[kurvaRange];
   const kontrol='<div style="display:flex;gap:6px;margin:8px 0">'+rangeBtn+'</div>'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:10px;color:#E5E7EB">Simbol:</span><select class="inp" style="flex:1;padding:6px 8px;font-size:12px" onchange="setKurvaSimbol(this.value)">'+optSim+'</select></div>';
   let isi='';
