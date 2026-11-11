@@ -17509,7 +17509,7 @@ function setAkunTampilan(a){
     if(sel){ [].forEach.call(sel.options,function(o){ o.hidden = !!(g && o.value && o.value!==g); }); if(g) sel.value=g; }
     if(g){ if(typeof setInputSinyalPairGroup==='function') setInputSinyalPairGroup(g); if(typeof daftarSinyalPairGroup!=='undefined' && typeof setDaftarSinyalPairGroup==='function') setDaftarSinyalPairGroup(g); }
     var _awal=!window._akunSudahInit; window._akunSudahInit=1;
-    if(!_awal) ['renderScoreCard','renderRemPipsCard','renderBatasDDCard','renderBatasDDSim','renderRekonCard','renderDaftarPair','renderAudit','renderDaftarSinyal','renderRingkasV3C','bangunDropdownPair'].forEach(function(fn){
+    if(!_awal) ['renderScoreCard','renderRemPipsCard','renderBatasDDCard','renderBatasDDSim','renderRekonCard','renderDaftarPair','renderAudit','renderDaftarSinyal','renderRingkasV3C','bangunDropdownPair','taruhKurvaAkun'].forEach(function(fn){
       try{ if(typeof window[fn]==='function') window[fn](); }catch(e){ console.warn('rerender',fn,e); }
     });
     try{ if(typeof pasangPilihanVersiCrypto==='function') pasangPilihanVersiCrypto(); }catch(e){}
@@ -18124,6 +18124,136 @@ function bangunDropdownPair(){
 }
 (function(){ const ch=document.getElementById('inpRunningChannel'); if(ch) ch.addEventListener('change',function(){ try{ bangunDropdownPair(); }catch(e){} }); })();
 setTimeout(()=>{ try{ bangunDropdownPair(); }catch(e){} }, 2000);
+</script>
+<script>
+// ══ KURVA KUMULATIF: tampil di Akun MT4, Datuk EURUSD, dan Datuk Crypto 89 ══
+// Rentang waktu 3M/6M/1Y/3Y/5Y, filter simbol, dengan penjelasan titik tertinggi dan terendah.
+let kurvaRange='3M', kurvaSimbol='ALL', kurvaTutup=false;
+const KURVA_RANGE=[['3M',3],['6M',6],['1Y',12],['3Y',36],['5Y',60]];
+function setKurvaRange(r){ kurvaRange=r; renderKurvaAkun(); }
+function setKurvaSimbol(v){ kurvaSimbol=v; renderKurvaAkun(); }
+function toggleKurva(){ kurvaTutup=!kurvaTutup; renderKurvaAkun(); }
+function _kvTgl(t){ const a=String(t).slice(0,10).split('-'); return new Date(+a[0],+a[1]-1,+a[2]).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}); }
+function _kvAngka(v,desimal){ return (Math.round(v*Math.pow(10,desimal))/Math.pow(10,desimal)).toLocaleString('id-ID',{minimumFractionDigits:0,maximumFractionDigits:desimal}); }
+// Ambil data sesuai akun yang aktif. Mengembalikan baris {tgl, urut, nilai, vp, sim, sinyal}
+function kurvaAmbilData(akun,admin){
+  if(akun==='mt4'){
+    const perf=hitungPerformaMt4(); const hari=perf.hari.filter(h=>h.adaSaldo||Math.abs(h.prof)>0);
+    const satuan=admin?'¢':'%';
+    let tumbuh=1;
+    const baris=hari.map(h=>{
+      let nilai;
+      if(admin){ nilai=h.prof; } else { tumbuh*= (h.start>0?(1+h.prof/h.start):1); nilai=null; }
+      return {tgl:h.tgl, urut:h.tgl, nilai:nilai, kum:admin?null:(tumbuh-1)*100, vp:0, sim:'XAUUSD', sinyal:h.jumlahOrder||0};
+    });
+    return {baris, satuan, simbol:['XAUUSD'], nama:'Akun MT4', mt4:true, admin};
+  }
+  const g=(akun==='analis')?'XAUUSD':'FOREX';
+  const rows=(cachedSinyalAnalis[g]||[]).filter(r=>r.status!=='running' && r.tanggal && isFinite(parseFloat(r.pips)));
+  const baris=rows.map(r=>({tgl:String(r.tanggal).slice(0,10), urut:String(r.tanggal).slice(0,10)+' '+String(r.jam||''), nilai:parseFloat(r.pips), vp:parseFloat(r.vp||0)||0, sim:String(r.simbol||'').toUpperCase(), sinyal:1}))
+    .sort((a,b)=>a.urut.localeCompare(b.urut));
+  const simbol=Array.from(new Set(baris.map(b=>b.sim).filter(Boolean))).sort();
+  return {baris, satuan:'pips', simbol, nama:(g==='FOREX'?'Datuk Crypto 89':'Datuk EURUSD'), mt4:false, admin};
+}
+function kurvaBangun(data,rangeKey,simbol){
+  const bulan=(KURVA_RANGE.find(x=>x[0]===rangeKey)||KURVA_RANGE[0])[1];
+  const mulai=new Date(); mulai.setMonth(mulai.getMonth()-bulan); mulai.setHours(0,0,0,0);
+  const iso=mulai.getFullYear()+'-'+String(mulai.getMonth()+1).padStart(2,'0')+'-'+String(mulai.getDate()).padStart(2,'0');
+  let b=data.baris.filter(x=>x.tgl>=iso);
+  if(simbol!=='ALL') b=b.filter(x=>x.sim===simbol);
+  if(!b.length) return null;
+  // deret kumulatif: titik 0 = awal rentang
+  const kum=[0]; const info=[{tgl:b[0].tgl, ket:'Awal rentang'}];
+  let acc=0;
+  b.forEach(x=>{
+    if(data.mt4 && !data.admin){ acc=x.kum; } else { acc+=x.nilai; }
+    kum.push(acc); info.push({tgl:x.tgl, ket:x.sim});
+  });
+  let iMax=0,iMin=0; kum.forEach((v,i)=>{ if(v>kum[iMax]) iMax=i; if(v<kum[iMin]) iMin=i; });
+  // penurunan terdalam dari puncak
+  let puncak=0,iPuncak=0,dd=0,ddA=0,ddB=0;
+  kum.forEach((v,i)=>{ if(v>puncak){ puncak=v; iPuncak=i; } if(puncak-v>dd){ dd=puncak-v; ddA=iPuncak; ddB=i; } });
+  const akhir=kum[kum.length-1];
+  const totalVp=b.reduce((s,x)=>s+x.vp,0), sinyal=b.reduce((s,x)=>s+x.sinyal,0);
+  // sinyal/hari terbaik dan terburuk
+  let best=null,worst=null; b.forEach(x=>{ const v=(data.mt4&&!data.admin)?null:x.nilai; if(v===null) return; if(!best||v>best.nilai) best=x; if(!worst||v<worst.nilai) worst=x; });
+  return {kum,info,iMax,iMin,dd,ddA,ddB,akhir,totalVp,sinyal,best,worst,awal:b[0].tgl,akhirTgl:b[b.length-1].tgl,jumlahTitik:b.length};
+}
+function kurvaSvg(h){
+  const W=340,H=180,PL=46,PR=8,PT=10,PB=22, kum=h.kum, n=kum.length;
+  const max=Math.max.apply(null,kum.concat([0])), min=Math.min.apply(null,kum.concat([0]));
+  const span=(max-min)||1;
+  const xs=i=>PL+(n>1?i*(W-PL-PR)/(n-1):0), ys=v=>PT+(max-v)/span*(H-PT-PB);
+  const warna=h.akhir>=0?'#16A34A':'#DC2626';
+  const pts=kum.map((v,i)=>xs(i).toFixed(1)+','+ys(v).toFixed(1));
+  const garis='M'+pts.join(' L');
+  const y0=ys(0).toFixed(1);
+  const area=garis+' L'+xs(n-1).toFixed(1)+','+y0+' L'+xs(0).toFixed(1)+','+y0+' Z';
+  const nilaiGrid=Array.from(new Set([max,0,min]));
+  const grid=nilaiGrid.map(v=>'<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+ys(v).toFixed(1)+'" y2="'+ys(v).toFixed(1)+'" stroke="#6B7280" stroke-opacity="'+(v===0?'.6':'.3')+'" stroke-width="1"/>'
+     +'<text x="'+(PL-4)+'" y="'+(ys(v)+3).toFixed(1)+'" text-anchor="end" font-size="9" fill="#E5E7EB">'+_kvAngka(v,h.desimal)+'</text>').join('');
+  const mk=(i,c)=>'<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(kum[i]).toFixed(1)+'" r="4" fill="'+c+'" stroke="#FFFFFF" stroke-width="1.5"/>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block"><defs><linearGradient id="kvGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+warna+'" stop-opacity=".45"/><stop offset="1" stop-color="'+warna+'" stop-opacity=".03"/></linearGradient></defs>'
+    +grid+'<path d="'+area+'" fill="url(#kvGrad)"/><path d="'+garis+'" fill="none" stroke="'+warna+'" stroke-width="2" stroke-linejoin="round"/>'
+    +(h.iMax>0?mk(h.iMax,'#16A34A'):'')+(h.iMin>0?mk(h.iMin,'#DC2626'):'')
+    +'<circle cx="'+xs(n-1).toFixed(1)+'" cy="'+ys(kum[n-1]).toFixed(1)+'" r="3" fill="'+warna+'"/>'
+    +'<text x="'+PL+'" y="'+(H-4)+'" font-size="9" fill="#E5E7EB">'+_kvTgl(h.awal)+'</text><text x="'+(W-PR)+'" y="'+(H-4)+'" text-anchor="end" font-size="9" fill="#E5E7EB">'+_kvTgl(h.akhirTgl)+'</text></svg>';
+}
+function renderKurvaAkun(){
+  const kartu=document.getElementById('kurvaAkunCard'); if(!kartu) return;
+  const akun=document.body.getAttribute('data-akun')||'mt4';
+  let data; try{ data=kurvaAmbilData(akun,!!isAdmin); }catch(e){ kartu.innerHTML=''; return; }
+  const warnaAngka=v=>v>=0?'#4ADE80':'#F87171';
+  const rangeBtn=KURVA_RANGE.map(([k])=>'<button type="button" onclick="setKurvaRange(\''+k+'\')" style="flex:1;padding:6px 0;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;color:#FFFFFF;background:'+(k===kurvaRange?'#14532D':'transparent')+';border:1.5px solid '+(k===kurvaRange?'#4ADE80':'var(--border)')+'">'+k+'</button>').join('');
+  if(kurvaSimbol!=='ALL' && data.simbol.indexOf(kurvaSimbol)<0) kurvaSimbol='ALL';
+  const optSim='<option value="ALL"'+(kurvaSimbol==='ALL'?' selected':'')+'>Semua simbol</option>'+data.simbol.map(s=>'<option value="'+s+'"'+(s===kurvaSimbol?' selected':'')+'>'+s+'</option>').join('');
+  const h=kurvaBangun(data,kurvaRange,kurvaSimbol);
+  const judulRange={'3M':'3 bulan terakhir','6M':'6 bulan terakhir','1Y':'1 tahun terakhir','3Y':'3 tahun terakhir','5Y':'5 tahun terakhir'}[kurvaRange];
+  const kontrol='<div style="display:flex;gap:6px;margin:8px 0">'+rangeBtn+'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:10px;color:#E5E7EB">Simbol:</span><select class="inp" style="flex:1;padding:6px 8px;font-size:12px" onchange="setKurvaSimbol(this.value)">'+optSim+'</select></div>';
+  let isi='';
+  if(!h){
+    isi=kontrol+'<div style="padding:16px;text-align:center;font-size:11px;color:#E5E7EB">Belum ada data pada rentang '+judulRange+(kurvaSimbol!=='ALL'?' untuk '+kurvaSimbol:'')+'.</div>';
+  } else {
+    const mt4pct=(data.mt4&&!data.admin), satuan=mt4pct?'%':(data.mt4?'¢':'pips');
+    h.desimal=(data.mt4)?(mt4pct?2:2):1;
+    const fm=v=>mt4pct?(_kvAngka(v,2)+'%'):(data.mt4?('¢'+_kvAngka(v,2)):(_kvAngka(v,1)+' pips'));
+    const sg=v=>(v>0?'+':'');
+    const peri=(i)=>_kvTgl(h.info[i].tgl);
+    const turunDariPuncak=h.kum[h.iMax]-h.akhir;
+    const penjelasan='<div style="font-size:11px;color:#FFFFFF;line-height:1.7;margin-top:10px;padding-top:8px;border-top:1px dashed var(--border)">'
+      +'<div><span style="color:#16A34A">●</span> <b>Tertinggi:</b> <span style="color:#4ADE80;font-weight:800">'+sg(h.kum[h.iMax])+fm(h.kum[h.iMax])+'</span> pada '+(h.iMax===0?'awal rentang':peri(h.iMax))+'</div>'
+      +'<div><span style="color:#DC2626">●</span> <b>Terendah:</b> <span style="color:#F87171;font-weight:800">'+sg(h.kum[h.iMin])+fm(h.kum[h.iMin])+'</span> pada '+(h.iMin===0?'awal rentang':peri(h.iMin))+'</div>'
+      +'<div><b>Sekarang:</b> <span style="color:'+warnaAngka(h.akhir)+';font-weight:800">'+sg(h.akhir)+fm(h.akhir)+'</span>'+(turunDariPuncak>0.0001?' (turun '+fm(turunDariPuncak)+' dari puncak)':' (di puncak)')+'</div>'
+      +(h.dd>0.0001?'<div><b>Penurunan terdalam dari puncak:</b> <span style="color:#F87171;font-weight:800">-'+fm(h.dd)+'</span>, dari '+(h.ddA===0?'awal rentang':peri(h.ddA))+' ke '+peri(h.ddB)+'</div>':'')
+      +(h.best&&h.best.nilai>0?'<div><b>'+(data.mt4?'Hari':'Sinyal')+' untung terbesar:</b> <span style="color:#4ADE80;font-weight:800">+'+(data.mt4?'¢'+_kvAngka(h.best.nilai,2):_kvAngka(h.best.nilai,1)+' pips')+'</span> ('+(data.mt4?_kvTgl(h.best.tgl):h.best.sim+', '+_kvTgl(h.best.tgl))+')</div>':'')
+      +(h.worst&&h.worst.nilai<0?'<div><b>'+(data.mt4?'Hari':'Sinyal')+' rugi terbesar:</b> <span style="color:#F87171;font-weight:800">'+(data.mt4?'-¢'+_kvAngka(Math.abs(h.worst.nilai),2):_kvAngka(h.worst.nilai,1)+' pips')+'</span> ('+(data.mt4?_kvTgl(h.worst.tgl):h.worst.sim+', '+_kvTgl(h.worst.tgl))+')</div>':'')
+      +'</div>';
+    isi=kontrol+kurvaSvg(h)+penjelasan;
+    var judulKanan='<div style="text-align:right"><div style="font-size:16px;font-weight:800;color:'+warnaAngka(h.akhir)+'">'+sg(h.akhir)+fm(h.akhir)+'</div>'+((!data.mt4)?'<div style="font-size:10px;color:'+warnaAngka(h.totalVp)+'">('+_kvAngka(h.totalVp,2)+' VP)</div>':'')+'</div>';
+    var subKiri='<div style="font-size:10px;color:#E5E7EB">'+h.sinyal+' '+(data.mt4?'order':'sinyal')+' · '+h.jumlahTitik+' '+(data.mt4?'hari':'penutupan')+'</div>';
+  }
+  const kepala='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+    +'<div><div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📈 Kurva Kumulatif — '+data.nama+'</div><div style="font-size:12px;color:#FFFFFF;font-weight:700;margin-top:2px">'+judulRange+'</div>'+(subKiri||'')+'</div>'
+    +'<div style="display:flex;align-items:flex-start;gap:8px">'+(judulKanan||'')+'<button type="button" onclick="toggleKurva()" style="width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:#FFFFFF;cursor:pointer;font-size:14px">'+(kurvaTutup?'⌄':'⌃')+'</button></div></div>';
+  kartu.innerHTML='<div style="background:var(--bg0);border:1.5px solid #4ADE80;border-radius:12px;padding:12px 14px">'+kepala+(kurvaTutup?'':isi)+'</div>';
+}
+// Letakkan kartu di bagian yang sesuai dengan akun yang aktif.
+function taruhKurvaAkun(){
+  let kartu=document.getElementById('kurvaAkunCard');
+  if(!kartu){ kartu=document.createElement('div'); kartu.id='kurvaAkunCard'; kartu.style.cssText='margin:12px 0'; }
+  const akun=document.body.getAttribute('data-akun')||'mt4';
+  if(akun==='mt4'){ const w=document.getElementById('pertumbuhanBulanWrap'); if(w&&w.parentNode&&kartu.nextSibling!==w){ w.parentNode.insertBefore(kartu,w); } }
+  else if(akun==='crypto89'){ const host=document.getElementById('secCrypto89Host'); if(host){ const r=document.getElementById('ringkasV3C'); if(r&&r.parentNode===host) host.insertBefore(kartu,r.nextSibling); else host.appendChild(kartu); } }
+  else { const r=document.getElementById('ringkasV4')||document.getElementById('aturanResmiV4'); if(r&&r.parentNode){ r.parentNode.insertBefore(kartu,r.nextSibling); } }
+  renderKurvaAkun();
+}
+
+(function(){
+  if(typeof renderPertumbuhanBulanan==='function'){ const _rp=renderPertumbuhanBulanan; renderPertumbuhanBulanan=function(){ _rp.apply(this,arguments); try{ taruhKurvaAkun(); }catch(e){ console.error('kurva',e); } }; }
+  if(typeof renderBatasDDCard==='function'){ const _rb=renderBatasDDCard; renderBatasDDCard=function(){ _rb.apply(this,arguments); try{ taruhKurvaAkun(); }catch(e){ console.error('kurva',e); } }; }
+})();
+[3000,6000,9000,13000].forEach(t=>setTimeout(()=>{ try{ taruhKurvaAkun(); }catch(e){ console.error('kurva',e); } },t));
 </script>
 </body>
 </html>
