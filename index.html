@@ -1843,7 +1843,7 @@ function renderInvCalcDisclaimer(){
       <label class="lbl">Channel (wajib dipilih)</label>
       <select class="inp" id="inpRunningChannel" onchange="setDaftarSinyalPairGroup(this.value)"><option value="">— pilih channel —</option><option value="XAUUSD">Datuk EURUSD (XAUUSD)</option><option value="FOREX">Datuk Crypto 89 (FOREX)</option></select>
       <label class="lbl">Pair</label>
-      <input class="inp" type="text" id="inpRunningSimbolManual" placeholder="mis. AUDJPY">
+      <select class="inp" id="inpRunningSimbolManual"><option value="">— Pilih pair —</option></select>
       <label class="lbl">Arah</label>
       <select class="inp" id="inpRunningArah"><option value="">— pilih Buy/Sell —</option><option value="buy">Buy</option><option value="sell">Sell</option></select>
       <label class="lbl">Price (entry)</label>
@@ -1860,7 +1860,7 @@ function renderInvCalcDisclaimer(){
       <button class="btn" onclick="tambahSinyalRunning()" style="margin-top:8px">➕ Catat Sinyal Running</button>
       <div style="border:1px dashed #FACC15;border-radius:9px;padding:8px 10px;margin-top:10px">
         <div style="font-size:10px;font-weight:800;color:#FACC15;margin-bottom:6px">⏳ SINYAL PENDING (belum jalan — bisa diedit lalu dijadikan running)</div>
-        <label class="lbl">Pair</label><input class="inp" id="inpPendingPair" placeholder="mis. AUDJPY" autocomplete="off">
+        <label class="lbl">Pair</label><select class="inp" id="inpPendingPair"><option value="">— Pilih pair —</option></select>
         <label class="lbl">Arah</label><select class="inp" id="inpPendingArah"><option value="">— pilih Buy/Sell —</option><option value="buy">Buy</option><option value="sell">Sell</option></select>
         <label class="lbl">Price (entry)</label><input class="inp" type="number" step="any" id="inpPendingHarga" placeholder="mis. 110.860">
         <label class="lbl">Take profit</label><input class="inp" type="number" step="any" id="inpPendingTp" placeholder="mis. 111.760">
@@ -5341,6 +5341,7 @@ async function simpanDataHarianRingkas(){
   const tglBuka=(document.getElementById('inpRingkasTglBuka')||{}).value||null;
   const jamBuka=(document.getElementById('inpRingkasJamBuka')||{}).value||null;
   const pairSimbol=getSimbolSinyalTerpilih();
+  if(pairSimbol && typeof pairBukanKanal==='function' && pairBukanKanal(g,pairSimbol) && !confirm('Pair '+pairSimbol+' bukan bagian aturan '+(g==='FOREX'?'Datuk Crypto 89':'Datuk EURUSD')+'. Tetap simpan?')) return;
   const batchInput=(document.getElementById('inpRingkasBatch')||{}).value||'';
   const pipsInput=document.getElementById('inpRingkasPips').value;
   const vpInput=document.getElementById('inpRingkasVp').value;
@@ -5595,6 +5596,7 @@ async function tambahSinyalRunning(){
   const openedAt=val('inpRunningOpenedAt'); // format: YYYY-MM-DDTHH:MM
   const batch=val('inpRunningBatch');
   if(!simbol){toast('❌ Isi pair dulu');return;}
+  if(typeof pairBukanKanal==='function' && pairBukanKanal(g,simbol) && !confirm('Pair '+simbol.toUpperCase()+' bukan bagian aturan '+namaChannel+'. Tetap simpan?')) return;
   if(!isFinite(hargaEntry)){toast('❌ Isi price (entry) dulu');return;}
   if(!openedAt){toast('❌ Isi opened at dulu');return;}
   const tgl=openedAt.slice(0,10);
@@ -5718,6 +5720,7 @@ async function tambahSinyalPending(){
   const arah=val('inpPendingArah');
   const entry=parseFloat(val('inpPendingHarga')), tp=parseFloat(val('inpPendingTp')), sl=parseFloat(val('inpPendingSl'));
   if(!pair){toast('❌ Isi pair dulu');return;}
+  if(typeof pairBukanKanal==='function' && pairBukanKanal(g,pair) && !confirm('Pair '+pair+' bukan bagian aturan '+(g==='FOREX'?'Datuk Crypto 89':'Datuk EURUSD')+'. Tetap simpan?')) return;
   const err=validasiArahHarga(arah, entry, tp, sl);
   if(err){toast('❌ '+err);return;}
   const id=buatIdSinyal();
@@ -5775,7 +5778,7 @@ async function jadikanRunningDariPending(g,id){
   const def=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,16);
   const opened=prompt('Opened at (YYYY-MM-DDTHH:MM):', def); if(!opened) return;
   if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(opened.trim())){toast('❌ Format: YYYY-MM-DDTHH:MM');return;}
-  const set=(i,v)=>{ const el=document.getElementById(i); if(el) el.value=v; };
+  const set=(i,v)=>{ const el=document.getElementById(i); if(el){ if(el.tagName==='SELECT' && v!=='' && ![].some.call(el.options,o=>o.value===String(v))){ const o=document.createElement('option'); o.value=v; o.textContent=v; el.appendChild(o); } el.value=v; } };
   set('inpRunningChannel', g);
   set('inpRunningSimbolManual', item.simbol||'');
   set('inpRunningHarga', pv.hargaEntry);
@@ -17418,7 +17421,7 @@ function setAkunTampilan(a){
     if(sel){ [].forEach.call(sel.options,function(o){ o.hidden = !!(g && o.value && o.value!==g); }); if(g) sel.value=g; }
     if(g){ if(typeof setInputSinyalPairGroup==='function') setInputSinyalPairGroup(g); if(typeof daftarSinyalPairGroup!=='undefined' && typeof setDaftarSinyalPairGroup==='function') setDaftarSinyalPairGroup(g); }
     var _awal=!window._akunSudahInit; window._akunSudahInit=1;
-    if(!_awal) ['renderScoreCard','renderRemPipsCard','renderBatasDDCard','renderBatasDDSim','renderRekonCard','renderDaftarPair','renderAudit','renderDaftarSinyal','renderRingkasV3C'].forEach(function(fn){
+    if(!_awal) ['renderScoreCard','renderRemPipsCard','renderBatasDDCard','renderBatasDDSim','renderRekonCard','renderDaftarPair','renderAudit','renderDaftarSinyal','renderRingkasV3C','bangunDropdownPair'].forEach(function(fn){
       try{ if(typeof window[fn]==='function') window[fn](); }catch(e){ console.warn('rerender',fn,e); }
     });
     try{ if(typeof pasangPilihanVersiCrypto==='function') pasangPilihanVersiCrypto(); }catch(e){}
@@ -17981,6 +17984,58 @@ function renderRingkasV4(){
 (function(){ const _r=renderBatasDDCard; renderBatasDDCard=function(){ _r.apply(this,arguments); try{ renderRingkasV4(); }catch(e){ console.error('ringkasV4',e); } }; })();
 setTimeout(()=>{ try{ renderRingkasV4(); }catch(e){} }, 4000);
 setTimeout(()=>{ try{ renderRingkasV4(); }catch(e){} }, 7500);
+</script>
+<script>
+// Pair per channel (sesuai aturan terkunci): Datuk EURUSD v4 dan Datuk Crypto 89 v3.
+const PAIR_KANAL={ XAUUSD:['XAUUSD','NZDUSD','AUDUSD','USDCHF','AUDJPY','CADJPY','EURUSD'], FOREX:['GBPUSD','NZDJPY','USDCAD','CHFJPY','EURJPY','EURNZD','GBPJPY','USDJPY'] };
+const PAIR_LAMA_KANAL={ XAUUSD:['EURGBP'], FOREX:[] };   // masih dikenali (aturan lama v2), tapi tidak termasuk aturan terkini
+function pairBukanKanal(g,pair){
+  const p=String(pair||'').toUpperCase().trim(); if(!p||!PAIR_KANAL[g]) return false;
+  return !(PAIR_KANAL[g].includes(p) || (PAIR_LAMA_KANAL[g]||[]).includes(p));
+}
+let _pairOptAsli=null;
+function bangunDropdownPair(){
+  const sel=document.getElementById('inpRingkasSimbolSelect'); if(!sel) return;
+  if(!_pairOptAsli) _pairOptAsli=[].map.call(sel.options,o=>({v:o.value,t:o.textContent}));
+  const kt=kanalTampil(), g=(kt.length===1)?kt[0]:null;
+  const boleh=v=> !v || v==='__LAINNYA__' || !g || PAIR_KANAL[g].includes(v) || PAIR_LAMA_KANAL[g].includes(v);
+  const lama=v=> g && PAIR_LAMA_KANAL[g].includes(v);
+  const sekarang=sel.value;
+  sel.innerHTML=_pairOptAsli.filter(o=>boleh(o.v)).map(o=>'<option value="'+o.v+'">'+o.t+(lama(o.v)?' (aturan lama v2)':'')+'</option>').join('');
+  sel.value=[].some.call(sel.options,o=>o.value===sekarang)?sekarang:'';
+  // saran pair untuk form running & pending
+  let dl=document.getElementById('dlPairKanal'); if(!dl){ dl=document.createElement('datalist'); dl.id='dlPairKanal'; document.body.appendChild(dl); }
+  const daftar=g?PAIR_KANAL[g]:PAIR_KANAL.XAUUSD.concat(PAIR_KANAL.FOREX);
+  dl.innerHTML=daftar.map(x=>'<option value="'+x+'">').join('');
+  ['inpRunningSimbolManual','inpPendingPair'].forEach(id=>{ const el=document.getElementById(id); if(el) el.setAttribute('list','dlPairKanal'); });
+}
+setTimeout(()=>{ try{ bangunDropdownPair(); }catch(e){} }, 1500);
+</script>
+<script>
+// Pair dipilih (bukan diketik) dan dikelompokkan menurut channel, di form closed, running, dan pending.
+const NAMA_KANAL={ XAUUSD:'Datuk EURUSD', FOREX:'Datuk Crypto 89' };
+function _opsiPair(daftar,labelDari,lamaDari){ return daftar.map(v=>'<option value="'+v+'">'+((labelDari&&labelDari[v])||v)+((lamaDari&&lamaDari.includes(v))?' (aturan lama v2)':'')+'</option>').join(''); }
+function _isiSelectPair(sel,g,label){
+  if(!sel) return; const sekarang=sel.value;
+  let html='<option value="">— Pilih pair —</option>';
+  if(g && PAIR_KANAL[g]){ html+=_opsiPair(PAIR_KANAL[g].concat(PAIR_LAMA_KANAL[g]||[]),label,PAIR_LAMA_KANAL[g]); }
+  else { html+=['XAUUSD','FOREX'].map(k=>'<optgroup label="'+NAMA_KANAL[k]+'">'+_opsiPair(PAIR_KANAL[k].concat(PAIR_LAMA_KANAL[k]||[]),label,PAIR_LAMA_KANAL[k])+'</optgroup>').join(''); }
+  sel.innerHTML=html;
+  sel.value=[].some.call(sel.options,o=>o.value===sekarang)?sekarang:'';
+}
+function bangunDropdownPair(){
+  const label={}; (_pairOptAsli||[]).forEach(o=>{ if(o.v && o.v!=='__LAINNYA__') label[o.v]=o.t; });
+  if(!_pairOptAsli){ const s0=document.getElementById('inpRingkasSimbolSelect'); if(s0){ _pairOptAsli=[].map.call(s0.options,o=>({v:o.value,t:o.textContent})); _pairOptAsli.forEach(o=>{ if(o.v && o.v!=='__LAINNYA__') label[o.v]=o.t; }); } }
+  const kt=kanalTampil(), gTab=(kt.length===1)?kt[0]:null;
+  // form closed: ikut tab yang aktif
+  _isiSelectPair(document.getElementById('inpRingkasSimbolSelect'), gTab, label);
+  const man=document.getElementById('inpRingkasSimbolManual'); if(man) man.style.display='none';
+  // form running dan pending: ikut channel yang dipilih (atau tab aktif)
+  const ch=document.getElementById('inpRunningChannel'); let gRun=(ch&&ch.value)||gTab||null;
+  ['inpRunningSimbolManual','inpPendingPair'].forEach(id=>_isiSelectPair(document.getElementById(id), gRun, null));
+}
+(function(){ const ch=document.getElementById('inpRunningChannel'); if(ch) ch.addEventListener('change',function(){ try{ bangunDropdownPair(); }catch(e){} }); })();
+setTimeout(()=>{ try{ bangunDropdownPair(); }catch(e){} }, 2000);
 </script>
 </body>
 </html>
