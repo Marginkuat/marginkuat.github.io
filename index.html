@@ -14192,7 +14192,15 @@ async function exportLaporanCSV(){
   const statusEl=document.getElementById('exportStatus');
   statusEl.textContent='⏳ Menyiapkan CSV...';
   try{
-    const rows=await getExportRows();
+    const rowsMentah=await getExportRows();
+    // Satu baris per tanggal (sama seperti perhitungan di dashboard): utamakan pair XAUUSD, lalu ambil id terbesar.
+    // Ini membuang baris sisa (BTCUSD/FOREX/ganda) supaya penjumlahan kolom profit di CSV = profit sebenarnya.
+    const pilih={};
+    rowsMentah.forEach(r=>{
+      const t=String(r.tanggal||'').slice(0,10), p=String(r.pair||'')==='XAUUSD'?1:0, id=Number(r.id)||0, cur=pilih[t];
+      if(!cur || p>cur.p || (p===cur.p && id>cur.id)) pilih[t]={r,p,id};
+    });
+    const rows=Object.keys(pilih).sort().map(t=>pilih[t].r);
     if(!rows.length){statusEl.textContent='❌ Tidak ada data tercatat di bulan ini.';return;}
 
     // Ambil SEMUA histori (bukan cuma bulan ini) buat hitung wd/deposit yang akurat — biar hari
