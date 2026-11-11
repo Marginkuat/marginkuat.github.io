@@ -4202,6 +4202,90 @@ async function catatPelanggaranMt4(list){
   }catch(e){ console.error('catatPelanggaranMt4', e); }
 }
 
+// ══ LAPORAN PERTUMBUHAN MT4: harian, bulanan, per 3 bulan (kuartal), tahunan ══
+let pertumbuhanPeriode='bulanan';
+const PERIODE_LAPORAN=[['harian','Harian'],['bulanan','Bulanan'],['tigabulan','Per 3 Bulan'],['tahunan','Tahunan']];
+function setPeriodePertumbuhan(p){ pertumbuhanPeriode=p; try{ renderPertumbuhanBulanan(); }catch(e){ console.error('laporan',e); } }
+function tabsPertumbuhan(){
+  return '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">'+PERIODE_LAPORAN.map(([k,t])=>{
+    const aktif=(k===pertumbuhanPeriode);
+    return '<button type="button" onclick="setPeriodePertumbuhan(\''+k+'\')" style="flex:1;min-width:70px;padding:7px 4px;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;color:#FFFFFF;background:'+(aktif?'#14532D':'transparent')+';border:1.5px solid '+(aktif?'#4ADE80':'var(--border)')+'">'+t+'</button>';
+  }).join('')+'</div>';
+}
+function kunciPeriodeLaporan(p){
+  if(p==='harian') return t=>t;
+  if(p==='tigabulan') return t=>t.slice(0,4)+'-Q'+(Math.floor((+t.slice(5,7)-1)/3)+1);
+  if(p==='tahunan') return t=>t.slice(0,4);
+  return t=>t.slice(0,7);
+}
+function labelPeriodeLaporan(p,k){
+  if(p==='harian'){ const a=k.split('-'); return new Date(+a[0],+a[1]-1,+a[2]).toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+  if(p==='tigabulan'){ const a=k.split('-Q'), q=+a[1]; return 'Kuartal '+q+' '+a[0]+' ('+['Jan–Mar','Apr–Jun','Jul–Sep','Okt–Des'][q-1]+')'; }
+  if(p==='tahunan') return 'Tahun '+k;
+  const a=k.split('-'); return new Date(+a[0],+a[1]-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'});
+}
+function agregatLaporanMt4(hari,kunci){
+  const map={}, urut=[];
+  hari.forEach(h=>{
+    const k=kunci(h.tgl);
+    if(!map[k]){ map[k]={kunci:k,start:h.start,end:h.end,sumProf:0,dep:0,wd:0,profS:0,profI:0,depS:0,depI:0,poolS1:0,poolI1:0,growth:1,order:0,hari:0,eq:h.start,puncak:h.start,ddCent:0}; urut.push(k); }
+    const m=map[k];
+    m.end=h.end; m.sumProf+=h.prof; m.dep+=h.dep; m.wd+=h.wd; m.profS+=h.profS; m.profI+=h.profI; m.depS+=h.depS; m.depI+=h.depI;
+    m.poolS1=h.poolS; m.poolI1=h.poolI; if(h.start>0) m.growth*=(1+h.prof/h.start);
+    m.order+=h.jumlahOrder; if(h.adaSaldo) m.hari++;
+    m.eq+=h.prof; m.puncak=Math.max(m.puncak,m.eq); m.ddCent=Math.max(m.ddCent,m.puncak-m.eq);
+  });
+  return urut.map(k=>Object.assign({},map[k],{pct:(map[k].growth-1)*100}));
+}
+function renderLaporanPeriode(wrap,perf){
+  const p=pertumbuhanPeriode, grup=agregatLaporanMt4(perf.hari,kunciPeriodeLaporan(p));
+  if(!grup.length){ wrap.innerHTML=''; return; }
+  const g=grup[grup.length-1];
+  const warna=v=>v>=0?'#4ADE80':'#F87171';
+  const baris=(label,nilai,w)=>'<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:6px 0;border-bottom:1px dashed var(--border)"><span style="color:#E5E7EB">'+label+'</span><span style="color:'+(w||'#FFFFFF')+';font-weight:700">'+nilai+'</span></div>';
+  const judul=t=>'<div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:12px">'+t+'</div>';
+  const nm={harian:['hari','Hari','Laporan Harian'],bulanan:['bulan','Bulan','Laporan Bulanan'],tigabulan:['3 bulan','3 bulan','Laporan Per 3 Bulan'],tahunan:['tahun','Tahun','Laporan Tahunan']}[p];
+  const adaInv=Math.abs(g.poolI1)+Math.abs(g.profI)+Math.abs(g.depI)>0.005;
+  const cek=(g.poolS1+g.poolI1)-g.end, cekOk=Math.abs(cek)<0.005;
+  const sgn=v=>(v>=0?'+':'');
+  const ringkas=isAdmin?(
+    judul('Ringkasan')
+    +baris('Saldo awal '+nm[0],fc(g.start))
+    +baris('DP '+nm[0]+' ini','+'+fc(g.dep),'#60A5FA')
+    +baris('Profit & rugi '+nm[0]+' ini',sgn(g.sumProf)+fc(g.sumProf),warna(g.sumProf))
+    +baris('WD '+nm[0]+' ini','-'+fc(g.wd),'#F87171')
+    +baris('Saldo akhir '+nm[0],fc(g.end))
+    +baris('💵 Kekayaan Anda',fc(g.poolS1),'#4ADE80')
+    +(adaInv?baris('Bagian investor',fc(g.poolI1),'#C4B5FD'):'')
+    +'<div style="font-size:11px;margin-top:6px;color:'+(cekOk?'#4ADE80':'#F87171')+'">'+(cekOk?'✓ Tepat sama dengan saldo statement FBS':'⚠️ Kekayaan beda '+fc(cek)+' dari saldo statement FBS')+'</div>'
+  ):'';
+  const detail=
+    judul('Pertumbuhan & kemerosotan')
+    +baris('Pertumbuhan '+nm[0]+' ini',sgn(g.pct)+g.pct.toFixed(2)+'%',warna(g.pct))
+    +baris('Kemerosotan '+nm[0]+' ini (dari puncak)','-¢'+g.ddCent.toFixed(2),'#F87171')
+    +(p!=='harian'?baris('Hari trading',String(g.hari)):'')
+    +baris('Jumlah order',String(g.order));
+  const barisDaftar=b=>{
+    const sel=b.end-(b.start+b.sumProf+b.dep-b.wd), ok=Math.abs(sel)<0.005;
+    return '<div style="padding:6px 0;border-bottom:1px dashed #2A2A2A;color:#FFFFFF">'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px"><span>'+labelPeriodeLaporan(p,b.kunci)+'</span><span style="font-weight:700;color:'+warna(b.sumProf)+'">'+(isAdmin?'':(sgn(b.pct)+b.pct.toFixed(2)+'% · '))+(b.sumProf>=0?'+':'-')+'¢'+Math.abs(b.sumProf).toFixed(2)+'</span></div>'
+      +(isAdmin?'<div style="font-size:9px;color:#E5E7EB;line-height:1.6">Saldo awal ¢'+b.start.toFixed(2)+' · DP ¢'+b.dep.toFixed(2)+' · WD ¢'+b.wd.toFixed(2)+' · Saldo akhir ¢'+b.end.toFixed(2)+' '+(ok?'✓':'⚠️ selisih ¢'+sel.toFixed(2))+'<br>Pertumbuhan '+sgn(b.pct)+b.pct.toFixed(2)+'% · '+b.order+' order</div>':'')
+      +'</div>';
+  };
+  const daftar=grup.slice().reverse();
+  const batas=(p==='harian')?14:daftar.length;
+  const daftarHtml=daftar.slice(0,batas).map(barisDaftar).join('')
+    +(daftar.length>batas?'<details style="margin-top:4px"><summary style="cursor:pointer;font-size:10px;font-weight:800;color:#4ADE80;padding:6px 0">Tampilkan '+(daftar.length-batas)+' hari lainnya</summary>'+daftar.slice(batas).map(barisDaftar).join('')+'</details>':'');
+  wrap.innerHTML='<div style="background:var(--bg0);border:1.5px solid #4ADE80;border-radius:10px;padding:12px 14px">'
+    +tabsPertumbuhan()
+    +'<div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📅 '+nm[2]+' — '+labelPeriodeLaporan(p,g.kunci)+'</div>'
+    +'<div style="font-size:22px;font-weight:800;color:'+warna(isAdmin?g.sumProf:g.pct)+';margin-top:4px">'+(isAdmin?fc(g.sumProf):(sgn(g.pct)+g.pct.toFixed(2)+'%'))+'</div>'
+    +'<div style="font-size:9px;color:#E5E7EB">'+(isAdmin?'Profit trading '+nm[0]+' ini (termasuk komisi &amp; swap)':'Pertumbuhan '+nm[0]+' ini (persen)')+'</div>'
+    +ringkas
+    +'<details style="margin-top:12px"><summary style="cursor:pointer;font-size:11px;font-weight:800;color:#4ADE80;padding:8px 0">📂 Lihat detail lengkap</summary>'+detail+'</details>'
+    +judul('Per '+({harian:'hari',bulanan:'bulan',tigabulan:'3 bulan',tahunan:'tahun'}[p]))+daftarHtml
+    +'</div>';
+}
 function renderPertumbuhanBulanan(){
   const wrap = document.getElementById('pertumbuhanBulanWrap');
   if(!wrap) return;
@@ -4209,6 +4293,7 @@ function renderPertumbuhanBulanan(){
   if(!perf.hari.length){ wrap.innerHTML=''; return; }
   const viol = daftarPelanggaranMt4(perf);
   catatPelanggaranMt4(viol);
+  if(pertumbuhanPeriode!=='bulanan'){ renderLaporanPeriode(wrap,perf); return; }
   const namaBulan = p => { const [y,m]=p.split('-'); return new Date(+y,+m-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'}); };
   const bulanIni = perf.bulan[perf.bulan.length-1];
   const warna = v => v>=0?'#4ADE80':'#F87171';
@@ -4266,6 +4351,7 @@ function renderPertumbuhanBulanan(){
 
   wrap.innerHTML = `
   <div style="background:var(--bg0);border:1.5px solid #4ADE80;border-radius:10px;padding:12px 14px">
+    ${tabsPertumbuhan()}
     <div style="font-size:10px;color:#FFFFFF;font-weight:800;letter-spacing:.5px;text-transform:uppercase">📅 Pertumbuhan Bulan Ini — ${namaBulan(bulanIni.periode)}</div>
     <div style="font-size:22px;font-weight:800;color:${warna(isAdmin?bulanIni.sumProf:bulanIni.pct)};margin-top:4px">${isAdmin?fc(bulanIni.sumProf):((bulanIni.pct>=0?'+':'')+bulanIni.pct.toFixed(2)+'%')}</div>
     <div style="font-size:9px;color:#E5E7EB">${isAdmin?'Profit trading bulan ini (termasuk komisi &amp; swap)':'Pertumbuhan bulan ini (persen)'}</div>
