@@ -1924,7 +1924,8 @@ function renderInvCalcDisclaimer(){
       <input class="inp" type="number" step="0.01" id="inpRingkasVp" placeholder="-60">
       <div id="inpRingkasVpKeterangan" style="font-size:8px;color:#E5E7EB;margin-top:-4px;margin-bottom:6px"></div>
       <div style="display:flex;gap:8px"><div style="flex:1"><label class="lbl">SL rencana (pips) — untuk audit</label><input class="inp" type="number" step="any" id="inpRingkasSl" placeholder="mis. 500"></div><div style="flex:1"><label class="lbl">TP rencana (pips) — untuk audit</label><input class="inp" type="number" step="any" id="inpRingkasTp" placeholder="mis. 500"></div></div>
-      <div style="font-size:8px;color:#E5E7EB;margin-bottom:6px">Pakai kalkulator <b>Hard</b>. Kalau SL/TP kosong, otomatis terisi dari kalkulator Hard untuk pair ini (forex: SL sesuai pair, TP = 2× SL; emas: SL 500 / TP 500). Isi manual hanya kalau SL/TP Anda berbeda dari Hard.</div>
+      <div data-chan="FOREX" style="font-size:8px;color:#E5E7EB;margin-bottom:6px">Kalau SL/TP kosong, otomatis terisi dari aturan v3 Datuk Crypto 89: SL 45 pips (GBPUSD, NZDJPY, USDCAD) atau 60 pips (CHFJPY, EURJPY, EURNZD, GBPJPY, USDJPY), TP = 2× SL (RR 1:2, kalkulator Hard). Isi manual hanya kalau SL/TP Anda berbeda dari aturan.</div>
+      <div data-chan="XAUUSD" style="font-size:8px;color:#E5E7EB;margin-bottom:6px">Kalau SL/TP kosong, otomatis terisi sesuai aturan untuk pair ini (forex: kalkulator Hard, SL sesuai pair, TP = 2× SL; emas: aturan v4 kalkulator Standar, SL 200 / TP 400). Isi manual hanya kalau SL/TP Anda berbeda dari Hard.</div>
       <button class="btn btn-p" onclick="simpanDataHarianRingkas()" style="margin-top:10px">💾 Simpan Sinyal (pair: <span id="inpRingkasPairLabel2">Datuk EURUSD</span>)</button>
       <div id="inpRingkasStatus" style="font-size:10px;color:#E5E7EB;margin-top:8px;text-align:center"></div>
     </div>
@@ -5298,15 +5299,19 @@ function onSimbolSinyalPilihanBerubah(){
   if(manualEl) manualEl.style.display = (selEl && selEl.value==='__LAINNYA__') ? 'block' : 'none';
   autoHitungVpRingkas();
 }
+// Emas (XAUUSD): mulai 1 Nov 2026 aturan v4 = SL 200 / TP 400 (kalkulator Standar). Sebelum itu aturan v2 = SL 500 / TP 500.
+function slTpEmasUntukTanggal(tgl){ const t=String(tgl||'').slice(0,10); return (t && t<'2026-11-01') ? {sl:500,tp:500} : {sl:200,tp:400}; }
 function autoIsiSlTpRencana(simbol){
-  // SL/TP rencana otomatis dari kalkulator Hard (forex: SL per pair, TP = 2× SL; gold: 500 / 500)
+  // SL/TP rencana otomatis (forex: kalkulator Hard, SL per pair, TP = 2× SL; emas: v4 SL 200 / TP 400)
   const slEl=document.getElementById('inpRingkasSl'), tpEl=document.getElementById('inpRingkasTp');
   if(!slEl||!tpEl) return;
-  const sl = (simbol && FOREX_SL_PAIR[simbol]) || (simbol==='XAUUSD' ? 500 : null);
+  const tglEl=document.getElementById('inpRingkasTglBuka'), tglEl2=document.getElementById('inpRingkasTgl');
+  const emas=slTpEmasUntukTanggal((tglEl&&tglEl.value)||(tglEl2&&tglEl2.value));
+  const sl = (simbol && FOREX_SL_PAIR[simbol]) || (simbol==='XAUUSD' ? emas.sl : null);
   if(!sl) return;
   if(!slEl.value || slEl.dataset.otomatis==='1'){
     slEl.value = sl;  slEl.dataset.otomatis='1';
-    tpEl.value = (simbol==='XAUUSD' ? 500 : 2*sl); tpEl.dataset.otomatis='1';
+    tpEl.value = (simbol==='XAUUSD' ? emas.tp : 2*sl); tpEl.dataset.otomatis='1';
   }
 }
 function autoHitungVpRingkas(){
@@ -5356,8 +5361,9 @@ async function simpanDataHarianRingkas(){
     let slRenc=parseFloat((document.getElementById('inpRingkasSl')||{}).value), tpRenc=parseFloat((document.getElementById('inpRingkasTp')||{}).value);
     // SL/TP rencana kosong → otomatis dari kalkulator Hard (SL per pair, TP = 2× SL). Gold: SL 500 / TP 500.
     if(!isFinite(slRenc)||!isFinite(tpRenc)){
-      const slHard=(pairSimbol && FOREX_SL_PAIR[pairSimbol]) || (g==='XAUUSD' ? 500 : null);
-      if(slHard){ slRenc=slHard; tpRenc=(g==='XAUUSD'?500:2*slHard); }
+      const _em=slTpEmasUntukTanggal(tglBuka||tgl);
+      const slHard=(pairSimbol && FOREX_SL_PAIR[pairSimbol]) || (pairSimbol==='XAUUSD' ? _em.sl : null);
+      if(slHard){ slRenc=slHard; tpRenc=(pairSimbol==='XAUUSD'?_em.tp:2*slHard); }
     }
     cachedSinyalAnalis[g].push(Object.assign({id:buatIdSinyal(), tanggal:tgl, jam:jam||null, tanggalBuka:tglBuka||tgl, jamBuka:jamBuka||null, simbol:pairSimbol||null, batch:batchInput.trim()||null, status:'closed', pips, vp}, (isFinite(slRenc)&&isFinite(tpRenc))?{slPips:slRenc, tpPips:tpRenc}:{}));
     const sBaru=cachedSinyalAnalis[g][cachedSinyalAnalis[g].length-1];
