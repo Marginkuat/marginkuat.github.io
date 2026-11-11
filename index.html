@@ -376,17 +376,18 @@ function toggleKamusGrup(btn){
   <button type="button" class="akun-btn" data-akun-btn="crypto89" onclick="setAkunTampilan('crypto89')">🪙 Akun Datuk Crypto 89</button>
 </div>
 <div data-akun="mt4">
-<div style="margin:12px 0 16px;padding:16px 14px;border-radius:14px;background:linear-gradient(135deg,#7F1D1D,#450A0A);border:2px solid #F87171;box-shadow:0 0 0 3px rgba(248,113,113,.15)">
-  <div style="font-size:18px;font-weight:900;color:#FFFFFF;line-height:1.3;margin-bottom:8px">⚠️ WAJIB: DATA MT4 HARUS DARI STATEMENT FBS RESMI</div>
-  <div style="font-size:13px;color:#FECACA;line-height:1.6;margin-bottom:10px">Jangan input manual <b>setoran</b>, <b>penarikan (WD)</b>, atau <b>saldo MT4</b>.<br>Input manual yang tidak sama dengan statement FBS akan membuat angka amburadul.</div>
-  <div style="font-size:12px;color:#FFFFFF;line-height:1.7;background:rgba(0,0,0,.35);border-radius:10px;padding:10px 12px">
-    <b>Cara yang benar:</b><br>
-    1️⃣ Minta laporan HTML resmi dari FBS<br>
-    2️⃣ Buka bagian <b>Ekstrak &amp; Kelompokkan</b>, pilih file itu<br>
-    3️⃣ Isi Saldo Awal <b>460.21</b> (untuk periode mulai 1 Mei 2026)<br>
-    4️⃣ Tekan <b>Ekstrak</b>, lalu <b>Simpan Semua Langsung ke Database</b>
-  </div>
-  <div style="font-size:11px;color:#FCA5A5;margin-top:10px;line-height:1.5">Entri manual setoran/WD MT4 di periode yang sudah ada statement-nya tidak dihitung. Input manual hanya untuk pengeluaran dari uang yang sudah Anda tarik.</div>
+<div style="margin:12px 0 16px;padding:14px;border-radius:14px;background:linear-gradient(135deg,#7F1D1D,#450A0A);border:2px solid #F87171;box-shadow:0 0 0 3px rgba(248,113,113,.15)">
+  <div style="font-size:16px;font-weight:900;color:#FFFFFF;line-height:1.3;margin-bottom:6px">⚠️ WAJIB: DATA MT4 HARUS DARI STATEMENT FBS RESMI</div>
+  <div style="font-size:13px;color:#FECACA;line-height:1.5">Jangan input manual <b>setoran</b>, <b>penarikan (WD)</b>, atau <b>saldo MT4</b>.</div>
+  <details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:#FFFFFF">📋 Lihat cara yang benar</summary>
+    <div style="font-size:12px;color:#FFFFFF;line-height:1.7;background:rgba(0,0,0,.35);border-radius:10px;padding:10px 12px;margin-top:6px">
+      1️⃣ Minta laporan HTML resmi dari FBS<br>
+      2️⃣ Buka <b>Ekstrak &amp; Kelompokkan</b>, pilih file itu<br>
+      3️⃣ Isi Saldo Awal <b>460.21</b> (periode mulai 1 Mei 2026)<br>
+      4️⃣ Tekan <b>Ekstrak</b>, lalu <b>Simpan Semua Langsung ke Database</b><br>
+      <span style="color:#FCA5A5;font-size:11px">Entri manual setoran/WD di periode yang sudah ada statement-nya tidak dihitung. Input manual hanya untuk pengeluaran dari uang yang sudah ditarik.</span>
+    </div>
+  </details>
 </div>
 <!-- LABEL PERMANEN: profil risiko akun ini (SELALU tampil, otomatis ikut profil yang aktif di server) -->
 <div id="labelProfilRisiko" style="margin:0 0 14px"></div>
@@ -401,6 +402,7 @@ function toggleKamusGrup(btn){
   <div class="bal-cent" id="balCent">¢0.00</div>
   <div class="bal-usd" id="balUSD">= $0.00 USD nyata</div>
   <div class="bal-rp" id="balRp">≈ Rp 0</div>
+  <div id="statementTerakhirInfo" style="margin-top:8px;text-align:center;font-size:11px;font-weight:700"></div>
   <div class="bal-grid">
     <div class="bal-box"><div class="bal-box-val cg" id="bWinRate">0%</div><div class="bal-box-lbl">Win Rate</div></div>
     <div class="bal-box"><div class="bal-box-val cy" id="bHari">0</div><div class="bal-box-lbl">Hari Trading</div></div>
@@ -2188,6 +2190,7 @@ function renderInvCalcDisclaimer(){
 
   <div class="graph-card" style="margin-bottom:12px">
     <div style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.6">Dihitung 100% otomatis dari selisih Saldo Harian yang sudah kamu input — bukan input manual terpisah, jadi dijamin selalu sinkron sama data Saldo MT4 kamu (gak akan pernah beda angka). <b style="color:#FFFFFF">Catatan jujur:</b> ini menghitung dari SELISIH saldo, bukan dari bukti mutasi transaksi asli. Selisih kecil (di bawah ~₡20) bisa jadi bukan WD/deposit beneran — kadang itu cuma swap, komisi broker, atau saldo yang salah ketik. Entri seperti itu ditandai terpisah di daftar riwayat.</div>
+    <div style="margin-bottom:10px;padding:8px 10px;border-radius:8px;background:#7F1D1D;border:1px solid #F87171;color:#FFFFFF;font-size:11px;line-height:1.5">⚠️ DP/WD dibaca dari statement FBS, jangan input manual. Isi tujuan WD di <b>Laporan Keuangan Resmi → bagian 5</b>.</div>
     <div id="depositWdRingkasan">
       <div style="text-align:center;padding:10px;color:#E5E7EB;font-size:12px">Memuat...</div>
     </div>
@@ -2359,7 +2362,7 @@ function renderInvCalcDisclaimer(){
 <div class="section" data-akun="mt4" id="secLapResmi">
   <div class="sec-title">🏛️ Laporan Keuangan Resmi — Akun MT4</div>
   <div class="graph-card">
-    <div style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.6">Semua angka dalam ¢ (akun cent), bersumber dari statement resmi FBS. Cocokkan dengan Personal Area FBS atau laporan HTML asli untuk verifikasi pihak ketiga.</div>
+    <div style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.6"><b style="color:#FCA5A5">⚠️ DP/WD baru muncul di sini setelah statement FBS diimpor (Ekstrak &amp; Kelompokkan).</b><br>Semua angka dalam ¢ (akun cent), bersumber dari statement resmi FBS. Cocokkan dengan Personal Area FBS atau laporan HTML asli untuk verifikasi pihak ketiga.</div>
     <div id="lapResmiBox" style="font-size:11px;color:#E5E7EB">Memuat...</div>
     <div id="lapWdTujuan" style="font-size:11px;color:#E5E7EB;margin-top:14px"></div>
     <button type="button" onclick="window.print()" style="margin-top:12px;width:100%;padding:10px;border-radius:10px;border:1px solid #4ADE80;background:#14532D;color:#FFFFFF;font-weight:800;font-size:12px;cursor:pointer">🖨️ Cetak / Simpan PDF</button>
@@ -18387,6 +18390,24 @@ function renderWdTujuan(){
 (function(){
   if(typeof renderLapResmi==='function'){ const _rw=renderLapResmi; renderLapResmi=function(){ _rw.apply(this,arguments); try{ renderWdTujuan(); }catch(e){ console.error('wdtujuan',e); } }; }
 })();
+
+// ══ PENANDA: tanggal data terakhir dari FBS (warna berubah kalau sudah lama tidak diimpor) ══
+function renderStatementTerakhir(){
+  const el=document.getElementById('statementTerakhirInfo'); if(!el) return;
+  let t=''; try{ t=batasStatementMt4(); }catch(e){}
+  if(!t){ el.textContent=''; return; }
+  const p=t.split('-').map(Number), d0=new Date(p[0],p[1]-1,p[2]), n=new Date(), d1=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+  const hari=Math.round((d1-d0)/86400000);
+  const warna=hari<=3?'#4ADE80':(hari<=7?'#FBBF24':'#F87171');
+  const teks=hari<=0?'hari ini':hari+' hari lalu';
+  const aksi=hari>7?' — impor statement FBS terbaru sekarang':(hari>3?' — jangan lupa impor statement':'');
+  el.style.color=warna;
+  el.textContent=(hari>3?'⚠️ ':'✓ ')+'Data FBS terakhir: '+fd(t)+' ('+teks+')'+aksi;
+}
+(function(){
+  if(typeof renderPertumbuhanBulanan==='function'){ const _rs=renderPertumbuhanBulanan; renderPertumbuhanBulanan=function(){ _rs.apply(this,arguments); try{ renderStatementTerakhir(); }catch(e){ console.error('stmtterakhir',e); } }; }
+})();
+[2000,5000,9000,13000].forEach(t=>setTimeout(()=>{ try{ renderStatementTerakhir(); }catch(e){ console.error('stmtterakhir',e); } },t));
 </script>
 </body>
 </html>
