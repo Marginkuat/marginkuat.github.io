@@ -14219,10 +14219,23 @@ async function exportLaporanCSV(){
       prevSaldo=saldo;
     });
 
+    // KOREKSI: WD & deposit diambil dari arus kas resmi (statement FBS) untuk tanggal yang sudah tercakup statement.
+    // Hasil tebakan dari selisih saldo antar baris (di atas) hanya dipakai untuk baris pertama (modal awal) dan tanggal setelah statement.
+    // Ini mencegah WD/deposit palsu kalau ada baris ganda di tanggal yang sama (mis. XAUUSD + FOREX).
+    try{
+      const nyata=arusMt4Detail(), batasS=batasStatementMt4(), tglPertama=allRows.length?String(allRows[0].tanggal).slice(0,10):'';
+      Object.keys(wdDepositMap).forEach(t=>{
+        if(t===tglPertama || !batasS || t>batasS) return;
+        const n=nyata[t]||{dep:0,wd:0};
+        wdDepositMap[t]={wd:parseFloat((n.wd||0).toFixed(2)), deposit:parseFloat((n.dep||0).toFixed(2))};
+      });
+    }catch(e){ console.error('koreksi wd/deposit CSV',e); }
     const header=['tanggal','saldo_mt4','profit','gross_profit','gross_loss','wd','deposit','jumlah_signal','pair','profil_risiko','catatan'];
     let csv=header.join(',')+'\n';
+    const sudahTgl={};
     rows.forEach(r=>{
-      const wdDep=wdDepositMap[r.tanggal]||{wd:0,deposit:0};
+      // WD/deposit hanya ditulis di baris pertama tiap tanggal, supaya tidak terhitung dobel kalau ada beberapa baris (pair) di hari yang sama
+      const wdDep=sudahTgl[r.tanggal]?{wd:0,deposit:0}:(wdDepositMap[r.tanggal]||{wd:0,deposit:0}); sudahTgl[r.tanggal]=true;
       const rowWithWdDep={...r, wd:wdDep.wd||'', deposit:wdDep.deposit||'', profil_risiko: profilLabelEfektif(r)};
       const line=header.map(h=>{
         let v=rowWithWdDep[h]==null?'':rowWithWdDep[h];
