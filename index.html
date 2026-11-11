@@ -2356,6 +2356,15 @@ function renderInvCalcDisclaimer(){
      (lihat doInvestorLogin/loggedInInvestorCode), dan (2) nama lengkap investor TIDAK
      ditampilkan di kartu dashboard-nya sendiri (lihat investorCardHtml, param isSelfMode) —
      cuma Admin yang lihat nama asli, buat keperluan kelola dana. -->
+<div class="section" data-akun="mt4" id="secLapResmi">
+  <div class="sec-title">🏛️ Laporan Keuangan Resmi — Akun MT4</div>
+  <div class="graph-card">
+    <div style="font-size:9px;color:#E5E7EB;margin-bottom:10px;line-height:1.6">Semua angka dalam ¢ (akun cent), bersumber dari statement resmi FBS. Cocokkan dengan Personal Area FBS atau laporan HTML asli untuk verifikasi pihak ketiga.</div>
+    <div id="lapResmiBox" style="font-size:11px;color:#E5E7EB">Memuat...</div>
+    <div id="lapWdTujuan" style="font-size:11px;color:#E5E7EB;margin-top:14px"></div>
+    <button type="button" onclick="window.print()" style="margin-top:12px;width:100%;padding:10px;border-radius:10px;border:1px solid #4ADE80;background:#14532D;color:#FFFFFF;font-weight:800;font-size:12px;cursor:pointer">🖨️ Cetak / Simpan PDF</button>
+  </div>
+</div>
 <div class="section" data-akun="mt4" id="secInvestorDashboard">
   <div class="sec-title">👥 Investor Dashboard</div>
   <div class="graph-card">
@@ -3328,6 +3337,7 @@ const fd=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short
 
 // ══ SEARCH MENU: cari & lompat ke bagian manapun di situs ══
 const SEARCH_MENU=[
+  {id:'secLapResmi', icon:'🏛️', label:'Laporan Keuangan Resmi', desc:'Posisi keuangan, arus kas, dan kinerja per bulan dari statement FBS', kw:'laporan keuangan resmi arus kas deposit wd audit posisi keuangan bulanan statement fbs', cat:'keuangan'},
   {id:'mt4RisikoWrap', icon:'⚠️', label:'Peringatan Risiko Modal MT4', desc:'Risiko per order vs saldo, perkiraan margin call', kw:'peringatan risiko modal margin call bahaya saldo habis 5% risiko per order berbahaya', cat:'performa'},
   {id:'inpSaldoHarianTitle', icon:'⚙️', label:'Input Saldo Harian', desc:'Isi saldo MT4, profit, dan jumlah signal tiap hari (butuh login admin)', kw:'input saldo harian data harian catatan harian isi tambah simpan saldo mt4 profit jumlah signal tanggal edit', cat:'input'},
   {id:'secInputSinyal', icon:'📝', label:'Input Sinyal Analis', desc:'Catat sinyal Datuk EURUSD / Datuk Crypto 89: pair, jam buka & tutup, pips, SL/TP rencana', kw:'input sinyal analis datuk eurusd crypto 89 order closed buka tutup pips simpan sinyal forex emas', cat:'input'},
@@ -18202,7 +18212,7 @@ function kurvaSvg(h){
 function renderKurvaAkun(){
   const kartu=document.getElementById('kurvaAkunCard'); if(!kartu) return;
   const akun=document.body.getAttribute('data-akun')||'mt4';
-  let data; try{ data=kurvaAmbilData(akun,!!isAdmin); }catch(e){ kartu.innerHTML=''; return; }
+  let data; try{ data=kurvaAmbilData(akun,true); }catch(e){ kartu.innerHTML=''; return; }
   const warnaAngka=v=>v>=0?'#4ADE80':'#F87171';
   const rangeBtn=KURVA_RANGE.map(([k])=>'<button type="button" onclick="setKurvaRange(\''+k+'\')" style="flex:1;padding:6px 0;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;color:#FFFFFF;background:'+(k===kurvaRange?'#14532D':'transparent')+';border:1.5px solid '+(k===kurvaRange?'#4ADE80':'var(--border)')+'">'+k+'</button>').join('');
   if(kurvaSimbol!=='ALL' && data.simbol.indexOf(kurvaSimbol)<0) kurvaSimbol='ALL';
@@ -18254,6 +18264,98 @@ function taruhKurvaAkun(){
   if(typeof renderBatasDDCard==='function'){ const _rb=renderBatasDDCard; renderBatasDDCard=function(){ _rb.apply(this,arguments); try{ taruhKurvaAkun(); }catch(e){ console.error('kurva',e); } }; }
 })();
 [3000,6000,9000,13000].forEach(t=>setTimeout(()=>{ try{ taruhKurvaAkun(); }catch(e){ console.error('kurva',e); } },t));
+
+// ══ LAPORAN KEUANGAN RESMI (gaya laporan perusahaan): posisi, arus kas, kinerja per bulan — semua dalam ¢ ══
+function renderLapResmi(){
+  const el=document.getElementById('lapResmiBox'); if(!el) return;
+  let p; try{ p=hitungPerformaMt4(); }catch(e){ el.textContent='Data belum siap.'; return; }
+  const B=p.bulan||[], H=p.hari||[]; if(!B.length){ el.textContent='Belum ada data.'; return; }
+  const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const w=v=>v>=0?'#4ADE80':'#F87171';
+  const mulai=B[0].start, akhir=B[B.length-1].end;
+  const dep=B.reduce((a,b)=>a+b.dep,0), wd=B.reduce((a,b)=>a+b.wd,0), lab=B.reduce((a,b)=>a+b.sumProf,0);
+  const hitung=mulai+dep-wd+lab, selisih=akhir-hitung, ok=Math.abs(selisih)<0.5;
+  const row=(k,v,col)=>'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1F2A1F"><span>'+k+'</span><b style="color:'+(col||'#FFFFFF')+'">'+v+'</b></div>';
+  const hariAda=H.filter(h=>h.adaSaldo||Math.abs(h.prof)>0);
+  const untung=hariAda.filter(h=>h.prof>0).length, rugi=hariAda.filter(h=>h.prof<0).length;
+  let cum=0,puncak=0,dd=0; hariAda.forEach(h=>{ cum+=h.prof; if(cum>puncak) puncak=cum; if(puncak-cum>dd) dd=puncak-cum; });
+  const best=hariAda.reduce((a,h)=>(!a||h.prof>a.prof)?h:a,null), worst=hariAda.reduce((a,h)=>(!a||h.prof<a.prof)?h:a,null);
+  const nm=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const bln=k=>nm[+k.slice(5,7)-1]+' '+k.slice(2,4);
+  const th='style="padding:5px 6px;text-align:right;white-space:nowrap;color:#FFFFFF"';
+  const td='style="padding:5px 6px;text-align:right;white-space:nowrap"';
+  const rows=B.map(b=>{ const sl=b.end-(b.start+b.dep-b.wd+b.sumProf);
+    return '<tr><td style="padding:5px 6px;white-space:nowrap">'+bln(b.periode)+'</td><td '+td+'>'+c(b.start)+'</td><td '+td+'>'+c(b.dep)+'</td><td '+td+'>'+c(b.wd)+'</td><td '+td+' ><span style="color:'+w(b.sumProf)+'">'+c(b.sumProf)+'</span></td><td '+td+'><b>'+c(b.end)+'</b></td><td '+td+'>'+(Math.abs(sl)<0.5?'✓':'<span style="color:#FBBF24">'+c(sl)+'</span>')+'</td></tr>'; }).join('');
+  el.innerHTML=
+    '<div style="font-weight:800;color:#FFFFFF;margin:2px 0 4px">1. Posisi Keuangan</div>'
+    +'<div style="font-size:9px;margin-bottom:4px">Periode '+fd(H[0]?H[0].tgl:'')+' s/d '+fd(H.length?H[H.length-1].tgl:'')+'</div>'
+    +row('Saldo awal',c(mulai))+row('+ Deposit (modal disetor)',c(dep),'#4ADE80')+row('− Penarikan (WD)',c(wd),'#F87171')+row('+ Laba/rugi trading',c(lab),w(lab))
+    +row('= Saldo akhir (dihitung)',c(hitung))+row('Saldo akhir (statement)',c(akhir))
+    +'<div style="margin:6px 0 12px;font-size:11px;color:'+(ok?'#4ADE80':'#FBBF24')+'">'+(ok?'✓ Seimbang: dihitung sama dengan saldo statement':'⚠️ Selisih '+c(selisih)+' — cocokkan dengan statement FBS')+'</div>'
+    +'<div style="font-weight:800;color:#FFFFFF;margin:6px 0 4px">2. Arus Kas</div>'
+    +row('Uang masuk (deposit)',c(dep),'#4ADE80')+row('Uang keluar (WD)',c(wd),'#F87171')+row('Arus kas bersih (masuk − keluar)',c(dep-wd),w(dep-wd))
+    +'<div style="font-weight:800;color:#FFFFFF;margin:12px 0 4px">3. Kinerja Trading</div>'
+    +row('Hari trading',hariAda.length+' ('+untung+' untung · '+rugi+' rugi)')
+    +(best?row('Hari untung terbesar',c(best.prof)+' ('+fd(best.tgl)+')','#4ADE80'):'')+(worst?row('Hari rugi terbesar',c(worst.prof)+' ('+fd(worst.tgl)+')','#F87171'):'')
+    +row('Penurunan terdalam dari puncak',c(dd),'#F87171')
+    +'<div style="font-weight:800;color:#FFFFFF;margin:12px 0 4px">4. Rincian per Bulan</div>'
+    +'<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:10px;min-width:560px"><thead><tr style="border-bottom:1px solid #4B5563"><th style="padding:5px 6px;text-align:left;color:#FFFFFF">Bulan</th><th '+th+'>Saldo awal</th><th '+th+'>Deposit</th><th '+th+'>WD</th><th '+th+'>Laba trading</th><th '+th+'>Saldo akhir</th><th '+th+'>Cek</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div style="font-size:9px;margin-top:10px;line-height:1.6">Sumber: statement resmi FBS (HTML) yang diimpor ke situs. Laba trading tidak termasuk deposit dan WD. Tanda ✓ berarti saldo awal + deposit − WD + laba = saldo akhir bulan itu.</div>';
+}
+(function(){
+  if(typeof renderPertumbuhanBulanan==='function'){ const _rl=renderPertumbuhanBulanan; renderPertumbuhanBulanan=function(){ _rl.apply(this,arguments); try{ renderLapResmi(); }catch(e){ console.error('lapresmi',e); } }; }
+})();
+[3000,6000,9000,13000].forEach(t=>setTimeout(()=>{ try{ renderLapResmi(); }catch(e){ console.error('lapresmi',e); } },t));
+
+// ══ TUJUAN WD: tiap penarikan dicatat arahnya (kebutuhan harian, tabungan, dll). Disimpan di app_settings key "wd_tujuan" ══
+const WD_TUJUAN=[['harian','Kebutuhan harian'],['tabungan','Tabungan / darurat'],['investasi','Investasi'],['hiburan','Hiburan'],['utang','Bayar utang'],['lainnya','Lain-lain']];
+let _wdTujuan; // undefined = belum dimuat, object = sudah
+async function wdTujuanMuat(){
+  try{ const r=await api('app_settings?select=value&key=eq.wd_tujuan'); _wdTujuan=(r&&r.length)?(JSON.parse(r[0].value)||{}):{}; }
+  catch(e){ console.error('wd_tujuan',e); _wdTujuan={}; }
+  renderWdTujuan();
+}
+async function setWdTujuan(key,val){
+  if(!isAdmin){ toast('❌ Harus masuk sebagai Admin'); return; }
+  if(!_wdTujuan) _wdTujuan={};
+  if(val) _wdTujuan[key]=val; else delete _wdTujuan[key];
+  try{
+    const ada=await api('app_settings?select=key&key=eq.wd_tujuan'), v=JSON.stringify(_wdTujuan);
+    if(ada&&ada.length) await api('app_settings?key=eq.wd_tujuan','PATCH',{value:v}); else await api('app_settings','POST',{key:'wd_tujuan',value:v});
+    toast('✅ Tujuan WD tersimpan');
+  }catch(e){ console.error(e); toast('⚠️ Gagal menyimpan tujuan WD'); }
+  renderWdTujuan();
+}
+function renderWdTujuan(){
+  const el=document.getElementById('lapWdTujuan'); if(!el) return;
+  if(_wdTujuan===undefined){ _wdTujuan=null; el.textContent='Memuat tujuan WD...'; wdTujuanMuat(); return; }
+  if(_wdTujuan===null) return;
+  const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const batas=batasStatementMt4(), list=[];
+  (allKasData||[]).forEach(r=>{ const f=arusMt4Sah(r,batas); if(f&&f.arah==='wd') list.push({key:String(r.keterangan||'').indexOf('STMT-')===0?r.keterangan:'id'+r.id, tgl:String(r.tanggal||'').slice(0,10), jml:f.jumlah}); });
+  list.sort((a,b)=>b.tgl.localeCompare(a.tgl));
+  const nama={}; WD_TUJUAN.forEach(t=>nama[t[0]]=t[1]);
+  const tot={}; let semua=0, belum=0, nBelum=0;
+  list.forEach(w=>{ semua+=w.jml; const t=_wdTujuan[w.key]; if(t&&nama[t]) tot[t]=(tot[t]||0)+w.jml; else { belum+=w.jml; nBelum++; } });
+  const row=(k,v,col)=>'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1F2A1F"><span>'+k+'</span><b style="color:'+(col||'#FFFFFF')+'">'+v+'</b></div>';
+  let h='<div style="font-weight:800;color:#FFFFFF;margin:2px 0 4px">5. Tujuan Penarikan (WD)</div>'
+    +'<div style="font-size:9px;margin-bottom:4px">Ke mana uang yang ditarik dari MT4 dipakai. Total dicatat + belum dicatat = total WD.</div>';
+  WD_TUJUAN.forEach(t=>{ if(tot[t[0]]) h+=row(t[1],c(tot[t[0]])); });
+  h+=row('Belum dicatat tujuannya ('+nBelum+' WD)',c(belum),belum>0?'#FBBF24':'#4ADE80')+row('Total WD (statement)',c(semua),'#F87171');
+  if(isAdmin && list.length){
+    h+='<details style="margin-top:8px"><summary style="cursor:pointer;color:#FFFFFF;font-weight:700">✍️ Atur tujuan tiap WD</summary>';
+    list.forEach(w=>{
+      const cur=_wdTujuan[w.key]||'';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1F2A1F"><span style="font-size:10px">'+fd(w.tgl)+'<br><b style="color:#F87171">'+c(w.jml)+'</b></span><select class="inp" style="flex:1;max-width:60%;padding:6px 8px;font-size:11px" onchange="setWdTujuan(\''+w.key+'\',this.value)"><option value="">— pilih tujuan —</option>'
+        +WD_TUJUAN.map(t=>'<option value="'+t[0]+'"'+(t[0]===cur?' selected':'')+'>'+t[1]+'</option>').join('')+'</select></div>';
+    });
+    h+='</details>';
+  }
+  el.innerHTML=h;
+}
+(function(){
+  if(typeof renderLapResmi==='function'){ const _rw=renderLapResmi; renderLapResmi=function(){ _rw.apply(this,arguments); try{ renderWdTujuan(); }catch(e){ console.error('wdtujuan',e); } }; }
+})();
 </script>
 </body>
 </html>
