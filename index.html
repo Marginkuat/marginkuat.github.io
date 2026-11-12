@@ -281,7 +281,7 @@ function kanalTampil(){ var a=document.body&&document.body.getAttribute('data-ak
       <details class="kamus-item"><summary>Profit Factor</summary><div class="kamus-body">Perbandingan antara total keuntungan dari transaksi profit (Gross Profit) dengan total kerugian dari transaksi loss (Gross Loss).<br><br>Rumus: Gross Profit ÷ Gross Loss (6 bulan terakhir).<br><br>Semakin besar nilainya, semakin sehat performanya — di atas 1 artinya untung lebih besar dari rugi secara total.</div></details>
       <details class="kamus-item"><summary>Recovery Factor</summary><div class="kamus-body">Tingkat kemampuan akun buat pulih (recovery) dari kerugian terdalam yang pernah dialami.<br><br>Rumus: Nett P/L ÷ Drawdown terbesar (6 bulan terakhir).<br><br>Makin besar, makin cepat/kuat akun ini "menyembuhkan diri" tiap kali kena rugi dalam.</div></details>
       <details class="kamus-item"><summary>Max Drawdown (Max DD)</summary><div class="kamus-body">Penurunan TERBESAR dari titik puncak (peak) tertinggi saldo ke titik terendah setelahnya, dalam periode tertentu.<br><br>Ini mengukur "luka terdalam" yang pernah dialami akun — beda dari Current Drawdown yang lihat kondisi HARI INI.</div></details>
-      <details class="kamus-item"><summary>Current Drawdown</summary><div class="kamus-body">Seberapa jauh saldo SEKARANG dari puncak tertinggi yang pernah dicapai, dibanding modal yang lagi aktif ditradingkan.<br><br>Beda dengan Max DD (histori), ini nunjukin kondisi akun HARI INI — lagi floating minus dalam, atau udah recover.</div></details>
+      <details class="kamus-item"><summary>Current Drawdown (Drawdown bulan ini)</summary><div class="kamus-body">Seberapa jauh saldo SEKARANG dari puncak saldo <b>bulan berjalan</b>, dibanding saldo awal bulan itu.<br>Rumus: (puncak saldo bulan ini − saldo sekarang) ÷ saldo awal bulan × 100%.<br>Contoh Nov 2026: (728,52 − 520,56) ÷ 627,28 = 33,2%.<br><br>Beda dengan Max DD (histori), ini nunjukin kondisi akun HARI INI — lagi floating minus dalam, atau udah recover.</div></details>
       <details class="kamus-item"><summary>Monthly Loss Ratio</summary><div class="kamus-body">Perbandingan antara loss terbesar dalam sebulan dengan rata-rata profit bulanan (6 bulan terakhir).<br><br>Semakin kecil persentasenya, semakin sehat — artinya loss terburukmu gak terlalu jauh dari kondisi normal.</div></details>
       <details class="kamus-item"><summary>Consistency Score</summary><div class="kamus-body">Skor seberapa STABIL profit bulanan kamu (gak naik-turun ekstrem tiap bulan).<br><br>Dihitung dari variasi/standar deviasi profit tiap bulan — makin kecil variasinya, makin konsisten &amp; makin tinggi skornya.</div></details>
       <details class="kamus-item"><summary>Sharpe Ratio</summary><div class="kamus-body">Rasio yang mengukur seberapa besar return yang kamu dapat DIBANDING risiko/volatilitas yang diambil buat dapetin return itu.<br><br>Rumus umum: (Rata-rata return − return bebas risiko) ÷ Standar deviasi return.<br><br>Makin tinggi, makin "efisien" — untung yang didapat sepadan dengan risiko yang diambil, bukan untung yang kebetulan/spekulatif.</div></details>
@@ -3332,7 +3332,7 @@ function renderBalanceDrawdown(){
     const data=(typeof getRiskMeterData==='function') ? getRiskMeterData() : null;
     if(!data){ el.innerHTML=''; return; }
     const zone=riskZone(data.ddPct, MT4_DD_HARIAN_MAKS, MT4_DD_BULAN_MAKS);
-    el.innerHTML=`🛡️ Current Drawdown: <b style="color:${zone.color}">${data.ddPct.toFixed(1)}%</b> <span style="color:${zone.color}">(${zone.label})</span>`;
+    el.innerHTML=`🛡️ Drawdown bulan ini: <b style="color:${zone.color}">${data.ddPct.toFixed(1)}%</b> <span style="color:${zone.color}">(${zone.label})</span><div style="font-size:10px;color:#E5E7EB;font-weight:400;margin-top:3px">Penurunan dari puncak saldo bulan ini ÷ saldo awal bulan. Bukan kerugian total sejak awal.</div>`;
   }catch(e){ el.innerHTML=''; }
 }
 function toggleBalanceMask(){
@@ -18259,12 +18259,13 @@ function renderKurvaAkun(){
   const akun=document.body.getAttribute('data-akun')||'mt4';
   let data; try{ data=kurvaAmbilData(akun,true); }catch(e){ kartu.innerHTML=''; return; }
   const warnaAngka=v=>v>=0?'#4ADE80':'#F87171';
-  const rangeBtn=KURVA_RANGE.map(([k])=>'<button type="button" onclick="setKurvaRange(\''+k+'\')" style="flex:1;padding:6px 0;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;color:#FFFFFF;background:'+(k===kurvaRange?'#14532D':'transparent')+';border:1.5px solid '+(k===kurvaRange?'#4ADE80':'var(--border)')+'">'+k+'</button>').join('');
+  const namaRange={'1D':'Hari','1M':'1 Bulan','3M':'3 Bulan','6M':'6 Bulan','1Y':'1 Tahun','3Y':'3 Tahun','5Y':'5 Tahun'};
+  const rangeBtn=KURVA_RANGE.map(([k])=>'<button type="button" onclick="setKurvaRange(\''+k+'\')" style="flex:1 1 22%;padding:8px 0;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;color:#FFFFFF;background:'+(k===kurvaRange?'#14532D':'transparent')+';border:1.5px solid '+(k===kurvaRange?'#4ADE80':'var(--border)')+'">'+namaRange[k]+'</button>').join('');
   if(kurvaSimbol!=='ALL' && data.simbol.indexOf(kurvaSimbol)<0) kurvaSimbol='ALL';
   const optSim='<option value="ALL"'+(kurvaSimbol==='ALL'?' selected':'')+'>Semua simbol</option>'+data.simbol.map(s=>'<option value="'+s+'"'+(s===kurvaSimbol?' selected':'')+'>'+s+'</option>').join('');
   const h=kurvaBangun(data,kurvaRange,kurvaSimbol);
   const judulRange={'1D':'Hari trading terakhir','1M':'1 bulan terakhir','3M':'3 bulan terakhir','6M':'6 bulan terakhir','1Y':'1 tahun terakhir','3Y':'3 tahun terakhir','5Y':'5 tahun terakhir'}[kurvaRange];
-  const kontrol='<div style="display:flex;gap:6px;margin:8px 0">'+rangeBtn+'</div>'
+  const kontrol='<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">'+rangeBtn+'</div>'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:10px;color:#E5E7EB">Simbol:</span><select class="inp" style="flex:1;padding:6px 8px;font-size:12px" onchange="setKurvaSimbol(this.value)">'+optSim+'</select></div>';
   let isi='';
   if(!h){
