@@ -18177,9 +18177,10 @@ setTimeout(()=>{ try{ bangunDropdownPair(); }catch(e){} }, 2000);
 <script>
 // ══ KURVA KUMULATIF: tampil di Akun MT4, Datuk EURUSD, dan Datuk Crypto 89 ══
 // Rentang waktu 3M/6M/1Y/3Y/5Y, filter simbol, dengan penjelasan titik tertinggi dan terendah.
-let kurvaRange='3M', kurvaSimbol='ALL', kurvaTutup=false;
+let kurvaRange='3M', kurvaSimbol='ALL', kurvaTutup=false, kurvaBulan=''; // kurvaBulan = 'YYYY-MM' kalau memilih bulan kalender tertentu
 const KURVA_RANGE=[['1D',0],['1M',1],['3M',3],['6M',6],['1Y',12],['3Y',36],['5Y',60]]; // 1D = hari trading terakhir yang tercatat
-function setKurvaRange(r){ kurvaRange=r; renderKurvaAkun(); }
+function setKurvaRange(r){ kurvaRange=r; kurvaBulan=''; renderKurvaAkun(); }
+function setKurvaBulan(v){ kurvaBulan=v; renderKurvaAkun(); }
 function setKurvaSimbol(v){ kurvaSimbol=v; renderKurvaAkun(); }
 function toggleKurva(){ kurvaTutup=!kurvaTutup; renderKurvaAkun(); }
 function _kvTgl(t){ const a=String(t).slice(0,10).split('-'); return new Date(+a[0],+a[1]-1,+a[2]).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}); }
@@ -18204,16 +18205,23 @@ function kurvaAmbilData(akun,admin){
   const simbol=Array.from(new Set(baris.map(b=>b.sim).filter(Boolean))).sort();
   return {baris, satuan:'pips', simbol, nama:(g==='FOREX'?'Datuk Crypto 89':'Datuk EURUSD'), mt4:false, admin};
 }
-function kurvaBangun(data,rangeKey,simbol){
+function kurvaBangun(data,rangeKey,simbol,bulanPilih){
   const bulan=(KURVA_RANGE.find(x=>x[0]===rangeKey)||KURVA_RANGE[2])[1];
   const mulai=new Date(); mulai.setMonth(mulai.getMonth()-bulan); mulai.setHours(0,0,0,0);
   const iso=mulai.getFullYear()+'-'+String(mulai.getMonth()+1).padStart(2,'0')+'-'+String(mulai.getDate()).padStart(2,'0');
   let b;
-  if(rangeKey==='1D'){
+  if(bulanPilih){
+    // bulan kalender yang dipilih (Oktober = 1-31 Okt, November = 1-30 Nov)
+    b=data.baris.filter(x=>String(x.tgl).slice(0,7)===bulanPilih);
+  } else if(rangeKey==='1D'){
     // 1 hari = hari trading terakhir yang ada datanya (bukan 'kemarin', supaya tidak kosong saat akhir pekan atau belum ada data baru)
     let semua=data.baris; if(simbol!=='ALL') semua=semua.filter(x=>x.sim===simbol);
     const terakhir=semua.reduce((m,x)=>x.tgl>m?x.tgl:m,'');
     b=terakhir?semua.filter(x=>x.tgl===terakhir):[];
+  } else if(rangeKey==='1M'){
+    // Bulan Ini = bulan kalender berjalan (tanggal 1 sampai hari ini), sama dengan laporan bulanan & Trading Family
+    const n=new Date(), awalBulan=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-01';
+    b=data.baris.filter(x=>x.tgl>=awalBulan);
   } else { b=data.baris.filter(x=>x.tgl>=iso); }
   if(simbol!=='ALL') b=b.filter(x=>x.sim===simbol);
   if(!b.length) return null;
@@ -18259,14 +18267,20 @@ function renderKurvaAkun(){
   const akun=document.body.getAttribute('data-akun')||'mt4';
   let data; try{ data=kurvaAmbilData(akun,true); }catch(e){ kartu.innerHTML=''; return; }
   const warnaAngka=v=>v>=0?'#4ADE80':'#F87171';
-  const namaRange={'1D':'Hari','1M':'1 Bulan','3M':'3 Bulan','6M':'6 Bulan','1Y':'1 Tahun','3Y':'3 Tahun','5Y':'5 Tahun'};
-  const rangeBtn=KURVA_RANGE.map(([k])=>'<button type="button" onclick="setKurvaRange(\''+k+'\')" style="flex:1 1 22%;padding:8px 0;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;color:#FFFFFF;background:'+(k===kurvaRange?'#14532D':'transparent')+';border:1.5px solid '+(k===kurvaRange?'#4ADE80':'var(--border)')+'">'+namaRange[k]+'</button>').join('');
+  const namaRange={'1D':'Hari','1M':'Bulan Ini','3M':'3 Bulan','6M':'6 Bulan','1Y':'1 Tahun','3Y':'3 Tahun','5Y':'5 Tahun'};
+  const rangeBtn=KURVA_RANGE.map(([k])=>'<button type="button" onclick="setKurvaRange(\''+k+'\')" style="flex:1 1 22%;padding:8px 0;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;color:#FFFFFF;background:'+(k===kurvaRange&&!kurvaBulan?'#14532D':'transparent')+';border:1.5px solid '+(k===kurvaRange&&!kurvaBulan?'#4ADE80':'var(--border)')+'">'+namaRange[k]+'</button>').join('');
   if(kurvaSimbol!=='ALL' && data.simbol.indexOf(kurvaSimbol)<0) kurvaSimbol='ALL';
   const optSim='<option value="ALL"'+(kurvaSimbol==='ALL'?' selected':'')+'>Semua simbol</option>'+data.simbol.map(s=>'<option value="'+s+'"'+(s===kurvaSimbol?' selected':'')+'>'+s+'</option>').join('');
-  const h=kurvaBangun(data,kurvaRange,kurvaSimbol);
-  const judulRange={'1D':'Hari trading terakhir','1M':'1 bulan terakhir','3M':'3 bulan terakhir','6M':'6 bulan terakhir','1Y':'1 tahun terakhir','3Y':'3 tahun terakhir','5Y':'5 tahun terakhir'}[kurvaRange];
+  const namaBln=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const bulanAda=Array.from(new Set(data.baris.map(x=>String(x.tgl).slice(0,7)))).sort().reverse();
+  if(kurvaBulan && bulanAda.indexOf(kurvaBulan)<0) kurvaBulan='';
+  const labelBulan=k=>namaBln[+k.slice(5,7)-1]+' '+k.slice(0,4);
+  const optBulan='<option value="">Ikuti tombol di atas</option>'+bulanAda.map(k=>'<option value="'+k+'"'+(k===kurvaBulan?' selected':'')+'>'+labelBulan(k)+'</option>').join('');
+  const h=kurvaBangun(data,kurvaRange,kurvaSimbol,kurvaBulan);
+  const judulRange=kurvaBulan?labelBulan(kurvaBulan):{'1D':'Hari trading terakhir','1M':'Bulan ini (kalender)','3M':'3 bulan terakhir','6M':'6 bulan terakhir','1Y':'1 tahun terakhir','3Y':'3 tahun terakhir','5Y':'5 tahun terakhir'}[kurvaRange];
   const kontrol='<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">'+rangeBtn+'</div>'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:10px;color:#E5E7EB">Simbol:</span><select class="inp" style="flex:1;padding:6px 8px;font-size:12px" onchange="setKurvaSimbol(this.value)">'+optSim+'</select></div>';
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:10px;color:#E5E7EB">Simbol:</span><select class="inp" style="flex:1;padding:6px 8px;font-size:12px" onchange="setKurvaSimbol(this.value)">'+optSim+'</select></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:10px;color:#E5E7EB">Bulan:</span><select class="inp" style="flex:1;padding:6px 8px;font-size:12px" onchange="setKurvaBulan(this.value)">'+optBulan+'</select></div>';
   let isi='';
   if(!h){
     isi=kontrol+'<div style="padding:16px;text-align:center;font-size:11px;color:#E5E7EB">Belum ada data pada rentang '+judulRange+(kurvaSimbol!=='ALL'?' untuk '+kurvaSimbol:'')+'.</div>';
