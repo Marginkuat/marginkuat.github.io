@@ -3332,7 +3332,14 @@ function renderBalanceDrawdown(){
     const data=(typeof getRiskMeterData==='function') ? getRiskMeterData() : null;
     if(!data){ el.innerHTML=''; return; }
     const zone=riskZone(data.ddPct, MT4_DD_HARIAN_MAKS, MT4_DD_BULAN_MAKS);
-    el.innerHTML=`🛡️ Drawdown bulan ini: <b style="color:${zone.color}">${data.ddPct.toFixed(1)}%</b> <span style="color:${zone.color}">(${zone.label})</span><div style="font-size:10px;color:#E5E7EB;font-weight:400;margin-top:3px">Penurunan dari puncak saldo bulan ini ÷ saldo awal bulan. Bukan kerugian total sejak awal.</div>`;
+    // Buffer = berapa kali bisa kalah beruntun (SL penuh, sesuai rencana MT4_RISIKO) sebelum saldo habis. Rasio saja, tanpa nominal, jadi aman dilihat publik.
+    const buf=(data.hasRiskInput && data.riskPct>0) ? 100/data.riskPct : null;
+    let bufferHtml='';
+    if(buf!==null){
+      const wb=buf>=10?'#4ADE80':(buf>=5?'#FBBF24':'#F87171');
+      bufferHtml=`<div style="margin-top:8px;font-size:12px;font-weight:700">🛟 Buffer: <span style="color:${wb}">${Math.floor(buf)}× kalah beruntun</span> sebelum saldo habis</div><div style="font-size:10px;color:#E5E7EB;font-weight:400;margin-top:2px;line-height:1.5">Rencana SL ${MT4_RISIKO.slPips} pips, lot ${MT4_RISIKO.lot}: risiko ${data.riskPct.toFixed(1)}% saldo per trade. Leverage 1:${MT4_LEVERAGE}: margin satu posisi lot ${MT4_RISIKO.lot} hanya beberapa sen, jadi margin call dan stop out baru terjadi saat ekuitas tinggal beberapa sen. Posisi terbuka yang banyak membuatnya lebih cepat.</div>`;
+    }
+    el.innerHTML=`🛡️ Drawdown bulan ini: <b style="color:${zone.color}">${data.ddPct.toFixed(1)}%</b> <span style="color:${zone.color}">(${zone.label})</span><div style="font-size:10px;color:#E5E7EB;font-weight:400;margin-top:3px">Penurunan dari puncak saldo bulan ini ÷ saldo awal bulan. Bukan kerugian total sejak awal.</div>${bufferHtml}`;
   }catch(e){ el.innerHTML=''; }
 }
 function toggleBalanceMask(){
@@ -17364,6 +17371,7 @@ const MT4_TARGET_BUFFER_X=100;
 const MT4_MAKS_ORDER_HARI=5;                   // maks order per hari (aturan 8 Nov 2026)                 // target buffer: saldo = 100 × risiko per kalah
 const MT4_MODAL_MIN_USD=5000;   // modal minimal akun MT4 (USD). Saldo MT4 dicatat dalam ¢: 100 ¢ = $1
 const MT4_DD_HARIAN_MAKS=3, MT4_DD_BULAN_MAKS=6, MT4_TARGET_PROFIT_BULAN=10;
+const MT4_LEVERAGE=3000; // leverage akun FBS ini (1:3000). Dipakai untuk catatan margin di baris Buffer.
 function renderRisikoModalMt4(){
   const el=document.getElementById('mt4RisikoWrap'); if(!el) return;
   el.innerHTML=''; return;   // kartu dihapus: aturan sekarang hanya buffer
