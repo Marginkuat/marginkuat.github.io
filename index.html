@@ -2143,6 +2143,12 @@ function renderInvCalcDisclaimer(){
 </div>
 
 <!-- RIWAYAT DEPOSIT & PENARIKAN (WD) -->
+<div class="section" data-akun="mt4" id="secWdAman">
+  <div class="sec-title">🛡️ WD Aman Bulan Ini</div>
+  <div class="graph-card">
+    <div id="wdAmanBox" style="font-size:12px;color:#E5E7EB;line-height:1.6">Memuat...</div>
+  </div>
+</div>
 <div class="section" data-akun="mt4" id="secWdHistory">
   <div class="sec-title">📥📤 Ringkasan Deposit &amp; Penarikan (WD)</div>
 
@@ -3308,6 +3314,7 @@ const fd=s=>s?new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short
 
 // ══ SEARCH MENU: cari & lompat ke bagian manapun di situs ══
 const SEARCH_MENU=[
+  {id:'secWdAman', icon:'🛡️', label:'WD Aman Bulan Ini', desc:'Batas WD yang aman dari profit bulan ini tanpa menggerus buffer', kw:'wd aman tarik dana batas penarikan profit buffer saldo', cat:'keuangan'},
   {id:'secLapResmi', icon:'🏛️', label:'Laporan Keuangan Resmi', desc:'Posisi keuangan, arus kas, dan kinerja per bulan dari statement FBS', kw:'laporan keuangan resmi arus kas deposit wd audit posisi keuangan bulanan statement fbs', cat:'keuangan'},
   {id:'mt4RisikoWrap', icon:'⚠️', label:'Peringatan Risiko Modal MT4', desc:'Risiko per order vs saldo, perkiraan margin call', kw:'peringatan risiko modal margin call bahaya saldo habis 5% risiko per order berbahaya', cat:'performa'},
   {id:'inpSaldoHarianTitle', icon:'⚙️', label:'Input Saldo Harian', desc:'Isi saldo MT4, profit, dan jumlah signal tiap hari (butuh login admin)', kw:'input saldo harian data harian catatan harian isi tambah simpan saldo mt4 profit jumlah signal tanggal edit', cat:'input'},
@@ -18419,6 +18426,50 @@ function renderWdAturan(){
   if(typeof renderPertumbuhanBulanan==='function'){ const _rwa=renderPertumbuhanBulanan; renderPertumbuhanBulanan=function(){ _rwa.apply(this,arguments); try{ renderWdAturan(); }catch(e){ console.error('wdaturan',e); } }; }
 })();
 [2000,5000,9000,13000].forEach(t=>setTimeout(()=>{ try{ renderWdAturan(); }catch(e){ console.error('wdaturan',e); } },t));
+
+// ══ WD AMAN BULAN INI: batas penarikan yang aman. Ubah 3 angka ini kalau aturan berubah. ══
+const WD_AMAN_PERSEN_PROFIT=40;  // maksimal WD = 40% dari profit bersih bulan ini
+const WD_AMAN_BUFFER_MIN=20;     // saldo setelah WD tidak boleh di bawah 20× risiko per kalah
+const WD_AMAN_DD_MAKS=20;        // tahan WD kalau drawdown terdalam bulan ini lebih dari 20%
+function renderWdAman(){
+  const el=document.getElementById('wdAmanBox'); if(!el) return;
+  let p,rm; try{ p=hitungPerformaMt4(); rm=getRiskMeterData(); }catch(e){ el.textContent='Data belum siap.'; return; }
+  const B=p.bulan||[]; if(!B.length){ el.textContent='Belum ada data.'; return; }
+  const n=new Date(), kini=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+  const pm=new Date(n.getFullYear(),n.getMonth()-1,1), lalu=pm.getFullYear()+'-'+String(pm.getMonth()+1).padStart(2,'0');
+  const bKini=B.find(b=>b.periode===kini)||{sumProf:0,wd:0}, bLalu=B.find(b=>b.periode===lalu);
+  const saldo=B[B.length-1].end;
+  const risikoCent=(rm&&rm.hasRiskInput&&rm.riskPct>0)?rm.riskPct*saldo/100:0;
+  const lantai=WD_AMAN_BUFFER_MIN*risikoCent;
+  const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const row=(k,v,col)=>'<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #1F2A1F"><span>'+k+'</span><b style="color:'+(col||'#FFFFFF')+';text-align:right">'+v+'</b></div>';
+  const profit=bKini.sumProf, jatah=Math.max(0,profit*WD_AMAN_PERSEN_PROFIT/100), sudah=bKini.wd||0;
+  const sisaJatah=Math.max(0,jatah-sudah), lebih=Math.max(0,saldo-lantai);
+  const batas=Math.max(0,Math.min(sisaJatah,lebih));
+  const alasan=[];
+  if(profit<=0) alasan.push('Profit bulan ini belum positif ('+c(profit)+').');
+  if(bLalu && bLalu.sumProf<0) alasan.push('Bulan lalu rugi ('+c(bLalu.sumProf)+'): tahan WD sampai ada bulan hijau.');
+  if(rm && rm.ddPct>WD_AMAN_DD_MAKS) alasan.push('Drawdown terdalam bulan ini '+rm.ddPct.toFixed(1)+'% (batas '+WD_AMAN_DD_MAKS+'%).');
+  if(risikoCent>0 && lebih<=0) alasan.push('Saldo sudah di bawah lantai '+c(lantai)+'.');
+  const tahan=alasan.length>0;
+  let h=tahan
+    ?'<div style="font-size:18px;font-weight:900;color:#F87171">⛔ Tahan WD bulan ini</div><div style="margin:4px 0 8px">'+alasan.map(a=>'• '+a).join('<br>')+'</div>'
+    :'<div style="font-size:18px;font-weight:900;color:#4ADE80">✅ Boleh WD sampai '+c(batas)+'</div>';
+  h+=row('Profit bersih bulan ini',c(profit),profit>=0?'#4ADE80':'#F87171')
+    +row('Jatah WD ('+WD_AMAN_PERSEN_PROFIT+'% dari profit)',c(jatah))
+    +row('Sudah WD bulan ini',c(sudah),'#F87171')
+    +row('Sisa jatah',c(sisaJatah))
+    +row('Saldo MT4 sekarang',c(saldo))
+    +(risikoCent>0?row('Lantai saldo ('+WD_AMAN_BUFFER_MIN+'× risiko '+c(risikoCent)+')',c(lantai))+row('Kelebihan di atas lantai',c(lebih)):'')
+    +row(tahan?'Batas WD jika semua syarat terpenuhi':'Batas WD aman',c(batas),tahan?'#FBBF24':'#4ADE80');
+  if(!tahan && risikoCent>0) h+='<div style="font-size:11px;margin-top:6px">Setelah WD maksimal, saldo '+c(saldo-batas)+' dengan buffer sekitar <b>'+Math.floor((saldo-batas)/risikoCent)+'× kalah beruntun</b>.</div>';
+  h+='<div style="font-size:10px;margin-top:8px;line-height:1.5">Aturan: WD hanya dari profit bulan berjalan (maks '+WD_AMAN_PERSEN_PROFIT+'%), saldo setelah WD tidak di bawah '+WD_AMAN_BUFFER_MIN+'× risiko per kalah, dan tahan WD kalau bulan lalu rugi atau drawdown terdalam bulan ini lebih dari '+WD_AMAN_DD_MAKS+'%. Ini patokan hitungan, bukan saran keuangan.</div>';
+  el.innerHTML=h;
+}
+(function(){
+  if(typeof renderPertumbuhanBulanan==='function'){ const _rwm=renderPertumbuhanBulanan; renderPertumbuhanBulanan=function(){ _rwm.apply(this,arguments); try{ renderWdAman(); }catch(e){ console.error('wdaman',e); } }; }
+})();
+[2000,5000,9000,13000].forEach(t=>setTimeout(()=>{ try{ renderWdAman(); }catch(e){ console.error('wdaman',e); } },t));
 </script>
 </body>
 </html>
