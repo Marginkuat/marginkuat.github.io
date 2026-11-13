@@ -1260,6 +1260,8 @@ function updXauNote(sel,id){
     return plan;
   }
 
+  // Simbol uang mengikuti tipe akun: akun Cent (Sen) = ¢, selain itu $. Supaya ¢919 tidak terbaca $919.
+  const CUR=()=>(akunTypeEl && akunTypeEl.value==='Sen')?'¢':'$';
   function buildLevelTableHtml(modalSaatIni, sl, pipvalue){
     if(sl<=0 || pipvalue<=0) return '';
     const plan=buildLevelPlan(sl, pipvalue);
@@ -1276,8 +1278,8 @@ function updXauNote(sel,id){
       return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:5px 0;border-bottom:1px solid var(--border);${aktif?'background:var(--bg3);border-radius:6px;padding-left:6px;padding-right:6px':''}">
         <span style="color:${tercapai?'#4ADE80':'#E5E7EB'}">${tercapai?'✓':'○'} Level ${i+1} — lot ${lv.lot.toFixed(2)} <span style="color:#E5E7EB">(${lv.buffer.toFixed(2)}x, ${riskPct}%)</span></span>
         <span style="text-align:right">
-          <span style="color:${tercapai?'#4ADE80':'#FFFFFF'};font-weight:700">$${lv.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</span><br>
-          <span style="font-size:8px;color:#E5E7EB">risk $${lv.risk.toLocaleString('en-US',{maximumFractionDigits:2})}/trade</span>
+          <span style="color:${tercapai?'#4ADE80':'#FFFFFF'};font-weight:700">${CUR()}${lv.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</span><br>
+          <span style="font-size:8px;color:#E5E7EB">risk ${CUR()}${lv.risk.toLocaleString('en-US',{maximumFractionDigits:2})}/trade</span>
         </span>
       </div>`;
     });
@@ -1286,11 +1288,11 @@ function updXauNote(sel,id){
     return `
       <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-top:12px">
         <div style="text-align:center;margin-bottom:10px">
-          <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px">Level Saat Ini (Modal $${modalSaatIni.toLocaleString('en-US')})</div>
+          <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px">Level Saat Ini (Modal ${CUR()}${modalSaatIni.toLocaleString('en-US')})</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:${levelSekarang>0?'#4ADE80':'#F87171'}">${levelSekarang>0?'Level '+levelSekarang:'⚠️ Modal Habis'}</div>
-          ${levelSekarang<=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Modal di bawah $${plan[0].modal.toLocaleString('en-US',{maximumFractionDigits:2})} (lot minimum ${plan[0].lot.toFixed(2)}) — belum cukup buat masuk Level 1 sama sekali.</div>` : ''}
-          ${next ? `<div style="font-size:9px;color:#E5E7EB;margin-top:2px">Butuh saldo <b style="color:#FFFFFF">$${next.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</b> (lot ${next.lot.toFixed(2)}) buat naik ke Level ${levelIdx+2}</div>` : `<div style="font-size:9px;color:#4ADE80;margin-top:2px">🏆 Sudah di level tertinggi tabel ini!</div>`}
-          ${levelIdx>=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Kalau ${LOSS_COUNT}x kalah beruntun di lot ${plan[levelIdx].lot.toFixed(2)} (rugi $${(LOSS_COUNT*plan[levelIdx].risk).toLocaleString('en-US',{maximumFractionDigits:2})}), turun ke Level ${levelIdx}</div>` : ''}
+          ${levelSekarang<=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Modal di bawah ${CUR()}${plan[0].modal.toLocaleString('en-US',{maximumFractionDigits:2})} (lot minimum ${plan[0].lot.toFixed(2)}) — belum cukup buat masuk Level 1 sama sekali.</div>` : ''}
+          ${next ? `<div style="font-size:9px;color:#E5E7EB;margin-top:2px">Butuh saldo <b style="color:#FFFFFF">${CUR()}${next.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</b> (lot ${next.lot.toFixed(2)}) buat naik ke Level ${levelIdx+2}</div>` : `<div style="font-size:9px;color:#4ADE80;margin-top:2px">🏆 Sudah di level tertinggi tabel ini!</div>`}
+          ${levelIdx>=0 ? `<div style="font-size:9px;color:#F87171;margin-top:2px">Kalau ${LOSS_COUNT}x kalah beruntun di lot ${plan[levelIdx].lot.toFixed(2)} (rugi ${CUR()}${(LOSS_COUNT*plan[levelIdx].risk).toLocaleString('en-US',{maximumFractionDigits:2})}), turun ke Level ${levelIdx}</div>` : ''}
           ${(()=>{
             if(levelSekarang<=0) return '';
             // ── Kerugian DOLLAR RIIL kalau level turun terus sampai habis dari level sekarang: jumlahkan
@@ -1302,12 +1304,12 @@ function updXauNote(sel,id){
             const totalLoss=levelSekarang*LOSS_COUNT;
             const sisaSaldo=modalSaatIni-totalRugi;
             const sisaPct=modalSaatIni>0?(sisaSaldo/modalSaatIni*100):0;
-            return `<div style="font-size:9px;color:#F87171;margin-top:6px;padding-top:6px;border-top:1px dashed #4A1414">⚠️ Potensi kuras modal dari Level ${levelSekarang} sampai ke bawah Level 1: butuh <b>${levelSekarang}× beruntun</b> kejadian "${LOSS_COUNT}x kalah beruntun" (total ${totalLoss} loss berturut-turut tanpa menang sekali pun) — rugi dollar riil <b>≈ $${totalRugi.toLocaleString('en-US',{maximumFractionDigits:2})}</b>, sisa saldo <b>≈ $${sisaSaldo.toLocaleString('en-US',{maximumFractionDigits:2})} (${sisaPct.toFixed(0)}% dari modal sekarang)</b> — bukan berarti saldo jadi $0/margin call, cuma udah di bawah modal minimum buat lanjut sistem level ini.</div>`;
+            return `<div style="font-size:9px;color:#F87171;margin-top:6px;padding-top:6px;border-top:1px dashed #4A1414">⚠️ Potensi kuras modal dari Level ${levelSekarang} sampai ke bawah Level 1: butuh <b>${levelSekarang}× beruntun</b> kejadian "${LOSS_COUNT}x kalah beruntun" (total ${totalLoss} loss berturut-turut tanpa menang sekali pun) — rugi riil <b>≈ ${CUR()}${totalRugi.toLocaleString('en-US',{maximumFractionDigits:2})}</b>, sisa saldo <b>≈ ${CUR()}${sisaSaldo.toLocaleString('en-US',{maximumFractionDigits:2})} (${sisaPct.toFixed(0)}% dari modal sekarang)</b> — bukan berarti saldo jadi ${CUR()}0/margin call, cuma udah di bawah modal minimum buat lanjut sistem level ini.</div>`;
           })()}
         </div>
         <div style="font-size:8px;color:#E5E7EB;text-align:center;margin-bottom:8px">👇 Lot naik terus per level — tidak pernah turun lagi walau saldo makin besar. Target saldo & risk dihitung dari SL/nilai-pip yang aktif sekarang:</div>
         ${rows}
-        <div style="font-size:8px;color:#E5E7EB;margin-top:10px;line-height:1.6">💡 Aturan: ${LOSS_COUNT}× kalah beruntun di level manapun = rugi $${LOSS_COUNT}×risk level itu, biasanya cukup buat saldo turun TEPAT 1 level (di bawah target modal level sekarang). Ganti pair/preset atau isi SL manual, semua target saldo & risk di atas otomatis dihitung ulang.</div>
+        <div style="font-size:8px;color:#E5E7EB;margin-top:10px;line-height:1.6">💡 Aturan: ${LOSS_COUNT}× kalah beruntun di level manapun = rugi ${CUR()}${LOSS_COUNT}×risk level itu, biasanya cukup buat saldo turun TEPAT 1 level (di bawah target modal level sekarang). Ganti pair/preset atau isi SL manual, semua target saldo & risk di atas otomatis dihitung ulang.</div>
       </div>`;
   }
 
