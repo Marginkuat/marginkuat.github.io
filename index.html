@@ -387,6 +387,7 @@ function toggleKamusGrup(btn){
       4️⃣ Tekan <b>Ekstrak</b>, lalu <b>Simpan Semua Langsung ke Database</b><br>
       <span style="color:#FCA5A5;font-size:11px">Entri manual setoran/WD di periode yang sudah ada statement-nya tidak dihitung. Input manual hanya untuk pengeluaran dari uang yang sudah ditarik.</span>
     </div>
+    <div id="wdAturanBanner" style="margin-top:8px"></div>
   </details>
 </div>
 <!-- LABEL PERMANEN: profil risiko akun ini (SELALU tampil, otomatis ikut profil yang aktif di server) -->
@@ -2816,7 +2817,7 @@ function renderInvCalcDisclaimer(){
 4️⃣ Cek <b>Verifikasi Data vs Laporan Broker</b> sampai 0 hari beda.<br>
 5️⃣ Untuk WD, isi tujuannya di <b>Laporan Keuangan Resmi → Atur tujuan tiap WD</b>.<br>
 <b>Arah uang:</b> Sumber dana → DP ke MT4 → trading → WD → kebutuhan harian / tabungan / investasi / hiburan.<br>
-Form di bawah hanya untuk <b>pengeluaran dari uang yang sudah Anda tarik</b>.</div>
+Form di bawah hanya untuk <b>pengeluaran dari uang yang sudah Anda tarik</b>.<div id="wdAturanForm" style="margin-top:8px"></div></div>
 
 <div style="margin:8px 0 12px;padding:10px 12px;border-radius:10px;background:#7F1D1D;border:1.5px solid #F87171;color:#FFFFFF;font-size:12px;line-height:1.5"><b>⚠️ Jangan input setoran/WD MT4 di sini.</b> Gunakan statement FBS resmi di bagian Ekstrak. Form ini hanya untuk pengeluaran dari uang yang sudah Anda tarik.</div>
 
@@ -18322,7 +18323,8 @@ function renderLapResmi(){
 [3000,6000,9000,13000].forEach(t=>setTimeout(()=>{ try{ renderLapResmi(); }catch(e){ console.error('lapresmi',e); } },t));
 
 // ══ TUJUAN WD: tiap penarikan dicatat arahnya (kebutuhan harian, tabungan, dll). Disimpan di app_settings key "wd_tujuan" ══
-const WD_TUJUAN=[['harian','Kebutuhan harian'],['tabungan','Tabungan / darurat'],['investasi','Investasi'],['hiburan','Hiburan'],['utang','Bayar utang'],['lainnya','Lain-lain']];
+const WD_TUJUAN=[['hiburan','Hiburan'],['darurat','Dana darurat'],['harian','Kebutuhan harian'],['investasi','Investasi'],['karyawan','Bayar karyawan'],['pajak','Pajak']];
+const WD_TUJUAN_ALIAS={tabungan:'darurat'}; // catatan lama yang tersimpan sebagai 'tabungan'
 let _wdTujuan; // undefined = belum dimuat, object = sudah
 async function wdTujuanMuat(){
   try{ const r=await api('app_settings?select=value&key=eq.wd_tujuan'); _wdTujuan=(r&&r.length)?(JSON.parse(r[0].value)||{}):{}; }
@@ -18350,7 +18352,7 @@ function renderWdTujuan(){
   list.sort((a,b)=>b.tgl.localeCompare(a.tgl));
   const nama={}; WD_TUJUAN.forEach(t=>nama[t[0]]=t[1]);
   const tot={}; let semua=0, belum=0, nBelum=0;
-  list.forEach(w=>{ semua+=w.jml; const t=_wdTujuan[w.key]; if(t&&nama[t]) tot[t]=(tot[t]||0)+w.jml; else { belum+=w.jml; nBelum++; } });
+  list.forEach(w=>{ semua+=w.jml; const t0=_wdTujuan[w.key], t=WD_TUJUAN_ALIAS[t0]||t0; if(t&&nama[t]) tot[t]=(tot[t]||0)+w.jml; else { belum+=w.jml; nBelum++; } });
   const row=(k,v,col)=>'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1F2A1F"><span>'+k+'</span><b style="color:'+(col||'#FFFFFF')+'">'+v+'</b></div>';
   let h='<div style="font-weight:800;color:#FFFFFF;margin:2px 0 4px">5. Tujuan Penarikan (WD)</div>'
     +'<div style="font-size:9px;margin-bottom:4px">Ke mana uang yang ditarik dari MT4 dipakai. Total dicatat + belum dicatat = total WD.</div>';
@@ -18359,7 +18361,7 @@ function renderWdTujuan(){
   if(isAdmin && list.length){
     h+='<details style="margin-top:8px"><summary style="cursor:pointer;color:#FFFFFF;font-weight:700">✍️ Atur tujuan tiap WD</summary>';
     list.forEach(w=>{
-      const cur=_wdTujuan[w.key]||'';
+      const cur=WD_TUJUAN_ALIAS[_wdTujuan[w.key]]||_wdTujuan[w.key]||'';
       h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1F2A1F"><span style="font-size:10px">'+fd(w.tgl)+'<br><b style="color:#F87171">'+c(w.jml)+'</b></span><select class="inp" style="flex:1;max-width:60%;padding:6px 8px;font-size:11px" onchange="setWdTujuan(\''+w.key+'\',this.value)"><option value="">— pilih tujuan —</option>'
         +WD_TUJUAN.map(t=>'<option value="'+t[0]+'"'+(t[0]===cur?' selected':'')+'>'+t[1]+'</option>').join('')+'</select></div>';
     });
@@ -18388,6 +18390,44 @@ function renderStatementTerakhir(){
   if(typeof renderPertumbuhanBulanan==='function'){ const _rs=renderPertumbuhanBulanan; renderPertumbuhanBulanan=function(){ _rs.apply(this,arguments); try{ renderStatementTerakhir(); }catch(e){ console.error('stmtterakhir',e); } }; }
 })();
 [2000,5000,9000,13000].forEach(t=>setTimeout(()=>{ try{ renderStatementTerakhir(); }catch(e){ console.error('stmtterakhir',e); } },t));
+
+// ══ TATA CARA WD: setiap WD, saldo MT4 dibagi ke pos-pos ini (persen dari saldo MT4 saat WD). Sisanya tetap jadi modal trading. ══
+// Ubah angka pct di bawah kalau aturannya berubah. Contoh: saldo 100.000 → tiap pos 8% = 8.000.
+const WD_ATURAN=[
+  {nama:'Hiburan',          ket:'ngopi, begadang, dan lain-lain', pct:8},
+  {nama:'Dana darurat',     ket:'cadangan kondisi mendesak',      pct:8},
+  {nama:'Kebutuhan harian', ket:'pulsa, listrik, internet, air, wifi, bahan pokok/makanan', pct:8},
+  {nama:'Investasi',        ket:'saham, tanah, kendaraan, dan lain-lain', pct:8},
+  {nama:'Bayar karyawan',   ket:'gaji dan upah',                  pct:8},
+  {nama:'Pajak',            ket:'dana pajak yang disisihkan',     pct:8}
+];
+function wdAturanHtml(saldo){
+  const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const c0=v=>'¢'+Math.round(+v||0).toLocaleString('id-ID');
+  const totPct=WD_ATURAN.reduce((a,p)=>a+p.pct,0), sisaPct=100-totPct;
+  const num=['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣'];
+  let h='<div style="font-weight:800;margin-bottom:4px">💸 Tata cara WD: ke mana uangnya</div>'
+    +'<div style="font-size:11px;margin-bottom:4px">Setiap WD, saldo MT4 dibagi ke pos berikut (persen dari saldo MT4 saat WD):</div>';
+  h+=WD_ATURAN.map((p,i)=>'<div style="font-size:11px;line-height:1.5">'+num[i]+' <b>'+p.nama+'</b> ('+p.ket+'): <b>'+p.pct+'%</b></div>').join('');
+  h+='<div style="font-size:11px;margin-top:4px">Total WD <b>'+totPct+'%</b>, sisa <b>'+sisaPct+'%</b> tetap jadi modal trading.'+(totPct>100?' <b style="color:#FDE68A">⚠️ Total lebih dari 100%</b>':'')+'</div>';
+  const ex=100000, t1=ex*WD_ATURAN[0].pct/100;
+  h+='<div style="font-size:11px;margin-top:6px;background:rgba(0,0,0,.35);border-radius:8px;padding:8px 10px;line-height:1.6"><b>Contoh:</b> saldo MT4 '+c0(ex)+' → tiap pos '+c0(t1)+' (total WD '+c0(ex*totPct/100)+', sisa modal '+c0(ex*sisaPct/100)+').</div>';
+  if(saldo>0){
+    let buf='';
+    try{ const rm=getRiskMeterData(); if(rm && rm.hasRiskInput && rm.riskPct>0){ const risikoCent=rm.riskPct*saldo/100, sisa=saldo*sisaPct/100; buf=' Buffer setelah WD: sekitar <b>'+Math.floor(sisa/risikoCent)+'× kalah beruntun</b>.'; } }catch(e){}
+    h+='<div style="font-size:11px;margin-top:6px;background:rgba(0,0,0,.35);border-radius:8px;padding:8px 10px;line-height:1.6"><b>Dengan saldo sekarang '+c(saldo)+':</b> tiap pos '+c(saldo*WD_ATURAN[0].pct/100)+', total WD '+c(saldo*totPct/100)+', sisa modal '+c(saldo*sisaPct/100)+'.'+buf+'</div>';
+  }
+  return h;
+}
+function renderWdAturan(){
+  let saldo=0;
+  try{ const p=hitungPerformaMt4(); saldo=p.bulan.length?p.bulan[p.bulan.length-1].end:0; }catch(e){}
+  ['wdAturanBanner','wdAturanForm'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=wdAturanHtml(saldo); });
+}
+(function(){
+  if(typeof renderPertumbuhanBulanan==='function'){ const _rwa=renderPertumbuhanBulanan; renderPertumbuhanBulanan=function(){ _rwa.apply(this,arguments); try{ renderWdAturan(); }catch(e){ console.error('wdaturan',e); } }; }
+})();
+[2000,5000,9000,13000].forEach(t=>setTimeout(()=>{ try{ renderWdAturan(); }catch(e){ console.error('wdaturan',e); } },t));
 </script>
 </body>
 </html>
