@@ -18396,31 +18396,18 @@ const WD_ATURAN=[
   {nama:'Bayar karyawan',   ket:'gaji dan upah',                  pct:8},
   {nama:'Pajak',            ket:'dana pajak yang disisihkan',     pct:8}
 ];
-const WD_CONTOH=300; // contoh nominal WD kecil untuk simulasi di banner
 function wdAturanHtml(saldo){
-  const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const c0=v=>'¢'+Math.round(+v||0).toLocaleString('id-ID');
-  const totPct=WD_ATURAN.reduce((a,p)=>a+p.pct,0), sisaPct=100-totPct;
   const num=['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣'];
-  const box='font-size:11px;margin-top:6px;background:rgba(0,0,0,.35);border-radius:8px;padding:8px 10px;line-height:1.6';
-  let h='<div style="font-weight:800;margin-bottom:4px">💸 Tata cara WD: ke mana uangnya</div>'
-    +'<div style="font-size:11px;margin-bottom:4px"><b>Target pembagian</b> (persen dari saldo MT4 saat WD). Ini patokan, bukan kewajiban sama rata:</div>';
-  h+=WD_ATURAN.map((p,i)=>'<div style="font-size:11px;line-height:1.5">'+num[i]+' <b>'+p.nama+'</b> ('+p.ket+'): <b>'+p.pct+'%</b></div>').join('');
-  h+='<div style="font-size:11px;margin-top:4px">Kalau semua pos terpenuhi: WD <b>'+totPct+'%</b>, sisa <b>'+sisaPct+'%</b> tetap jadi modal trading.'+(totPct>100?' <b style="color:#FDE68A">⚠️ Total lebih dari 100%</b>':'')+'</div>';
-  const ex=100000;
-  h+='<div style="'+box+'"><b>Contoh:</b> saldo MT4 '+c0(ex)+' → tiap pos '+c0(ex*WD_ATURAN[0].pct/100)+' (total WD '+c0(ex*totPct/100)+', sisa modal '+c0(ex*sisaPct/100)+').</div>';
-  if(saldo>0){
-    let risikoCent=0; try{ const rm=getRiskMeterData(); if(rm && rm.hasRiskInput && rm.riskPct>0) risikoCent=rm.riskPct*saldo/100; }catch(e){}
-    const buf=(sisa)=>risikoCent>0?' Buffer setelah WD: sekitar <b>'+Math.floor(sisa/risikoCent)+'× kalah beruntun</b>.':'';
-    h+='<div style="'+box+'"><b>Dengan saldo sekarang '+c(saldo)+' (target penuh):</b> tiap pos '+c(saldo*WD_ATURAN[0].pct/100)+', total WD '+c(saldo*totPct/100)+', sisa modal '+c(saldo*sisaPct/100)+'.'+buf(saldo*sisaPct/100)+'</div>';
-    const wdKecil=Math.min(WD_CONTOH,saldo);
-    h+='<div style="'+box+'"><b>Kalau hanya WD '+c(wdKecil)+' dan seluruhnya ke Dana darurat:</b> sisa modal '+c(saldo-wdKecil)+'.'+buf(saldo-wdKecil)+' Boleh, tidak harus sama rata.</div>';
-  }
-  h+='<div style="'+box+'"><b>Langkah mencatatnya (otomatis dari statement):</b><br>'
-    +'1️⃣ WD di FBS (nominal bebas).<br>'
-    +'2️⃣ Impor statement FBS: WD masuk sendiri ke <b>KAS (belum dialokasikan)</b>.<br>'
-    +'3️⃣ Buka <b>Rekening per Kategori</b> → pilih <b>KAS</b> → mode <b>Pakai (Alokasikan)</b> → pilih kantong tujuan → isi nominal.<br>'
-    +'4️⃣ Saldo kantong, Dana Darurat, dan bagian 5 Laporan Keuangan Resmi ter-update otomatis.</div>';
+  const box='font-size:12px;margin-top:6px;background:rgba(0,0,0,.35);border-radius:8px;padding:8px 10px;line-height:1.7';
+  let h='<div style="font-weight:800;margin-bottom:4px">💸 Alur WD: dari MT4 ke mana uangnya</div>'
+    +'<div style="'+box+'"><b>MT4 (FBS)</b> → WD → <b>rekening bank Anda (KAS)</b> → dipindah ke <b>pos</b></div>'
+    +'<div style="'+box+'"><b>Langkahnya:</b><br>'
+    +'1️⃣ WD di FBS. FBS mengirim uang ke rekening bank Anda.<br>'
+    +'2️⃣ Impor statement FBS. WD tercatat otomatis sebagai <b>KAS (belum dialokasikan)</b>.<br>'
+    +'3️⃣ Pindahkan uang ke pos: <b>Rekening per Kategori</b> → pilih <b>KAS</b> → mode <b>Pakai (Alokasikan)</b> → pilih pos → isi nominal.<br>'
+    +'4️⃣ Saldo pos dan bagian 5 Laporan Keuangan Resmi ter-update otomatis.</div>'
+    +'<div style="font-size:11px;margin-top:8px"><b>Pos tujuan</b> (target '+WD_ATURAN[0].pct+'% per pos, patokan saja, tidak harus sama rata):</div>';
+  h+=WD_ATURAN.map((p,i)=>'<div style="font-size:11px;line-height:1.5">'+num[i]+' <b>'+p.nama+'</b> ('+p.ket+')</div>').join('');
   return h;
 }
 function renderWdAturan(){
