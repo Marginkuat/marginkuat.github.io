@@ -3337,7 +3337,7 @@ function renderBalanceDrawdown(){
     let bufferHtml='';
     if(buf!==null){
       const wb=buf>=10?'#4ADE80':(buf>=5?'#FBBF24':'#F87171');
-      bufferHtml=`<div style="margin-top:8px;font-size:12px;font-weight:700">🛟 Buffer: <span style="color:${wb}">${Math.floor(buf)}× kalah beruntun</span> sebelum saldo habis</div><div style="font-size:10px;color:#E5E7EB;font-weight:400;margin-top:2px;line-height:1.5">Rencana SL ${MT4_RISIKO.slPips} pips, lot ${MT4_RISIKO.lot}: risiko ${data.riskPct.toFixed(1)}% saldo per trade. Leverage 1:${MT4_LEVERAGE}: margin satu posisi lot ${MT4_RISIKO.lot} hanya beberapa sen, jadi margin call dan stop out baru terjadi saat ekuitas tinggal beberapa sen. Posisi terbuka yang banyak membuatnya lebih cepat.</div>`;
+      bufferHtml=`<div style="margin-top:8px;font-size:12px;font-weight:700">🛟 Buffer: <span style="color:${wb}">${Math.floor(buf)}× kalah beruntun</span> sebelum saldo habis</div><div style="font-size:10px;color:#E5E7EB;font-weight:400;margin-top:2px;line-height:1.5">Rencana SL ${MT4_RISIKO.slPips} pips, lot ${MT4_RISIKO.lot}: risiko ${data.riskPct.toFixed(1)}% saldo per trade. Leverage 1:${MT4_LEVERAGE}: margin satu posisi lot ${MT4_RISIKO.lot} sekitar ¢${(MT4_RISIKO.lot*MT4_HARGA_EMAS_PERKIRAAN*100/MT4_LEVERAGE).toFixed(0)} (perkiraan). Margin call dan stop out dihitung dari margin itu, jadi baru terjadi saat ekuitas sangat kecil dibanding saldo. Posisi terbuka yang banyak membuatnya lebih cepat.</div>`;
     }
     // Drawdown SEKARANG (bulan berjalan): jarak saldo terakhir dari puncak saldo bulan ini ÷ saldo awal bulan.
     let ddNowHtml='';
@@ -17382,7 +17382,8 @@ const MT4_TARGET_BUFFER_X=100;
 const MT4_MAKS_ORDER_HARI=5;                   // maks order per hari (aturan 8 Nov 2026)                 // target buffer: saldo = 100 × risiko per kalah
 const MT4_MODAL_MIN_USD=5000;   // modal minimal akun MT4 (USD). Saldo MT4 dicatat dalam ¢: 100 ¢ = $1
 const MT4_DD_HARIAN_MAKS=3, MT4_DD_BULAN_MAKS=6, MT4_TARGET_PROFIT_BULAN=10;
-const MT4_LEVERAGE=3000; // leverage akun FBS ini (1:3000). Dipakai untuk catatan margin di baris Buffer.
+const MT4_LEVERAGE=500; // leverage akun menurut statement FBS (header: 1:500). Ganti kalau leverage diubah. Dipakai untuk catatan margin di baris Buffer.
+const MT4_HARGA_EMAS_PERKIRAAN=4000; // hanya untuk perkiraan margin, bukan harga live
 function renderRisikoModalMt4(){
   const el=document.getElementById('mt4RisikoWrap'); if(!el) return;
   el.innerHTML=''; return;   // kartu dihapus: aturan sekarang hanya buffer
