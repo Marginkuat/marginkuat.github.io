@@ -2255,6 +2255,8 @@ function renderInvCalcDisclaimer(){
         <option value="dana_darurat">🚨 Tabungan/Darurat (BCA Blu)</option>
         <option value="investasi">📊 Investasi (Stockbit)</option>
         <option value="hiburan">🎉 Hiburan (OVO)</option>
+        <option value="bayar_karyawan">👷 Bayar Karyawan</option>
+        <option value="pajak">🧾 Pajak</option>
       </select>
     </div>
 
@@ -9376,7 +9378,9 @@ const REKENING_KATEGORI=[
   {key:'kebutuhan_harian',  label:'Kebutuhan Harian (BNI)',          icon:'🍚', depositKat:'pocket_kebutuhan_harian', usageKat:'pakai_kebutuhan_harian',       color:'#FFFFFF'},
   {key:'dana_darurat',      label:'Tabungan/Darurat (BCA Blu)',      icon:'🚨', depositKat:'dana_darurat',            usageKat:'pakai_dana_darurat',           color:'#60A5FA'},
   {key:'investasi',         label:'Investasi (Stockbit)',            icon:'📊', depositKat:'investasi',               usageKat:'pakai_investasi',              color:'#4ADE80'},
-  {key:'hiburan',           label:'Hiburan (OVO)',                   icon:'🎉', depositKat:'pocket_hiburan',          usageKat:'pakai_hiburan',                color:'#F87171'}
+  {key:'hiburan',           label:'Hiburan (OVO)',                   icon:'🎉', depositKat:'pocket_hiburan',          usageKat:'pakai_hiburan',                color:'#F87171'},
+  {key:'bayar_karyawan',    label:'Bayar Karyawan',                  icon:'👷', depositKat:'pocket_bayar_karyawan',   usageKat:'pakai_bayar_karyawan',         color:'#FDBA74'},
+  {key:'pajak',             label:'Pajak',                           icon:'🧾', depositKat:'pocket_pajak',            usageKat:'pakai_pajak',                  color:'#C4B5FD'}
 ];
 let rekKatAktif='kas';
 let rekKatModeAktif='setor';
@@ -18344,29 +18348,20 @@ async function setWdTujuan(key,val){
 }
 function renderWdTujuan(){
   const el=document.getElementById('lapWdTujuan'); if(!el) return;
-  if(_wdTujuan===undefined){ _wdTujuan=null; el.textContent='Memuat tujuan WD...'; wdTujuanMuat(); return; }
-  if(_wdTujuan===null) return;
   const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const batas=batasStatementMt4(), list=[];
-  (allKasData||[]).forEach(r=>{ const f=arusMt4Sah(r,batas); if(f&&f.arah==='wd') list.push({key:String(r.keterangan||'').indexOf('STMT-')===0?r.keterangan:'id'+r.id, tgl:String(r.tanggal||'').slice(0,10), jml:f.jumlah}); });
-  list.sort((a,b)=>b.tgl.localeCompare(a.tgl));
-  const nama={}; WD_TUJUAN.forEach(t=>nama[t[0]]=t[1]);
-  const tot={}; let semua=0, belum=0, nBelum=0;
-  list.forEach(w=>{ semua+=w.jml; const t0=_wdTujuan[w.key], t=WD_TUJUAN_ALIAS[t0]||t0; if(t&&nama[t]) tot[t]=(tot[t]||0)+w.jml; else { belum+=w.jml; nBelum++; } });
   const row=(k,v,col)=>'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1F2A1F"><span>'+k+'</span><b style="color:'+(col||'#FFFFFF')+'">'+v+'</b></div>';
-  let h='<div style="font-weight:800;color:#FFFFFF;margin:2px 0 4px">5. Tujuan Penarikan (WD)</div>'
-    +'<div style="font-size:9px;margin-bottom:4px">Ke mana uang yang ditarik dari MT4 dipakai. Total dicatat + belum dicatat = total WD.</div>';
-  WD_TUJUAN.forEach(t=>{ if(tot[t[0]]) h+=row(t[1],c(tot[t[0]])); });
-  h+=row('Belum dicatat tujuannya ('+nBelum+' WD)',c(belum),belum>0?'#FBBF24':'#4ADE80')+row('Total WD (statement)',c(semua),'#F87171');
-  if(isAdmin && list.length){
-    h+='<details style="margin-top:8px"><summary style="cursor:pointer;color:#FFFFFF;font-weight:700">✍️ Atur tujuan tiap WD</summary>';
-    list.forEach(w=>{
-      const cur=WD_TUJUAN_ALIAS[_wdTujuan[w.key]]||_wdTujuan[w.key]||'';
-      h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1F2A1F"><span style="font-size:10px">'+fd(w.tgl)+'<br><b style="color:#F87171">'+c(w.jml)+'</b></span><select class="inp" style="flex:1;max-width:60%;padding:6px 8px;font-size:11px" onchange="setWdTujuan(\''+w.key+'\',this.value)"><option value="">— pilih tujuan —</option>'
-        +WD_TUJUAN.map(t=>'<option value="'+t[0]+'"'+(t[0]===cur?' selected':'')+'>'+t[1]+'</option>').join('')+'</select></div>';
-    });
-    h+='</details>';
-  }
+  let totalWd=0, totalAlokasi=0, h='';
+  try{ totalWd=getTotalWdUntukAlokasi(); }catch(e){ el.textContent=''; return; }
+  h+='<div style="font-weight:800;color:#FFFFFF;margin:2px 0 4px">5. Alokasi WD ke kantong</div>'
+    +'<div style="font-size:9px;margin-bottom:4px">Diambil dari Rekening per Kategori (KAS dialokasikan ke kantong). Kolom kanan = saldo kantong sekarang setelah dipakai.</div>';
+  REKENING_KATEGORI.filter(k=>k.key!=='kas').forEach(k=>{
+    const masuk=(allKasData||[]).filter(r=>r.kategori===k.depositKat).reduce((a,r)=>a+parseFloat(r.jumlah||0),0);
+    totalAlokasi+=masuk;
+    if(masuk>0.004) h+=row(k.icon+' '+k.label, c(masuk)+' <span style="font-weight:400;color:#E5E7EB">→ saldo '+c(getRekKatSaldo(k.key))+'</span>');
+  });
+  const sisaKas=totalWd-totalAlokasi;
+  h+=row('Belum dialokasikan (sisa KAS)',c(sisaKas),sisaKas>0.01?'#FBBF24':'#4ADE80')+row('Total WD (statement)',c(totalWd),'#F87171');
+  h+='<div style="font-size:9px;margin-top:6px;line-height:1.5">Untuk mengalokasikan: <b>Rekening per Kategori → KAS → Pakai (Alokasikan)</b> → pilih kantong.</div>';
   el.innerHTML=h;
 }
 (function(){
@@ -18401,22 +18396,31 @@ const WD_ATURAN=[
   {nama:'Bayar karyawan',   ket:'gaji dan upah',                  pct:8},
   {nama:'Pajak',            ket:'dana pajak yang disisihkan',     pct:8}
 ];
+const WD_CONTOH=300; // contoh nominal WD kecil untuk simulasi di banner
 function wdAturanHtml(saldo){
   const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
   const c0=v=>'¢'+Math.round(+v||0).toLocaleString('id-ID');
   const totPct=WD_ATURAN.reduce((a,p)=>a+p.pct,0), sisaPct=100-totPct;
   const num=['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣'];
+  const box='font-size:11px;margin-top:6px;background:rgba(0,0,0,.35);border-radius:8px;padding:8px 10px;line-height:1.6';
   let h='<div style="font-weight:800;margin-bottom:4px">💸 Tata cara WD: ke mana uangnya</div>'
-    +'<div style="font-size:11px;margin-bottom:4px">Setiap WD, saldo MT4 dibagi ke pos berikut (persen dari saldo MT4 saat WD):</div>';
+    +'<div style="font-size:11px;margin-bottom:4px"><b>Target pembagian</b> (persen dari saldo MT4 saat WD). Ini patokan, bukan kewajiban sama rata:</div>';
   h+=WD_ATURAN.map((p,i)=>'<div style="font-size:11px;line-height:1.5">'+num[i]+' <b>'+p.nama+'</b> ('+p.ket+'): <b>'+p.pct+'%</b></div>').join('');
-  h+='<div style="font-size:11px;margin-top:4px">Total WD <b>'+totPct+'%</b>, sisa <b>'+sisaPct+'%</b> tetap jadi modal trading.'+(totPct>100?' <b style="color:#FDE68A">⚠️ Total lebih dari 100%</b>':'')+'</div>';
-  const ex=100000, t1=ex*WD_ATURAN[0].pct/100;
-  h+='<div style="font-size:11px;margin-top:6px;background:rgba(0,0,0,.35);border-radius:8px;padding:8px 10px;line-height:1.6"><b>Contoh:</b> saldo MT4 '+c0(ex)+' → tiap pos '+c0(t1)+' (total WD '+c0(ex*totPct/100)+', sisa modal '+c0(ex*sisaPct/100)+').</div>';
+  h+='<div style="font-size:11px;margin-top:4px">Kalau semua pos terpenuhi: WD <b>'+totPct+'%</b>, sisa <b>'+sisaPct+'%</b> tetap jadi modal trading.'+(totPct>100?' <b style="color:#FDE68A">⚠️ Total lebih dari 100%</b>':'')+'</div>';
+  const ex=100000;
+  h+='<div style="'+box+'"><b>Contoh:</b> saldo MT4 '+c0(ex)+' → tiap pos '+c0(ex*WD_ATURAN[0].pct/100)+' (total WD '+c0(ex*totPct/100)+', sisa modal '+c0(ex*sisaPct/100)+').</div>';
   if(saldo>0){
-    let buf='';
-    try{ const rm=getRiskMeterData(); if(rm && rm.hasRiskInput && rm.riskPct>0){ const risikoCent=rm.riskPct*saldo/100, sisa=saldo*sisaPct/100; buf=' Buffer setelah WD: sekitar <b>'+Math.floor(sisa/risikoCent)+'× kalah beruntun</b>.'; } }catch(e){}
-    h+='<div style="font-size:11px;margin-top:6px;background:rgba(0,0,0,.35);border-radius:8px;padding:8px 10px;line-height:1.6"><b>Dengan saldo sekarang '+c(saldo)+':</b> tiap pos '+c(saldo*WD_ATURAN[0].pct/100)+', total WD '+c(saldo*totPct/100)+', sisa modal '+c(saldo*sisaPct/100)+'.'+buf+'</div>';
+    let risikoCent=0; try{ const rm=getRiskMeterData(); if(rm && rm.hasRiskInput && rm.riskPct>0) risikoCent=rm.riskPct*saldo/100; }catch(e){}
+    const buf=(sisa)=>risikoCent>0?' Buffer setelah WD: sekitar <b>'+Math.floor(sisa/risikoCent)+'× kalah beruntun</b>.':'';
+    h+='<div style="'+box+'"><b>Dengan saldo sekarang '+c(saldo)+' (target penuh):</b> tiap pos '+c(saldo*WD_ATURAN[0].pct/100)+', total WD '+c(saldo*totPct/100)+', sisa modal '+c(saldo*sisaPct/100)+'.'+buf(saldo*sisaPct/100)+'</div>';
+    const wdKecil=Math.min(WD_CONTOH,saldo);
+    h+='<div style="'+box+'"><b>Kalau hanya WD '+c(wdKecil)+' dan seluruhnya ke Dana darurat:</b> sisa modal '+c(saldo-wdKecil)+'.'+buf(saldo-wdKecil)+' Boleh, tidak harus sama rata.</div>';
   }
+  h+='<div style="'+box+'"><b>Langkah mencatatnya (otomatis dari statement):</b><br>'
+    +'1️⃣ WD di FBS (nominal bebas).<br>'
+    +'2️⃣ Impor statement FBS: WD masuk sendiri ke <b>KAS (belum dialokasikan)</b>.<br>'
+    +'3️⃣ Buka <b>Rekening per Kategori</b> → pilih <b>KAS</b> → mode <b>Pakai (Alokasikan)</b> → pilih kantong tujuan → isi nominal.<br>'
+    +'4️⃣ Saldo kantong, Dana Darurat, dan bagian 5 Laporan Keuangan Resmi ter-update otomatis.</div>';
   return h;
 }
 function renderWdAturan(){
