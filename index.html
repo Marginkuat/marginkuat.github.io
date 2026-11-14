@@ -1260,6 +1260,8 @@ function updXauNote(sel,id){
     }
     return plan;
   }
+  // Diekspor supaya Aturan MT4 membaca lot dari sistem level kalkulator yang SAMA (satu sumber kebenaran).
+  window.KALK_LEVEL={buildLevelPlan, LOT_START};
 
   // Simbol uang mengikuti tipe akun: akun Cent (Sen) = ¢, selain itu $. Supaya ¢919 tidak terbaca $919.
   const CUR=()=>(akunTypeEl && akunTypeEl.value==='Sen')?'¢':'$';
@@ -3306,7 +3308,7 @@ function renderBalanceDrawdown(){
   try{
     const data=(typeof getRiskMeterData==='function') ? getRiskMeterData() : null;
     if(!data){ el.innerHTML=''; return; }
-    const zone=riskZone(data.ddPct, MT4_DD_HARIAN_MAKS, MT4_DD_BULAN_MAKS);
+    const zone=riskZone(data.ddMaxPct, MT4_DD_HARIAN_MAKS, MT4_DD_BULAN_MAKS);
     // Buffer = berapa kali bisa kalah beruntun (SL penuh, sesuai rencana MT4_RISIKO) sebelum saldo habis. Rasio saja, tanpa nominal, jadi aman dilihat publik.
     const buf=(data.hasRiskInput && data.riskPct>0) ? 100/data.riskPct : null;
     let bufferHtml='';
@@ -3325,7 +3327,7 @@ function renderBalanceDrawdown(){
         ddNowHtml=` · Sekarang: <b style="color:${ddNow<0.05?'#4ADE80':'#FBBF24'}">${ddNow.toFixed(1)}%</b>`;
       }
     }catch(e){ console.error('dd sekarang',e); }
-    el.innerHTML=`🛡️ Drawdown terdalam bulan ini: <b style="color:${zone.color}">${data.ddPct.toFixed(1)}%</b> <span style="color:${zone.color}">(${zone.label})</span>${ddNowHtml}<div style="font-size:10px;color:#E5E7EB;font-weight:400;margin-top:3px">Terdalam = penurunan terbesar dari puncak saldo bulan ini ÷ saldo awal bulan. Sekarang = jarak saldo saat ini dari puncak bulan ini. Bukan kerugian total sejak awal.</div>${bufferHtml}`;
+    el.innerHTML=`🛡️ Drawdown terdalam bulan ini: <b style="color:${zone.color}">${data.ddMaxPct.toFixed(1)}%</b> <span style="color:${zone.color}">(${zone.label})</span>${ddNowHtml}<div style="font-size:10px;color:#E5E7EB;font-weight:400;margin-top:3px">Terdalam = penurunan terbesar dari puncak saldo bulan ini ÷ saldo awal bulan. Sekarang = jarak saldo saat ini dari puncak bulan ini. Bukan kerugian total sejak awal.</div>${bufferHtml}`;
   }catch(e){ el.innerHTML=''; }
 }
 function toggleBalanceMask(){
@@ -9921,8 +9923,19 @@ function getRiskMeterData(){
   if(!rows.length) return null;
 
   // ── Current Drawdown: satu sumber dengan Akun menyalahi aturan (DD bulan dari puncak / saldo awal bulan) ──
+  // PERBAIKAN: Current Drawdown = jarak saldo SEKARANG dari puncak bulan ini ÷ saldo awal bulan (0% kalau sedang di puncak).
+  // DD terdalam bulan ini (historis) dipisah ke ddMaxPct, tidak dipakai buat lampu.
   const _ap = aturanPropMt4();
-  const ddPct = _ap ? _ap.ddBulanIni : 0;
+  const ddMaxPct = _ap ? _ap.ddBulanIni : 0;
+  let ddPct = 0;
+  try{
+    const _perf=hitungPerformaMt4(), _lb=_perf.bulan[_perf.bulan.length-1];
+    const _hb=_perf.hari.filter(h=>h.adaSaldo && String(h.tgl).slice(0,7)===_lb.periode);
+    if(_hb.length && _lb.start>0){
+      const _puncak=Math.max(_lb.start, ..._hb.map(h=>h.end)), _skrg=_hb[_hb.length-1].end;
+      ddPct=Math.max(0,(_puncak-_skrg)/_lb.start*100);
+    }
+  }catch(e){ ddPct=0; }
 
   // ── Risk of Ruin (%): skenario rencana — RR 1:2 (SL 200 / TP 400), lot 0,02, buffer = saldo ÷ risiko per kalah ──
   // Satu sumber dengan kartu Risk of Ruin di bawah Risk Meter.
@@ -9939,7 +9952,7 @@ function getRiskMeterData(){
   const modalSekarang=parseFloat(rows[rows.length-1].saldo_mt4||0);
   const riskPct = modalSekarang>0 ? (riskDollar/modalSekarang*100) : 0;
 
-  return {ddPct, ror, hasEnoughData, riskPct, hasRiskInput:riskDollar>0.001};
+  return {ddPct, ddMaxPct, ror, hasEnoughData, riskPct, hasRiskInput:riskDollar>0.001};
 }
 function riskMeterLampRow(label, valueText, zone, hint){
   return `
@@ -9979,8 +9992,8 @@ function renderRiskMeter(){
       <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Status Risiko Akun</div>
       <div style="font-size:20px;font-weight:800;color:${overallColor}">${overallDot} ${overallLabel}</div>
     </div>
-    ${riskMeterLampRow('Current Drawdown', data.ddPct.toFixed(1)+'%', ddZone, 'Jarak equity ke puncak tertinggi bulan ini, dibanding saldo awal bulan')}
-    ${rorZone ? riskMeterLampRow('Risk of Ruin', data.ror.toFixed(2)+'%', rorZone, 'Peluang teoretis akun habis, rencana RR 1:2 · lot 0,02 · buffer saldo ÷ ¢40') : `
+    ${riskMeterLampRow('Current Drawdown', data.ddPct.toFixed(1)+'%', ddZone, 'Jarak equity SEKARANG ke puncak tertinggi bulan ini, dibanding saldo awal bulan · DD terdalam bulan ini: '+data.ddMaxPct.toFixed(1)+'%')}
+    ${rorZone ? riskMeterLampRow('Risk of Ruin', data.ror.toFixed(2)+'%', rorZone, 'Peluang teoretis akun habis, rencana RR 1:2 · lot '+String(MT4_RISIKO.lot).replace('.',',')+' · buffer saldo ÷ ¢'+(MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01)).toFixed(0)) : `
     <div style="padding:10px 0;text-align:center;font-size:10px;color:#E5E7EB;border-bottom:1px solid var(--bg2)">Risk of Ruin belum bisa dihitung — butuh minimal 5 hari data dengan profit &amp; loss.</div>`}
     ${riskZoneVal ? riskMeterLampRow('Risk per Trade', data.riskPct.toFixed(2)+'%', riskZoneVal, 'Dari Kalkulator Risiko — % modal dipertaruhkan per entry') : `
     <div style="padding:10px 0;text-align:center;font-size:10px;color:#E5E7EB">Risk per Trade belum terhitung — isi SL &amp; Lot di <span onclick="document.getElementById('secKalkulator').scrollIntoView({behavior:'smooth'})" style="color:#FFFFFF;text-decoration:underline;cursor:pointer">Kalkulator Agresif 5%</span> dulu.</div>`}
@@ -17353,6 +17366,17 @@ function renderAturanMtLama(){
 // ══ PERINGATAN RISIKO MODAL AKUN MT4 (kartu terpisah; aturan emas TIDAK diubah) ══
 // Membandingkan risiko aturan emas (SL 500 pips, jatah 5 order/bulan) dengan saldo terakhir. Hanya persentase ditampilkan (nominal saldo privat).
 const MT4_RISIKO={slPips:200, tpPips:400, rr:'1:2', lot:0.02, centPerPip:0.1};
+// SINKRON KALKULATOR: lot aturan MT4 tidak lagi diketik manual, tapi ikut Level kalkulator (modal = saldo MT4 terakhir,
+// SL & nilai/pip aturan di atas). Saldo naik ke level berikutnya → lot ikut naik; saldo turun → ikut turun, persis tabel kalkulator.
+Object.defineProperty(MT4_RISIKO,'lot',{enumerable:true,configurable:true,get(){
+  try{
+    const K=window.KALK_LEVEL, saldo=saldoTerakhirMt4();
+    if(!K || !(saldo>0)) return 0.02;
+    const plan=K.buildLevelPlan(MT4_RISIKO.slPips, MT4_RISIKO.centPerPip);
+    let idx=-1; plan.forEach((lv,i)=>{ if(saldo>=lv.modal) idx=i; });
+    return idx>=0 ? plan[idx].lot : K.LOT_START;   // di bawah Level 1 → lot minimum
+  }catch(e){ return 0.02; }
+}});
 const MT4_ATURAN_TANGGAL='8 November 2026';   // versi aturan MT4 yang berlaku
 const MT4_TARGET_BUFFER_X=100;
 const MT4_MAKS_ORDER_HARI=5;                   // maks order per hari (aturan 8 Nov 2026)                 // target buffer: saldo = 100 × risiko per kalah
@@ -18538,7 +18562,7 @@ function renderWdAman(){
   const alasan=[];
   if(profit<=0) alasan.push('Profit bulan ini belum positif ('+c(profit)+').');
   if(bLalu && bLalu.sumProf<0) alasan.push('Bulan lalu rugi ('+c(bLalu.sumProf)+'): tahan WD sampai ada bulan hijau.');
-  if(rm && rm.ddPct>WD_AMAN_DD_MAKS) alasan.push('Drawdown terdalam bulan ini '+rm.ddPct.toFixed(1)+'% (batas '+WD_AMAN_DD_MAKS+'%).');
+  if(rm && rm.ddMaxPct>WD_AMAN_DD_MAKS) alasan.push('Drawdown terdalam bulan ini '+rm.ddMaxPct.toFixed(1)+'% (batas '+WD_AMAN_DD_MAKS+'%).');
   if(risikoCent>0 && lebih<=0) alasan.push('Saldo sudah di bawah lantai '+c(lantai)+'.');
   const tahan=alasan.length>0;
   let h=tahan
