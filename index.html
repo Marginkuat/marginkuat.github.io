@@ -379,6 +379,7 @@ function toggleKamusGrup(btn){
 <div style="margin:12px 0 16px;padding:14px;border-radius:14px;background:linear-gradient(135deg,#7F1D1D,#450A0A);border:2px solid #F87171;box-shadow:0 0 0 3px rgba(248,113,113,.15)">
   <div style="font-size:16px;font-weight:900;color:#FFFFFF;line-height:1.3;margin-bottom:6px">⚠️ WAJIB: DATA MT4 HARUS DARI STATEMENT FBS RESMI</div>
   <div style="font-size:13px;color:#FECACA;line-height:1.5">Jangan input manual <b>setoran</b>, <b>penarikan (WD)</b>, atau <b>saldo MT4</b>.</div>
+  <div id="redBoxLot" style="display:none;margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.45);border:1px solid rgba(74,222,128,.45);text-align:center"></div>
   <details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:#FFFFFF">📋 Lihat cara yang benar</summary>
     <div style="font-size:12px;color:#FFFFFF;line-height:1.7;background:rgba(0,0,0,.35);border-radius:10px;padding:10px 12px;margin-top:6px">
       1️⃣ Minta laporan HTML resmi dari FBS<br>
@@ -1313,14 +1314,37 @@ function updXauNote(sel,id){
       </div>`;
   }
 
+  // Ringkasan LOT di kotak merah atas halaman: cuma "modal update kamu -> pakai lot berapa".
+  function updateRedBoxLot(d){
+    const el=document.getElementById('redBoxLot');
+    if(!el) return;
+    if(!d){ el.style.display='none'; el.innerHTML=''; return; }
+    const plan=buildLevelPlan(d.sl, d.pipvalue);
+    let idx=-1;
+    plan.forEach((lv,i)=>{ if(d.modal>=lv.modal) idx=i; });
+    const fm=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
+    el.style.display='block';
+    if(idx<0){
+      el.innerHTML=`<div style="font-size:11px;font-weight:800;color:#FECACA;letter-spacing:.5px">🎯 LOT UNTUK MODAL KAMU</div>
+        <div style="font-size:18px;font-weight:900;color:#F87171;margin-top:2px">⚠️ Modal belum cukup</div>
+        <div style="font-size:11px;color:#FFFFFF;margin-top:2px">Modal ${CUR()}${fm(d.modal)} &lt; ${CUR()}${fm(plan[0].modal)} (minimal buat lot ${plan[0].lot.toFixed(2)})</div>`;
+      return;
+    }
+    const lv=plan[idx], next=plan[idx+1];
+    el.innerHTML=`<div style="font-size:11px;font-weight:800;color:#FECACA;letter-spacing:.5px">🎯 PAKAI LOT (MODAL ${CUR()}${fm(d.modal)})</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:900;color:#4ADE80;line-height:1.1;margin-top:2px">${lv.lot.toFixed(2)}</div>
+      <div style="font-size:11px;color:#FFFFFF;margin-top:2px">Level ${idx+1} · SL ${fm(d.sl)} · risk ${CUR()}${fm(lv.risk)}/trade${next?` · naik lot ${next.lot.toFixed(2)} di ${CUR()}${fm(next.modal)}`:' · 🏆 level tertinggi'}</div>`;
+  }
+
   function computeRekom(){
     const modal=parseFloat(modalEl.value)||0;
     const sl=parseFloat(slEl.value)||0;
     const pipvalue=parseFloat(pipvalueEl.value)||0;
 
-    if(modal<=0 || sl<=0 || pipvalue<=0){ rekomOutEl.innerHTML=''; if(remOutEl) remOutEl.innerHTML=''; return; }
+    if(modal<=0 || sl<=0 || pipvalue<=0){ rekomOutEl.innerHTML=''; if(remOutEl) remOutEl.innerHTML=''; updateRedBoxLot(null); return; }
 
     rekomOutEl.innerHTML = buildLevelTableHtml(modal, sl, pipvalue);
+    updateRedBoxLot({modal, sl, pipvalue});
     if(remOutEl){
       const plan=buildLevelPlan(sl, pipvalue);
       let levelIdx=-1;
