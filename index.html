@@ -1323,6 +1323,8 @@ function updXauNote(sel,id){
     let idx=-1;
     plan.forEach((lv,i)=>{ if(d.modal>=lv.modal) idx=i; });
     const fm=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
+    window.__lotInfo = idx>=0 ? {cur:CUR(), modal:d.modal, level:idx+1, lot:plan[idx].lot, target:plan[idx].modal, risk:plan[idx].risk, loss:LOSS_COUNT} : {cur:CUR(), modal:d.modal, level:0, lot:0, target:plan[0].modal, risk:plan[0].risk, loss:LOSS_COUNT};
+    try{ if(typeof renderWdAturan==='function') renderWdAturan(); }catch(e){}
     el.style.display='block';
     if(idx<0){
       el.innerHTML=`<div style="font-size:9px;font-weight:800;color:#FECACA;letter-spacing:.3px">🎯 LOT UNTUK MODAL KAMU</div>
@@ -18431,6 +18433,58 @@ const WD_ATURAN=[
   {nama:'Bayar karyawan',   ket:'gaji dan upah',                  pct:8},
   {nama:'Pajak',            ket:'dana pajak yang disisihkan',     pct:8}
 ];
+// Ringkasan uang SEKARANG per pos (total saja) — tampil di kotak merah atas, di atas daftar pos tujuan.
+const WD_POS_KEY={'Hiburan':'hiburan','Dana darurat':'dana_darurat','Kebutuhan harian':'kebutuhan_harian','Investasi':'investasi','Bayar karyawan':'bayar_karyawan','Pajak':'pajak'};
+function wdSaldoPosHtml(){
+  let totalWd=0, kas=0, pos=[];
+  try{
+    totalWd=getTotalWdUntukAlokasi();
+    kas=getRekKatSaldo('kas');
+    pos=WD_ATURAN.map(p=>({nama:p.nama, icon:(getRekKatConfig(WD_POS_KEY[p.nama])||{}).icon||'•', v:getRekKatSaldo(WD_POS_KEY[p.nama])}));
+  }catch(e){ return ''; }
+  const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const row=(k,v,col,bold)=>'<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.12);font-size:11px"><span>'+k+'</span><b style="color:'+(col||'#FFFFFF')+(bold?';font-size:12px':'')+'">'+v+'</b></div>';
+  const totalPos=pos.reduce((a,x)=>a+x.v,0);
+  let h='<div style="'+'margin-top:8px;background:rgba(0,0,0,.35);border-radius:8px;padding:6px 10px'+'">'
+    +'<div style="font-size:11px;font-weight:800;margin-bottom:2px">💰 Uang kamu sekarang (total per pos)</div>'
+    +row('Total WD dari MT4', c(totalWd), '#F87171')+wdDetailHtml()
+    +row('🏦 KAS (belum dialokasikan)', c(kas), kas>0.01?'#FBBF24':'#4ADE80');
+  pos.forEach(x=>{ h+=row(x.icon+' '+x.nama, c(x.v), x.v>0.004?'#4ADE80':'#E5E7EB'); });
+  h+=row('Total di 6 pos', c(totalPos), '#4ADE80', true)+'</div>';
+  return h+wdAnjuranHtml();
+}
+// Rincian dari mana angka "Total WD": tanggal-tanggal selisih saldo yang bukan profit (supaya bisa dicek).
+function wdDetailHtml(){
+  try{
+    const reset=getAlokasiResetTanggal();
+    const ev=getWdProfitPerHari().filter(d=>d.wd>0.01 && (!reset || new Date(d.tanggal)>new Date(reset)));
+    const n=new Date(), kini=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+    let bulanIni=0; try{ const b=hitungPerformaMt4().bulan.find(x=>x.periode===kini); bulanIni=b?(b.wd||0):0; }catch(e){}
+    const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const st='font-size:9px;color:#E5E7EB;line-height:1.4;padding:2px 0 4px;border-bottom:1px solid rgba(255,255,255,.12)';
+    let t='WD bulan ini (statement): <b>'+c(bulanIni)+'</b>';
+    if(ev.length){
+      const last=ev[ev.length-1];
+      t+='<br>'+ev.length+' kejadian selisih saldo, terakhir '+fd(last.tanggal)+' ('+c(last.wd)+(last.kecil?', penyesuaian kecil':'')+'). Dihitung dari saldo harian: selisih saldo yang bukan profit dianggap WD, jadi bisa juga komisi/swap/salah ketik saldo.';
+    }
+    return '<div style="'+st+'">'+t+'</div>';
+  }catch(e){ return ''; }
+}
+// Anjuran WD: saldo setelah WD tidak boleh turun di bawah target modal level sekarang (dari kalkulator lot).
+function wdAnjuranHtml(){
+  const L=window.__lotInfo; if(!L) return '';
+  const f=v=>L.cur+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const box='margin-top:8px;background:rgba(0,0,0,.35);border-radius:8px;padding:6px 10px;font-size:11px;line-height:1.5';
+  if(L.level<=0) return '<div style="'+box+'"><b>🧮 Anjuran WD:</b> <span style="color:#F87171;font-weight:800">⛔ Tahan WD</span> — modal '+f(L.modal)+' belum mencapai Level 1 ('+f(L.target)+').</div>';
+  const maks=Math.max(0,L.modal-L.target);
+  const aman=Math.max(0,L.modal-L.target-L.loss*L.risk);
+  const pct=v=>L.modal>0?(v/L.modal*100).toFixed(1)+'%':'0%';
+  return '<div style="'+box+'"><b>🧮 Anjuran WD (tanpa turun dari Level '+L.level+')</b><br>'
+    +'Batas level: saldo minimal <b>'+f(L.target)+'</b> (lot '+L.lot.toFixed(2)+')<br>'
+    +'Maks WD: <b style="color:#4ADE80">'+f(maks)+' ('+pct(maks)+' dari saldo)</b><br>'
+    +'Lebih aman: <b style="color:#4ADE80">'+f(aman)+' ('+pct(aman)+')</b> — masih tetap di level walau '+L.loss+'× kalah beruntun'
+    +'<div style="font-size:9px;color:#E5E7EB;margin-top:2px">Patokan hitungan dari kalkulator lot, bukan saran keuangan. Satuan ikut tipe akun di kalkulator.</div></div>';
+}
 function wdAturanHtml(saldo){
   const num=['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣'];
   const box='font-size:12px;margin-top:6px;background:rgba(0,0,0,.35);border-radius:8px;padding:8px 10px;line-height:1.7';
@@ -18441,6 +18495,7 @@ function wdAturanHtml(saldo){
     +'2️⃣ Impor statement FBS. WD tercatat otomatis sebagai <b>KAS (belum dialokasikan)</b>.<br>'
     +'3️⃣ Pindahkan uang ke pos: <b>Rekening per Kategori</b> → pilih <b>KAS</b> → mode <b>Pakai (Alokasikan)</b> → pilih pos → isi nominal.<br>'
     +'4️⃣ Saldo pos dan bagian 5 Laporan Keuangan Resmi ter-update otomatis.</div>'
+    +wdSaldoPosHtml()
     +'<div style="font-size:11px;margin-top:8px"><b>Pos tujuan</b> (target '+WD_ATURAN[0].pct+'% per pos, patokan saja, tidak harus sama rata):</div>';
   h+=WD_ATURAN.map((p,i)=>'<div style="font-size:11px;line-height:1.5">'+num[i]+' <b>'+p.nama+'</b> ('+p.ket+')</div>').join('');
   return h;
@@ -18452,6 +18507,12 @@ function renderWdAturan(){
 }
 (function(){
   if(typeof renderPertumbuhanBulanan==='function'){ const _rwa=renderPertumbuhanBulanan; renderPertumbuhanBulanan=function(){ _rwa.apply(this,arguments); try{ renderWdAturan(); }catch(e){ console.error('wdaturan',e); } }; }
+})();
+(function(){
+  if(typeof renderRekeningKategori==='function'){ const _rk=renderRekeningKategori; renderRekeningKategori=function(){ _rk.apply(this,arguments); try{ renderWdAturan(); }catch(e){} }; }
+})();
+(function(){
+  if(typeof renderWdTujuan==='function'){ const _rt=renderWdTujuan; renderWdTujuan=function(){ _rt.apply(this,arguments); try{ renderWdAturan(); }catch(e){} }; }
 })();
 [2000,5000,9000,13000].forEach(t=>setTimeout(()=>{ try{ renderWdAturan(); }catch(e){ console.error('wdaturan',e); } },t));
 
