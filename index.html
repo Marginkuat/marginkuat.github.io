@@ -1381,7 +1381,7 @@ function updXauNote(sel,id){
 // pintu buat kalkulator Umum 2% & Agresif 5% — biar gak ada kemungkinan salah satu
 // ketinggalan sinkron pas ditambah kalkulator baru nanti.
 window.syncModalSemuaKalkulator=function(){
-  const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const rows=rowsMt4Urut();   // sumber sama dengan Aturan MT4: saldo MT4 terakhir dari input harian
   if(!rows.length) return;
   const terakhir=rows[rows.length-1];
   const nilai=parseFloat(terakhir.saldo_mt4||0).toFixed(2);
@@ -1663,7 +1663,7 @@ function renderLabelProfilRisiko(){
 let risikoBulanCache=null, risikoBulanSedang=false;
 function bulanIniKeyMt4(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function saldoTerakhirMt4(){
-  const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4))).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
+  const rows=rowsMt4Urut().filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4)));
   return rows.length?parseFloat(rows[rows.length-1].saldo_mt4):0;
 }
 function saldoAcuanBulanMt4(){ return saldoTerakhirMt4(); }   // risiko per trade selalu pakai saldo sekarang
@@ -3856,6 +3856,9 @@ function getRowsAkunRealXauusd(){
       jumlah_signal: parseInt(r.jumlah_signal||0,10)||0, jumlah_loss: parseInt(r.jumlah_loss||0,10)||0 };
   });
 }
+// SATU SUMBER DATA AKUN MT4: baris Saldo Harian (hasil input harian) — 1 baris per tanggal, tanpa FOREX, urut tanggal naik.
+// Semua kartu/statistik akun MT4 WAJIB lewat sini supaya angkanya sama dengan Kurva, Aturan, & Risk Meter.
+function rowsMt4Urut(){ return getRowsAkunRealXauusd().slice().sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal))); }
 function getSaldoMt4Sekarang(){
   const rows=getRowsAkunRealXauusd().slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
   return rows.length ? parseFloat(rows[rows.length-1].saldo_mt4||0) : 0;
@@ -7631,7 +7634,7 @@ function loadMonthlyComparison(){
   const el=document.getElementById('monthlyComparison');
   if(!el)return;
   try{
-    const rows=allSaldoData||[];
+    const rows=rowsMt4Urut();
     if(!rows.length){
       el.innerHTML='<div style="padding:14px">Belum ada data.</div>';
       return;
@@ -8176,7 +8179,7 @@ async function syncAllHistoricalKas(){
   }
   if(el) el.innerHTML='⏳ Menyinkronkan histori trading ke Arus Kas, mohon tunggu...';
   try{
-    const rows=(allSaldoData||[]).filter(r=>parseFloat(r.profit||0)!==0);
+    const rows=rowsMt4Urut().filter(r=>parseFloat(r.profit||0)!==0);
     for(const r of rows){
       await syncKasFromProfit(r.tanggal, r.profit);
     }
@@ -8680,7 +8683,7 @@ function renderKasRingkasan(){
   // Ini otomatis akurat dan SELALU balance dengan saldo MT4 saat ini — nggak tergantung
   // konsistensi kamu waktu kasih label "gaji"/"modal"/dll di form Aliran Uang.
   let totalModalDisetor=0, totalWD=0, totalProfitTrading=0, totalLossTrading=0;
-  const dataUrut=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const dataUrut=rowsMt4Urut();
   let prevSaldo=null;
   dataUrut.forEach(r=>{
     const saldo=parseFloat(r.saldo_mt4||0);
@@ -8721,7 +8724,7 @@ function renderKasRingkasan(){
   // DENGAN BENAR ke Arus Kas (harus ada entrinya DAN kategorinya harus terisi, bukan cuma "ada entri").
   const backfillEl=document.getElementById('kasBackfillNotif');
   if(backfillEl){
-    const hariAdaProfit=(allSaldoData||[]).filter(r=>parseFloat(r.profit||0)!==0).length;
+    const hariAdaProfit=rowsMt4Urut().filter(r=>parseFloat(r.profit||0)!==0).length;
     const sudahSinkronBenar=rows.filter(r=>(r.keterangan||'').includes(AUTOSYNC_TAG) && r.kategori).length;
     const belumLengkap = hariAdaProfit>0 && sudahSinkronBenar<hariAdaProfit;
     backfillEl.style.display = (belumLengkap || !hasKategoriCol) ? 'block' : 'none';
@@ -8922,7 +8925,7 @@ function setupKasChartInteraction(data){
 // dengan label berbeda ("Penyesuaian") supaya tidak diklaim sebagai penarikan/setoran dana nyata.
 const SELISIH_KECIL_THRESHOLD = 20; // ₡ — di bawah nominal ini, dianggap "penyesuaian kecil" bukan WD/deposit pasti
 function getWdProfitPerHari(){
-  const dataUrut=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const dataUrut=rowsMt4Urut();
   const out=[];
   let prevSaldo=null;
   dataUrut.forEach(r=>{
@@ -9396,7 +9399,7 @@ function renderLapSaya(){
 }
 // Rata-rata profit trading per bulan (dari Saldo Harian)
 function getRataRataProfitBulanan(){
-  const rows=allSaldoData||[];
+  const rows=rowsMt4Urut();
   if(!rows.length) return 0;
   const byMonth={};
   rows.forEach(r=>{
@@ -10210,7 +10213,7 @@ function updateGoalManual(id){
   renderGoalTracker();
 }
 function getGoalCurrentVal(goal){
-  const rows=allSaldoData||[];
+  const rows=rowsMt4Urut();
   if(goal.sumber==='modal'){
     return rows.length ? parseFloat(rows[rows.length-1].saldo_mt4||0) : 0;
   }
@@ -10366,7 +10369,7 @@ async function fetchInvestorsAdmin(){
 // buat cegah investor baru masuk diam-diam pas akun lagi kena REM (transparansi).
 function getStatusRemBulanIni(pairGroup){
   const g=pairGroup||'XAUUSD';
-  const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const rows=rowsMt4Urut();
   const now=new Date();
   const rowsBulanIni=rows.filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); });
   if(!rowsBulanIni.length) return {aktif:false, totalBulanIni:0, bawah:0, saldoAwalBulan:0, basisSaldo:0};
@@ -10993,7 +10996,7 @@ async function renderInvestorDashboard(){
     const semuaTransaksi=await fetchAllInvestorTransaksiAdmin();
     const transaksiByInvestor={};
     semuaTransaksi.forEach(t=>{ (transaksiByInvestor[t.investor_id]=transaksiByInvestor[t.investor_id]||[]).push(t); });
-    const rows=allSaldoData||[];
+    const rows=rowsMt4Urut();
     const totalProfitAllTime=rows.reduce((s,r)=>s+parseFloat(r.profit||0),0);
     const totalModalInvestorPool=investors.reduce((s,v)=>s+parseFloat(v.modal||0),0);
     const modalOwner=getModalOwner();
@@ -11085,7 +11088,7 @@ async function renderInvestorDashboard(){
     }
     const found=rows[0];
     loggedInInvestorId=found.id;
-    const rows2=allSaldoData||[];
+    const rows2=rowsMt4Urut();
     const totalProfitAllTime=rows2.reduce((s,r)=>s+parseFloat(r.profit||0),0);
     const modalOwner=getModalOwner();
     const totalPoolCapital=modalOwner+parseFloat(found.total_pool||0);
@@ -11131,7 +11134,7 @@ function markAllNotifRead(){
 }
 function buildNotifList(){
   const notifs=[];
-  const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(b.tanggal)-new Date(a.tanggal));
+  const rows=rowsMt4Urut().reverse();
   const todayStr=rows[0]?rows[0].tanggal:new Date().toISOString().slice(0,10);
 
   // 1) WD terbaru
@@ -11229,7 +11232,7 @@ function toggleNotifRows(){
 
 // ══ INVESTOR CALCULATOR ══
 function getMonthlyReturnRates(){
-  const rows=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const rows=rowsMt4Urut();
   const grouped={};
   rows.forEach(r=>{
     const d=new Date(r.tanggal);
@@ -11344,7 +11347,7 @@ function weeklyRecapLabelText(start,end){
 }
 function getWeeklyRecapData(offset){
   const {start,end}=getWeekRange(offset);
-  const rows=(allSaldoData||[]).filter(r=>{
+  const rows=rowsMt4Urut().filter(r=>{
     const d=new Date(r.tanggal);
     return d>=start && d<=end;
   }).sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
@@ -11676,7 +11679,7 @@ function sertifikatLabel(){
   return sertifikatPeriode==='bulanan' ? `${bn[sertifikatMonth]} ${sertifikatYear}` : `Tahun ${sertifikatYear}`;
 }
 function getSertifikatStats(){
-  const rows=(allSaldoData||[]).filter(r=>{
+  const rows=rowsMt4Urut().filter(r=>{
     const d=new Date(r.tanggal);
     if(sertifikatPeriode==='bulanan') return d.getFullYear()===sertifikatYear && d.getMonth()===sertifikatMonth;
     return d.getFullYear()===sertifikatYear;
@@ -12225,7 +12228,7 @@ function labaRugiNext(){labaRugiMonth++;if(labaRugiMonth>11){labaRugiMonth=0;lab
 function renderLabaRugi(wrap){
   const bulanNama=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   const rowsKas=(allKasData||[]).filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===labaRugiYear && d.getMonth()===labaRugiMonth; });
-  const rowsTrading=(allSaldoData||[]).filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===labaRugiYear && d.getMonth()===labaRugiMonth; });
+  const rowsTrading=rowsMt4Urut().filter(r=>{ const d=new Date(r.tanggal); return d.getFullYear()===labaRugiYear && d.getMonth()===labaRugiMonth; });
 
   // "gaji" & "modal_mt4" = uang yang disetor sebagai MODAL ke MT4, BUKAN pendapatan — jadi
   // sengaja TIDAK dihitung di sini. Cuma "pendapatan" (pendapatan lain di luar trading & gaji)
@@ -12760,7 +12763,7 @@ function renderBukuList(){
     const expanded=bukuExpanded.has(r.id);
     const teks=(expanded||!panjang) ? isi : isi.slice(0,140)+'…';
     // Profil risiko yang dipakai bulan ini (bisa lebih dari 1 kalau ganti di tengah bulan)
-    const rowsBulanIni=(allSaldoData||[]).filter(x=>{ const d=new Date(x.tanggal); return d.getFullYear()===r.tahun && (d.getMonth()+1)===r.bulan; });
+    const rowsBulanIni=rowsMt4Urut().filter(x=>{ const d=new Date(x.tanggal); return d.getFullYear()===r.tahun && (d.getMonth()+1)===r.bulan; });
     const profilCountBuku={};
     rowsBulanIni.forEach(x=>{ const ef=profilEfektifRow(x); if(ef&&ef.kode) profilCountBuku[ef.kode]=(profilCountBuku[ef.kode]||0)+1; });
     const profilBadgesBuku=Object.keys(profilCountBuku).sort((a,b)=>profilCountBuku[b]-profilCountBuku[a]).map(k=>profilBadgeHtml(k)).join(' ');
@@ -13251,7 +13254,7 @@ async function loadRRAnalysis(){
   const el=document.getElementById('rrAnalysis');
   if(!el)return;
   try{
-    const rows=allSaldoData||[];
+    const rows=rowsMt4Urut();
     const gains=rows.map(r=>parseFloat(r.profit||0)).filter(p=>p>0);
     const losses=rows.map(r=>parseFloat(r.profit||0)).filter(p=>p<0);
     if(!gains.length && !losses.length){
@@ -13417,7 +13420,7 @@ function loadJournalVisual(){
   const wrap=document.getElementById('journalVisualWrap');
   if(!wrap)return;
   try{
-    const rows=allSaldoData||[];
+    const rows=rowsMt4Urut();
     if(!rows.length){
       wrap.innerHTML='<div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Belum ada data.</div>';
       return;
@@ -13533,11 +13536,12 @@ async function loadBenchmark(){
   if(!wrap)return;
   wrap.innerHTML='<div style="text-align:center;padding:20px;color:#E5E7EB;font-size:12px">Memuat data harga...</div>';
   try{
-    if(!allSaldoData||allSaldoData.length<2){
+    const _rowsB=rowsMt4Urut();
+    if(_rowsB.length<2){
       wrap.innerHTML='<div style="padding:14px;text-align:center;color:#E5E7EB;font-size:12px">Butuh minimal 2 hari data tercatat untuk membandingkan performa.</div>';
       return;
     }
-    const firstDate=new Date(allSaldoData[0].tanggal);
+    const firstDate=new Date(_rowsB[0].tanggal);
     const daysSpan=Math.min(365, Math.max(7, Math.ceil((Date.now()-firstDate.getTime())/86400000)));
 
     const res=await fetch(`https://api.coingecko.com/api/v3/coins/${benchmarkAsset}/market_chart?vs_currency=usd&days=${daysSpan}&interval=daily`);
@@ -13547,9 +13551,9 @@ async function loadBenchmark(){
     if(!prices.length) throw new Error('Data harga kosong');
 
     // Performa akun Anda (% return dari modal awal)
-    const portoAwal=parseFloat(allSaldoData[0].saldo_mt4||0)-parseFloat(allSaldoData[0].profit||0);
+    const portoAwal=parseFloat(_rowsB[0].saldo_mt4||0)-parseFloat(_rowsB[0].profit||0);
     let cum=0;
-    const yourCurve=allSaldoData.map(r=>{ cum+=parseFloat(r.profit||0); return portoAwal>0?(cum/portoAwal*100):0; });
+    const yourCurve=_rowsB.map(r=>{ cum+=parseFloat(r.profit||0); return portoAwal>0?(cum/portoAwal*100):0; });
     const yourPct=yourCurve[yourCurve.length-1];
 
     const benchPct=((prices[prices.length-1]-prices[0])/prices[0])*100;
@@ -13605,7 +13609,7 @@ async function loadBenchmark(){
         ${youWin?'🎉 Anda mengungguli '+assetLabel:'⚠️ '+assetLabel+' unggul dari performa Anda'}
       </div>`;
 
-    setupBenchmarkInteraction(yourCurve, benchCurve, allSaldoData, assetLabel, W, padX);
+    setupBenchmarkInteraction(yourCurve, benchCurve, _rowsB, assetLabel, W, padX);
   }catch(e){
     console.error(e);
     wrap.innerHTML='<div style="padding:14px;text-align:center;color:#F87171;font-size:12px">Gagal memuat data harga benchmark. Cek koneksi internet lalu coba lagi.</div>';
@@ -13948,7 +13952,8 @@ function renderEquity(){
   const emptyEl=document.getElementById('equityEmpty');
   const statsEl=document.getElementById('equityStats');
   if(!wrap)return;
-  if(!allSaldoData||!allSaldoData.length){
+  const _rowsEq=rowsMt4Urut();
+  if(!_rowsEq.length){
     wrap.innerHTML='';
     if(emptyEl)emptyEl.style.display='block';
     if(statsEl)statsEl.innerHTML='';
@@ -13961,7 +13966,7 @@ function renderEquity(){
   const peakPoints=[];
   const dailyInfo=[];
   const profits=[];
-  allSaldoData.forEach(r=>{
+  _rowsEq.forEach(r=>{
     const p=parseFloat(r.profit||0);
     cum+=p;
     if(cum>peak)peak=cum;
@@ -15620,7 +15625,7 @@ function tahunanNext(){ tahunanYear++; renderTahunanLabel(); }
 // Hitung deposit/WD implisit dari SELURUH histori (bukan cuma 1 tahun), sama seperti
 // exportLaporanPDF, biar akurat walau tahun yang dipilih bukan tahun pertama trading.
 function hitungWdDepositMapFull(){
-  const allSorted=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const allSorted=rowsMt4Urut();
   const map={};
   let prevSaldo=null;
   allSorted.forEach(r=>{
@@ -15643,7 +15648,7 @@ function hitungWdDepositMapFull(){
 }
 
 function getTahunanData(year){
-  const rows=(allSaldoData||[]).filter(r=>new Date(r.tanggal).getFullYear()===year)
+  const rows=rowsMt4Urut().filter(r=>new Date(r.tanggal).getFullYear()===year)
     .slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
   if(!rows.length) return null;
   const wdDepositMap=hitungWdDepositMapFull();
@@ -15685,7 +15690,7 @@ function getTahunanData(year){
   // WD + profit != saldo akhir. Fix: saldo awal tahun = saldo carry-over dari record TERAKHIR
   // sebelum tahun ini (histori penuh). Kalau gak ada record sebelumnya (akun baru mulai di tahun
   // ini), saldo awal = 0, dan setoran hari pertama tetap murni masuk Total Deposit seperti biasa.
-  const allSortedFull=(allSaldoData||[]).slice().sort((a,b)=>new Date(a.tanggal)-new Date(b.tanggal));
+  const allSortedFull=rowsMt4Urut();
   const rowSebelumTahun=allSortedFull.filter(r=>new Date(r.tanggal)<new Date(rows[0].tanggal));
   const saldoAwalTahun=rowSebelumTahun.length ? parseFloat(rowSebelumTahun[rowSebelumTahun.length-1].saldo_mt4||0) : 0;
   const saldoAkhirTahun=parseFloat(rows[rows.length-1].saldo_mt4||0);
@@ -17387,7 +17392,7 @@ const MT4_HARGA_EMAS_PERKIRAAN=4000; // hanya untuk perkiraan margin, bukan harg
 function renderRisikoModalMt4(){
   const el=document.getElementById('mt4RisikoWrap'); if(!el) return;
   el.innerHTML=''; return;   // kartu dihapus: aturan sekarang hanya buffer
-  const rows=(allSaldoData||[]).filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4))).sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
+  const rows=rowsMt4Urut().filter(r=>r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4)));
   const saldo=saldoAcuanBulanMt4();
   if(!(saldo>0)){ el.innerHTML=''; return; }
   const risk=MT4_RISIKO.slPips*MT4_RISIKO.centPerPip*(MT4_RISIKO.lot/0.01);   // risiko 1 order (sen) — tidak ditampilkan sebagai nominal
