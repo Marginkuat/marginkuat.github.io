@@ -8736,6 +8736,14 @@ function renderKasRingkasan(){
   const totalDanaMasuk=totalModalDisetor+totalProfitTrading;
   const totalDanaKeluar=totalWD+totalLossTrading;
   const saldoMt4Sekarang = getSaldoMt4Sekarang(); // FIX: filter XAUUSD saja, jangan kecampur pair lain
+  // Catatan audit: angka Dana Masuk/Keluar di bawah selalu "balance" karena selisih saldo yang tidak punya bukti ikut dianggap setoran/WD.
+  // Jadi kartu ini BUKAN bukti audit; bagian yang belum berbukti ditampilkan di sini, tanggalnya ada di kartu Rekonsiliasi MT4.
+  let _catatanAudit='';
+  try{
+    const _hb=hitungPerformaMt4().hari.filter(h=>h.adaSaldo && Math.abs(h.selisih)>=0.01);
+    const _gross=_hb.reduce((a,h)=>a+Math.abs(h.selisih),0);
+    if(_gross>=0.01) _catatanAudit='<div style="margin-top:8px;padding:6px 8px;border-radius:8px;background:#2D0E0E;border:1px solid #F87171;font-size:9px;color:#FECACA;text-align:center;line-height:1.5">⚠️ Catatan audit: '+fc(_gross)+' dari angka Dana Masuk/Keluar di atas berasal dari selisih saldo yang belum punya bukti DP, WD, atau profit di statement ('+_hb.length+' hari). Kartu ini otomatis "balance", jadi bukan bukti. Tanggalnya ada di kartu <b>Rekonsiliasi MT4</b>.</div>';
+  }catch(_e){}
 
   el.innerHTML=`
     <div class="bal-box" style="background:var(--bg3);border:1px solid #B8860B;margin-bottom:8px">
@@ -8750,7 +8758,7 @@ function renderKasRingkasan(){
       <b style="color:#FFFFFF">Saldo MT4 Saat Ini</b> = angka riil, diambil langsung dari saldo hari terakhir yang kamu input.<br>
       <b style="color:#4ADE80">Total Dana Masuk</b> = semua modal yang pernah kamu setor ke MT4 (dana investasi, digabung jadi satu, apapun labelnya) + semua profit trading sejak awal.<br>
       <b style="color:#F87171">Total Dana Keluar</b> = semua yang pernah ditarik dari MT4 + loss trading sejak awal.<br>
-      Angka ini dihitung otomatis dari catatan Saldo Harian (bukan dari label manual di Aliran Uang), jadi selalu balance: Dana Masuk − Dana Keluar = Saldo MT4 Saat Ini, tidak akan pernah "minus" secara nggak masuk akal.</div>`;
+      Angka ini dihitung otomatis dari catatan Saldo Harian (bukan dari label manual di Aliran Uang), jadi selalu balance: Dana Masuk − Dana Keluar = Saldo MT4 Saat Ini, tidak akan pernah "minus" secara nggak masuk akal.</div>${_catatanAudit}`;
 
   // Deteksi kalau ada hari trading (saldo_harian) yang profit/loss-nya belum pernah tersinkron
   // DENGAN BENAR ke Arus Kas (harus ada entrinya DAN kategorinya harus terisi, bukan cuma "ada entri").
