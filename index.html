@@ -2150,7 +2150,7 @@ function renderInvCalcDisclaimer(){
         4️⃣ Pastikan tanggal dan saldo benar, dan muncul tulisan <b>DP terbaca</b>. Tekan <b>Simpan Catatan Hari Ini</b>.<br>
         5️⃣ DP otomatis masuk Aliran Uang (Modal MT4) dan ikut ke kartu ini.<br><br>
         <b style="color:#F87171">⬇️ Kalau WD (tarik dana)</b><br>
-        Langkahnya sama, tulisannya <b>WD terbaca</b>. Tujuan uang WD (kebutuhan harian, tabungan, investasi) diisi di <b>Laporan Keuangan Resmi → Atur tujuan tiap WD</b>.<br><br>
+        Langkah impornya sama seperti DP, tulisannya <b>WD terbaca</b>. WD tercatat sebagai <b>KAS (belum dialokasikan)</b>. Lalu pindahkan ke pos lewat <b>Rekening per Kategori → KAS → Pakai (Alokasikan) → pilih pos → isi nominal</b>. Rincian ada di kotak merah <b>Alur WD</b>.<br>DP tidak perlu dialokasikan, karena tetap menjadi modal di MT4.<br><br>
         <b style="color:#FFFFFF">Cek akhir:</b> buka kartu ini. Selisih harus <b>0,00</b>.<br>
         Kalau ada selisih, kartu menandai tanggalnya. Artinya statement hari itu belum diimpor, atau DP/WD terlewat. Impor ulang statement hari itu; impor ulang tidak membuat catatan dobel. Jangan mengedit angka.<br><br>
         <b style="color:#FACC15">Batasan:</b> Statement Harian hanya memuat DP/WD bersih per hari (DP dikurangi WD). Kalau DP dan WD terjadi di hari yang sama, impor statement lengkap lewat <b>Ekstrak &amp; Kelompokkan</b> supaya terpisah per tiket. Situs memakai <b>Saldo</b>, bukan Ekuitas; profit mengambang baru masuk setelah order ditutup.
@@ -4050,7 +4050,7 @@ function hitungPerformaMt4(){
   getRowsAkunRealXauusd().forEach(r=>{ rowMap[String(r.tanggal||'').slice(0,10)] = r; });
   const detail = arusMt4Detail();
   const semuaTgl = Array.from(new Set([...Object.keys(rowMap), ...Object.keys(detail)])).sort();
-  let prevEnd = null, prevNyata = false;
+  let prevEnd = null, prevNyata = false, prevTglHari = null;
   const hari = [];
   semuaTgl.forEach(tgl=>{
     const r = rowMap[tgl];
@@ -4064,17 +4064,18 @@ function hitungPerformaMt4(){
       // Saldo belum tercatat: profit & arus TETAP dihitung (saldo relatif). Saldo hari ini tidak dianggap nyata.
       const start = prevEnd!==null ? prevEnd : 0;
       const end = start + prof + flow;
-      prevEnd = end; prevNyata = false;
+      prevEnd = end; prevNyata = false; prevTglHari = tgl;
       hari.push({ tgl, start, end, prof, flow, dep:ar.dep, wd:ar.wd, depS:ar.depS||0, depI:ar.depI||0, selisih:0, adaSaldo:false,
         jumlahOrder, jumlahLoss, pctHari: start>0 ? prof/start*100 : 0 });
       return;
     }
     const end = parseFloat(r.saldo_mt4);
     const sambung = prevEnd!==null && prevNyata;
+    const prevTglPakai = sambung ? prevTglHari : null;   // tanggal saldo sebelumnya (untuk menjelaskan selisih)
     const start = sambung ? prevEnd : end - prof - flow;   // baris pertama yang punya saldo: mundur dari saldo akhir
     const selisih = sambung ? end - (start + prof + flow) : 0;
-    prevEnd = end; prevNyata = true;
-    hari.push({ tgl, start, end, prof, flow, dep:ar.dep, wd:ar.wd, depS:ar.depS||0, depI:ar.depI||0, selisih, adaSaldo:true,
+    prevEnd = end; prevNyata = true; prevTglHari = tgl;
+    hari.push({ tgl, start, end, prof, flow, dep:ar.dep, wd:ar.wd, depS:ar.depS||0, depI:ar.depI||0, selisih, adaSaldo:true, prevTgl:prevTglPakai,
       jumlahOrder, jumlahLoss, pctHari: start>0 ? prof/start*100 : 0 });
   });
   // Pembagian modal: saldo dibagi "modal sendiri" dan "modal investor" mengikuti proporsi modal.
@@ -7848,7 +7849,7 @@ function renderRiwayatRows(rows, append){
         <div class="ri-saldo">${fc(r.saldo_mt4)}</div>
         ${r.catatan?`<div class="ri-cat">${escapeHtml(r.catatan)}</div>`:''}
         ${r._mt4&&(r._mt4.dep>0||r._mt4.wd>0)?`<div style="font-size:9px;color:#E5E7EB">${r._mt4.dep>0?'⬆️ Setoran '+fc(r._mt4.dep)+' ':''}${r._mt4.wd>0?'⬇️ WD '+fc(r._mt4.wd):''}</div>`:''}
-        ${r._mt4&&Math.abs(r._mt4.selisih)>=1?`<div style="font-size:9px;color:#F87171">⚠️ selisih ${fc(r._mt4.selisih)} · setoran/WD belum tercatat di Aliran Uang</div>`:''}
+        ${r._mt4&&Math.abs(r._mt4.selisih)>=1?`<div style="font-size:9px;color:#F87171;line-height:1.5">⚠️ selisih ${fc(r._mt4.selisih)}${r._mt4.prevTgl?` · saldo sebelumnya ${fc(r._mt4.prevSaldo)} (${fd(r._mt4.prevTgl)}) + profit ${fc(p)} + DP/WD ${fc((r._mt4.dep||0)-(r._mt4.wd||0))} ≠ saldo ini`:''}<br>Cek statement ${r._mt4.prevTgl?'tanggal '+fd(r._mt4.prevTgl)+' dan hari di antaranya':'hari ini'}: ada order closed, DP, atau WD yang belum diinput.</div>`:''}
         <div>${profilBadgeRowHtml(r)}</div>
       </div>
       <div class="ri-profit" style="color:${pColor}">${p>=0?'+':''}${fc(p)}</div>
@@ -7988,7 +7989,7 @@ function tempelRiwayatMt4(){
   riwayatMt4Semua = perf.hari.filter(h=>h.adaSaldo).slice().reverse().map(h=>{
     const raw = rawPerTgl[h.tgl] || {};
     return { ...raw, tanggal:h.tgl, saldo_mt4:h.end, profit:h.prof,
-      _mt4:{dep:h.dep, wd:h.wd, selisih:h.selisih} };
+      _mt4:{dep:h.dep, wd:h.wd, selisih:h.selisih, prevTgl:h.prevTgl||null, prevSaldo:h.start} };
   });
   const btn=document.getElementById('btnMuatLebihRiwayat'); if(btn) btn.style.display='none';
   const st=document.getElementById('riwayatLoadStatus'); if(st) st.textContent='';
@@ -12656,6 +12657,27 @@ async function simpanSaldo(){
   if(saldo<0){toast('❌ Saldo MT4 gak boleh negatif');return;}
   if(!isFinite(saldo)||!isFinite(profit)){toast('❌ Angka gak valid');return;}
   if(!tgl){toast('❌ Isi tanggal');return;}
+  // Cek kesinambungan saldo (anti-selisih audit): saldo yang diisi harus = saldo hari sebelumnya + profit + DP/WD.
+  if(pair!=='FOREX'){
+    try{
+      const sebelum=rowsMt4Urut().filter(r=>String(r.tanggal).slice(0,10)<tgl && r.saldo_mt4!=null && isFinite(parseFloat(r.saldo_mt4)));
+      if(sebelum.length){
+        const prev=sebelum[sebelum.length-1], prevTgl=String(prev.tanggal).slice(0,10), prevSaldo=parseFloat(prev.saldo_mt4);
+        const arus=arusMt4PerTanggal();
+        let arusTercatat=0; Object.keys(arus).forEach(t=>{ if(t>prevTgl && t<=tgl) arusTercatat+=arus[t]; });
+        const dw=(window.__dpWdHarian && window.__dpWdHarian.tanggal===tgl) ? window.__dpWdHarian.nilai : 0;
+        const dwBaru=(Math.abs(dw)>=0.005 && Math.abs((arus[tgl]||0)-dw)>0.01) ? dw : 0;   // belum tercatat di Aliran Uang
+        const dpwdTotal=arusTercatat+dwBaru;
+        const seharusnya=prevSaldo+profit+dpwdTotal, selisih=saldo-seharusnya;
+        if(Math.abs(selisih)>0.01){
+          const f=v=>(v<0?'−':'')+'¢'+Math.abs(v).toFixed(2);
+          if(!confirm('⚠️ Saldo belum nyambung dengan data sebelumnya.\n\nSaldo '+prevTgl+': '+f(prevSaldo)+'\n+ Profit/Loss: '+f(profit)+'\n+ DP/WD: '+f(dpwdTotal)+'\n= Seharusnya: '+f(seharusnya)+'\nSaldo yang kamu isi: '+f(saldo)+'\nSelisih: '+f(selisih)+'\n\nBiasanya karena ada order closed, DP, atau WD yang belum diinput, atau hari di antaranya belum diimpor. Kalau tetap disimpan, selisih ini muncul di kartu Rekonsiliasi.\n\nTetap simpan?')){
+            return;
+          }
+        }
+      }
+    }catch(eCek){ console.error('cek kesinambungan saldo', eCek); }
+  }
   try{
     const bodyData={
       saldo_mt4: parseFloat(saldo.toFixed(2)),
@@ -17464,7 +17486,7 @@ function renderRekonMt4(){
     }
     if(bad.length){
       html+='<div style="margin-top:10px;padding:8px 10px;border-radius:8px;background:#2D0E0E;border:1px solid #F87171;font-size:11px;color:#FECACA;line-height:1.6"><b>Hari yang tidak nyambung:</b><br>'
-        +bad.slice(0,12).map(h=>'• '+tglF(h.tgl)+(isAdmin?' — selisih '+fs(h.selisih):'')).join('<br>')
+        +bad.slice(0,12).map(h=>'• '+tglF(h.tgl)+(isAdmin?' — selisih '+fs(h.selisih):'')+(h.prevTgl?' (sejak saldo '+tglF(h.prevTgl)+')':'')).join('<br>')
         +(bad.length>12?'<br>… dan '+(bad.length-12)+' hari lain':'')
         +'<br><span style="color:#E5E7EB">Penyebab umum: DP/WD hari itu belum tercatat, atau statement hari itu belum diimpor.</span></div>';
     }
