@@ -2153,7 +2153,7 @@ function renderInvCalcDisclaimer(){
         Langkah impornya sama seperti DP, tulisannya <b>WD terbaca</b>. WD tercatat sebagai <b>KAS (belum dialokasikan)</b>. Lalu pindahkan ke pos lewat <b>Rekening per Kategori → KAS → Pakai (Alokasikan) → pilih pos → isi nominal</b>. Rincian ada di kotak merah <b>Alur WD</b>.<br>DP tidak perlu dialokasikan, karena tetap menjadi modal di MT4.<br><br>
         <b style="color:#FFFFFF">Cek akhir:</b> buka kartu ini. Selisih harus <b>0,00</b>.<br>
         Kalau ada selisih, kartu menandai tanggalnya. Artinya statement hari itu belum diimpor, atau DP/WD terlewat. Impor ulang statement hari itu; impor ulang tidak membuat catatan dobel. Jangan mengedit angka.<br><br>
-        <b style="color:#FACC15">Batasan:</b> Statement Harian hanya memuat DP/WD bersih per hari (DP dikurangi WD). Kalau DP dan WD terjadi di hari yang sama, impor statement lengkap lewat <b>Ekstrak &amp; Kelompokkan</b> supaya terpisah per tiket. Situs memakai <b>Saldo</b>, bukan Ekuitas; profit mengambang baru masuk setelah order ditutup.
+        <b style="color:#FACC15">Catatan penting:</b> Tiap DP/WD dicatat per <b>nomor tiket FBS</b> (baris "Balance" di statement), jadi statement yang sama diimpor dua kali tidak membuat catatan dobel. Statement Harian dan Mingguan di tanggal yang sama isinya sama, cukup impor salah satu. Pakai satu jalur saja, yaitu <b>Baca &amp; Isi Otomatis</b>, supaya tanggal DP/WD sejajar dengan tanggal saldo. Situs memakai <b>Saldo</b>, bukan Ekuitas; profit mengambang baru masuk setelah order ditutup.
       </div>
     </details>
   </div>
@@ -12735,7 +12735,14 @@ async function simpanSaldo(){
     try{
       const dw=window.__dpWdHarian;
       if(dw && dw.tanggal===tgl && pair!=='FOREX' && Math.abs(dw.nilai)>=0.005){
-        await simpanArusMt4([{ticket:'HARIAN-'+tgl, tanggal:tgl, profit:String(dw.nilai)}]);
+        const rows=Array.isArray(dw.rows)?dw.rows:[];
+        const totalRows=rows.reduce((a,b)=>a+b.num,0);
+        if(rows.length && Math.abs(totalRows-dw.nilai)<0.01){
+          // Kunci = nomor tiket FBS (sama dengan jalur Ekstrak & Kelompokkan) → mengimpor statement yang sama lagi tidak membuat catatan dobel
+          await simpanArusMt4(rows.map(b=>({ticket:b.ticket, tanggal:tgl, profit:String(b.num)})));
+        }else{
+          await simpanArusMt4([{ticket:'HARIAN-'+tgl, tanggal:tgl, profit:String(dw.nilai)}]);
+        }
         await fetchAllKasData();
       }
       window.__dpWdHarian=null;
@@ -14660,7 +14667,9 @@ function parseNumBroker(str){
   if(s==='') return NaN;
   s=s.replace(/\s/g,'').replace(/'/g,'');
   if(s.includes(',') && s.includes('.')){
-    s=s.replace(/,/g,'');
+    // pemisah yang muncul TERAKHIR = desimal: "1,500.00" → 1500.00 ; "1.500,00" → 1500.00
+    if(s.lastIndexOf(',')>s.lastIndexOf('.')) s=s.replace(/\./g,'').replace(',','.');
+    else s=s.replace(/,/g,'');
   }else if(s.includes(',') && !s.includes('.')){
     const parts=s.split(',');
     if(parts.length===2 && parts[1].length<=2) s=parts.join('.');
@@ -14916,6 +14925,25 @@ function extractOpenTradesCount(doc){
   return count;
 }
 
+// Baris "Balance" di Transaksi Tertutup = DP/WD sungguhan dari broker (profit + = setoran, − = penarikan).
+// Baris di bawahnya (kalau ada) berisi referensi pembayaran, mis. "D-XIO-...: IDR 54000.00".
+function extractBalanceRows(doc){
+  const out=[];
+  Array.from(doc.querySelectorAll('tr')).forEach(tr=>{
+    const tds=Array.from(tr.querySelectorAll(':scope > td'));
+    if(tds.length<9) return;
+    if(!/^balance$/i.test((tds[2]?tds[2].textContent:'').trim())) return;
+    const ticket=tds[0].textContent.trim();
+    const num=parseNumBroker(tds[tds.length-1].textContent.trim());
+    if(!ticket || isNaN(num) || Math.abs(num)<0.005) return;
+    const waktu=(tds[1]?tds[1].textContent:'').replace(/\s+/g,' ').trim();
+    let ref=''; const nx=tr.nextElementSibling;
+    if(nx){ const c=nx.querySelectorAll(':scope > td'); if(c.length===1) ref=c[0].textContent.replace(/\s+/g,' ').trim(); }
+    if(!out.some(o=>o.ticket===ticket)) out.push({ticket, num, waktu, ref});
+  });
+  return out;
+}
+
 function extractRingkasanHarian(doc){
   const bodyText=(doc.body?doc.body.textContent:'').replace(/\s+/g,' ');
   const saldoMatch=bodyText.match(/Saldo:\s*([\d.,\s]+?)(?=\s|$|Ekuitas)/i);
@@ -14952,11 +14980,14 @@ function bacaLaporanEmailHarian(){
     }catch(e){ statusEl.textContent='❌ Gagal membaca file: '+(e.message||''); return; }
 
     const ringkasan=extractRingkasanHarian(doc);
-    window.__dpWdHarian = (ringkasan.dpwd!=null && ringkasan.tanggalISO) ? {tanggal:ringkasan.tanggalISO, nilai:ringkasan.dpwd} : null;
+    const _balRows=extractBalanceRows(doc);
+    window.__dpWdHarian = (ringkasan.dpwd!=null && ringkasan.tanggalISO) ? {tanggal:ringkasan.tanggalISO, nilai:ringkasan.dpwd, rows:_balRows} : null;
     let _dpInfo='';
     if(ringkasan.dpwd==null) _dpInfo='<div style="color:#FACC15;margin-bottom:4px">⚠️ Baris Deposit/Penarikan tidak ditemukan di laporan ini — cek manual apakah ada DP/WD hari itu.</div>';
     else if(Math.abs(ringkasan.dpwd)<0.005) _dpInfo='<div style="margin-bottom:4px">Deposit/Penarikan hari ini: 0,00 (tidak ada DP/WD).</div>';
-    else _dpInfo='<div style="color:#4ADE80;margin-bottom:4px">'+(ringkasan.dpwd>0?'⬆️ DP (setoran)':'⬇️ WD (penarikan)')+' terbaca: <b>¢'+Math.abs(ringkasan.dpwd).toFixed(2)+'</b> — otomatis dicatat ke Aliran Uang saat kamu tekan Simpan.</div>';
+    else _dpInfo='<div style="color:#4ADE80;margin-bottom:4px">'+(ringkasan.dpwd>0?'⬆️ DP (setoran)':'⬇️ WD (penarikan)')+' terbaca: <b>¢'+Math.abs(ringkasan.dpwd).toFixed(2)+'</b> — otomatis dicatat ke Aliran Uang saat kamu tekan Simpan.'
+      +_balRows.map(b=>'<br><span style="color:#E5E7EB">• '+(b.num>0?'DP':'WD')+' ¢'+Math.abs(b.num).toFixed(2)+' · tiket '+b.ticket+(b.waktu?' · '+b.waktu:'')+(b.ref?' · '+escapeHtml(b.ref):'')+'</span>').join('')
+      +'</div>';
     if(!trades.length && ringkasan.saldo==null){
       statusEl.textContent='⚠️ Format laporan tidak dikenali. Pastikan ini file HTML laporan asli dari broker (bukan hasil screenshot/PDF).';
       return;
