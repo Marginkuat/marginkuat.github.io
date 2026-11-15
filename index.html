@@ -17515,6 +17515,24 @@ function renderRekonMt4(){
       html+='<div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;margin:12px 0 4px">Per bulan</div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:10px;color:#E5E7EB;white-space:nowrap"><tr style="color:#FFFFFF"><th style="text-align:left;padding:3px 4px">Bulan</th><th>Awal</th><th>P/L</th><th>DP</th><th>WD</th><th>Akhir</th><th>Selisih</th></tr>'
         +Object.keys(bln).sort().map(k=>{ const b=bln[k], okb=Math.abs(b.sel)<0.005; return '<tr style="border-top:1px solid var(--border);text-align:right"><td style="text-align:left;padding:3px 4px">'+k+'</td><td>'+b.awal.toFixed(2)+'</td><td>'+b.prof.toFixed(2)+'</td><td>'+b.dp.toFixed(2)+'</td><td>'+b.wd.toFixed(2)+'</td><td>'+b.akhir.toFixed(2)+'</td><td style="color:'+(okb?'#4ADE80':'#F87171')+'">'+(okb?'0.00':b.sel.toFixed(2))+'</td></tr>'; }).join('')+'</table></div>';
     }
+    if(isAdmin){
+      // Buku DP & WD: semua catatan arus dana + statusnya, supaya terlihat mana yang dihitung dan mana yang diabaikan (bukti audit).
+      try{
+        const batas=batasStatementMt4();
+        const buku=(allKasData||[]).map(r=>({r, f:klasifikasiArusMt4(r)})).filter(x=>x.f).sort((a,b)=>String(a.r.tanggal).localeCompare(String(b.r.tanggal)));
+        if(buku.length){
+          html+='<div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.6px;margin:12px 0 4px">Buku DP &amp; WD (bukti audit)</div>'
+            +buku.slice(-20).map(x=>{
+              const sah=arusMt4Sah(x.r,batas)!==null, ket=String(x.r.keterangan||'');
+              const sumber= ket.indexOf('STMT-HARIAN-')===0 ? 'ringkasan statement harian' : (ket.indexOf('STMT-')===0 ? 'statement FBS · tiket '+escapeHtml(ket.slice(5)) : 'input manual');
+              return '<div style="padding:5px 0;border-top:1px solid var(--border);font-size:11px;color:#E5E7EB;line-height:1.5">'+tglF(String(x.r.tanggal).slice(0,10))+' · '+(x.f.arah==='dep'?'⬆️ DP':'⬇️ WD')+' <b style="color:#FFFFFF">'+fc(x.f.jumlah)+'</b><br><span style="font-size:10px;color:'+(sah?'#4ADE80':'#F87171')+'">'+sumber+(sah?' · ✅ dihitung':' · ⚠️ DIABAIKAN: tanggalnya sudah tercakup statement. Impor statement hari itu supaya tercatat resmi.')+'</span></div>';
+            }).join('')
+            +(buku.length>20?'<div style="font-size:10px;color:#E5E7EB;padding-top:4px">… menampilkan 20 terakhir dari '+buku.length+' catatan</div>':'');
+        }else{
+          html+='<div style="font-size:11px;color:#FACC15;margin-top:10px">Belum ada catatan DP/WD di Aliran Uang. Kalau pernah DP atau WD, impor statement hari itu.</div>';
+        }
+      }catch(eBuku){ console.error('buku dp/wd',eBuku); }
+    }
     if(bad.length){
       html+='<div style="margin-top:10px;padding:8px 10px;border-radius:8px;background:#2D0E0E;border:1px solid #F87171;font-size:11px;color:#FECACA;line-height:1.6"><b>Hari yang tidak nyambung:</b><br>'
         +bad.slice(0,12).map(h=>'• '+tglF(h.tgl)+(isAdmin?' — selisih '+fs(h.selisih):'')+(h.prevTgl?' (sejak saldo '+tglF(h.prevTgl)+')':'')).join('<br>')
