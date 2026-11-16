@@ -5494,19 +5494,6 @@ async function simpanDataHarianRingkas(){
   const vp=parseFloat(vpInput);
   if(!isFinite(pips)){toast('❌ Angka Pips gak valid');return;}
   if(!isFinite(vp)){toast('❌ Angka VP gak valid');return;}
-  if(g==='XAUUSD'||g==='FOREX'){
-    // Datuk EURUSD / Crypto 89: hanya kena SL atau kena TP sesuai aturan grup. Pips dan VP tidak boleh diketik bebas.
-    const _sl=aturanSlTpGrup(g, pairSimbol, tglBuka||tgl);
-    if(!_sl){ toast(g==='FOREX'?'❌ Pair ini tidak ada di aturan Datuk Crypto 89':'❌ Pair ini tidak ada di aturan v4 Datuk EURUSD'); return; }
-    if(Math.abs(pips+_sl.sl)>0.01 && Math.abs(pips-_sl.tp)>0.01){ toast('❌ Hanya boleh kena SL ('+(-_sl.sl)+' pips) atau kena TP (+'+_sl.tp+' pips). Yang kamu isi: '+pips); return; }
-    const _mv=multiplierVpDariSimbol(pairSimbol);
-    if(!_mv.pasti){ toast('❌ Pair ini belum ada di tabel VP resmi, hubungi admin'); return; }
-    if(Math.abs(vp-pips*_mv.nilai)>0.01){ toast('❌ VP harus pips × '+_mv.nilai+' = '+(pips*_mv.nilai).toFixed(2)); return; }
-    const _isAu=String(pairSimbol||'').toUpperCase()==='XAUUSD';
-    const _cnt=hitungOrderGrup(g, tgl, g==='XAUUSD'?_isAu:undefined);
-    if(_cnt.hari>=5){ toast('❌ Sudah 5 order close di tanggal ini untuk '+(g==='FOREX'?'Crypto 89':(_isAu?'XAUUSD':'forex'))+'. Batas harian tercapai.'); return; }
-    if(_cnt.bulan>=100){ toast('❌ Sudah 100 order close di bulan ini untuk '+(g==='FOREX'?'Crypto 89':(_isAu?'XAUUSD':'forex'))+'. Batas bulanan tercapai.'); return; }
-  }
   try{
     statusEl.textContent='⏳ Menyimpan...';
     // Setiap sinyal jadi ENTRY SENDIRI di array (dengan id unik biar bisa diedit/dihapus nanti)
@@ -5770,8 +5757,10 @@ async function tambahSinyalRunning(){
       arah: arah||null,
       hargaEntry: hargaEntry,
       hargaTp: isFinite(hargaTp) ? hargaTp : null,
-      hargaSl: isFinite(hargaSl) ? hargaSl : null
+      hargaSl: isFinite(hargaSl) ? hargaSl : null,
+      hargaRencana: (typeof window._hargaRencanaPending==='number') ? window._hargaRencanaPending : null
     };
+    window._hargaRencanaPending=null;
     await simpanSinyalPrivatKeServer(g);
     // Verifikasi: baca ulang dari server, pastikan harga TP/SL benar-benar tersimpan
     let privatTersimpan=false;
@@ -5943,8 +5932,10 @@ async function jadikanRunningDariPending(g,id){
   set('inpRunningArah', pv.arah);
   set('inpRunningOpenedAt', opened.trim());
   set('inpRunningBatch', item.batch||'');
+  window._hargaRencanaPending=isFinite(pv.hargaEntry)?pv.hargaEntry:null;
   const sebelum=(cachedSinyalAnalis[g]||[]).length;
   await tambahSinyalRunning();
+  window._hargaRencanaPending=null;
   if((cachedSinyalAnalis[g]||[]).length>sebelum){
     cachedPending[g]=(cachedPending[g]||[]).filter(x=>x.id!==id);
     delete (cachedSinyalAnalisPrivat[g]||{})[id];
@@ -6256,33 +6247,26 @@ async function tutupSinyalRunning(g, id, jenis){
   // Hasil otomatis HANYA jadi nilai default. Admin selalu cek & bisa edit pips dan VP
   // sebelum disimpan, lalu konfirmasi ringkasan.
   let pips=null, vp=null, defPips;
-  if(g==='XAUUSD'||g==='FOREX'){
-    // Datuk EURUSD / Crypto 89: hanya kena SL atau kena TP sesuai aturan grup. Tidak ada cut manual.
-    const _rv=aturanSlTpGrup(g, item.simbol, item.tanggalBuka||item.tanggal);
-    if(!_rv){ toast(g==='FOREX'?'❌ Pair ini tidak ada di aturan Datuk Crypto 89':'❌ Pair ini tidak ada di aturan v4 Datuk EURUSD'); return; }
-    defPips = jenis==='sl' ? -_rv.sl : _rv.tp;
+  if(jenis==='sl'){
+    if(punyaLevelPips && finNum(item.slPips)) defPips=-Math.abs(item.slPips);
+    else if(punyaDataHarga && finNum(privat.hargaSl)) defPips=hitungPipsDariHarga(privat.hargaSl);
+    else defPips=-30;
   } else {
-    if(jenis==='sl'){
-      if(punyaLevelPips && finNum(item.slPips)) defPips=-Math.abs(item.slPips);
-      else if(punyaDataHarga && finNum(privat.hargaSl)) defPips=hitungPipsDariHarga(privat.hargaSl);
-      else defPips=-30;
-    } else {
-      const tpPipsAcuan = punyaLevelPips && finNum(item.tpPips) ? item.tpPips : (punyaDataHarga && finNum(privat.hargaTp) ? hitungPipsDariHarga(privat.hargaTp) : null);
-      if(tpPipsAcuan!==null){
-        const kenaTp = confirm(`${item.simbol||g} ditutup sebagai PROFIT.\n\nOK = kena TP persis (hasil otomatis ${tpPipsAcuan.toFixed(1)} pips).\nCancel = cut manual (isi pips sendiri).`);
-        defPips = tpPipsAcuan;
-      } else defPips=30;
-    }
+    const tpPipsAcuan = punyaLevelPips && finNum(item.tpPips) ? item.tpPips : (punyaDataHarga && finNum(privat.hargaTp) ? hitungPipsDariHarga(privat.hargaTp) : null);
+    if(tpPipsAcuan!==null){
+      const kenaTp = confirm(`${item.simbol||g} ditutup sebagai PROFIT.\n\nOK = kena TP persis (hasil otomatis ${tpPipsAcuan.toFixed(1)} pips).\nCancel = cut manual (isi pips sendiri).`);
+      defPips = tpPipsAcuan;
+    } else defPips=30;
   }
   const {pasti:multPasti}=multiplierVpDariSimbol(item.simbol);
-  const pipsStr=(g==='XAUUSD'||g==='FOREX')?String(defPips):prompt(`CEK & EDIT PIPS — ${item.simbol||g} (${jenis==='sl'?'LOSS, isi minus':'PROFIT, isi plus'})\nHasil otomatis: ${defPips.toFixed(1)}`, defPips.toFixed(1));
+  const pipsStr=prompt(`CEK & EDIT PIPS — ${item.simbol||g} (${jenis==='sl'?'LOSS, isi minus':'PROFIT, isi plus'})\nHasil otomatis: ${defPips.toFixed(1)}`, defPips.toFixed(1));
   if(pipsStr===null)return;
   pips=parseFloat(pipsStr);
   if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
   if(jenis==='sl' && pips>0){toast('❌ Kena SL tapi pips plus? Cek lagi angkanya');return;}
   if(jenis!=='sl' && pips<0){toast('❌ Profit tapi pips minus? Cek lagi angkanya');return;}
   const defVp = pips*mult;
-  const vpStr=(g==='XAUUSD'||g==='FOREX')?String(defVp.toFixed(2)):prompt(`CEK & EDIT VP — ${item.simbol||g}\nRumus: pips × ${mult}${multPasti?'':' (⚠️ pair ini belum ada di tabel resmi, cek manual!)'}\nHasil otomatis: ${defVp.toFixed(2)}`, defVp.toFixed(2));
+  const vpStr=prompt(`CEK & EDIT VP — ${item.simbol||g}\nRumus: pips × ${mult}${multPasti?'':' (⚠️ pair ini belum ada di tabel resmi, cek manual!)'}\nHasil otomatis: ${defVp.toFixed(2)}`, defVp.toFixed(2));
   if(vpStr===null)return;
   vp=parseFloat(vpStr);
   if(!isFinite(vp)){toast('❌ Angka VP gak valid');return;}
@@ -17289,6 +17273,12 @@ function auditChannel(g,bk){
       else tambah(x,'pasti','Pelanggaran: tidak sesuai kalkulator Hard (untung tidak sama dengan TP)', `Untung ${fmtP(pp)} pips, TP aturan ${A.tp} (RR ${A.rrTeks}). Ditutup manual atau TP berbeda.`);
     }
   });
+  // (B2) entry pending: harga terisi berbeda dari pending (masuk market)
+  L.forEach(x=>{
+    const pv=(cachedSinyalAnalisPrivat[g]||{})[x.r.id]||{};
+    const c=cekEntryPending(g, x.r, pv);
+    if(c) tambah(x,'pasti','Pelanggaran: order pending masuk market (harga terisi berbeda dari pending)', `Selisih ${c.selisihPips} pips dari harga pending, toleransi ${c.tolPips} pips (15% SL)`);
+  });
   // (C) jatah order: emas 5/bulan (hanya di channel emas), forex 3 per pair — dihitung urut waktu BUKA
   const urutBuka=L.slice().sort((a,b)=>buka(a)-buka(b));
   let emasN=0; const pairN={};
@@ -18487,6 +18477,18 @@ async function perbaruiKriteriaGrup(g){
   box.innerHTML=kr+st+sukHtml+lockHtml;
 }
 async function kunciKriteriaGrup(g){ await kunciAturanResmi(kriteriaGrup(g).versi); await perbaruiKriteriaGrup(g); }
+// Entry pending: harga terisi berbeda dari harga pending lebih dari 15% jarak SL aturan = masuk market / tidak sesuai pending.
+function cekEntryPending(g, r, pv){
+  if(!pv || pv.hargaRencana==null || pv.hargaEntry==null) return null;
+  const rule=aturanSlTpGrup(g, r.simbol, r.tanggalBuka||r.tanggal);
+  if(!rule) return null;
+  const pipPrice=pipPriceFactorAnalis(r.simbol);
+  if(!(pipPrice>0)) return null;
+  const selisihPips=Math.abs(pv.hargaEntry-pv.hargaRencana)/pipPrice;
+  const tolPips=0.15*rule.sl;
+  if(selisihPips>tolPips) return {selisihPips:Math.round(selisihPips*10)/10, tolPips:Math.round(tolPips*10)/10};
+  return null;
+}
 // Hitungan murni tanpa tampilan. rows = sinyal XAUUSD (Datuk EURUSD), bulanKey = 'YYYY-MM'
 function hitungKriteriaV4(rows,bulanKey,KR){
   const K=KR||KRITERIA_GAGAL_V4;
