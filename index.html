@@ -16324,9 +16324,9 @@ function _bdPilihBulanOpsi(){
   sel.innerHTML=keys.map(k=>{ const [y,m]=k.split('-'); return `<option value="${k}" ${k===batasDDBulanDipilih?'selected':''}>${nm[parseInt(m,10)-1]} ${y}${k===nowKey?' (bulan ini)':''}</option>`; }).join('');
 }
 const BATAS_RUGI_BULAN_PCT_ANALIS=6;   // maksimal rugi 1 bulan = 6% dari modal
+// Acuan modal aktif Datuk EURUSD (XAUUSD) = aturan v4 (modal $7.350). batasAturanV2 tetap angka v2 sebagai arsip.
+function batasAktifXAUUSD(){ return {modal:V4_MODAL.TOTAL, stopUsd:V4_REM_USD_TOTAL}; }
 function batasAturanV2(g){
-  // Datuk EURUSD (XAUUSD): pakai aturan v4 (modal $7.350, REM total $2.450), bukan angka v2 di bawah
-  if(g==='XAUUSD' && typeof V4_MODAL!=='undefined') return {modal:V4_MODAL.TOTAL, lot:0.01, stopUsd:V4_REM_USD_TOTAL, warnUsd:Math.round(V4_REM_USD_TOTAL/2*100)/100, riskLossUsd:0, maxLossPerHari:999};
   const R=FOREX_REM_V2, E=METODE_DEF['H4-500'], f=remForexBatas(g,R);
   const stopPips=3000;   // Datuk EURUSD & Datuk Crypto 89: 3000 pips ($300), acuan $5.000
   const stopUsd=Math.round(stopPips*0.1*100)/100;                       // lot 0,01: 1 pip = $0,10
@@ -16450,7 +16450,7 @@ function renderBatasDDSim(){
   const wrap=document.getElementById('batasDDSimWrap'); if(!wrap) return;
   const mEl=document.getElementById('batasDDModalInv'), lEl=document.getElementById('batasDDLotInv');
   try{ if(mEl && mEl.dataset.init!=='1'){ mEl.dataset.init='1'; const sm=localStorage.getItem('bdd_modal_inv'), sl=localStorage.getItem('bdd_lot_inv'); if(sm&&!mEl.value) mEl.value=sm; if(sl&&lEl&&!lEl.value) lEl.value=sl; } }catch(e){}
-  const modal=parseFloat(mEl&&mEl.value); const _kt=kanalTampil(); const _acuan=(_kt.length===1&&_kt[0]==='FOREX')?aturanResmiV3C().modalUsd:((_kt.length===1&&_kt[0]==='XAUUSD')?V4_MODAL.TOTAL:batasAturanV2('XAUUSD').modal); const lotAuto=Math.max(0.01,Math.floor(modal/_acuan+1e-9)*0.01); const lot=Math.max(0.01,parseFloat(lEl&&lEl.value)||(isFinite(modal)?lotAuto:0.01));
+  const modal=parseFloat(mEl&&mEl.value); const _kt=kanalTampil(); const _acuan=(_kt.length===1&&_kt[0]==='FOREX')?aturanResmiV3C().modalUsd:((_kt.length===1&&_kt[0]==='XAUUSD')?V4_MODAL.TOTAL:batasAktifXAUUSD().modal); const lotAuto=Math.max(0.01,Math.floor(modal/_acuan+1e-9)*0.01); const lot=Math.max(0.01,parseFloat(lEl&&lEl.value)||(isFinite(modal)?lotAuto:0.01));
   try{ if(isFinite(modal)&&modal>0){ localStorage.setItem('bdd_modal_inv',String(modal)); localStorage.setItem('bdd_lot_inv',String(lot)); } }catch(e){}
   if(!isFinite(modal)||modal<=0){ wrap.innerHTML='<div style="font-size:10px;color:#E5E7EB;text-align:center">Isi modal Anda untuk melihat risikonya.</div>'; return; }
   if(lot<=0){ wrap.innerHTML='<div style="font-size:10px;color:#F87171">Lot tidak valid.</div>'; return; }
@@ -17088,8 +17088,8 @@ function renderStrategiInvestor(){
   const wrap=document.getElementById('batasDDStrategiWrap'); if(!wrap) return;
   const mEl=document.getElementById('batasDDModalInv'), lEl=document.getElementById('batasDDLotInv');
   const mIn=parseFloat(mEl&&mEl.value);
-  const modal=(isFinite(mIn)&&mIn>0)?mIn:batasAturanV2('XAUUSD').modal;
-  const lotAuto=Math.max(0.01,Math.floor(modal/batasAturanV2('XAUUSD').modal+1e-9)*0.01);
+  const modal=(isFinite(mIn)&&mIn>0)?mIn:batasAktifXAUUSD().modal;
+  const lotAuto=Math.max(0.01,Math.floor(modal/batasAktifXAUUSD().modal+1e-9)*0.01);
   const lotIn=parseFloat(lEl&&lEl.value), lotNaik=(isFinite(lotIn)&&lotIn>0&&lotIn<0.01);
   const lot=Math.max(0.01,lotIn||lotAuto);   // lot minimal 0,01
   const k=lot/0.01, pipUsd=PIP_VALUE_USD_PER_0_01_LOT*k;
@@ -17634,7 +17634,7 @@ function aturanResmiV31(){
 }
 async function kunciAturanResmi(ver){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk mengunci aturan');return;}
-  const A=(ver==='v4'?aturanResmiV4():ver==='v3-crypto89'?aturanResmiV3C():(ver==='v3.1'?aturanResmiV31():(ver==='v3'?aturanResmiV3():(ver==='v2'?aturanResmiV2():aturanResmiV1()))));
+  const A=(ver==='kriteria-gagal-v4'?kriteriaGagalV4():(ver==='v4'?aturanResmiV4():ver==='v3-crypto89'?aturanResmiV3C():(ver==='v3.1'?aturanResmiV31():(ver==='v3'?aturanResmiV3():(ver==='v2'?aturanResmiV2():aturanResmiV1())))));
   if(cachedAturanKunci.riwayat.some(x=>x.versi===A.versi)){ toast('🔒 Versi '+A.versi+' sudah terkunci. Perubahan aturan harus lewat versi baru.'); return; }
   const hash=await hitungSidikJariAturan(A);
   if(!hash){ toast('❌ Browser ini tidak mendukung SHA-256 (perlu HTTPS). Kunci dibatalkan.'); return; }
@@ -18283,9 +18283,10 @@ function pasangV4(){
    +isi
    +'<div style="font-weight:800;margin-top:10px">Total modal mengikuti analis ini: $7.350 · total REM per bulan $2.450</div>'
    +'<div style="font-size:10px;color:#E5E7EB;margin-top:6px">Rem di kartu REM PIPS mengikuti angka di atas. Pelanggaran dicek otomatis setiap kali data dimasukkan ke situs.</div>'
-   +'<div id="v4StatusKunci" style="margin-top:10px"></div></div></details>';
+   +'<div id="v4StatusKunci" style="margin-top:10px"></div><div id="kriteriaV4Box" style="margin-top:14px;padding-top:10px;border-top:1px dashed var(--border)"></div></div></details>';
   sisip.parentNode.insertBefore(box, sisip.nextSibling);
   perbaruiStatusV4();
+  perbaruiKriteriaV4().catch(e=>console.error('kriteriaV4',e));
 }
 async function perbaruiStatusV4(){
   const el=document.getElementById('v4StatusKunci'); if(!el) return;
@@ -18296,6 +18297,63 @@ async function perbaruiStatusV4(){
 }
 async function kunciV4(){ await kunciAturanResmi('v4'); await perbaruiStatusV4(); }
 setTimeout(pasangV4, 2200); setTimeout(pasangV4, 4600); setTimeout(pasangV4, 7000);
+
+// ══ KRITERIA GAGAL V4 — Datuk EURUSD (diputuskan 16 Nov 2026) ══
+// Rugi bersih bulan kalender (order tertutup, forex + XAUUSD digabung) mencapai -3.000 pips (= -$300):
+// analis berhenti kirim sinyal baru. Sinyal running tetap jalan sampai kena SL/TP. Tidak ada aturan baru otomatis.
+// Situs hanya mencatat dan memberi peringatan. Input sinyal tidak diblokir.
+const KRITERIA_GAGAL_V4={ versi:'kriteria-gagal-v4', ditetapkan:'16 November 2026', batasPips:-3000, batasUsd:-300, nilaiPipUsd:0.1,
+  ukuran:'rugi bersih bulan kalender, order tertutup, forex + XAUUSD digabung', cek:'langsung saat batas tercapai',
+  tindakan:'analis berhenti kirim sinyal baru; order running tetap sampai kena SL/TP; tidak ada aturan baru otomatis, evaluasi dan diskusi dulu' };
+function kriteriaGagalV4(){ return KRITERIA_GAGAL_V4; }
+// Hitungan murni tanpa tampilan. rows = sinyal XAUUSD (Datuk EURUSD), bulanKey = 'YYYY-MM'
+function hitungKriteriaV4(rows,bulanKey){
+  const dalam=(rows||[]).filter(r=>String(r.tanggal||'').slice(0,7)===bulanKey && String(r.tanggal).slice(0,10)>='2026-11-01');
+  const tutup=dalam.filter(r=>r.status!=='running');
+  const net=tutup.reduce((x,r)=>x+(parseFloat(r.pips)||0),0);
+  const batas=KRITERIA_GAGAL_V4.batasPips;
+  return {bulan:bulanKey, netPips:Math.round(net*10)/10, runningN:dalam.length-tutup.length, sisaPips:Math.round((net-batas)*10)/10, tercapai:net<=batas};
+}
+let kriteriaSimpanBusy=false, kriteriaTercatat={};
+async function perbaruiKriteriaV4(){
+  const box=document.getElementById('kriteriaV4Box'); if(!box) return;
+  const L=KRITERIA_GAGAL_V4, now=new Date(), pad=n=>String(n).padStart(2,'0');
+  const bk=now.getFullYear()+'-'+pad(now.getMonth()+1), kunci='kriteria_gagal_v4_'+bk;
+  const h=hitungKriteriaV4((cachedSinyalAnalis&&cachedSinyalAnalis.XAUUSD)||[], bk);
+  const f1=v=>(Math.round(v*10)/10).toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1});
+  let snap=null, bacaOk=false;
+  try{
+    const rows=await api('app_settings?select=value&key=eq.'+kunci);
+    bacaOk=true;
+    if(rows&&rows.length&&rows[0].value) snap=JSON.parse(rows[0].value);
+  }catch(e){ console.error('kriteriaV4 baca', e); }
+  if(snap) kriteriaTercatat[kunci]=true;
+  if(h.tercapai && bacaOk && !snap && isAdmin && !kriteriaSimpanBusy && !kriteriaTercatat[kunci]){
+    kriteriaSimpanBusy=true;
+    snap={bulan:bk, terdeteksiPada:now.toISOString(), netPips:h.netPips, runningN:h.runningN, batasPips:L.batasPips};
+    try{ await simpanSettingRem(kunci, JSON.stringify(snap)); kriteriaTercatat[kunci]=true; }catch(e){ console.error('kriteriaV4 simpan', e); snap=null; }
+    kriteriaSimpanBusy=false;
+  }
+  let lockHtml='';
+  try{ if(typeof loadAturanKunci==='function') await loadAturanKunci(); }catch(e){}
+  const c=((cachedAturanKunci&&cachedAturanKunci.riwayat)||[]).find(x=>x.versi===L.versi);
+  if(c) lockHtml='<div style="font-size:10px;color:#4ADE80;font-weight:800;margin-top:6px">🔒 Kriteria terkunci pada '+new Date(c.dikunciPada).toLocaleString('id-ID')+'</div><div style="font-size:9px;color:#E5E7EB;word-break:break-all">Sidik jari: '+c.hash+'</div>';
+  else lockHtml='<div style="font-size:10px;color:#FACC15;font-weight:800;margin-top:6px">❗ Kriteria belum dikunci di server.</div>'+(isAdmin?'<button onclick="kunciKriteriaV4()" style="margin-top:6px;padding:8px 12px;border-radius:8px;border:1px solid #34D399;background:transparent;color:#FFFFFF;font-weight:800;cursor:pointer">🔒 Kunci Kriteria Gagal v4</button>':'');
+  const kr='<div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-bottom:6px">🛑 Kriteria Gagal v4</div>'
+    +'<div style="font-size:10px;color:#E5E7EB;line-height:1.6;margin-bottom:8px">Ukuran: '+L.ukuran+'. Batas: '+L.batasPips.toLocaleString('id-ID')+' pips (= $'+(-L.batasUsd)+'). Dicek: '+L.cek+'. Situs mencatat dan memberi peringatan, tidak memblokir input sinyal.</div>';
+  let st;
+  if(h.tercapai){
+    const catat=snap?'Tercatat di situs: '+new Date(snap.terdeteksiPada).toLocaleString('id-ID')+' pada rugi bersih '+f1(snap.netPips)+' pips.':(bacaOk?'Belum tercatat di situs (perlu login admin untuk mencatat).':'Belum bisa dicek, koneksi bermasalah.');
+    st='<div style="background:#2D0E0E;border:1px solid #4A1414;border-radius:8px;padding:8px 10px;font-size:11px;line-height:1.6"><b style="color:#F87171">⛔ Batas '+L.batasPips.toLocaleString('id-ID')+' pips tercapai</b> (bulan '+bk+')<br>Rugi bersih saat ini: <b>'+f1(h.netPips)+' pips</b> · sinyal running: '+h.runningN+'<br>'+catat+'<br>Tindakan: analis berhenti kirim sinyal baru. Sinyal running tetap jalan sampai kena SL/TP. Evaluasi dan diskusi dulu sebelum aturan baru.</div>';
+  } else {
+    st='<div style="background:#132D0E;border:1px solid #1E4A14;border-radius:8px;padding:8px 10px;font-size:11px;line-height:1.6"><b style="color:#4ADE80">✅ Belum tercapai</b> (bulan '+bk+')<br>Rugi bersih: <b>'+f1(h.netPips)+' pips</b> · sisa jarak ke batas '+f1(h.sisaPips)+' pips · sinyal running: '+h.runningN+'</div>';
+  }
+  box.innerHTML=kr+st+lockHtml;
+}
+async function kunciKriteriaV4(){ await kunciAturanResmi('kriteria-gagal-v4'); await perbaruiKriteriaV4(); }
+(function(){ const _rk=renderBatasDDCard; renderBatasDDCard=function(){ _rk.apply(this,arguments); try{ perbaruiKriteriaV4().catch(e=>console.error('kriteriaV4',e)); }catch(e){} }; })();
+setTimeout(()=>{ try{ perbaruiKriteriaV4().catch(e=>console.error('kriteriaV4',e)); }catch(e){} }, 5000);
+setTimeout(()=>{ try{ perbaruiKriteriaV4().catch(e=>console.error('kriteriaV4',e)); }catch(e){} }, 9000);
 
 // Ringkasan aturan v4 (tampilan): order hari ini/bulan ini dan loss kotor, forex dan emas dihitung terpisah.
 function renderRingkasV4(){
