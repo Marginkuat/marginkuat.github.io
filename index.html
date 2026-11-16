@@ -5476,6 +5476,7 @@ function autoHitungVpRingkas(){
 async function simpanDataHarianRingkas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin untuk input data');return;}
   const g=inputSinyalPairGroup||'XAUUSD';
+  if(g==='XAUUSD'){ const _b=gerbangInputXAU(); if(_b){ toast(_b); return; } }
   const tgl=document.getElementById('inpRingkasTgl').value;
   const jam=(document.getElementById('inpRingkasJam')||{}).value||null;
   const tglBuka=(document.getElementById('inpRingkasTglBuka')||{}).value||null;
@@ -5493,6 +5494,19 @@ async function simpanDataHarianRingkas(){
   const vp=parseFloat(vpInput);
   if(!isFinite(pips)){toast('❌ Angka Pips gak valid');return;}
   if(!isFinite(vp)){toast('❌ Angka VP gak valid');return;}
+  if(g==='XAUUSD'){
+    // Datuk EURUSD: hanya kena SL atau kena TP sesuai aturan v4. Pips dan VP tidak boleh diketik bebas.
+    const _sl=aturanSlTpXAU(pairSimbol, tglBuka||tgl);
+    if(!_sl){ toast('❌ Pair ini tidak ada di aturan v4 Datuk EURUSD'); return; }
+    if(Math.abs(pips+_sl.sl)>0.01 && Math.abs(pips-_sl.tp)>0.01){ toast('❌ Hanya boleh kena SL ('+(-_sl.sl)+' pips) atau kena TP (+'+_sl.tp+' pips). Yang kamu isi: '+pips); return; }
+    const _mv=multiplierVpDariSimbol(pairSimbol);
+    if(!_mv.pasti){ toast('❌ Pair ini belum ada di tabel VP resmi, hubungi admin'); return; }
+    if(Math.abs(vp-pips*_mv.nilai)>0.01){ toast('❌ VP harus pips × '+_mv.nilai+' = '+(pips*_mv.nilai).toFixed(2)); return; }
+    const _isAu=String(pairSimbol||'').toUpperCase()==='XAUUSD';
+    const _cnt=hitungOrderXAU(_isAu, tgl);
+    if(_cnt.hari>=5){ toast('❌ Sudah 5 order close di tanggal ini untuk '+(_isAu?'XAUUSD':'forex')+'. Batas harian tercapai.'); return; }
+    if(_cnt.bulan>=100){ toast('❌ Sudah 100 order close di bulan ini untuk '+(_isAu?'XAUUSD':'forex')+'. Batas bulanan tercapai.'); return; }
+  }
   try{
     statusEl.textContent='⏳ Menyimpan...';
     // Setiap sinyal jadi ENTRY SENDIRI di array (dengan id unik biar bisa diedit/dihapus nanti)
@@ -5728,6 +5742,7 @@ async function tambahSinyalRunning(){
   const val=id=>((document.getElementById(id)||{}).value||'').trim();
   const g=val('inpRunningChannel');
   if(g!=='XAUUSD' && g!=='FOREX'){toast('❌ Pilih channel dulu (Datuk EURUSD atau Datuk Crypto 89)');return;}
+  if(g==='XAUUSD'){ const _b=gerbangInputXAU(); if(_b){ toast(_b); return; } }
   const namaChannel = g==='FOREX' ? 'Datuk Crypto 89' : 'Datuk EURUSD';
   const simbol=val('inpRunningSimbolManual');
   const hargaEntry=parseFloat(val('inpRunningHarga'));
@@ -5856,6 +5871,7 @@ async function tambahSinyalPending(){
   const val=id=>((document.getElementById(id)||{}).value||'').trim();
   const g=val('inpRunningChannel');
   if(g!=='XAUUSD' && g!=='FOREX'){toast('❌ Pilih channel dulu (Datuk EURUSD atau Datuk Crypto 89)');return;}
+  if(g==='XAUUSD'){ const _b=gerbangInputXAU(); if(_b){ toast(_b); return; } }
   const pair=val('inpPendingPair').toUpperCase();
   const arah=val('inpPendingArah');
   const entry=parseFloat(val('inpPendingHarga')), tp=parseFloat(val('inpPendingTp')), sl=parseFloat(val('inpPendingSl'));
@@ -6240,26 +6256,33 @@ async function tutupSinyalRunning(g, id, jenis){
   // Hasil otomatis HANYA jadi nilai default. Admin selalu cek & bisa edit pips dan VP
   // sebelum disimpan, lalu konfirmasi ringkasan.
   let pips=null, vp=null, defPips;
-  if(jenis==='sl'){
-    if(punyaLevelPips && finNum(item.slPips)) defPips=-Math.abs(item.slPips);
-    else if(punyaDataHarga && finNum(privat.hargaSl)) defPips=hitungPipsDariHarga(privat.hargaSl);
-    else defPips=-30;
+  if(g==='XAUUSD'){
+    // Datuk EURUSD: hanya kena SL atau kena TP sesuai aturan v4. Tidak ada cut manual.
+    const _rv=aturanSlTpXAU(item.simbol, item.tanggalBuka||item.tanggal);
+    if(!_rv){ toast('❌ Pair ini tidak ada di aturan v4 Datuk EURUSD'); return; }
+    defPips = jenis==='sl' ? -_rv.sl : _rv.tp;
   } else {
-    const tpPipsAcuan = punyaLevelPips && finNum(item.tpPips) ? item.tpPips : (punyaDataHarga && finNum(privat.hargaTp) ? hitungPipsDariHarga(privat.hargaTp) : null);
-    if(tpPipsAcuan!==null){
-      const kenaTp = confirm(`${item.simbol||g} ditutup sebagai PROFIT.\n\nOK = kena TP persis (hasil otomatis ${tpPipsAcuan.toFixed(1)} pips).\nCancel = cut manual (isi pips sendiri).`);
-      defPips = tpPipsAcuan;
-    } else defPips=30;
+    if(jenis==='sl'){
+      if(punyaLevelPips && finNum(item.slPips)) defPips=-Math.abs(item.slPips);
+      else if(punyaDataHarga && finNum(privat.hargaSl)) defPips=hitungPipsDariHarga(privat.hargaSl);
+      else defPips=-30;
+    } else {
+      const tpPipsAcuan = punyaLevelPips && finNum(item.tpPips) ? item.tpPips : (punyaDataHarga && finNum(privat.hargaTp) ? hitungPipsDariHarga(privat.hargaTp) : null);
+      if(tpPipsAcuan!==null){
+        const kenaTp = confirm(`${item.simbol||g} ditutup sebagai PROFIT.\n\nOK = kena TP persis (hasil otomatis ${tpPipsAcuan.toFixed(1)} pips).\nCancel = cut manual (isi pips sendiri).`);
+        defPips = tpPipsAcuan;
+      } else defPips=30;
+    }
   }
   const {pasti:multPasti}=multiplierVpDariSimbol(item.simbol);
-  const pipsStr=prompt(`CEK & EDIT PIPS — ${item.simbol||g} (${jenis==='sl'?'LOSS, isi minus':'PROFIT, isi plus'})\nHasil otomatis: ${defPips.toFixed(1)}`, defPips.toFixed(1));
+  const pipsStr=(g==='XAUUSD')?String(defPips):prompt(`CEK & EDIT PIPS — ${item.simbol||g} (${jenis==='sl'?'LOSS, isi minus':'PROFIT, isi plus'})\nHasil otomatis: ${defPips.toFixed(1)}`, defPips.toFixed(1));
   if(pipsStr===null)return;
   pips=parseFloat(pipsStr);
   if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
   if(jenis==='sl' && pips>0){toast('❌ Kena SL tapi pips plus? Cek lagi angkanya');return;}
   if(jenis!=='sl' && pips<0){toast('❌ Profit tapi pips minus? Cek lagi angkanya');return;}
   const defVp = pips*mult;
-  const vpStr=prompt(`CEK & EDIT VP — ${item.simbol||g}\nRumus: pips × ${mult}${multPasti?'':' (⚠️ pair ini belum ada di tabel resmi, cek manual!)'}\nHasil otomatis: ${defVp.toFixed(2)}`, defVp.toFixed(2));
+  const vpStr=(g==='XAUUSD')?String(defVp.toFixed(2)):prompt(`CEK & EDIT VP — ${item.simbol||g}\nRumus: pips × ${mult}${multPasti?'':' (⚠️ pair ini belum ada di tabel resmi, cek manual!)'}\nHasil otomatis: ${defVp.toFixed(2)}`, defVp.toFixed(2));
   if(vpStr===null)return;
   vp=parseFloat(vpStr);
   if(!isFinite(vp)){toast('❌ Angka VP gak valid');return;}
@@ -7366,10 +7389,12 @@ function renderSatuChannelScore(g){
     // hari buat tau tren September naik/turun dari baseline Agustus, dan kapan boleh berhenti
     // nambah sinyal analisa (begitu Live > baseline). ──
     const target=cachedTargetResmiAsli[g];
+    if(g==='XAUUSD'){ window._skorTargetAdaXAU=false; window._skorTargetTercapaiXAU=false; }
     let targetBlokHtml='';
     if(target && isFinite(target.nilai)){
       const selisihTarget=totalSkorLive-target.nilai;
       const tercapai=selisihTarget>0.005;
+      if(g==='XAUUSD'){ window._skorTargetAdaXAU=true; window._skorTargetTercapaiXAU=tercapai; }
       const warnaTarget=tercapai?'#4ADE80':(selisihTarget<-0.005?'#F87171':'#E5E7EB');
       const panahTarget=tercapai?'🔺':(selisihTarget<-0.005?'🔻':'➖');
       targetBlokHtml=`<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
@@ -7416,6 +7441,7 @@ function renderSatuChannelScore(g){
   const ambangVp80 = adaSyarat80 ? ambangVp80Mentah : 0;
   const kurangVp80 = adaSyarat80 ? Math.max(0, ambangVp80-totalVpBulanIni) : 0;
   const medalTercapai = kurangSinyal===0 && kurangVp===0 && kurangPips===0 && (!adaSyarat80 || kurangVp80===0);
+  if(g==='XAUUSD') window._medalTercapaiXAU=medalTercapai;
   // ── Kebutuhan VP/hari — kekurangan VP TERBESAR (mana yang lebih berat: syarat 300 VP atau
   // syarat 80% Avg Monthly VP) dibagi sisa hari bulan berjalan, biar admin tau "harus ngebut
   // berapa" per hari, bukan cuma "kurang berapa total". ──
@@ -18348,12 +18374,90 @@ async function perbaruiKriteriaV4(){
   } else {
     st='<div style="background:#132D0E;border:1px solid #1E4A14;border-radius:8px;padding:8px 10px;font-size:11px;line-height:1.6"><b style="color:#4ADE80">✅ Belum tercapai</b> (bulan '+bk+')<br>Rugi bersih: <b>'+f1(h.netPips)+' pips</b> · sisa jarak ke batas '+f1(h.sisaPips)+' pips · sinyal running: '+h.runningN+'</div>';
   }
-  box.innerHTML=kr+st+lockHtml;
+  const tg=targetSemuaTercentangXAU();
+  const okRugi=!h.tercapai;
+  const sukHtml='<div style="margin-top:8px;font-size:10px;color:#E5E7EB;line-height:1.7"><b style="color:#FFFFFF">Kriteria sukses v4</b> (dinilai akhir bulan): semua target tercentang dan rugi bersih tidak mencapai -3.000 pips.<br>'
+    +(tg.medal?'✅':'○')+' Syarat medal lengkap<br>'
+    +(tg.skorAda?((tg.skorOk?'✅':'○')+' Target skor resmi asli tercapai'):'⬜ Target skor resmi asli belum diatur')+'<br>'
+    +(okRugi?'✅':'❌')+' Rugi bersih tidak mencapai -3.000 pips<br>'
+    +((tg.semua&&okRugi)?'<b style="color:#4ADE80">Sejauh ini memenuhi. Keputusan akhir di akhir bulan.</b>':'<b style="color:#FACC15">Belum memenuhi.</b>')+'</div>';
+  box.innerHTML=kr+st+sukHtml+lockHtml;
 }
 async function kunciKriteriaV4(){ await kunciAturanResmi('kriteria-gagal-v4'); await perbaruiKriteriaV4(); }
 (function(){ const _rk=renderBatasDDCard; renderBatasDDCard=function(){ _rk.apply(this,arguments); try{ perbaruiKriteriaV4().catch(e=>console.error('kriteriaV4',e)); }catch(e){} }; })();
 setTimeout(()=>{ try{ perbaruiKriteriaV4().catch(e=>console.error('kriteriaV4',e)); }catch(e){} }, 5000);
 setTimeout(()=>{ try{ perbaruiKriteriaV4().catch(e=>console.error('kriteriaV4',e)); }catch(e){} }, 9000);
+
+// ══ INPUT SINYAL DATUK EURUSD: GERBANG (blokir input baru) + BANNER ATURAN ══
+// Yang diblokir hanya input sinyal BARU. Sinyal yang sudah running tetap bisa ditutup saat kena SL/TP.
+let kriteriaBacaAturan=false;
+function bulanKeyNow(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1); }
+function tglHariIni(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function fmtPips1(v){ return (Math.round(v*10)/10).toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1}); }
+function kriteriaTercapaiXAU(){
+  const bk=bulanKeyNow();
+  const h=hitungKriteriaV4((cachedSinyalAnalis&&cachedSinyalAnalis.XAUUSD)||[], bk);
+  return {h:h, bk:bk, blokir: h.tercapai || !!kriteriaTercatat['kriteria_gagal_v4_'+bk]};
+}
+// SL dan TP per pair sesuai aturan v4 untuk tanggal itu. null berarti pair tidak ada di aturan v4 Datuk EURUSD.
+function aturanSlTpXAU(simbol, tgl){
+  const s=String(simbol||'').toUpperCase().replace(/[^A-Z]/g,'');
+  if(s==='XAUUSD') return slTpEmasUntukTanggal(tgl);
+  const p=aturanResmiV4().forex.pair[s];
+  return p ? {sl:p.sl, tp:p.tp} : null;
+}
+// Jumlah order close untuk satu grup (emas atau forex) pada tanggal tertentu dan bulan tertentu
+function hitungOrderXAU(isAu, tglCek){
+  const tg=String(tglCek||tglHariIni()).slice(0,10), bk=tg.slice(0,7);
+  const rows=((cachedSinyalAnalis&&cachedSinyalAnalis.XAUUSD)||[]).filter(r=>r.status!=='running' && ((String(r.simbol||'').toUpperCase()==='XAUUSD')===isAu));
+  return {hari: rows.filter(r=>String(r.tanggal).slice(0,10)===tg).length, bulan: rows.filter(r=>String(r.tanggal).slice(0,7)===bk).length};
+}
+function gerbangInputXAU(){
+  // Hanya cek admin. Kriteria gagal v4 cuma memberi peringatan (banner), tidak menahan input.
+  if(!isAdmin) return '❌ Harus masuk sebagai Admin untuk input data';
+  return null;
+}
+function renderBannerInputXAU(){
+  const sec=document.getElementById('secInputSinyal'); if(!sec) return;
+  let b=document.getElementById('bannerInputXAU');
+  if(!b){
+    b=document.createElement('div'); b.id='bannerInputXAU';
+    b.style.cssText='margin:10px 0 14px;border:1.5px solid #34D399;border-radius:10px;padding:10px 11px;background:#0F1A12';
+    b.innerHTML='<div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-bottom:6px">📖 BACA DULU: Aturan v4 Datuk EURUSD</div>'
+      +'<div style="font-size:10px;color:#E5E7EB;line-height:1.6">'
+      +'• Forex: maks 5 order close per hari dan 100 per bulan. SL 30 pips untuk AUDUSD, NZDUSD, USDCHF. SL 45 pips untuk AUDJPY, CADJPY, EURUSD. TP = 2 × SL.<br>'
+      +'• XAUUSD: maks 5 order close per hari dan 100 per bulan. SL 200 pips, TP 400 pips (berlaku 1 Nov 2026).<br>'
+      +'• REM bulanan: forex 4.500 pips ($450), XAUUSD 20.000 pips ($2.000), total $2.450.<br>'
+      +'• Kriteria gagal: rugi bersih bulan kalender mencapai -3.000 pips (-$300). Saat itu input sinyal baru diblokir.<br>'
+      +'• Status yang boleh hanya: running, kena SL, atau kena TP. Sinyal running tidak bisa ditutup manual.<br>'
+      +'• Pips dan VP terisi otomatis dari aturan dan tidak bisa diketik bebas.</div>'
+      +'<div id="bannerStatusXAU" style="margin-top:8px"></div>'
+      +'<div style="font-size:10px;margin-top:6px"><span onclick="var e=document.getElementById(\'aturanResmiV4\');if(e)e.scrollIntoView({behavior:\'smooth\'});" style="color:#34D399;text-decoration:underline;cursor:pointer">Buka kartu aturan lengkap</span></div>';
+    const desc=sec.parentNode&&sec.parentNode.nextElementSibling;
+    if(desc) desc.insertAdjacentElement('afterend', b); else sec.parentNode.appendChild(b);
+  }
+  const st=b.querySelector('#bannerStatusXAU'); if(!st) return;
+  const k=kriteriaTercapaiXAU(), h=k.h, au=hitungOrderXAU(true), fx=hitungOrderXAU(false);
+  const tgt=targetSemuaTercentangXAU();
+  let html='';
+  if(k.blokir){
+    html+='<div style="background:#2D0E0E;border:1px solid #4A1414;border-radius:8px;padding:8px 10px;font-size:11px;color:#F87171;font-weight:800;line-height:1.6;margin-bottom:6px">⚠️ Anda sudah -3.000 pips bulan ini (rugi bersih '+fmtPips1(h.netPips)+' pips). Jangan buat sinyal baru. Input di bawah masih bisa dibuka, tapi itu di luar kriteria yang sudah kamu tetapkan.</div>';
+  }
+  if(tgt.semua){
+    html+='<div style="background:#2D2208;border:1px solid #6B5417;border-radius:8px;padding:8px 10px;font-size:11px;color:#FACC15;font-weight:800;line-height:1.6;margin-bottom:6px">⚠️ Semua target sudah tercentang bulan ini. Jangan tambah sinyal hanya untuk mengejar target.</div>';
+  }
+  const sisaTeks = h.tercapai ? 'sudah melewati batas -3.000 pips' : 'sisa jarak ke batas '+fmtPips1(h.sisaPips)+' pips';
+  html+='<div style="background:#132D0E;border:1px solid #1E4A14;border-radius:8px;padding:8px 10px;font-size:10px;color:#E5E7EB;line-height:1.6">Rugi bersih bulan ini '+fmtPips1(h.netPips)+' pips, '+sisaTeks+'.<br>Order close hari ini: forex '+fx.hari+'/5, XAUUSD '+au.hari+'/5. Bulan ini: forex '+fx.bulan+'/100, XAUUSD '+au.bulan+'/100.</div>';
+  st.innerHTML=html;
+}
+// Semua target = syarat medal lengkap DAN (kalau target skor resmi asli sudah diatur) target skor tercapai.
+function targetSemuaTercentangXAU(){
+  const medal = window._medalTercapaiXAU===true;
+  const skorAda = window._skorTargetAdaXAU===true;
+  const skorOk = window._skorTargetTercapaiXAU===true;
+  return {medal:medal, skorAda:skorAda, skorOk:skorOk, semua: medal && (!skorAda || skorOk)};
+}
+setInterval(renderBannerInputXAU, 3000); setTimeout(renderBannerInputXAU, 1500);
 
 // Ringkasan aturan v4 (tampilan): order hari ini/bulan ini dan loss kotor, forex dan emas dihitung terpisah.
 function renderRingkasV4(){
