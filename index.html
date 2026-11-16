@@ -18440,12 +18440,8 @@ function renderBannerInputXAU(){
   const k=kriteriaTercapaiXAU(), h=k.h, au=hitungOrderXAU(true), fx=hitungOrderXAU(false);
   const tgt=targetSemuaTercentangXAU();
   let html='';
-  if(k.blokir){
-    html+='<div style="background:#2D0E0E;border:1px solid #4A1414;border-radius:8px;padding:8px 10px;font-size:11px;color:#F87171;font-weight:800;line-height:1.6;margin-bottom:6px">⚠️ Anda sudah -3.000 pips bulan ini (rugi bersih '+fmtPips1(h.netPips)+' pips). Jangan buat sinyal baru. Input di bawah masih bisa dibuka, tapi itu di luar kriteria yang sudah kamu tetapkan.</div>';
-  }
-  if(tgt.semua){
-    html+='<div style="background:#2D2208;border:1px solid #6B5417;border-radius:8px;padding:8px 10px;font-size:11px;color:#FACC15;font-weight:800;line-height:1.6;margin-bottom:6px">⚠️ Semua target sudah tercentang bulan ini. Jangan tambah sinyal hanya untuk mengejar target.</div>';
-  }
+  if(k.blokir) html+=kotakStopXAU('rugi','RUGI -3.000 PIPS SUDAH TERCAPAI','Rugi bersih bulan ini '+fmtPips1(h.netPips)+' pips. Batas kriteria yang kamu tetapkan sudah tercapai. Jangan input sinyal baru bulan ini.');
+  if(tgt.semua) html+=kotakStopXAU('target','TARGET TERPENUHI','Semua target bulan ini sudah tercentang. Jangan tambah sinyal untuk mengejar target.');
   const sisaTeks = h.tercapai ? 'sudah melewati batas -3.000 pips' : 'sisa jarak ke batas '+fmtPips1(h.sisaPips)+' pips';
   html+='<div style="background:#132D0E;border:1px solid #1E4A14;border-radius:8px;padding:8px 10px;font-size:10px;color:#E5E7EB;line-height:1.6">Rugi bersih bulan ini '+fmtPips1(h.netPips)+' pips, '+sisaTeks+'.<br>Order close hari ini: forex '+fx.hari+'/5, XAUUSD '+au.hari+'/5. Bulan ini: forex '+fx.bulan+'/100, XAUUSD '+au.bulan+'/100.</div>';
   st.innerHTML=html;
@@ -18458,15 +18454,22 @@ function targetSemuaTercentangXAU(){
   return {medal:medal, skorAda:skorAda, skorOk:skorOk, semua: medal && (!skorAda || skorOk)};
 }
 // Peringatan paling atas untuk Datuk EURUSD: tampil tepat di atas kartu REM DD (#bannerAnalisTop).
+// Kotak larangan: solid, huruf besar, jelas dibaca sekilas. Dipakai di atas REM DD dan di banner Input Sinyal.
+function kotakStopXAU(tipe, sub, isi){
+  const warna = tipe==='rugi'
+    ? 'background:#DC2626;color:#FFFFFF;border:3px solid #7F1D1D;'
+    : 'background:#F59E0B;color:#111827;border:3px solid #92400E;';
+  return '<div style="'+warna+'border-radius:12px;padding:14px;margin-bottom:8px;box-shadow:0 4px 14px rgba(0,0,0,.35)">'
+    +'<div style="font-size:20px;font-weight:900;letter-spacing:.5px;line-height:1.2">🛑 STOP! JANGAN BUAT SIGNAL</div>'
+    +'<div style="font-size:14px;font-weight:900;text-transform:uppercase;margin-top:6px">'+sub+'</div>'
+    +'<div style="font-size:13px;font-weight:700;line-height:1.5;margin-top:6px">'+isi+'</div>'
+    +'</div>';
+}
 function bangunPeringatanAtasXAU(){
   const k=kriteriaTercapaiXAU(), tgt=targetSemuaTercentangXAU();
   let html='';
-  if(k.blokir){
-    html+='<div style="background:#2D0E0E;border:2px solid #F87171;border-radius:10px;padding:10px 12px;font-size:12px;color:#F87171;font-weight:800;line-height:1.6;margin-bottom:8px">⚠️ Anda sudah -3.000 pips bulan ini (rugi bersih '+fmtPips1(k.h.netPips)+' pips). Jangan buat sinyal baru. Situs hanya memberi peringatan, input masih bisa dibuka.</div>';
-  }
-  if(tgt.semua){
-    html+='<div style="background:#2D2208;border:2px solid #FACC15;border-radius:10px;padding:10px 12px;font-size:12px;color:#FACC15;font-weight:800;line-height:1.6;margin-bottom:8px">⚠️ Semua target sudah tercentang bulan ini. Jangan tambah sinyal hanya untuk mengejar target.</div>';
-  }
+  if(k.blokir) html+=kotakStopXAU('rugi','RUGI -3.000 PIPS SUDAH TERCAPAI','Rugi bersih bulan ini '+fmtPips1(k.h.netPips)+' pips. Batas kriteria yang kamu tetapkan sudah tercapai. Jangan input sinyal baru bulan ini.');
+  if(tgt.semua) html+=kotakStopXAU('target','TARGET TERPENUHI','Semua target bulan ini sudah tercentang. Jangan tambah sinyal untuk mengejar target.');
   return html;
 }
 function renderPeringatanAtasXAU(){
