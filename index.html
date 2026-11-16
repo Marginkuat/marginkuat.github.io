@@ -18376,6 +18376,22 @@ function bangunPeringatanGrup(g){
   return html;
 }
 // Peringatan atas untuk Crypto 89: di bawah judul seksi analis, hanya tampil saat akun Crypto 89 dipilih
+// Cari kartu "ATURAN TAMPIL — DATUK CRYPTO 89". Dipakai sebagai patokan: peringatan Crypto 89 diletakkan tepat di atasnya.
+function kartuAturanTampilCrypto(){
+  try{
+    const semua=[...document.querySelectorAll('div,span,b,h3,h4,p')];
+    const cari=re=>semua.find(x=>x.childElementCount===0 && re.test((x.textContent||'').trim()));
+    const atp=cari(/ATURAN TAMPIL — DATUK CRYPTO 89/i), rng=cari(/RINGKAS ATURAN V3/i);
+    if(!atp || !rng) return null;
+    let node=atp;
+    while(node.parentNode){
+      if(node.parentNode.contains(rng)) return node;
+      node=node.parentNode;
+    }
+  }catch(e){}
+  return null;
+}
+// Peringatan atas untuk Crypto 89: tepat di atas kartu ATURAN TAMPIL, hanya tampil saat akun Crypto 89 dipilih
 function renderPeringatanFOREX(){
   const akunOk = document.body.getAttribute('data-akun')==='crypto89';
   let el=document.getElementById('peringatanAtasFOREX');
@@ -18385,11 +18401,14 @@ function renderPeringatanFOREX(){
   const html=bangunPeringatanGrup('FOREX');
   el.innerHTML=html;
   el.style.display=(akunOk&&html)?'':'none';
-  const jd=document.querySelector('#secAnalisBlok .sec-title');
-  if(jd && jd.parentNode){
-    if(el.previousElementSibling!==jd || el.parentNode!==jd.parentNode) jd.parentNode.insertBefore(el, jd.nextSibling);
-    if(box.previousElementSibling!==el || box.parentNode!==el.parentNode) el.parentNode.insertBefore(box, el.nextSibling);
+  const kartu=kartuAturanTampilCrypto();
+  if(kartu && kartu.parentNode){
+    if(el.nextElementSibling!==kartu || el.parentNode!==kartu.parentNode) kartu.parentNode.insertBefore(el, kartu);
+  } else {
+    const jd=document.querySelector('#secAnalisBlok .sec-title');
+    if(jd && jd.parentNode && (el.previousElementSibling!==jd || el.parentNode!==jd.parentNode)) jd.parentNode.insertBefore(el, jd.nextElementSibling);
   }
+  if(el.parentNode && (box.previousElementSibling!==el || box.parentNode!==el.parentNode)) el.parentNode.insertBefore(box, el.nextElementSibling);
   box.style.display = akunOk ? '' : 'none';
 }
 // Banner input untuk Crypto 89: hanya tampil saat tab input Crypto 89 aktif
