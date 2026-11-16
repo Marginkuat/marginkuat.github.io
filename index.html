@@ -18328,13 +18328,13 @@ setTimeout(pasangV4, 2200); setTimeout(pasangV4, 4600); setTimeout(pasangV4, 700
 // Rugi bersih bulan kalender (order tertutup, forex + XAUUSD digabung) mencapai -3.000 pips (= -$300):
 // analis berhenti kirim sinyal baru. Sinyal running tetap jalan sampai kena SL/TP. Tidak ada aturan baru otomatis.
 // Situs hanya mencatat dan memberi peringatan. Input sinyal tidak diblokir.
-const KRITERIA_GAGAL_V4={ versi:'kriteria-gagal-v4', ditetapkan:'16 November 2026', batasPips:-3000, batasUsd:-300, nilaiPipUsd:0.1,
+const KRITERIA_GAGAL_V4={ versi:'kriteria-gagal-v4', ditetapkan:'16 November 2026, berlaku sejak 1 November 2026 tanpa batas akhir (tidak kadaluwarsa)', berlakuDari:'2026-11-01', berlakuSampai:null, batasPips:-3000, batasUsd:-300, nilaiPipUsd:0.1,
   ukuran:'rugi bersih bulan kalender, order tertutup, forex + XAUUSD digabung', cek:'langsung saat batas tercapai',
   tindakan:'analis berhenti kirim sinyal baru; order running tetap sampai kena SL/TP; tidak ada aturan baru otomatis, evaluasi dan diskusi dulu' };
 function kriteriaGagalV4(){ return KRITERIA_GAGAL_V4; }
 // Hitungan murni tanpa tampilan. rows = sinyal XAUUSD (Datuk EURUSD), bulanKey = 'YYYY-MM'
 function hitungKriteriaV4(rows,bulanKey){
-  const dalam=(rows||[]).filter(r=>String(r.tanggal||'').slice(0,7)===bulanKey && String(r.tanggal).slice(0,10)>='2026-11-01');
+  const dalam=(rows||[]).filter(r=>String(r.tanggal||'').slice(0,7)===bulanKey && String(r.tanggal).slice(0,10)>=KRITERIA_GAGAL_V4.berlakuDari);
   const tutup=dalam.filter(r=>r.status!=='running');
   const net=tutup.reduce((x,r)=>x+(parseFloat(r.pips)||0),0);
   const batas=KRITERIA_GAGAL_V4.batasPips;
@@ -18366,7 +18366,7 @@ async function perbaruiKriteriaV4(){
   if(c) lockHtml='<div style="font-size:10px;color:#4ADE80;font-weight:800;margin-top:6px">🔒 Kriteria terkunci pada '+new Date(c.dikunciPada).toLocaleString('id-ID')+'</div><div style="font-size:9px;color:#E5E7EB;word-break:break-all">Sidik jari: '+c.hash+'</div>';
   else lockHtml='<div style="font-size:10px;color:#FACC15;font-weight:800;margin-top:6px">❗ Kriteria belum dikunci di server.</div>'+(isAdmin?'<button onclick="kunciKriteriaV4()" style="margin-top:6px;padding:8px 12px;border-radius:8px;border:1px solid #34D399;background:transparent;color:#FFFFFF;font-weight:800;cursor:pointer">🔒 Kunci Kriteria Gagal v4</button>':'');
   const kr='<div style="font-size:11px;font-weight:800;color:#FFFFFF;margin-bottom:6px">🛑 Kriteria Gagal v4</div>'
-    +'<div style="font-size:10px;color:#E5E7EB;line-height:1.6;margin-bottom:8px">Ukuran: '+L.ukuran+'. Batas: '+L.batasPips.toLocaleString('id-ID')+' pips (= $'+(-L.batasUsd)+'). Dicek: '+L.cek+'. Situs mencatat dan memberi peringatan, tidak memblokir input sinyal.</div>';
+    +'<div style="font-size:10px;color:#E5E7EB;line-height:1.6;margin-bottom:8px">Ukuran: '+L.ukuran+'. Batas: '+L.batasPips.toLocaleString('id-ID')+' pips (= $'+(-L.batasUsd)+'). Berlaku sejak 1 Nov 2026, tanpa batas akhir. Dicek: '+L.cek+'. Situs mencatat dan memberi peringatan, tidak memblokir input sinyal.</div>';
   let st;
   if(h.tercapai){
     const catat=snap?'Tercatat di situs: '+new Date(snap.terdeteksiPada).toLocaleString('id-ID')+' pada rugi bersih '+f1(snap.netPips)+' pips.':(bacaOk?'Belum tercatat di situs (perlu login admin untuk mencatat).':'Belum bisa dicek, koneksi bermasalah.');
@@ -18457,6 +18457,33 @@ function targetSemuaTercentangXAU(){
   const skorOk = window._skorTargetTercapaiXAU===true;
   return {medal:medal, skorAda:skorAda, skorOk:skorOk, semua: medal && (!skorAda || skorOk)};
 }
+// Peringatan paling atas untuk Datuk EURUSD: tampil tepat di atas kartu REM DD (#bannerAnalisTop).
+function bangunPeringatanAtasXAU(){
+  const k=kriteriaTercapaiXAU(), tgt=targetSemuaTercentangXAU();
+  let html='';
+  if(k.blokir){
+    html+='<div style="background:#2D0E0E;border:2px solid #F87171;border-radius:10px;padding:10px 12px;font-size:12px;color:#F87171;font-weight:800;line-height:1.6;margin-bottom:8px">⚠️ Anda sudah -3.000 pips bulan ini (rugi bersih '+fmtPips1(k.h.netPips)+' pips). Jangan buat sinyal baru. Situs hanya memberi peringatan, input masih bisa dibuka.</div>';
+  }
+  if(tgt.semua){
+    html+='<div style="background:#2D2208;border:2px solid #FACC15;border-radius:10px;padding:10px 12px;font-size:12px;color:#FACC15;font-weight:800;line-height:1.6;margin-bottom:8px">⚠️ Semua target sudah tercentang bulan ini. Jangan tambah sinyal hanya untuk mengejar target.</div>';
+  }
+  return html;
+}
+function renderPeringatanAtasXAU(){
+  let el=document.getElementById('peringatanAtasXAU');
+  if(!el){ el=document.createElement('div'); el.id='peringatanAtasXAU'; el.style.cssText='margin:6px 0 10px 0'; }
+  const html=bangunPeringatanAtasXAU();
+  el.innerHTML=html;
+  el.style.display=html?'':'none';
+  const ban=document.getElementById('bannerAnalisTop');
+  if(ban && ban.parentNode){
+    if(el.nextElementSibling!==ban || el.parentNode!==ban.parentNode) ban.parentNode.insertBefore(el, ban);
+  } else if(!el.parentNode){
+    const host=document.querySelector('[data-akun="analis"]');
+    if(host) host.insertBefore(el, host.firstChild);
+  }
+}
+setTimeout(renderPeringatanAtasXAU, 1000); setInterval(renderPeringatanAtasXAU, 2000);
 setInterval(renderBannerInputXAU, 3000); setTimeout(renderBannerInputXAU, 1500);
 
 // Ringkasan aturan v4 (tampilan): order hari ini/bulan ini dan loss kotor, forex dan emas dihitung terpisah.
