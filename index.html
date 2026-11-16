@@ -5745,11 +5745,13 @@ async function tambahSinyalRunning(){
   const jamBuka=openedAt.slice(11,16)||null;
   const arah = val('inpRunningArah');
   if(arah!=='buy' && arah!=='sell'){toast('❌ Pilih arah Buy/Sell dulu');return;}
-  if(isFinite(hargaTp) && ((arah==='buy' && hargaTp<=hargaEntry)||(arah==='sell' && hargaTp>=hargaEntry))){toast('❌ TP tidak sesuai arah (Buy: TP > Price, Sell: TP < Price)');return;}
-  if(isFinite(hargaSl) && ((arah==='buy' && hargaSl>=hargaEntry)||(arah==='sell' && hargaSl<=hargaEntry))){toast('❌ SL tidak sesuai arah (Buy: SL < Price, Sell: SL > Price)');return;}
+  let pelanggaranArah=null;
+  if(isFinite(hargaTp) && ((arah==='buy' && hargaTp<=hargaEntry)||(arah==='sell' && hargaTp>=hargaEntry))) pelanggaranArah='TP tidak sesuai arah';
+  if(isFinite(hargaSl) && ((arah==='buy' && hargaSl>=hargaEntry)||(arah==='sell' && hargaSl<=hargaEntry))) pelanggaranArah=(pelanggaranArah?pelanggaranArah+'; ':'')+'SL tidak sesuai arah';
+  if(pelanggaranArah) toast('⚠️ '+pelanggaranArah+'. Tetap tersimpan dan dicatat untuk audit.');
   try{
     const idBaru=buatIdSinyal();
-    const data={id:idBaru, tanggal:tgl, jam:null, tanggalBuka:tgl, jamBuka, simbol:simbol.toUpperCase(), batch:batch||null, status:'running', pips:null, vp:null, slPips:null, tpPips:null, levelLabel:null};
+    const data={id:idBaru, tanggal:tgl, jam:null, tanggalBuka:tgl, jamBuka, simbol:simbol.toUpperCase(), batch:batch||null, status:'running', pips:null, vp:null, slPips:null, tpPips:null, levelLabel:null, pelanggaranInput:pelanggaranArah||null};
     cachedSinyalAnalis[g].push(data);
     await simpanSinyalKeServer(g);
     // Harga entry/TP/SL disimpan privat (cuma kelihatan pas login Admin)
@@ -5867,10 +5869,11 @@ async function tambahSinyalPending(){
   if(!pair){toast('❌ Isi pair dulu');return;}
   if(typeof pairBukanKanal==='function' && pairBukanKanal(g,pair) && !confirm('Pair '+pair+' bukan bagian aturan '+(g==='FOREX'?'Datuk Crypto 89':'Datuk EURUSD')+'. Tetap simpan?')) return;
   const err=validasiArahHarga(arah, entry, tp, sl);
-  if(err){toast('❌ '+err);return;}
+  if(err && /Pilih arah|Isi price/.test(err)){toast('❌ '+err);return;}
+  if(err) toast('⚠️ '+err+'. Tetap tersimpan dan dicatat untuk audit.');
   const id=buatIdSinyal();
   if(!cachedPending[g]) cachedPending[g]=[];
-  cachedPending[g].push({id, simbol:pair, batch:val('inpPendingBatch')||null, status:'pending', dibuat:new Date().toISOString()});
+  cachedPending[g].push({id, simbol:pair, batch:val('inpPendingBatch')||null, status:'pending', dibuat:new Date().toISOString(), pelanggaranInput:(err && !/Pilih arah|Isi price/.test(err))?err:null});
   cachedSinyalAnalisPrivat[g][id]={arah, hargaEntry:entry, hargaTp:isFinite(tp)?tp:null, hargaSl:isFinite(sl)?sl:null};
   try{
     await simpanSinyalPendingKeServer(g);
@@ -5892,7 +5895,8 @@ async function editSinyalPending(g,id){
   const batch=prompt('Batch (opsional):', item.batch||''); if(batch===null) return;
   const a=arah.trim().toLowerCase(), e=parseFloat(entry), t=tp.trim()===''?NaN:parseFloat(tp), s2=sl.trim()===''?NaN:parseFloat(sl);
   const err=validasiArahHarga(a, e, t, s2);
-  if(err){toast('❌ '+err);return;}
+  if(err && /Pilih arah|Isi price/.test(err)){toast('❌ '+err);return;}
+  if(err) toast('⚠️ '+err+'. Tetap tersimpan dan dicatat untuk audit.');
   item.simbol=pair.trim().toUpperCase()||item.simbol;
   item.batch=batch.trim()||null;
   cachedSinyalAnalisPrivat[g][id]={arah:a, hargaEntry:e, hargaTp:isFinite(t)?t:null, hargaSl:isFinite(s2)?s2:null};
@@ -6263,8 +6267,10 @@ async function tutupSinyalRunning(g, id, jenis){
   if(pipsStr===null)return;
   pips=parseFloat(pipsStr);
   if(!isFinite(pips)){toast('❌ Angka pips gak valid');return;}
-  if(jenis==='sl' && pips>0){toast('❌ Kena SL tapi pips plus? Cek lagi angkanya');return;}
-  if(jenis!=='sl' && pips<0){toast('❌ Profit tapi pips minus? Cek lagi angkanya');return;}
+  let pelanggaranTutup=null;
+  if(jenis==='sl' && pips>0) pelanggaranTutup='Kena SL tapi pips plus';
+  if(jenis!=='sl' && pips<0) pelanggaranTutup='Profit tapi pips minus';
+  if(pelanggaranTutup) toast('⚠️ '+pelanggaranTutup+'. Tetap tersimpan dan dicatat untuk audit.');
   const defVp = pips*mult;
   const vpStr=prompt(`CEK & EDIT VP — ${item.simbol||g}\nRumus: pips × ${mult}${multPasti?'':' (⚠️ pair ini belum ada di tabel resmi, cek manual!)'}\nHasil otomatis: ${defVp.toFixed(2)}`, defVp.toFixed(2));
   if(vpStr===null)return;
@@ -6281,6 +6287,7 @@ async function tutupSinyalRunning(g, id, jenis){
     item.vp=Math.round(vp*100)/100;
     item.tanggal=new Date().toISOString().slice(0,10);
     item.jam=jamStr.trim()||null;
+  item.pelanggaranInput=pelanggaranTutup||null;
     await simpanSinyalKeServer(g);
     // Bersihkan data harga privat begitu sinyal closed — udah gak perlu lagi buat saran pips.
     if(cachedSinyalAnalisPrivat[g] && cachedSinyalAnalisPrivat[g][id]){
@@ -17279,6 +17286,8 @@ function auditChannel(g,bk){
     const c=cekEntryPending(g, x.r, pv);
     if(c) tambah(x,'pasti','Pelanggaran: order pending masuk market (harga terisi berbeda dari pending)', `Selisih ${c.selisihPips} pips dari harga pending, toleransi ${c.tolPips} pips (15% SL)`);
   });
+  // (B3) input yang tidak sesuai arah / SL-TP (tetap tersimpan, dicatat di sini)
+  L.forEach(x=>{ if(x.r.pelanggaranInput) tambah(x,'indikasi','Input tidak sesuai arah/SL-TP', x.r.pelanggaranInput+' · cek ulang dengan MT4'); });
   // (C) jatah order: emas 5/bulan (hanya di channel emas), forex 3 per pair — dihitung urut waktu BUKA
   const urutBuka=L.slice().sort((a,b)=>buka(a)-buka(b));
   let emasN=0; const pairN={};
@@ -18362,7 +18371,7 @@ function bangunPeringatanGrup(g){
   const batasTeks=Math.abs(K.batasPips).toLocaleString('id-ID');
   let html='';
   if(k.blokir) html+=kotakStopXAU('rugi','RUGI -'+batasTeks+' PIPS SUDAH TERCAPAI','Rugi bersih bulan ini '+fmtPips1(k.h.netPips)+' pips. Batas kriteria yang kamu tetapkan sudah tercapai. Jangan input sinyal baru bulan ini.');
-  if(tgt.semua) html+=kotakStopXAU('target','TARGET TERPENUHI','Semua target bulan ini sudah tercentang. Jangan tambah sinyal untuk mengejar target.');
+  if(tgt.semua) html+=kotakStopXAU('target','TARGET TERPENUHI','Semua target bulan ini sudah tercentang. Stop kirim sinyal baru. Hapus pending yang belum terisi. Running tunggu sampai kena SL atau TP, jangan ditutup manual.');
   return html;
 }
 // Peringatan atas untuk Crypto 89: di bawah judul seksi analis, hanya tampil saat akun Crypto 89 dipilih
@@ -18426,7 +18435,7 @@ function renderBannerInputFOREX(){
   const k=kriteriaTercapaiGrup('FOREX'), h=k.h, ord=hitungOrderGrup('FOREX', null), tgt=targetSemuaGrup('FOREX');
   let html='';
   if(k.blokir) html+=kotakStopXAU('rugi','RUGI -6.000 PIPS SUDAH TERCAPAI','Rugi bersih bulan ini '+fmtPips1(h.netPips)+' pips. Batas kriteria yang kamu tetapkan sudah tercapai. Jangan input sinyal baru bulan ini.');
-  if(tgt.semua) html+=kotakStopXAU('target','TARGET TERPENUHI','Semua target bulan ini sudah tercentang. Jangan tambah sinyal untuk mengejar target.');
+  if(tgt.semua) html+=kotakStopXAU('target','TARGET TERPENUHI','Semua target bulan ini sudah tercentang. Stop kirim sinyal baru. Hapus pending yang belum terisi. Running tunggu sampai kena SL atau TP, jangan ditutup manual.');
   const sisaTeks = h.tercapai ? 'sudah melewati batas -6.000 pips' : 'sisa jarak ke batas '+fmtPips1(h.sisaPips)+' pips';
   html+='<div style="background:#132D0E;border:1px solid #1E4A14;border-radius:8px;padding:8px 10px;font-size:10px;color:#E5E7EB;line-height:1.6">Rugi bersih bulan ini '+fmtPips1(h.netPips)+' pips, '+sisaTeks+'.<br>Order close hari ini: '+ord.hari+'/5. Bulan ini: '+ord.bulan+'/100.</div>';
   st.innerHTML=html;
@@ -18489,6 +18498,11 @@ function cekEntryPending(g, r, pv){
   if(selisihPips>tolPips) return {selisihPips:Math.round(selisihPips*10)/10, tolPips:Math.round(tolPips*10)/10};
   return null;
 }
+// Jumlah sinyal XAU yang dibuka hari ini (running dan tutup). Dipakai untuk peringatan frekuensi.
+function jumlahSinyalXAUHariIni(){
+  const hari=tglHariIni();
+  return ((cachedSinyalAnalis&&cachedSinyalAnalis.XAUUSD)||[]).filter(r=>String(r.simbol||'').toUpperCase()==='XAUUSD' && String(r.tanggalBuka||r.tanggal||'').slice(0,10)===hari).length;
+}
 // Hitungan murni tanpa tampilan. rows = sinyal XAUUSD (Datuk EURUSD), bulanKey = 'YYYY-MM'
 function hitungKriteriaV4(rows,bulanKey,KR){
   const K=KR||KRITERIA_GAGAL_V4;
@@ -18550,7 +18564,7 @@ function renderBannerInputXAU(){
   const tgt=targetSemuaTercentangXAU();
   let html='';
   if(k.blokir) html+=kotakStopXAU('rugi','RUGI -3.000 PIPS SUDAH TERCAPAI','Rugi bersih bulan ini '+fmtPips1(h.netPips)+' pips. Batas kriteria yang kamu tetapkan sudah tercapai. Jangan input sinyal baru bulan ini.');
-  if(tgt.semua) html+=kotakStopXAU('target','TARGET TERPENUHI','Semua target bulan ini sudah tercentang. Jangan tambah sinyal untuk mengejar target.');
+  if(tgt.semua) html+=kotakStopXAU('target','TARGET TERPENUHI','Semua target bulan ini sudah tercentang. Stop kirim sinyal baru. Hapus pending yang belum terisi. Running tunggu sampai kena SL atau TP, jangan ditutup manual.');
   const sisaTeks = h.tercapai ? 'sudah melewati batas -3.000 pips' : 'sisa jarak ke batas '+fmtPips1(h.sisaPips)+' pips';
   html+='<div style="background:#132D0E;border:1px solid #1E4A14;border-radius:8px;padding:8px 10px;font-size:10px;color:#E5E7EB;line-height:1.6">Rugi bersih bulan ini '+fmtPips1(h.netPips)+' pips, '+sisaTeks+'.<br>Order close hari ini: forex '+fx.hari+'/5, XAUUSD '+au.hari+'/5. Bulan ini: forex '+fx.bulan+'/100, XAUUSD '+au.bulan+'/100.</div>';
   st.innerHTML=html;
@@ -18573,7 +18587,10 @@ function bangunPeringatanAtasXAU(){
   const k=kriteriaTercapaiXAU(), tgt=targetSemuaTercentangXAU();
   let html='';
   if(k.blokir) html+=kotakStopXAU('rugi','RUGI -3.000 PIPS SUDAH TERCAPAI','Rugi bersih bulan ini '+fmtPips1(k.h.netPips)+' pips. Batas kriteria yang kamu tetapkan sudah tercapai. Jangan input sinyal baru bulan ini.');
-  if(tgt.semua) html+=kotakStopXAU('target','TARGET TERPENUHI','Semua target bulan ini sudah tercentang. Jangan tambah sinyal untuk mengejar target.');
+  if(tgt.semua) html+=kotakStopXAU('target','TARGET TERPENUHI','Semua target bulan ini sudah tercentang. Stop kirim sinyal baru. Hapus pending yang belum terisi. Running tunggu sampai kena SL atau TP, jangan ditutup manual.');
+  // Kebiasaan frekuensi: XAU paling banyak 2–3 sinyal per hari. Hanya peringatan, input tetap bisa.
+  const nXauHari=jumlahSinyalXAUHariIni();
+  if(nXauHari>3) html+='<div style="background:#2D2208;border:2px solid #FACC15;border-radius:10px;padding:10px 12px;font-size:12px;color:#FACC15;font-weight:800;line-height:1.6;margin-bottom:8px">⚠️ Sinyal XAU hari ini sudah '+nXauHari+'. Kebiasaan kamu 2–3 per hari. Pertimbangkan berhenti.</div>';
   return html;
 }
 function renderPeringatanAtasXAU(){
