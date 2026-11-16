@@ -1805,7 +1805,7 @@ function renderInvCalcDisclaimer(){
 <div data-chan="V2OFF" style="display:none !important">Modal acuan = modal MINIMAL agar kerugian maksimal 1 bulan tidak lebih dari 6% (dihitung otomatis dari aturan v2), TIDAK memakai saldo akun/sen di situs ini. Otomatis dari sinyal closed yang di-input di bawah. Dihitung dalam $ (pips × nilai pip lot acuan), drawdown (DD) diukur dari PUNCAK bersih bulan itu. Loss dihitung berdasarkan tanggal <b>Closed at</b>. Investor & admin sama-sama bisa cek; hanya admin yang bisa ubah batas.</div>
       <div style="background:var(--bg0);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
         <div style="font-size:10px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🧮 Masukkan Modal Anda di Sini</div>
-        <div style="font-size:9px;color:#E5E7EB;margin-bottom:8px;line-height:1.5">Ketik modal Anda, lalu batas kerugian, drawdown (DD), dan sisa ruang untuk modal Anda muncul di bawahnya. Lot boleh dikosongkan (otomatis dihitung sebanding dengan acuan minimal per channel (Datuk EURUSD $5.000, Datuk Crypto 89 $1.800 sesuai aturan v3)). Hanya simulasi di layar Anda, tidak disimpan ke server dan tidak mengubah batas analis.</div>
+        <div style="font-size:9px;color:#E5E7EB;margin-bottom:8px;line-height:1.5">Ketik modal Anda, lalu batas kerugian, drawdown (DD), dan sisa ruang untuk modal Anda muncul di bawahnya. Lot boleh dikosongkan (otomatis dihitung sebanding dengan acuan minimal per channel (Datuk EURUSD $7.350 sesuai aturan v4, Datuk Crypto 89 $1.800 sesuai aturan v3)). Hanya simulasi di layar Anda, tidak disimpan ke server dan tidak mengubah batas analis.</div>
         <div style="display:flex;gap:8px">
           <div style="flex:1"><label class="lbl">Modal Anda ($)</label><input class="inp" type="number" step="any" min="1" id="batasDDModalInv" placeholder="mis. 1000" oninput="renderBatasDDSim()"></div>
           <div style="flex:1"><label class="lbl">Lot (minimal 0,01)</label><input class="inp" type="number" step="0.01" min="0.01" id="batasDDLotInv" placeholder="otomatis" oninput="renderBatasDDSim()"></div>
@@ -16274,7 +16274,7 @@ loadTahunanPengelolaProfil();
 // Setting disimpan di app_settings key 'batas_dd_XAUUSD' / 'batas_dd_FOREX' (JSON).
 // ══════════════════════════════════════════════════════════════════════
 const BATAS_DD_DEFAULT={
-  XAUUSD:{modal:7200, lot:0.01, stopUsd:432, warnUsd:216, riskLossUsd:50, maxLossPerHari:1},   // Datuk EURUSD (Aturan v3): modal $7.200 (emas $6.000 + forex $1.200), stop 6% = $432, peringatan 3% = $216   // stop 6% dari $1.000 = $60 = 600 pips (1 pip = $0,10)
+  XAUUSD:{modal:7350, lot:0.01, stopUsd:432, warnUsd:216, riskLossUsd:50, maxLossPerHari:1},   // Datuk EURUSD (Aturan v4): modal $7.350 (emas $6.000 + forex $1.350). Stop, peringatan, dan risiko di sini tidak dipakai untuk Datuk EURUSD, karena v4 hanya mengandalkan buffer
   FOREX: {modal:5000, lot:0.01, stopUsd:300, warnUsd:150, riskLossUsd:5.5, maxLossPerHari:1}   // Datuk Crypto 89: acuan $5.000, stop 6% = $300 = 3000 pips
 };
 let cachedBatasDD={XAUUSD:Object.assign({},BATAS_DD_DEFAULT.XAUUSD), FOREX:Object.assign({},BATAS_DD_DEFAULT.FOREX)};
@@ -16325,6 +16325,8 @@ function _bdPilihBulanOpsi(){
 }
 const BATAS_RUGI_BULAN_PCT_ANALIS=6;   // maksimal rugi 1 bulan = 6% dari modal
 function batasAturanV2(g){
+  // Datuk EURUSD (XAUUSD): pakai aturan v4 (modal $7.350, REM total $2.450), bukan angka v2 di bawah
+  if(g==='XAUUSD' && typeof V4_MODAL!=='undefined') return {modal:V4_MODAL.TOTAL, lot:0.01, stopUsd:V4_REM_USD_TOTAL, warnUsd:Math.round(V4_REM_USD_TOTAL/2*100)/100, riskLossUsd:0, maxLossPerHari:999};
   const R=FOREX_REM_V2, E=METODE_DEF['H4-500'], f=remForexBatas(g,R);
   const stopPips=3000;   // Datuk EURUSD & Datuk Crypto 89: 3000 pips ($300), acuan $5.000
   const stopUsd=Math.round(stopPips*0.1*100)/100;                       // lot 0,01: 1 pip = $0,10
@@ -17697,7 +17699,7 @@ function renderRekapSemuaBulan(){
 })();
 
 // ══ DD ANALIS (WAJIB): per channel, acuan masing-masing, harian 3% & bulanan 6%, peringatan di banner ══
-const ANALIS_DD={usdPerPip:0.1, harianPct:3, bulanPct:6, channel:[{g:'XAUUSD', nama:'Datuk EURUSD', modal:5000},{g:'FOREX', nama:'Datuk Crypto 89', modal:5000}]};
+const ANALIS_DD={usdPerPip:0.1, harianPct:3, bulanPct:6, channel:[{g:'XAUUSD', nama:'Datuk EURUSD', modal:7350},{g:'FOREX', nama:'Datuk Crypto 89', modal:5000}]};
 function hitungDDAnalis(g, modal){
   const rows=[];
   (cachedSinyalAnalis[g]||[]).forEach(r=>{
