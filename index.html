@@ -18535,6 +18535,71 @@ function jumlahSinyalXAUHariIni(){
   const hari=tglHariIni();
   return ((cachedSinyalAnalis&&cachedSinyalAnalis.XAUUSD)||[]).filter(r=>String(r.simbol||'').toUpperCase()==='XAUUSD' && String(r.tanggalBuka||r.tanggal||'').slice(0,10)===hari).length;
 }
+// ══ EKSPOR LAPORAN BULANAN ANALIS (hanya pips & VP — harga open, SL, TP privat TIDAK diekspor) ══
+function grupAnalisAktif(){ return (document.body.getAttribute('data-akun')==='crypto89') ? 'FOREX' : 'XAUUSD'; }
+function rowsEksporAnalis(g, bulanKey){
+  return (cachedSinyalAnalis[g]||[])
+    .filter(r=>r.status!=='running' && r.status!=='pending' && String(r.tanggal||'').slice(0,7)===bulanKey)
+    .sort((a,b)=>(String(a.tanggal)+String(a.jam||'')).localeCompare(String(b.tanggal)+String(b.jam||'')));
+}
+function ringkasEksporAnalis(rows){
+  const pips=rows.reduce((x,r)=>x+(parseFloat(r.pips)||0),0);
+  const vp=rows.reduce((x,r)=>x+(parseFloat(r.vp)||0),0);
+  const untung=rows.filter(r=>(parseFloat(r.pips)||0)>0).length;
+  return {jumlah:rows.length, untung:untung, rugi:rows.length-untung, pips:Math.round(pips*10)/10, vp:Math.round(vp*100)/100};
+}
+function angkaEksporCsv(v){ return (typeof v==='number') ? (Math.round(v*100)/100).toString().replace('.',',') : String(v==null?'':v); }
+function bulanEksporAnalis(){ const el=document.getElementById('eksporAnalisBulan'); return (el&&el.value) ? el.value : bulanKeyNow(); }
+function exportAnalisCSV(){
+  const g=grupAnalisAktif(), bk=bulanEksporAnalis();
+  const rows=rowsEksporAnalis(g,bk);
+  if(!rows.length){ toast('Tidak ada sinyal tertutup di bulan '+bk); return; }
+  const kepala=['Tanggal','Jam','Pair','Batch','Hasil','Pips','VP'];
+  const isi=rows.map(r=>{
+    const p=parseFloat(r.pips)||0;
+    return [r.tanggal, r.jam||'', r.simbol||'', r.batch||'', p>0?'Profit':(p<0?'Loss':'Netral'), angkaEksporCsv(p), angkaEksporCsv(parseFloat(r.vp)||0)].join(';');
+  });
+  const ring=ringkasEksporAnalis(rows);
+  const baris=[kepala.join(';')].concat(isi, ['','Jumlah order;'+ring.jumlah, 'Profit;'+ring.untung, 'Loss;'+ring.rugi, 'Pips total;'+angkaEksporCsv(ring.pips), 'VP total;'+angkaEksporCsv(ring.vp)]);
+  const blob=new Blob(['\uFEFF'+baris.join('\n')], {type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`Laporan_${g==='FOREX'?'Crypto89':'EURUSD'}_${bk}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('✅ CSV laporan '+bk+' diunduh ('+rows.length+' order)');
+}
+function exportAnalisPDF(){
+  const g=grupAnalisAktif(), bk=bulanEksporAnalis();
+  const rows=rowsEksporAnalis(g,bk);
+  if(!rows.length){ toast('Tidak ada sinyal tertutup di bulan '+bk); return; }
+  const ring=ringkasEksporAnalis(rows);
+  const judul=(g==='FOREX'?'Datuk Crypto 89':'Datuk EURUSD')+' — Laporan '+bk;
+  const trs=rows.map(r=>{ const p=parseFloat(r.pips)||0; return '<tr><td>'+r.tanggal+'</td><td>'+(r.jam||'')+'</td><td>'+(r.simbol||'')+'</td><td>'+(r.batch||'')+'</td><td>'+(p>0?'Profit':(p<0?'Loss':'Netral'))+'</td><td style="text-align:right">'+angkaEksporCsv(p)+'</td><td style="text-align:right">'+angkaEksporCsv(parseFloat(r.vp)||0)+'</td></tr>'; }).join('');
+  const html='<!doctype html><html><head><meta charset="utf-8"><title>'+judul+'</title><style>body{font-family:Arial,sans-serif;font-size:12px;margin:24px;color:#111}h1{font-size:16px;margin:0 0 4px}table{border-collapse:collapse;width:100%;margin-top:12px}th,td{border:1px solid #999;padding:4px 6px}th{background:#eee;text-align:left}.ring{margin-top:12px;font-weight:bold}</style></head><body>'
+    +'<h1>'+judul+'</h1><div>Hanya pips dan VP. Harga open, SL, dan TP tidak ditampilkan.</div>'
+    +'<table><thead><tr><th>Tanggal</th><th>Jam</th><th>Pair</th><th>Batch</th><th>Hasil</th><th>Pips</th><th>VP</th></tr></thead><tbody>'+trs+'</tbody></table>'
+    +'<div class="ring">Jumlah order: '+ring.jumlah+' · Profit: '+ring.untung+' · Loss: '+ring.rugi+' · Pips total: '+angkaEksporCsv(ring.pips)+' · VP total: '+angkaEksporCsv(ring.vp)+'</div>'
+    +'</body></html>';
+  const w=window.open('','_blank');
+  if(!w){ toast('❌ Pop-up diblokir browser. Izinkan pop-up untuk situs ini.'); return; }
+  w.document.write(html); w.document.close(); w.focus(); w.print();
+}
+function renderEksporAnalis(){
+  const host=document.getElementById('secAnalisBlok'); if(!host) return;
+  let box=document.getElementById('eksporAnalisBlok');
+  if(!box){
+    box=document.createElement('div'); box.id='eksporAnalisBlok';
+    box.style.cssText='margin:14px 0;padding:12px;border:1.5px solid #34D399;border-radius:12px;background:#0F1A12';
+    box.innerHTML='<div style="font-size:12px;font-weight:800;color:#FFFFFF;margin-bottom:4px">📁 Ekspor Laporan Bulanan Analis</div>'
+      +'<div style="font-size:10px;color:#E5E7EB;margin-bottom:8px">Isi laporan: tanggal, pair, batch, hasil, pips, dan VP. Harga open, SL, dan TP tidak ikut.</div>'
+      +'<input type="month" id="eksporAnalisBulan" style="margin-bottom:8px;width:100%">'
+      +'<div style="display:flex;gap:8px"><button class="btn btn-p" onclick="exportAnalisCSV()" style="margin-bottom:0;flex:1">⬇️ CSV</button><button class="btn btn-p" onclick="exportAnalisPDF()" style="margin-bottom:0;flex:1">⬇️ PDF (cetak)</button></div>';
+    host.appendChild(box);
+  }
+  const inp=document.getElementById('eksporAnalisBulan');
+  if(inp && !inp.value) inp.value=bulanKeyNow();
+}
 // Hitungan murni tanpa tampilan. rows = sinyal XAUUSD (Datuk EURUSD), bulanKey = 'YYYY-MM'
 function hitungKriteriaV4(rows,bulanKey,KR){
   const K=KR||KRITERIA_GAGAL_V4;
@@ -18642,6 +18707,7 @@ function renderPeringatanAtasXAU(){
 }
 setTimeout(renderPeringatanAtasXAU, 1000); setInterval(renderPeringatanAtasXAU, 2000);
 setInterval(renderBannerInputXAU, 3000);
+setTimeout(renderEksporAnalis, 1500); setInterval(renderEksporAnalis, 3000);
 setInterval(renderBannerInputFOREX, 3000); setTimeout(renderBannerInputFOREX, 1600);
 setTimeout(renderPeringatanFOREX, 1200); setInterval(renderPeringatanFOREX, 2000);
 setInterval(function(){ perbaruiKriteriaGrup('FOREX').catch(function(e){ console.error('kriteriaCrypto89', e); }); }, 3000); setTimeout(renderBannerInputXAU, 1500);
