@@ -11568,7 +11568,34 @@ function saveBackupInterval(){
   saveBackupSettings(s);
   renderAutoBackupInfo();
 }
-function buildBackupPayload(){
+// ══ BACKUP & RESTORE DATA SINYAL ANALIS ══
+// Data sinyal disimpan di server (app_settings), bukan di localStorage. Backup mengambil langsung dari server.
+const KUNCI_SINYAL_BACKUP=['sinyal_analis_XAUUSD','sinyal_analis_FOREX','sinyal_analis_privat_XAUUSD','sinyal_analis_privat_FOREX','sinyal_pending_XAUUSD','sinyal_pending_FOREX'];
+async function ambilSinyalUntukBackup(){
+  const hasil={};
+  for(const k of KUNCI_SINYAL_BACKUP){
+    const rows=await api('app_settings?select=value&key=eq.'+k);   // lempar error kalau gagal baca
+    hasil[k]=(rows&&rows.length&&rows[0].value)?JSON.parse(rows[0].value):null;
+  }
+  return hasil;
+}
+async function simpanKunciServer(key, payload){
+  const existing=await api('app_settings?select=key&key=eq.'+key);
+  if(existing.length){ await api('app_settings?key=eq.'+key,'PATCH',{value:payload}); }
+  else{ await api('app_settings','POST',{key,value:payload}); }
+}
+async function restoreSinyalDariBackup(data, tglBackup){
+  const jmlXau=Array.isArray(data.sinyal_analis_XAUUSD)?data.sinyal_analis_XAUUSD.length:0;
+  const jmlFx=Array.isArray(data.sinyal_analis_FOREX)?data.sinyal_analis_FOREX.length:0;
+  const ok=confirm(`Restore data sinyal analis dari backup ${tglBackup}?\n\nXAUUSD (Datuk EURUSD): ${jmlXau} baris\nFOREX (Datuk Crypto 89): ${jmlFx} baris\n\nIni akan MENIMPA data sinyal di server sekarang. Lanjut?`);
+  if(!ok) return false;
+  for(const k of KUNCI_SINYAL_BACKUP){
+    if(data[k]===null || data[k]===undefined) continue;
+    await simpanKunciServer(k, JSON.stringify(data[k]));
+  }
+  return true;
+}
+async function buildBackupPayload(){
   // Catatan: 'mk_investors' TIDAK ada di sini lagi — daftar investor sekarang tersimpan
   // di Supabase (tabel investors), bukan localStorage, jadi otomatis ikut backup Supabase kamu sendiri.
   const localKeys=['mk_goals','mk_aset_lain','mk_kewajiban','mk_target_rr','mk_sertifikat_nama','mk_kas_threshold','mk_backup_settings'];
@@ -11577,17 +11604,19 @@ function buildBackupPayload(){
     const v=localStorage.getItem(k);
     if(v!==null){ try{ localData[k]=JSON.parse(v); }catch(e){ localData[k]=v; } }
   });
+  const sinyalAnalis = await ambilSinyalUntukBackup();   // gagal baca server → backup dibatalkan
   return {
     exportedAt: new Date().toISOString(),
     app: 'Marginkuat',
     saldoHarian: allSaldoData||[],
     kasPribadi: allKasData||[],
-    localSettings: localData
+    localSettings: localData,
+    sinyalAnalis: sinyalAnalis
   };
 }
-function doBackupNow(silent){
+async function doBackupNow(silent){
   try{
-    const payload=buildBackupPayload();
+    const payload=await buildBackupPayload();
     const json=JSON.stringify(payload, null, 2);
     const blob=new Blob([json], {type:'application/json'});
     const url=URL.createObjectURL(blob);
@@ -11609,10 +11638,10 @@ function doBackupNow(silent){
     return null;
   }
 }
-function doBackupViaEmail(){
+async function doBackupViaEmail(){
   const s=getBackupSettings();
   const target=s.email||'';
-  const filename=doBackupNow(true);
+  const filename=await doBackupNow(true);
   if(!filename)return;
   const subject=encodeURIComponent('Backup Data Marginkuat — '+new Date().toLocaleDateString('id-ID'));
   const body=encodeURIComponent(`File backup (${filename}) sudah otomatis terdownload di perangkat kamu — cek folder Download, lalu lampirkan file itu ke email ini sebelum dikirim (browser tidak bisa melampirkan file secara otomatis karena alasan keamanan).\n\nDikirim dari Marginkuat.`);
@@ -11635,7 +11664,7 @@ function restoreFromBackupFile(event){
   if(!file) return;
 
   const reader=new FileReader();
-  reader.onload=function(e){
+  reader.onload=async function(e){
     let payload;
     try{
       payload=JSON.parse(e.target.result);
@@ -11668,6 +11697,10 @@ function restoreFromBackupFile(event){
       }
     });
 
+    if(payload.sinyalAnalis){
+      const okSinyal=await restoreSinyalDariBackup(payload.sinyalAnalis, tglBackup);
+      if(!okSinyal) toast('ℹ️ Data sinyal analis tidak di-restore (dibatalkan)');
+    }
     if(statusEl) statusEl.textContent=`✅ ${restoredCount} pengaturan berhasil di-restore. Memuat ulang halaman...`;
     toast(`✅ ${restoredCount} pengaturan berhasil di-restore`);
     fileInput.value='';
@@ -11708,8 +11741,7 @@ function checkAutoBackupSchedule(){
   const now=Date.now();
   const intervalMs=s.intervalDays*86400000;
   if(now-last >= intervalMs){
-    doBackupNow(true);
-    toast('💾 Auto backup berjalan — file backup terbaru otomatis terdownload');
+    doBackupNow(true).then(f=>{ if(f) toast('💾 Auto backup berjalan — file backup terbaru otomatis terdownload'); });
   }
 }
 
