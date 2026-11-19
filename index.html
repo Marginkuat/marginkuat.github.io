@@ -5363,6 +5363,19 @@ let cachedSinyalAnalis={XAUUSD:[], FOREX:[]};
 // publik (anon key) gak bisa ambil datanya sama sekali dari server, bukan cuma "gak dirender".
 // Makanya loadSinyalAnalisPrivat() CUMA dipanggil kalau isAdmin true (setelah login berhasil).
 let cachedSinyalAnalisPrivat={XAUUSD:{}, FOREX:{}};
+// ══ PENGAMAN PENYIMPANAN: tidak menimpa data server yang tidak ada di halaman ══
+let sinyalSudahDimuat={XAUUSD:false, FOREX:false}, privatSudahDimuat={XAUUSD:false, FOREX:false};
+async function cekTimpaServer(key, nilaiLokal, izinKurang, sudahDimuat, label){
+  if(!sudahDimuat) throw new Error('Data '+label+' belum selesai dimuat. Muat ulang halaman, lalu coba lagi.');
+  if(izinKurang) return;   // penghapusan yang disengaja (hapus sinyal, tutup running, hapus duplikat)
+  const rows=await api('app_settings?select=value&key=eq.'+key);
+  if(!rows||!rows.length||!rows[0].value) return;   // belum ada di server: aman
+  let server; try{ server=JSON.parse(rows[0].value); }catch(e){ return; }
+  const lokal=new Set(Array.isArray(nilaiLokal) ? nilaiLokal.map(r=>r&&r.id) : Object.keys(nilaiLokal||{}));
+  const idServer = Array.isArray(server) ? server.map(r=>r&&r.id).filter(x=>x!=null) : Object.keys(server||{});
+  const hilang=idServer.filter(id=>!lokal.has(id));
+  if(hilang.length) throw new Error('Server punya '+hilang.length+' data '+label+' yang tidak ada di halaman. Muat ulang halaman dulu supaya tidak tertimpa. Penyimpanan dibatalkan.');
+}
 async function loadSinyalAnalisPrivat(){
   if(!isAdmin) return;
   for(const g of ['XAUUSD','FOREX']){
@@ -5373,13 +5386,15 @@ async function loadSinyalAnalisPrivat(){
         if(parsed && typeof parsed==='object') cachedSinyalAnalisPrivat[g]=parsed;
       }
       window._privatLoadedSesi = true;
+      privatSudahDimuat[g]=true;
     }catch(e){
       console.error('Gagal load sinyal_analis_privat_'+g, e);
       toast('⚠️ Gagal baca harga Price/TP/SL dari server ('+g+'). Coba logout lalu login lagi.');
     }
   }
 }
-async function simpanSinyalPrivatKeServer(g){
+async function simpanSinyalPrivatKeServer(g, izinKurang){
+  try{ await cekTimpaServer('sinyal_analis_privat_'+g, cachedSinyalAnalisPrivat[g], !!izinKurang, privatSudahDimuat[g], 'harga privat'); }catch(e){ toast('❌ '+e.message); throw e; }
   const payload=JSON.stringify(cachedSinyalAnalisPrivat[g]);
   const key='sinyal_analis_privat_'+g;
   const existing=await api('app_settings?select=key&key=eq.'+key);
@@ -5394,10 +5409,12 @@ async function loadSinyalAnalis(){
         const parsed=JSON.parse(rows[0].value);
         if(Array.isArray(parsed)) cachedSinyalAnalis[g]=parsed;
       }
+      sinyalSudahDimuat[g]=true;
     }catch(e){ console.error('Gagal load sinyal_analis_'+g, e); }
   }
 }
-async function simpanSinyalKeServer(g){
+async function simpanSinyalKeServer(g, izinKurang){
+  try{ await cekTimpaServer('sinyal_analis_'+g, cachedSinyalAnalis[g], !!izinKurang, sinyalSudahDimuat[g], 'sinyal'); }catch(e){ toast('❌ '+e.message); throw e; }
   const payload=JSON.stringify(cachedSinyalAnalis[g]);
   const key='sinyal_analis_'+g;
   const existing=await api('app_settings?select=key&key=eq.'+key);
@@ -5553,7 +5570,7 @@ async function hapusSinyal(g, id){
   if(!confirm(`Hapus sinyal ${item.simbol||g} tanggal ${item.tanggal} (${item.pips}pip / ${item.vp}VP)? Ini gak bisa dibatalkan.`))return;
   try{
     cachedSinyalAnalis[g]=cachedSinyalAnalis[g].filter(r=>r.id!==id);
-    await simpanSinyalKeServer(g);
+    await simpanSinyalKeServer(g, true);
     toast('✅ Sinyal dihapus');
     renderScoreCard(); renderRemPipsCard(); renderDaftarSinyal();
   }catch(e){
@@ -5914,7 +5931,7 @@ async function hapusSinyalPending(g,id){
   delete (cachedSinyalAnalisPrivat[g]||{})[id];
   try{
     await simpanSinyalPendingKeServer(g);
-    await simpanSinyalPrivatKeServer(g);
+    await simpanSinyalPrivatKeServer(g, true);
   }catch(e){ console.error(e); toast('❌ Gagal hapus pending'); }
   renderDaftarRunning();
 }
@@ -5943,7 +5960,7 @@ async function jadikanRunningDariPending(g,id){
   if((cachedSinyalAnalis[g]||[]).length>sebelum){
     cachedPending[g]=(cachedPending[g]||[]).filter(x=>x.id!==id);
     delete (cachedSinyalAnalisPrivat[g]||{})[id];
-    try{ await simpanSinyalPendingKeServer(g); await simpanSinyalPrivatKeServer(g); }
+    try{ await simpanSinyalPendingKeServer(g); await simpanSinyalPrivatKeServer(g, true); }
     catch(e){ console.error(e); toast('⚠️ Sudah jadi running, tapi pending belum terhapus dari server'); }
     renderDaftarRunning();
   }
@@ -6221,10 +6238,10 @@ async function hapusSinyalRunning(g, id){
   if(!confirm(`Hapus catatan sinyal running ${item.simbol||g} (dibuka ${item.tanggal})?\n\nIni cuma hapus CATATAN di tools ini — kalau posisinya masih beneran kebuka di market/app TF, itu gak ikut kehapus, cuma catatannya di sini aja. Cocok dipakai kalau salah catat channel/pair.`))return;
   try{
     cachedSinyalAnalis[g]=cachedSinyalAnalis[g].filter(r=>r.id!==id);
-    await simpanSinyalKeServer(g);
+    await simpanSinyalKeServer(g, true);
     if(cachedSinyalAnalisPrivat[g] && cachedSinyalAnalisPrivat[g][id]){
       delete cachedSinyalAnalisPrivat[g][id];
-      await simpanSinyalPrivatKeServer(g);
+      await simpanSinyalPrivatKeServer(g, true);
     }
     toast('✅ Catatan sinyal running dihapus');
     renderDaftarSinyal();
@@ -6292,7 +6309,7 @@ async function tutupSinyalRunning(g, id, jenis){
     // Bersihkan data harga privat begitu sinyal closed — udah gak perlu lagi buat saran pips.
     if(cachedSinyalAnalisPrivat[g] && cachedSinyalAnalisPrivat[g][id]){
       delete cachedSinyalAnalisPrivat[g][id];
-      await simpanSinyalPrivatKeServer(g);
+      await simpanSinyalPrivatKeServer(g, true);
     }
     toast(`✅ ${item.simbol||g} ditutup: ${item.pips>=0?'+':''}${item.pips} pip / ${item.vp>=0?'+':''}${item.vp} VP`);
     renderScoreCard(); renderRemPipsCard(); renderDaftarSinyal();
@@ -16894,7 +16911,7 @@ async function hapusDuplikat(g){
   const cadangan=semua.slice();
   try{
     cachedSinyalAnalis[g]=semua.filter(r=>!idHapus.has(r.id));
-    await simpanSinyalKeServer(g);
+    await simpanSinyalKeServer(g, true);
     toast(`✅ ${idHapus.size} duplikat dihapus`);
     renderScoreCard(); renderRemPipsCard(); renderDaftarSinyal();
   }catch(e){
