@@ -1342,6 +1342,109 @@ function updXauNote(sel,id){
       <div style="font-size:9px;color:#FFFFFF;margin-top:2px;line-height:1.35">Level ${idx+1} · SL ${fm(d.sl)} · risk ${CUR()}${fm(lv.risk)}${next?`<br>naik lot ${next.lot.toFixed(2)} di ${CUR()}${fm(next.modal)}`:' · 🏆 tertinggi'}</div>`;
   }
 
+  // ══ KALKULATOR LEVEL 1,5% & 2,5%: sistem level sama dengan 5%, hanya persentase risiko yang beda ══
+  // Kalkulator 5% (buildLevelPlan, buildLevelTableHtml) dan kalkulator 2% TIDAK diubah.
+  // Input diambil dari kalkulator 5% (calcModal, calcSL, calcPipValue), jadi tidak ada isian baru.
+  function buildLevelPlanPct(sl, pipvalue, riskPct){
+    const buffer=1/riskPct, plan=[];
+    for(let i=0;i<N_LEVELS;i++){
+      const lot=Math.round((LOT_START+i*LOT_STEP)*100)/100;
+      const risk=sl*pipvalue*(lot/0.01);   // rumus risk sama dengan kalkulator 5%
+      plan.push({lot, risk, modal:buffer*risk, buffer});
+    }
+    return plan;
+  }
+  function buildLevelTableHtmlPct(modalSaatIni, sl, pipvalue, riskPct, uid, cur){
+    cur=cur||'$';
+    if(sl<=0 || pipvalue<=0) return '';
+    const plan=buildLevelPlanPct(sl, pipvalue, riskPct);
+    let levelIdx=-1; plan.forEach((lv,i)=>{ if(modalSaatIni>=lv.modal) levelIdx=i; });
+    const levelSekarang=levelIdx+1, next=plan[levelIdx+1];
+    const pctLbl=(riskPct*100).toString().replace('.',',');
+    const rowsArr=plan.map((lv,i)=>{
+      const tercapai=i<=levelIdx, aktif=i===levelIdx;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:5px 0;border-bottom:1px solid var(--border);${aktif?'background:var(--bg2);':''}">
+        <span style="color:${tercapai?'#4ADE80':'#E5E7EB'}">${tercapai?'✓':'○'} Level ${i+1} — lot ${lv.lot.toFixed(2)} <span style="color:#E5E7EB">(${lv.buffer.toFixed(2)}x, ${pctLbl}%)</span></span>
+        <span style="text-align:right">
+          <span style="color:${tercapai?'#4ADE80':'#FFFFFF'};font-weight:700">${cur}${lv.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</span><br>
+          <span style="font-size:8px;color:#E5E7EB">risk ${cur}${lv.risk.toLocaleString('en-US',{maximumFractionDigits:2})}/trade</span>
+        </span>
+      </div>`;
+    });
+    const rows=mkRingkasRows(rowsArr, levelIdx, uid, 3);
+    return `<div style="background:var(--bg2);border-radius:10px;padding:14px;margin-top:12px">
+      <div style="text-align:center;margin-bottom:10px">
+        <div style="font-size:9px;color:#E5E7EB;text-transform:uppercase;letter-spacing:.5px">Level Saat Ini (Modal ${cur}${modalSaatIni.toLocaleString('en-US')})</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:${levelSekarang>0?'#4ADE80':'#F87171'}">${levelSekarang>0?'Level '+levelSekarang:'⚠️ Modal belum cukup'}</div>
+        ${next?`<div style="font-size:9px;color:#E5E7EB;margin-top:2px">Butuh saldo <b style="color:#FFFFFF">${cur}${next.modal.toLocaleString('en-US',{maximumFractionDigits:2})}</b> (lot ${next.lot.toFixed(2)}) buat naik ke Level ${levelIdx+2}</div>`:''}
+      </div>
+      <div style="font-size:8px;color:#E5E7EB;text-align:center;margin-bottom:8px">👇 Sistem level sama dengan Kalkulator Agresif 5%, risk dikunci flat ${pctLbl}% per level</div>
+      ${rows}
+    </div>`;
+  }
+    function htmlKalkulatorLevelPct(suffix, judul, pct){
+    const pilihPair=(document.getElementById('calcPairSelect')||{}).innerHTML||'';
+    const pilihAkun=(document.getElementById('calcAkunType')||{}).innerHTML||'<option value="Standard">Standard ($)</option><option value="Sen">Cent (Sen)</option>';
+    const pctLbl=(pct*100).toString().replace('.',',');
+    return `<div class="sec-title">🧮 ${judul}</div>
+      <div style="font-size:11px;color:#E5E7EB;margin-bottom:12px;line-height:1.5">Sistem level sama dengan Kalkulator Agresif 5%. Hanya persentase risiko yang berbeda (${pctLbl}%).</div>
+      <label class="lbl">Pilih Pair</label>
+      <select class="inp" id="calcPairSelect${suffix}" style="margin-bottom:0">${pilihPair}</select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+        <div><label class="lbl">Pips Dipertaruhkan (SL)</label><input type="number" class="inp" id="calcSL${suffix}" value="200" step="0.01"></div>
+        <div><label class="lbl">Pips Target (TP)</label><input type="number" class="inp" id="calcTP${suffix}" value="400" step="0.01"></div>
+        <div><label class="lbl">Nilai/Pip ($)</label><input type="number" class="inp" id="calcPipValue${suffix}" value="0.1" step="0.01"></div>
+        <div><label class="lbl">Lot</label><input type="number" class="inp" id="calcLotTest${suffix}" value="0.01" step="0.01"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+        <div>
+          <label class="lbl">Modal Kamu <span id="calcModalLvl${suffix}Sumber" style="color:#E5E7EB;font-weight:400;text-transform:none;letter-spacing:0"></span></label>
+          <input type="number" class="inp" id="calcModalLvl${suffix}" step="1" min="0" style="margin-bottom:0">
+          <div style="font-size:8px;color:#E5E7EB;margin-top:4px">🔄 Otomatis dari Saldo MT4 terakhir, bisa diketik ulang manual.</div>
+        </div>
+        <div><label class="lbl">Tipe Akun</label><select class="inp" id="calcAkunType${suffix}" style="margin-bottom:0">${pilihAkun}</select></div>
+      </div>
+      <div style="height:1px;background:var(--border);margin:18px 0"></div>
+      <div style="font-size:11px;color:#E5E7EB;margin-bottom:12px;line-height:1.5">🎯 Masukkan harga entry, langsung dapat level SL/TP untuk RR 1:1 dan 1:2 sekaligus (pakai SL pips di atas sebagai basis).</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="lbl">Entry Price</label><input type="number" class="inp" id="entryPrice${suffix}" value="" step="0.00001" placeholder="cth: 4139.00" style="margin-bottom:0"></div>
+        <div><label class="lbl">Tipe</label><div class="calc-seg" id="entryTypeSeg${suffix}"><button data-type="buy" class="active">📈 Buy</button><button data-type="sell">📉 Sell</button></div></div>
+      </div>
+      <div id="selisihOut${suffix}" style="margin-top:12px"></div>
+      <div id="rrLevelsOut${suffix}" style="margin-top:16px"></div>
+      <div class="kalk-lvl-body"></div>`;
+  }
+  function renderKalkulatorLevelPct(){
+    const ref=document.getElementById('secKalkulator'); if(!ref || !ref.parentNode) return;
+    const daftar=[[0.015,'lvl15','15','Kalkulator Level 1,5%'],[0.025,'lvl25','25','Kalkulator Level 2,5%']];
+    let sisip=ref;
+    daftar.forEach(([pct,uid,suf,judul])=>{
+      const id='secKalkulatorLvl'+suf;
+      let sec=document.getElementById(id);
+      if(!sec){
+        sec=document.createElement('div'); sec.className='section'; sec.id=id; sec.setAttribute('data-akun','mt4');
+        sec.innerHTML=htmlKalkulatorLevelPct(suf, judul, pct);
+        sisip.parentNode.insertBefore(sec, sisip.nextSibling);
+        try{ if(typeof initEntryPriceCalcGeneric==='function') initEntryPriceCalcGeneric(suf); }catch(e){ console.error('init kalkulator level '+suf, e); }
+        const inpM=document.getElementById('calcModalLvl'+suf), lblM=document.getElementById('calcModalLvl'+suf+'Sumber');
+        const rowsS=(typeof rowsMt4Urut==='function') ? rowsMt4Urut() : [];
+        if(inpM && rowsS.length){
+          const t=rowsS[rowsS.length-1];
+          inpM.value=parseFloat(t.saldo_mt4||0).toFixed(2);
+          if(lblM && typeof fd==='function') lblM.textContent=`(update: ${fd(t.tanggal)})`;
+        }
+      }
+      sisip=sec;
+      const body=sec.querySelector('.kalk-lvl-body'); if(!body) return;
+      const sl=parseFloat((document.getElementById('calcSL'+suf)||{}).value)||0;
+      const pip=parseFloat((document.getElementById('calcPipValue'+suf)||{}).value)||0;
+      const modal=parseFloat((document.getElementById('calcModalLvl'+suf)||{}).value)||0;
+      const cur=((document.getElementById('calcAkunType'+suf)||{}).value==='Sen')?'¢':'$';
+      body.innerHTML = (modal>0 && sl>0 && pip>0) ? buildLevelTableHtmlPct(modal, sl, pip, pct, uid, cur) : '<div style="font-size:9px;color:#E5E7EB;padding:8px 0">Isi SL, pip, dan modal kamu untuk melihat level.</div>';
+    });
+  }
+    setTimeout(renderKalkulatorLevelPct, 1500); setInterval(renderKalkulatorLevelPct, 2000);
+
   function computeRekom(){
     const modal=parseFloat(modalEl.value)||0;
     const sl=parseFloat(slEl.value)||0;
@@ -1386,7 +1489,7 @@ window.syncModalSemuaKalkulator=function(){
   const terakhir=rows[rows.length-1];
   const nilai=parseFloat(terakhir.saldo_mt4||0).toFixed(2);
   const labelSumber=`(update: ${fd(terakhir.tanggal)})`;
-  [['calcModal2','calcModal2Sumber'], ['calcModal','calcModalSumber']].forEach(([idInput,idLabel])=>{
+  [['calcModal2','calcModal2Sumber'], ['calcModal','calcModalSumber'], ['calcModalLvl15','calcModalLvl15Sumber'], ['calcModalLvl25','calcModalLvl25Sumber']].forEach(([idInput,idLabel])=>{
     const inp=document.getElementById(idInput), lbl=document.getElementById(idLabel);
     if(inp) inp.value=nilai;
     if(lbl) lbl.textContent=labelSumber;
