@@ -18720,6 +18720,89 @@ function renderEksporAnalis(){
   const inp=document.getElementById('eksporAnalisBulan');
   if(inp && !inp.value) inp.value=bulanKeyNow();
 }
+// ══ CATATAN WD KE REKENING (bukti transfer). Hanya catatan: TIDAK mengubah saldo, profit/loss, atau kalkulator. ══
+// Penarikan dari MT4 tetap dibaca dari statement FBS. Angka di sini diketik dari screenshot bukti transfer.
+let catatanWdList=[], catatanWdDimuat=false, catatanWdMemuat=false;
+async function muatCatatanWd(){
+  if(catatanWdMemuat) return; catatanWdMemuat=true;
+  try{
+    const rows=await api('app_settings?select=value&key=eq.catatan_wd_mt4');
+    const v=(rows&&rows.length&&rows[0].value)?JSON.parse(rows[0].value):[];
+    catatanWdList=Array.isArray(v)?v:[];
+    catatanWdDimuat=true;
+  }catch(e){ console.error('catatan wd muat', e); }
+  catatanWdMemuat=false;
+  renderListCatatanWd();
+}
+// Penyimpanan dijaga: tidak menimpa catatan di server yang tidak ada di halaman (kecuali penghapusan yang disengaja)
+async function simpanCatatanWdServer(izinHapus){
+  if(!catatanWdDimuat) throw new Error('Catatan WD belum selesai dimuat. Muat ulang halaman, lalu coba lagi.');
+  if(!izinHapus){
+    const rows=await api('app_settings?select=value&key=eq.catatan_wd_mt4');
+    if(rows&&rows.length&&rows[0].value){
+      const srv=JSON.parse(rows[0].value);
+      const lokal=new Set(catatanWdList.map(x=>x.id));
+      if(Array.isArray(srv) && srv.some(x=>x&&!lokal.has(x.id))) throw new Error('Catatan WD di server lebih banyak dari halaman. Muat ulang halaman dulu.');
+    }
+  }
+  await simpanKunciServer('catatan_wd_mt4', JSON.stringify(catatanWdList));
+}
+async function simpanCatatanWd(){
+  if(!isAdmin){ toast('❌ Harus masuk sebagai Admin'); return; }
+  const g=id=>{ const el=document.getElementById(id); return el?el.value:''; };
+  const tgl=g('wdTgl'), jam=g('wdJam').trim(), bank=g('wdBank').trim(), rp=parseFloat(g('wdRp')), cent=parseFloat(g('wdCent')), ref=g('wdRef').trim(), ket=g('wdKet').trim();
+  if(!tgl){ toast('❌ Isi tanggal WD'); return; }
+  if(!(rp>0)){ toast('❌ Isi jumlah Rp dari bukti transfer'); return; }
+  const item={id:'wd'+Date.now().toString(36), tanggal:tgl, jam:jam, bank:bank, rp:rp, cent:isFinite(cent)?cent:null, ref:ref, ket:ket, dibuat:new Date().toISOString()};
+  catatanWdList.push(item);
+  try{ await simpanCatatanWdServer(false); }
+  catch(e){ catatanWdList=catatanWdList.filter(x=>x.id!==item.id); toast('❌ '+e.message); return; }
+  ['wdJam','wdBank','wdRp','wdCent','wdRef','wdKet'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  toast('✅ Catatan WD tersimpan');
+  renderListCatatanWd();
+}
+async function hapusCatatanWd(id){
+  if(!isAdmin) return;
+  if(!confirm('Hapus catatan WD ini?')) return;
+  const sebelum=catatanWdList;
+  catatanWdList=catatanWdList.filter(x=>x.id!==id);
+  try{ await simpanCatatanWdServer(true); }
+  catch(e){ catatanWdList=sebelum; toast('❌ '+e.message); return; }
+  renderListCatatanWd();
+}
+function renderListCatatanWd(){
+  const box=document.getElementById('catatanWdList'); if(!box) return;
+  if(!catatanWdList.length){ box.innerHTML='<div style="font-size:10px;color:#E5E7EB">Belum ada catatan WD.</div>'; return; }
+  box.innerHTML=catatanWdList.slice().sort((a,b)=>String(b.tanggal+(b.jam||'')).localeCompare(String(a.tanggal+(a.jam||'')))).map(w=>`
+    <div style="border-bottom:1px solid var(--border);padding:6px 0;font-size:10px;color:#E5E7EB;line-height:1.5">
+      <b style="color:#FFFFFF">${escapeHtml(w.tanggal)} ${escapeHtml(w.jam||'')}</b> · ${escapeHtml(w.bank||'-')}<br>
+      Rp ${Number(w.rp||0).toLocaleString('id-ID')}${w.cent!=null?' · ¢'+Number(w.cent).toLocaleString('id-ID'):''} · Ref ${escapeHtml(w.ref||'-')}
+      ${w.ket?'<br>'+escapeHtml(w.ket):''}
+      ${isAdmin?` <button onclick="hapusCatatanWd('${w.id}')" style="font-size:9px;margin-left:6px;cursor:pointer">Hapus</button>`:''}
+    </div>`).join('');
+}
+function renderCatatanWdMt4(){
+  if(document.getElementById('catatanWdBlok')){ if(!catatanWdDimuat && !catatanWdMemuat) muatCatatanWd(); return; }
+  const ref=document.getElementById('secKalkulatorLvl25')||document.getElementById('secKalkulator'); if(!ref||!ref.parentNode) return;
+  const box=document.createElement('div'); box.id='catatanWdBlok'; box.className='section'; box.setAttribute('data-akun','mt4');
+  box.innerHTML=`<div class="sec-title">🏦 Catatan WD ke Rekening</div>
+    <div style="font-size:10px;color:#E5E7EB;margin-bottom:8px;line-height:1.5">Ketik angka dari bukti transfer. Catatan ini hanya bukti: tidak mengubah saldo, profit/loss, atau kalkulator. Penarikan dari MT4 tetap dibaca dari statement FBS.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div><label class="lbl">Tanggal</label><input type="date" class="inp" id="wdTgl" style="margin-bottom:0"></div>
+      <div><label class="lbl">Jam (WIB)</label><input type="text" class="inp" id="wdJam" placeholder="18:02" style="margin-bottom:0"></div>
+      <div><label class="lbl">Jumlah Rp (bukti)</label><input type="number" class="inp" id="wdRp" step="1" min="0" placeholder="125883" style="margin-bottom:0"></div>
+      <div><label class="lbl">Jumlah ¢ (MT4)</label><input type="number" class="inp" id="wdCent" step="0.01" min="0" placeholder="700" style="margin-bottom:0"></div>
+      <div><label class="lbl">Bank tujuan</label><input type="text" class="inp" id="wdBank" placeholder="BNI" style="margin-bottom:0"></div>
+      <div><label class="lbl">No. referensi</label><input type="text" class="inp" id="wdRef" style="margin-bottom:0"></div>
+    </div>
+    <div style="margin-bottom:8px"><label class="lbl">Keterangan</label><input type="text" class="inp" id="wdKet" placeholder="opsional" style="margin-bottom:0"></div>
+    ${isAdmin?'<button class="btn btn-p" onclick="simpanCatatanWd()" style="margin-bottom:10px">💾 Simpan Catatan WD</button>':''}
+    <div id="catatanWdList"></div>`;
+  ref.parentNode.insertBefore(box, ref.nextSibling);
+  muatCatatanWd();
+}
+setTimeout(renderCatatanWdMt4, 2000); setInterval(renderCatatanWdMt4, 3000);
+
 // Hitungan murni tanpa tampilan. rows = sinyal XAUUSD (Datuk EURUSD), bulanKey = 'YYYY-MM'
 function hitungKriteriaV4(rows,bulanKey,KR){
   const K=KR||KRITERIA_GAGAL_V4;
