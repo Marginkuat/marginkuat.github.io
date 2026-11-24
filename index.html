@@ -18803,6 +18803,69 @@ function renderCatatanWdMt4(){
 }
 setTimeout(renderCatatanWdMt4, 2000); setInterval(renderCatatanWdMt4, 3000);
 
+// ══ ALIRAN DANA: masuk & keluar. Setoran/WD MT4 dari kas pribadi (statement + manual yang sah). Baris lain ditampilkan apa adanya. ══
+function barisAliranDana(bulan){
+  const batas=batasStatementMt4();
+  return (allKasData||[]).filter(r=>String(r.tanggal||'').slice(0,7)===bulan).slice().sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal))).map(r=>{
+    const f=klasifikasiArusMt4(r), stmt=isStmtRow(r);
+    const km=(typeof kategoriMeta!=='undefined' && r.kategori) ? kategoriMeta[r.kategori] : null;
+    let jenis='Kas pribadi', status='ditampilkan apa adanya', dihitung=false;
+    if(f){
+      jenis = f.arah==='wd' ? 'WD dari MT4' : 'Setoran ke MT4';
+      dihitung = !!arusMt4Sah(r, batas);
+      status = dihitung ? 'dihitung' : 'tidak dihitung (manual sebelum statement)';
+    } else if(km && km.grup==='operasional'){
+      jenis='Performa trading (auto-sync)'; status='bukan arus kas';
+    }
+    return {tgl:String(r.tanggal||'').slice(0,10), jenis:jenis, dari:r.dari||'', ke:r.ke||'', jumlah:parseFloat(r.jumlah)||0, kategori:r.kategori||'', sumber: stmt?'Statement FBS':'Manual', status:status, ket:r.keterangan||'', mt4:!!f, arahMt4:f?f.arah:null, dihitung:dihitung};
+  });
+}
+function refreshAliranDana(){
+  const el=document.getElementById('aliranBulan'); const bulan=(el&&el.value)?el.value:bulanKeyNow();
+  const rows=barisAliranDana(bulan);
+  const sah=rows.filter(x=>x.mt4 && x.dihitung);
+  const wd=sah.filter(x=>x.arahMt4==='wd').reduce((a,x)=>a+x.jumlah,0);
+  const dep=sah.filter(x=>x.arahMt4==='dep').reduce((a,x)=>a+x.jumlah,0);
+  const rg=document.getElementById('aliranRingkas'), tb=document.getElementById('aliranTabel');
+  if(rg) rg.innerHTML=`<div style="background:var(--bg2);border-radius:10px;padding:10px;font-size:11px;color:#E5E7EB;line-height:1.7">
+    <b style="color:#FFFFFF">Ringkasan MT4 (¢, hanya yang sah)</b><br>
+    Setoran masuk ke MT4: <b style="color:#4ADE80">¢${dep.toLocaleString('id-ID',{maximumFractionDigits:2})}</b><br>
+    WD keluar dari MT4: <b style="color:#F87171">¢${wd.toLocaleString('id-ID',{maximumFractionDigits:2})}</b><br>
+    Jumlah baris bulan ini: ${rows.length}</div>`;
+  if(tb){
+    if(!rows.length){ tb.innerHTML='<div style="font-size:10px;color:#E5E7EB;padding:8px 0">Belum ada data kas di bulan ini.</div>'; return; }
+    tb.innerHTML='<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:10px;color:#E5E7EB"><thead><tr style="text-align:left;border-bottom:1px solid var(--border)"><th>Tanggal</th><th>Jenis</th><th>Dari → Ke</th><th style="text-align:right">Jumlah</th><th>Sumber</th><th>Status</th></tr></thead><tbody>'
+      + rows.map(x=>`<tr style="border-bottom:1px solid var(--border)"><td>${escapeHtml(x.tgl)}</td><td>${escapeHtml(x.jenis)}</td><td>${escapeHtml(x.dari)} → ${escapeHtml(x.ke)}<br><span style="color:#9CA3AF">${escapeHtml(x.ket)}</span></td><td style="text-align:right">${x.mt4?'¢':''}${x.jumlah.toLocaleString('id-ID',{maximumFractionDigits:2})}</td><td>${escapeHtml(x.sumber)}</td><td>${escapeHtml(x.status)}</td></tr>`).join('')
+      + '</tbody></table></div>';
+  }
+}
+function unduhAliranDanaCSV(){
+  const el=document.getElementById('aliranBulan'); const bulan=(el&&el.value)?el.value:bulanKeyNow();
+  const rows=barisAliranDana(bulan);
+  if(!rows.length){ toast('Tidak ada data kas di bulan '+bulan); return; }
+  const kepala=['Tanggal','Jenis','Dari','Ke','Jumlah','Sumber','Status','Keterangan'];
+  const isi=rows.map(x=>[x.tgl, x.jenis, x.dari, x.ke, String(x.jumlah).replace('.',','), x.sumber, x.status, x.ket].map(v=>String(v==null?'':v).replace(/;/g,',')).join(';'));
+  const blob=new Blob(['\uFEFF'+[kepala.join(';')].concat(isi).join('\n')], {type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`Aliran_Dana_${bulan}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('✅ CSV aliran dana '+bulan+' diunduh ('+rows.length+' baris)');
+}
+function renderAliranDana(){
+  if(document.getElementById('aliranDanaBlok')){ refreshAliranDana(); return; }
+  const ref=document.getElementById('catatanWdBlok')||document.getElementById('secKalkulatorLvl25')||document.getElementById('secKalkulator'); if(!ref||!ref.parentNode) return;
+  const box=document.createElement('div'); box.id='aliranDanaBlok'; box.className='section'; box.setAttribute('data-akun','mt4');
+  box.innerHTML=`<div class="sec-title">📊 Aliran Dana (masuk & keluar)</div>
+    <div style="font-size:10px;color:#E5E7EB;margin-bottom:8px;line-height:1.5">Dari kas pribadi dan statement MT4. Setoran dan WD MT4 dalam ¢ (sen). Entri manual yang tanggalnya sebelum statement FBS tidak dihitung.</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px"><input type="month" id="aliranBulan" class="inp" style="margin-bottom:0;flex:1"><button class="btn btn-p" onclick="unduhAliranDanaCSV()" style="margin-bottom:0">⬇️ CSV</button></div>
+    <div id="aliranRingkas"></div><div id="aliranTabel"></div>`;
+  ref.parentNode.insertBefore(box, ref.nextSibling);
+  const inp=document.getElementById('aliranBulan');
+  if(inp){ if(!inp.value) inp.value=bulanKeyNow(); inp.addEventListener('change', refreshAliranDana); }
+  refreshAliranDana();
+}
+setTimeout(renderAliranDana, 2500); setInterval(renderAliranDana, 4000);
+
 // Hitungan murni tanpa tampilan. rows = sinyal XAUUSD (Datuk EURUSD), bulanKey = 'YYYY-MM'
 function hitungKriteriaV4(rows,bulanKey,KR){
   const K=KR||KRITERIA_GAGAL_V4;
