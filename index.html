@@ -3194,10 +3194,20 @@ const SB='https://tnucvqhlyngjxzpxpnsv.supabase.co';
 const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRudWN2cWhseW5nanh6cHhwbnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NzY1NzUsImV4cCI6MjA5NjE1MjU3NX0.f-Jtqb6F38ypJr7VNy0Kki1ME3Y0Qe1OrvjMqrb5pDk';
 async function api(p,m='GET',b=null){
   let session=getSession();
-  if(session && !isSessionValid(session)){ session=await supabaseRefresh(); } // access token expired, coba refresh dulu
+  if(session && !isSessionValid(session)){ session=await supabaseRefresh(); }
   const token=(session && session.access_token) ? session.access_token : KEY;
   const headers={'apikey':KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'};
   const o={method:m,headers};if(b)o.body=JSON.stringify(b);
+  // ── Log audit: setiap tulisan dicatat dulu. Kalau log gagal, tulisan dibatalkan. ──
+  if(m!=='GET' && !AUDIT_SKIP.test(p)){
+    if(!auditAktif){ await auditCek(); }
+    if(!auditAktif) throw new Error('Log audit belum aktif. Jalankan SQL setup di Supabase, lalu muat ulang halaman.');
+    const isi=b?JSON.stringify(b):'';
+    const kunciM=p.match(/key=eq\.([^&]+)/);
+    const logRow={metode:m, tabel:p.split('?')[0], kunci:kunciM?decodeURIComponent(kunciM[1]):'', ringkas:isi?(isi.length+' byte'):'tanpa isi', hash:isi?await hashTeks(isi):'', pengguna:(session&&session.user&&session.user.email)||(session&&session.email)||'anon'};
+    const lr=await fetch(SB+'/rest/v1/audit_log',{method:'POST',headers:{...headers,'Prefer':'return=minimal'},body:JSON.stringify(logRow)});
+    if(!lr.ok) throw new Error('Log audit gagal dicatat, perubahan dibatalkan: '+(await lr.text()));
+  }
   const r=await fetch(SB+'/rest/v1/'+p,o);
   if(!r.ok)throw new Error(await r.text());
   const t=await r.text();return t?JSON.parse(t):[];
@@ -18754,10 +18764,15 @@ async function simpanCatatanWd(){
   if(!tgl){ toast('❌ Isi tanggal WD'); return; }
   if(!(rp>0)){ toast('❌ Isi jumlah Rp dari bukti transfer'); return; }
   const item={id:'wd'+Date.now().toString(36), tanggal:tgl, jam:jam, bank:bank, rp:rp, cent:isFinite(cent)?cent:null, ref:ref, ket:ket, dibuat:new Date().toISOString()};
+  const fileEl=document.getElementById('wdLampiran');
+  if(fileEl && fileEl.files && fileEl.files[0]){
+    try{ item.lampiran=[await uploadBuktiWd(fileEl.files[0], item.id)]; }
+    catch(e){ toast('❌ '+e.message); return; }
+  }
   catatanWdList.push(item);
   try{ await simpanCatatanWdServer(false); }
   catch(e){ catatanWdList=catatanWdList.filter(x=>x.id!==item.id); toast('❌ '+e.message); return; }
-  ['wdJam','wdBank','wdRp','wdCent','wdRef','wdKet'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['wdJam','wdBank','wdRp','wdCent','wdRef','wdKet','wdLampiran'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   toast('✅ Catatan WD tersimpan');
   renderListCatatanWd();
 }
@@ -18778,6 +18793,7 @@ function renderListCatatanWd(){
       <b style="color:#FFFFFF">${escapeHtml(w.tanggal)} ${escapeHtml(w.jam||'')}</b> · ${escapeHtml(w.bank||'-')}<br>
       Rp ${Number(w.rp||0).toLocaleString('id-ID')}${w.cent!=null?' · ¢'+Number(w.cent).toLocaleString('id-ID'):''} · Ref ${escapeHtml(w.ref||'-')}
       ${w.ket?'<br>'+escapeHtml(w.ket):''}
+      ${(w.lampiran||[]).map(l=>`<br><button onclick="bukaBuktiWd('${l.path}')" style="font-size:9px;margin-top:3px;cursor:pointer">📎 ${escapeHtml(l.nama_file)}</button>`).join('')}
       ${isAdmin?` <button onclick="hapusCatatanWd('${w.id}')" style="font-size:9px;margin-left:6px;cursor:pointer">Hapus</button>`:''}
     </div>`).join('');
 }
@@ -18796,6 +18812,7 @@ function renderCatatanWdMt4(){
       <div><label class="lbl">No. referensi</label><input type="text" class="inp" id="wdRef" style="margin-bottom:0"></div>
     </div>
     <div style="margin-bottom:8px"><label class="lbl">Keterangan</label><input type="text" class="inp" id="wdKet" placeholder="opsional" style="margin-bottom:0"></div>
+    <div style="margin-bottom:8px"><label class="lbl">Lampiran bukti (foto atau PDF, maks 10 MB)</label><input type="file" id="wdLampiran" accept="image/*,application/pdf" class="inp" style="margin-bottom:0"></div>
     ${isAdmin?'<button class="btn btn-p" onclick="simpanCatatanWd()" style="margin-bottom:10px">💾 Simpan Catatan WD</button>':''}
     <div id="catatanWdList"></div>`;
   ref.parentNode.insertBefore(box, ref.nextSibling);
@@ -18865,6 +18882,80 @@ function renderAliranDana(){
   refreshAliranDana();
 }
 setTimeout(renderAliranDana, 2500); setInterval(renderAliranDana, 4000);
+
+// ══ LOG AUDIT & LAMPIRAN BUKTI ══
+// Log: tabel audit_log (append-only). Lampiran: bucket 'bukti' (privat) + tabel lampiran_bukti. Setup: lihat SQL setup.
+let auditAktif=false;
+const AUDIT_SKIP=/^(audit_log|rpc\/|storage\/)/;
+function tokenAktif(){ const s=getSession(); return (s&&s.access_token)?s.access_token:KEY; }
+async function auditCek(){
+  try{
+    const r=await fetch(SB+'/rest/v1/audit_log?select=id&limit=1',{headers:{'apikey':KEY,'Authorization':'Bearer '+tokenAktif()}});
+    auditAktif=!!r.ok;
+  }catch(e){ auditAktif=false; }
+  return auditAktif;
+}
+async function hashBytes(buf){ const d=await crypto.subtle.digest('SHA-256', buf); return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+async function hashTeks(teks){ return hashBytes(new TextEncoder().encode(teks)); }
+async function uploadBuktiWd(file, catatanId){
+  if(!auditAktif) throw new Error('Lampiran baru bisa diunggah setelah log audit aktif.');
+  if(file.size>10*1024*1024) throw new Error('File terlalu besar (maks 10 MB).');
+  const buf=await file.arrayBuffer();
+  const hash=await hashBytes(buf);
+  const now=new Date(), pad=n=>String(n).padStart(2,'0');
+  const nama=file.name.replace(/[^A-Za-z0-9._-]/g,'_').slice(0,80)||'bukti';
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  const path=now.getFullYear()+'/'+pad(now.getMonth()+1)+'/'+id+'_'+nama;
+  const r=await fetch(SB+'/storage/v1/object/bukti/'+path,{method:'POST',headers:{'apikey':KEY,'Authorization':'Bearer '+tokenAktif(),'Content-Type':file.type||'application/octet-stream','x-upsert':'false'},body:file});
+  if(!r.ok) throw new Error('Upload lampiran gagal: '+(await r.text()));
+  const meta={id:id, waktu:now.toISOString(), jenis:'WD', ref_catatan:catatanId, nama_file:nama, path:path, ukuran:file.size, hash_sha256:hash};
+  await api('lampiran_bukti','POST',meta);
+  return meta;
+}
+async function bukaBuktiWd(path){
+  const r=await fetch(SB+'/storage/v1/object/sign/bukti/'+path,{method:'POST',headers:{'apikey':KEY,'Authorization':'Bearer '+tokenAktif(),'Content-Type':'application/json'},body:JSON.stringify({expiresIn:300})});
+  if(!r.ok){ toast('❌ Tidak bisa membuka lampiran: '+(await r.text())); return; }
+  const j=await r.json();
+  window.open(SB+'/storage/v1'+j.signedURL,'_blank');
+}
+function renderLogAuditBlok(){
+  const ref=document.getElementById('aliranDanaBlok')||document.getElementById('catatanWdBlok')||document.getElementById('secKalkulatorLvl25')||document.getElementById('secKalkulator');
+  if(!ref||!ref.parentNode) return;
+  let box=document.getElementById('logAuditBlok');
+  if(!box){
+    box=document.createElement('div'); box.id='logAuditBlok'; box.className='section'; box.setAttribute('data-akun','mt4');
+    box.innerHTML=`<div class="sec-title">🧾 Log Audit</div>
+      <div id="logAuditStatus" style="font-size:10px;color:#E5E7EB;margin-bottom:8px;line-height:1.5"></div>
+      <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-p" onclick="unduhLogAuditCSV()" style="margin-bottom:0;flex:1">⬇️ CSV</button><button class="btn btn-p" onclick="renderLogAuditIsi()" style="margin-bottom:0;flex:1">🔄 Muat ulang</button></div>
+      <div id="logAuditIsi"></div>`;
+    ref.parentNode.insertBefore(box, ref.nextSibling);
+    renderLogAuditIsi();
+  }
+}
+let logAuditRows=[];
+async function renderLogAuditIsi(){
+  const st=document.getElementById('logAuditStatus'), isi=document.getElementById('logAuditIsi');
+  if(!auditAktif){ await auditCek(); }
+  if(st) st.innerHTML = auditAktif ? 'Setiap perubahan data dicatat di sini: waktu, pengguna, jenis perubahan, dan sidik jari isi (hash).' : '<b style="color:#F87171">⚠️ Log audit belum aktif.</b> Jalankan SQL setup di Supabase, lalu muat ulang halaman. Sampai itu selesai, penulisan data dibatasi.';
+  if(!auditAktif || !isi) return;
+  try{ logAuditRows=await api('audit_log?select=waktu,pengguna,metode,tabel,kunci,ringkas,hash&order=waktu.desc&limit=200'); }
+  catch(e){ isi.innerHTML='<div style="font-size:10px;color:#F87171">Gagal membaca log: '+escapeHtml(e.message)+'</div>'; return; }
+  if(!logAuditRows.length){ isi.innerHTML='<div style="font-size:10px;color:#E5E7EB">Belum ada catatan.</div>'; return; }
+  isi.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:9px;color:#E5E7EB"><thead><tr style="text-align:left;border-bottom:1px solid var(--border)"><th>Waktu</th><th>Pengguna</th><th>Aksi</th><th>Tabel / kunci</th><th>Hash</th></tr></thead><tbody>'
+    + logAuditRows.map(r=>`<tr style="border-bottom:1px solid var(--border)"><td>${escapeHtml(String(r.waktu||'').replace('T',' ').slice(0,19))}</td><td>${escapeHtml(r.pengguna||'')}</td><td>${escapeHtml(r.metode||'')}</td><td>${escapeHtml(r.tabel||'')}${r.kunci?'<br><span style="color:#9CA3AF">'+escapeHtml(r.kunci)+'</span>':''}</td><td style="font-family:monospace">${escapeHtml(String(r.hash||'').slice(0,12))}</td></tr>`).join('')
+    + '</tbody></table></div>';
+}
+function unduhLogAuditCSV(){
+  if(!logAuditRows.length){ toast('Belum ada log untuk diunduh'); return; }
+  const kepala=['Waktu','Pengguna','Aksi','Tabel','Kunci','Ringkas','Hash'];
+  const isi=logAuditRows.map(r=>[r.waktu,r.pengguna,r.metode,r.tabel,r.kunci,r.ringkas,r.hash].map(v=>String(v==null?'':v).replace(/;/g,',')).join(';'));
+  const blob=new Blob(['\uFEFF'+[kepala.join(';')].concat(isi).join('\n')], {type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='Log_Audit.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+setTimeout(auditCek, 1000);
+setTimeout(renderLogAuditBlok, 2800); setInterval(renderLogAuditBlok, 6000);
 
 // Hitungan murni tanpa tampilan. rows = sinyal XAUUSD (Datuk EURUSD), bulanKey = 'YYYY-MM'
 function hitungKriteriaV4(rows,bulanKey,KR){
