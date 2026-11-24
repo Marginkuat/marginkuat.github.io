@@ -18834,39 +18834,72 @@ function barisAliranDana(bulan){
     } else if(km && km.grup==='operasional'){
       jenis='Performa trading (auto-sync)'; status='bukan arus kas';
     }
-    return {tgl:String(r.tanggal||'').slice(0,10), jenis:jenis, dari:r.dari||'', ke:r.ke||'', jumlah:parseFloat(r.jumlah)||0, kategori:r.kategori||'', sumber: stmt?'Statement FBS':'Manual', status:status, ket:r.keterangan||'', mt4:!!f, arahMt4:f?f.arah:null, dihitung:dihitung};
+    return {tgl:String(r.tanggal||'').slice(0,10), jenis:jenis, dari:r.dari||'', ke:r.ke||'', jumlah:parseFloat(r.jumlah)||0, kategori:r.kategori||'', sumber: stmt?'Statement FBS':((km&&km.grup==='operasional')?'Auto-sync (bukan arus kas)':'Manual'), status:status, ket:r.keterangan||'', mt4:!!f, arahMt4:f?f.arah:null, dihitung:dihitung};
   });
 }
+// Rekening pribadi (Rp) dari catatan WD (bukti transfer). Terpisah dari ¢ MT4 dan tidak mengubah saldo MT4.
+function barisRekeningRp(bulan){
+  return (catatanWdList||[]).filter(w=>String(w.tanggal||'').slice(0,7)===bulan).slice().sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal))).map(w=>({
+    tgl:String(w.tanggal||'').slice(0,10), jenis:'Masuk dari WD MT4', dari:'MT4 (WD'+(w.cent!=null?' ¢'+w.cent:'')+')', ke:w.bank||'Rekening',
+    jumlah:Number(w.rp)||0, sumber:'Catatan WD (bukti)', status:'bukti, bukan ¢', ket:w.ref||w.ket||''}));
+}
+function barisPerformaHarian(bulan){ return barisAliranDana(bulan).filter(x=>x.jenis==='Performa trading (auto-sync)'); }
 function refreshAliranDana(){
   const el=document.getElementById('aliranBulan'); const bulan=(el&&el.value)?el.value:bulanKeyNow();
-  const rows=barisAliranDana(bulan);
+  const rows=barisAliranDana(bulan).filter(x=>x.jenis!=='Performa trading (auto-sync)');
+  const perf=barisPerformaHarian(bulan);
+  const rekRp=barisRekeningRp(bulan);
   const sah=rows.filter(x=>x.mt4 && x.dihitung);
   const wd=sah.filter(x=>x.arahMt4==='wd').reduce((a,x)=>a+x.jumlah,0);
   const dep=sah.filter(x=>x.arahMt4==='dep').reduce((a,x)=>a+x.jumlah,0);
+  const rp=rekRp.reduce((a,x)=>a+x.jumlah,0);
   const rg=document.getElementById('aliranRingkas'), tb=document.getElementById('aliranTabel');
   if(rg) rg.innerHTML=`<div style="background:var(--bg2);border-radius:10px;padding:10px;font-size:11px;color:#E5E7EB;line-height:1.7">
     <b style="color:#FFFFFF">Ringkasan MT4 (¢, hanya yang sah)</b><br>
     Setoran masuk ke MT4: <b style="color:#4ADE80">¢${dep.toLocaleString('id-ID',{maximumFractionDigits:2})}</b><br>
     WD keluar dari MT4: <b style="color:#F87171">¢${wd.toLocaleString('id-ID',{maximumFractionDigits:2})}</b><br>
-    Jumlah baris bulan ini: ${rows.length}</div>`;
+    Jumlah baris arus bulan ini: ${rows.length}</div>`;
   if(tb){
-    if(!rows.length){ tb.innerHTML='<div style="font-size:10px;color:#E5E7EB;padding:8px 0">Belum ada data kas di bulan ini.</div>'; return; }
-    tb.innerHTML='<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:10px;color:#E5E7EB"><thead><tr style="text-align:left;border-bottom:1px solid var(--border)"><th>Tanggal</th><th>Jenis</th><th>Dari → Ke</th><th style="text-align:right">Jumlah</th><th>Sumber</th><th>Status</th></tr></thead><tbody>'
-      + rows.map(x=>`<tr style="border-bottom:1px solid var(--border)"><td>${escapeHtml(x.tgl)}</td><td>${escapeHtml(x.jenis)}</td><td>${escapeHtml(x.dari)} → ${escapeHtml(x.ke)}<br><span style="color:#9CA3AF">${escapeHtml(x.ket)}</span></td><td style="text-align:right">${x.mt4?'¢':''}${x.jumlah.toLocaleString('id-ID',{maximumFractionDigits:2})}</td><td>${escapeHtml(x.sumber)}</td><td>${escapeHtml(x.status)}</td></tr>`).join('')
-      + '</tbody></table></div>';
+    let html='';
+    if(rows.length){
+      html+='<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:10px;color:#E5E7EB"><thead><tr style="text-align:left;border-bottom:1px solid var(--border)"><th>Tanggal</th><th>Jenis</th><th>Dari → Ke</th><th style="text-align:right">Jumlah</th><th>Sumber</th><th>Status</th></tr></thead><tbody>'
+        + rows.map(x=>`<tr style="border-bottom:1px solid var(--border)"><td>${escapeHtml(x.tgl)}</td><td>${escapeHtml(x.jenis)}</td><td>${escapeHtml(x.dari)} → ${escapeHtml(x.ke)}<br><span style="color:#9CA3AF">${escapeHtml(x.ket)}</span></td><td style="text-align:right">${x.mt4?'¢':''}${x.jumlah.toLocaleString('id-ID',{maximumFractionDigits:2})}</td><td>${escapeHtml(x.sumber)}</td><td>${escapeHtml(x.status)}</td></tr>`).join('')
+        + '</tbody></table></div>';
+    } else {
+      html+='<div style="font-size:10px;color:#E5E7EB;padding:8px 0">Belum ada arus MT4 atau kas di bulan ini.</div>';
+    }
+    if(rekRp.length){
+      html+='<div style="margin-top:14px;font-size:11px;color:#FFFFFF;font-weight:800">🏦 Rekening pribadi (Rp), dari bukti transfer</div>'
+        +'<div style="font-size:9px;color:#9CA3AF;margin-bottom:4px">Dihitung terpisah dari ¢ MT4. Tidak menambah atau mengurangi saldo MT4.</div>'
+        +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:10px;color:#E5E7EB"><thead><tr style="text-align:left;border-bottom:1px solid var(--border)"><th>Tanggal</th><th>Jenis</th><th>Dari → Ke</th><th style="text-align:right">Jumlah</th><th>Sumber</th></tr></thead><tbody>'
+        + rekRp.map(x=>`<tr style="border-bottom:1px solid var(--border)"><td>${escapeHtml(x.tgl)}</td><td>${escapeHtml(x.jenis)}</td><td>${escapeHtml(x.dari)} → ${escapeHtml(x.ke)}<br><span style="color:#9CA3AF">${escapeHtml(x.ket)}</span></td><td style="text-align:right">Rp ${x.jumlah.toLocaleString('id-ID')}</td><td>${escapeHtml(x.sumber)}</td></tr>`).join('')
+        + '</tbody></table></div>'
+        +`<div style="font-size:10px;color:#E5E7EB;margin-top:4px">Total masuk rekening: <b>Rp ${rp.toLocaleString('id-ID')}</b></div>`;
+    } else {
+      html+='<div style="font-size:10px;color:#E5E7EB;margin-top:12px">Belum ada catatan rekening (Rp) di bulan ini.</div>';
+    }
+    if(perf.length){
+      html+='<div style="margin-top:14px;font-size:11px;color:#FFFFFF;font-weight:800">📈 Performa harian (auto-sync)</div>'
+        +'<div style="font-size:9px;color:#9CA3AF;margin-bottom:4px">Bukan arus kas. Tidak masuk tabel di atas maupun total.</div>'
+        + perf.map(x=>`<div style="font-size:10px;color:#E5E7EB;border-bottom:1px solid var(--border);padding:4px 0">${escapeHtml(x.tgl)} · ${escapeHtml(x.dari)} → ${escapeHtml(x.ke)} · ${x.jumlah.toLocaleString('id-ID',{maximumFractionDigits:2})} · <span style="color:#9CA3AF">${escapeHtml(x.sumber)}</span></div>`).join('');
+    }
+    tb.innerHTML=html;
   }
 }
 function unduhAliranDanaCSV(){
   const el=document.getElementById('aliranBulan'); const bulan=(el&&el.value)?el.value:bulanKeyNow();
-  const rows=barisAliranDana(bulan);
-  if(!rows.length){ toast('Tidak ada data kas di bulan '+bulan); return; }
-  const kepala=['Tanggal','Jenis','Dari','Ke','Jumlah','Sumber','Status','Keterangan'];
-  const isi=rows.map(x=>[x.tgl, x.jenis, x.dari, x.ke, String(x.jumlah).replace('.',','), x.sumber, x.status, x.ket].map(v=>String(v==null?'':v).replace(/;/g,',')).join(';'));
-  const blob=new Blob(['\uFEFF'+[kepala.join(';')].concat(isi).join('\n')], {type:'text/csv;charset=utf-8'});
+  const rows=barisAliranDana(bulan).filter(x=>x.jenis!=='Performa trading (auto-sync)');
+  const rek=barisRekeningRp(bulan);
+  if(!rows.length && !rek.length){ toast('Tidak ada data kas di bulan '+bulan); return; }
+  const kepala=['Tanggal','Jenis','Dari','Ke','Jumlah','Sumber','Status','Keterangan','Mata uang'];
+  const bersih=v=>String(v==null?'':v).replace(/;/g,',');
+  const isi=rows.map(x=>[x.tgl,x.jenis,x.dari,x.ke,String(x.jumlah).replace('.',','),x.sumber,x.status,x.ket, x.mt4?'¢ (sen)':'sesuai input'].map(bersih).join(';'));
+  const isiRek=rek.map(x=>[x.tgl,x.jenis,x.dari,x.ke,String(x.jumlah).replace('.',','),x.sumber,x.status,x.ket,'Rp'].map(bersih).join(';'));
+  const blob=new Blob(['\uFEFF'+[kepala.join(';')].concat(isi, isiRek).join('\n')], {type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=`Aliran_Dana_${bulan}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-  toast('✅ CSV aliran dana '+bulan+' diunduh ('+rows.length+' baris)');
+  toast('✅ CSV aliran dana '+bulan+' diunduh ('+(rows.length+rek.length)+' baris)');
 }
 function renderAliranDana(){
   if(document.getElementById('aliranDanaBlok')){ refreshAliranDana(); return; }
