@@ -9942,7 +9942,8 @@ function renderDanaDarurat(){
 
   const persen=getAlokasiPersen();
   const totalWd=getTotalWdUntukAlokasi();
-  const danaDarurat = pakaiDataNyata ? nyataDanaDarurat : totalWd*(persen.tabungan/100);
+  // Hanya data nyata dari setoran/pemakaian Tabungan/Darurat. Tidak ada estimasi dari porsi Alokasi Dana.
+  const danaDarurat = nyataDanaDarurat;
 
   const {rata:pengeluaranBulanan, adaData:adaPengeluaran}=getRataRataPengeluaranPribadiBulanan();
   const bulanCukup = (adaPengeluaran && pengeluaranBulanan>0.01) ? (danaDarurat/pengeluaranBulanan) : null;
@@ -9950,13 +9951,13 @@ function renderDanaDarurat(){
   el.innerHTML=`
     <div class="bal-box" style="background:var(--bg3);border:1px solid #B8860B;margin-bottom:8px">
       <div class="bal-box-val" style="font-size:22px;color:#FFFFFF">${fc(danaDarurat)}</div>
-      <div class="bal-box-lbl">🏦 Dana Darurat Tersedia ${pakaiDataNyata?'(dari transaksi bertanda "Dana Darurat")':'(estimasi porsi Tabungan/Darurat)'}</div>
+      <div class="bal-box-lbl">🏦 Dana Darurat Tersedia ${pakaiDataNyata?'(dari transaksi bertanda "Dana Darurat")':'(belum ada setoran Tabungan/Darurat)'}</div>
     </div>
     <div class="bal-box" style="background:var(--bg2)">
       <div class="bal-box-val" style="font-size:18px;color:${bulanCukup===null?'#E5E7EB':(bulanCukup>=6?'#4ADE80':bulanCukup>=3?'#FACC15':'#F87171')}">${bulanCukup===null?'Belum ada data pengeluaran':bulanCukup.toFixed(1)+' bulan'}</div>
       <div class="bal-box-lbl">Dana darurat cukup untuk berapa lama${adaPengeluaran?` (rata-rata pengeluaran ${fc(pengeluaranBulanan)}/bulan)`:''}</div>
     </div>
-    ${!pakaiDataNyata?'<div style="font-size:9px;color:#E5E7EB;margin-top:6px;text-align:center">💡 Setor lewat "🏦 Rekening per Kategori" di atas (pilih Tabungan/Darurat) biar angka ini akurat dari data asli, bukan estimasi.</div>':''}
+    ${!pakaiDataNyata?'<div style="font-size:9px;color:#E5E7EB;margin-top:6px;text-align:center">💡 Belum ada setoran ke Tabungan/Darurat, jadi angka ini ¢0. Alokasikan dari KAS lewat "🏦 Rekening per Kategori" saat dana benar-benar sudah dipindahkan.</div>':''}
     ${!adaPengeluaran?'<div style="font-size:9px;color:#E5E7EB;margin-top:8px;text-align:center">Belum ada catatan pengeluaran pribadi (Belanja/Utilitas/Kesehatan/Gaya Hidup) di Aliran Uang, jadi estimasi bulan belum bisa dihitung.</div>':''}`;
 
   // ── SKOR KESEHATAN FINANSIAL (A–D) ──
