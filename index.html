@@ -2390,7 +2390,7 @@ function renderInvCalcDisclaimer(){
     <div class="calc-row">
       <div>
         <label class="lbl" id="rekKatJumlahLbl">Nominal (¢)</label>
-        <input class="inp" type="number" id="rekKatJumlah" placeholder="Contoh: 200" step="0.01" min="0" style="margin-bottom:0">
+        <input class="inp" type="text" inputmode="decimal" id="rekKatJumlah" placeholder="Contoh: 200 atau 1.500" style="margin-bottom:0">
       </div>
       <div>
         <label class="lbl">Tanggal</label>
@@ -2412,6 +2412,13 @@ function renderInvCalcDisclaimer(){
     <div id="rekKatFieldPakai" style="display:none">
       <label class="lbl" style="margin-top:10px">Dipakai Untuk Apa? (wajib diisi)</label>
       <input class="inp" id="rekKatUntukApa" placeholder="Contoh: Servis motor / Beli emas / Nonton bioskop">
+      <div style="margin-top:10px;padding:10px;border-radius:9px;background:var(--bg0);border:1px solid var(--border)">
+        <label class="lbl" style="margin-top:0">Tarik tunai dalam Rp (opsional, otomatis jadi ¢)</label>
+        <input class="inp" type="text" inputmode="numeric" id="rekKatRp" placeholder="Contoh: 50.000" oninput="hitungRekKatDariRp()">
+        <label class="lbl">Kurs Rp per $1 (kosongkan = pakai kurs catatan WD terakhir)</label>
+        <input class="inp" type="text" inputmode="decimal" id="rekKatKurs" placeholder="Contoh: 17983" oninput="hitungRekKatDariRp()">
+        <div id="rekKatRpHasil" style="font-size:10px;color:#E5E7EB;margin-top:6px"></div>
+      </div>
     </div>
 
     <div id="rekKatFieldAlokasi" style="display:none">
@@ -3055,10 +3062,10 @@ Form di bawah hanya untuk <b>pengeluaran dari uang yang sudah Anda tarik</b>.<di
     <input type="hidden" id="kasMataUang" value="IDR">
 
     <label class="lbl">Nominal Asli (sesuai kebijakan FBS, opsional)</label>
-    <input class="inp" type="number" id="kasNominalAsli" placeholder="Contoh: 50000" step="0.01" min="0">
+    <input class="inp" type="text" inputmode="decimal" id="kasNominalAsli" placeholder="Contoh: 50.000">
 
     <label class="lbl">Jumlah (¢ cent MT4 yang didapat/dipakai)</label>
-    <input class="inp" type="number" id="kasJumlah" placeholder="Contoh: 275" step="0.01" min="0">
+    <input class="inp" type="text" inputmode="decimal" id="kasJumlah" placeholder="Contoh: 275 atau 1.500">
 
     <label class="lbl">Tanggal</label>
     <input class="inp" type="date" id="kasTgl">
@@ -8719,16 +8726,50 @@ function toggleKategoriLainnya(){
   }
 }
 
+// Angka format Indonesia (1.500.000 / 1.500,5) atau Inggris (1,500,000 / 1500.5) → number. NaN kalau tidak valid.
+function parseAngkaId(v){
+  let s=String(v==null?'':v).trim().replace(/\s/g,'');
+  if(!s) return NaN;
+  if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s=s.replace(/\./g,'').replace(',','.');
+  else if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s=s.replace(/,/g,'');
+  else if(/^\d+,\d+$/.test(s)) s=s.replace(',','.');
+  return parseFloat(s);
+}
+// Kurs untuk konversi Rp → ¢ di form Pakai: pakai kurs dari catatan WD terakhir (Rp ÷ ¢ × 100), kalau kosong pakai K.
+function kursRekKatDefault(){
+  const w=(catatanWdList||[]).filter(x=>x.rp>0&&x.cent>0).sort((a,b)=>String(b.tanggal).localeCompare(String(a.tanggal)))[0];
+  return w ? w.rp/(w.cent/100) : K;
+}
+function hitungRekKatDariRp(){
+  const rpEl=document.getElementById('rekKatRp'), kEl=document.getElementById('rekKatKurs');
+  const jEl=document.getElementById('rekKatJumlah'), outEl=document.getElementById('rekKatRpHasil');
+  if(!rpEl||!jEl) return;
+  const rp=parseAngkaId(rpEl.value);
+  const kIn=kEl?parseAngkaId(kEl.value):NaN;
+  const kurs=kIn>0?kIn:kursRekKatDefault();
+  if(!(rp>0)){ if(outEl) outEl.textContent=''; return; }
+  const cent=Math.round(rp/kurs*100*100)/100;
+  jEl.value=cent.toFixed(2);
+  if(outEl) outEl.textContent='≈ '+fc(cent)+' (kurs '+Math.round(kurs).toLocaleString('id-ID')+' per $1)';
+}
+function ketRekKatDenganRp(ket){
+  const rpEl=document.getElementById('rekKatRp'), kEl=document.getElementById('rekKatKurs');
+  const rp=rpEl?parseAngkaId(rpEl.value):NaN;
+  if(!(rp>0)) return ket||null;
+  const kIn=kEl?parseAngkaId(kEl.value):NaN;
+  const kurs=kIn>0?kIn:kursRekKatDefault();
+  return (ket?ket+' · ':'')+'Tarik tunai Rp '+Math.round(rp).toLocaleString('id-ID')+' (kurs '+Math.round(kurs).toLocaleString('id-ID')+')';
+}
 async function simpanKas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
   const dari=document.getElementById('kasDari').value.trim();
   const ke=document.getElementById('kasKe').value.trim();
   const kategori=document.getElementById('kasKategori').value;
-  const jumlah=parseFloat(document.getElementById('kasJumlah').value)||0;
+  const jumlah=parseAngkaId(document.getElementById('kasJumlah').value)||0;
   const tgl=document.getElementById('kasTgl').value;
   const ket=document.getElementById('kasKet').value.trim();
   const mataUang=document.getElementById('kasMataUang').value;
-  const nominalAsli=parseFloat(document.getElementById('kasNominalAsli').value)||0;
+  const nominalAsli=parseAngkaId(document.getElementById('kasNominalAsli').value)||0;
   if(!dari){toast('❌ Isi sumber uang (Dari)');return;}
   if(!ke){toast('❌ Isi tujuan uang (Ke)');return;}
   if(!jumlah){toast('❌ Isi jumlah');return;}
@@ -9637,7 +9678,7 @@ async function simpanRekeningKategori(){
   const jumlahEl=document.getElementById('rekKatJumlah');
   const tglEl=document.getElementById('rekKatTgl');
   const ketEl=document.getElementById('rekKatKet');
-  const jumlah=parseFloat(jumlahEl.value)||0;
+  const jumlah=parseAngkaId(jumlahEl.value)||0;
   const tgl=tglEl.value;
   const ket=ketEl.value.trim();
   if(!jumlah){toast('❌ Isi nominal');return;}
@@ -9693,7 +9734,7 @@ async function simpanRekeningKategori(){
     if(jumlah>saldoSaatIni+0.01){
       if(!confirm(`Saldo ${cfg.label} cuma ${fc(saldoSaatIni)}, tapi kamu mau pakai ${fc(jumlah)} (saldo bakal minus). Lanjut?`)) return;
     }
-    bodyData={ tanggal:tgl, dari:cfg.label, ke:untukApa, jumlah:parseFloat(jumlah.toFixed(2)), keterangan:ket||null, kategori:cfg.usageKat };
+    bodyData={ tanggal:tgl, dari:cfg.label, ke:untukApa, jumlah:parseFloat(jumlah.toFixed(2)), keterangan:ketRekKatDenganRp(ket), kategori:cfg.usageKat };
   }
 
   try{
@@ -9708,6 +9749,8 @@ async function simpanRekeningKategori(){
     ketEl.value='';
     const untukApaEl=document.getElementById('rekKatUntukApa');
     if(untukApaEl) untukApaEl.value='';
+    ['rekKatRp','rekKatKurs'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    const rpHasilEl=document.getElementById('rekKatRpHasil'); if(rpHasilEl) rpHasilEl.textContent='';
     await fetchAllKasData();
     renderWdSection();
     renderKasRingkasan();
@@ -18760,7 +18803,7 @@ async function simpanCatatanWdServer(izinHapus){
 async function simpanCatatanWd(){
   if(!isAdmin){ toast('❌ Harus masuk sebagai Admin'); return; }
   const g=id=>{ const el=document.getElementById(id); return el?el.value:''; };
-  const tgl=g('wdTgl'), jam=g('wdJam').trim(), bank=g('wdBank').trim(), rp=parseFloat(g('wdRp')), cent=parseFloat(g('wdCent')), ref=g('wdRef').trim(), ket=g('wdKet').trim();
+  const tgl=g('wdTgl'), jam=g('wdJam').trim(), bank=g('wdBank').trim(), rp=Number(String(g('wdRp')).replace(/\D/g,'')), cent=parseFloat(g('wdCent')), ref=g('wdRef').trim(), ket=g('wdKet').trim();
   if(!tgl){ toast('❌ Isi tanggal WD'); return; }
   if(!(rp>0)){ toast('❌ Isi jumlah Rp dari bukti transfer'); return; }
   const item={id:'wd'+Date.now().toString(36), tanggal:tgl, jam:jam, bank:bank, rp:rp, cent:isFinite(cent)?cent:null, ref:ref, ket:ket, dibuat:new Date().toISOString()};
@@ -18821,6 +18864,26 @@ function renderCatatanWdMt4(){
 setTimeout(renderCatatanWdMt4, 2000); setInterval(renderCatatanWdMt4, 3000);
 
 // ══ ALIRAN DANA: masuk & keluar. Setoran/WD MT4 dari kas pribadi (statement + manual yang sah). Baris lain ditampilkan apa adanya. ══
+// Arah uang baris kas (non-MT4), dibaca dari kategori. Kosong = tidak jelas, label lama dipakai.
+const ARAH_MASUK_KAS={gaji:1,modal_investor:1,tambah_dana:1,modal_mt4:1};
+const ARAH_HABIS_KAS={kebutuhan_harian:1,kesehatan:1,gaya_hidup:1,cicilan_utang:1,sewa_bayar:1,pakai_kebutuhan_harian:1,pakai_hiburan:1,pakai_bayar_karyawan:1,pakai_pajak:1,gaji_karyawan:1,listrik_kantor:1,internet_kantor:1,air_kantor:1,sewa_kantor:1,operasional_lain:1};
+const ARAH_MILIK_KAS={dana_darurat:1,investasi:1,beli_aset:1};
+function arahKas(r){
+  const k=String(r.kategori||''), dari=String(r.dari||'');
+  if(ARAH_MASUK_KAS[k]) return 'Masuk';
+  if(k==='pakai_kas'||k==='pakai_dana_darurat'||k==='pakai_investasi'||k.indexOf('pocket_')===0||dari.indexOf('KAS (')===0) return 'Pindah internal';
+  if((k==='dana_darurat'||k==='investasi')&&/profit|kas/i.test(dari)) return 'Pindah internal';
+  if(ARAH_HABIS_KAS[k]) return 'Keluar (habis)';
+  if(ARAH_MILIK_KAS[k]) return 'Keluar (milik sendiri)';
+  return '';
+}
+function labelKas(r){
+  const k=String(r.kategori||'');
+  const km=(typeof kategoriMeta!=='undefined' && k) ? kategoriMeta[k] : null;
+  if(km) return km.label;
+  const cfg=(typeof REKENING_KATEGORI!=='undefined') ? REKENING_KATEGORI.find(c=>c.depositKat===k||c.usageKat===k) : null;
+  return cfg ? cfg.label : (k||'Kas pribadi');
+}
 function barisAliranDana(bulan){
   const batas=batasStatementMt4();
   return (allKasData||[]).filter(r=>String(r.tanggal||'').slice(0,7)===bulan).slice().sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal))).map(r=>{
@@ -18833,6 +18896,8 @@ function barisAliranDana(bulan){
       status = dihitung ? 'dihitung' : 'tidak dihitung (manual sebelum statement)';
     } else if(km && km.grup==='operasional'){
       jenis='Performa trading (auto-sync)'; status='bukan arus kas';
+    } else {
+      const a=arahKas(r); jenis=(a?a+' · ':'')+labelKas(r);
     }
     return {tgl:String(r.tanggal||'').slice(0,10), jenis:jenis, dari:r.dari||'', ke:r.ke||'', jumlah:parseFloat(r.jumlah)||0, kategori:r.kategori||'', sumber: stmt?'Statement FBS':((km&&km.grup==='operasional')?'Auto-sync (bukan arus kas)':'Manual'), status:status, ket:r.keterangan||'', mt4:!!f, arahMt4:f?f.arah:null, dihitung:dihitung};
   });
@@ -18863,7 +18928,7 @@ function refreshAliranDana(){
     let html='';
     if(rows.length){
       html+='<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:10px;color:#E5E7EB"><thead><tr style="text-align:left;border-bottom:1px solid var(--border)"><th>Tanggal</th><th>Jenis</th><th>Dari → Ke</th><th style="text-align:right">Jumlah</th><th>Sumber</th><th>Status</th></tr></thead><tbody>'
-        + rows.map(x=>`<tr style="border-bottom:1px solid var(--border)"><td>${escapeHtml(x.tgl)}</td><td>${escapeHtml(x.jenis)}</td><td>${escapeHtml(x.dari)} → ${escapeHtml(x.ke)}<br><span style="color:#9CA3AF">${escapeHtml(x.ket)}</span></td><td style="text-align:right">${x.mt4?'¢':''}${x.jumlah.toLocaleString('id-ID',{maximumFractionDigits:2})}</td><td>${escapeHtml(x.sumber)}</td><td>${escapeHtml(x.status)}</td></tr>`).join('')
+        + rows.map(x=>`<tr style="border-bottom:1px solid var(--border)"><td>${escapeHtml(x.tgl)}</td><td>${escapeHtml(x.jenis)}</td><td>${escapeHtml(x.dari)} → ${escapeHtml(x.ke)}<br><span style="color:#9CA3AF">${escapeHtml(x.ket)}</span></td><td style="text-align:right">¢${x.jumlah.toLocaleString('id-ID',{maximumFractionDigits:2})}</td><td>${escapeHtml(x.sumber)}</td><td>${escapeHtml(x.status)}</td></tr>`).join('')
         + '</tbody></table></div>';
     } else {
       html+='<div style="font-size:10px;color:#E5E7EB;padding:8px 0">Belum ada arus MT4 atau kas di bulan ini.</div>';
@@ -18893,7 +18958,7 @@ function unduhAliranDanaCSV(){
   if(!rows.length && !rek.length){ toast('Tidak ada data kas di bulan '+bulan); return; }
   const kepala=['Tanggal','Jenis','Dari','Ke','Jumlah','Sumber','Status','Keterangan','Mata uang'];
   const bersih=v=>String(v==null?'':v).replace(/;/g,',');
-  const isi=rows.map(x=>[x.tgl,x.jenis,x.dari,x.ke,String(x.jumlah).replace('.',','),x.sumber,x.status,x.ket, x.mt4?'¢ (sen)':'sesuai input'].map(bersih).join(';'));
+  const isi=rows.map(x=>[x.tgl,x.jenis,x.dari,x.ke,String(x.jumlah).replace('.',','),x.sumber,x.status,x.ket, '¢ (sen)'].map(bersih).join(';'));
   const isiRek=rek.map(x=>[x.tgl,x.jenis,x.dari,x.ke,String(x.jumlah).replace('.',','),x.sumber,x.status,x.ket,'Rp'].map(bersih).join(';'));
   const blob=new Blob(['\uFEFF'+[kepala.join(';')].concat(isi, isiRek).join('\n')], {type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
