@@ -2412,6 +2412,8 @@ function renderInvCalcDisclaimer(){
     <div id="rekKatFieldPakai" style="display:none">
       <label class="lbl" style="margin-top:10px">Dipakai Untuk Apa? (wajib diisi)</label>
       <input class="inp" id="rekKatUntukApa" placeholder="Contoh: Servis motor / Beli emas / Nonton bioskop">
+
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px"><button type="button" onclick="pilihUntukApaRekKat('Dapur')" style="font-size:11px;padding:6px 10px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:#E5E7EB;cursor:pointer">Dapur</button><button type="button" onclick="pilihUntukApaRekKat('Warung sate (usaha)')" style="font-size:11px;padding:6px 10px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:#E5E7EB;cursor:pointer">Warung sate (usaha)</button><button type="button" onclick="pilihUntukApaRekKat('Toko (usaha)')" style="font-size:11px;padding:6px 10px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:#E5E7EB;cursor:pointer">Toko (usaha)</button><button type="button" onclick="pilihUntukApaRekKat('Bayar listrik')" style="font-size:11px;padding:6px 10px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:#E5E7EB;cursor:pointer">Bayar listrik</button><button type="button" onclick="pilihUntukApaRekKat('Bayar air')" style="font-size:11px;padding:6px 10px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:#E5E7EB;cursor:pointer">Bayar air</button><button type="button" onclick="pilihUntukApaRekKat('Bayar wifi')" style="font-size:11px;padding:6px 10px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:#E5E7EB;cursor:pointer">Bayar wifi</button></div>
       <div style="margin-top:10px;padding:10px;border-radius:9px;background:var(--bg0);border:1px solid var(--border)">
         <label class="lbl" style="margin-top:0">Tarik tunai dalam Rp (opsional, otomatis jadi ¢)</label>
         <input class="inp" type="text" inputmode="numeric" id="rekKatRp" placeholder="Contoh: 50.000" oninput="hitungRekKatDariRp()">
@@ -8759,6 +8761,11 @@ function ketRekKatDenganRp(ket){
   const kIn=kEl?parseAngkaId(kEl.value):NaN;
   const kurs=kIn>0?kIn:kursRekKatDefault();
   return (ket?ket+' · ':'')+'Tarik tunai Rp '+Math.round(rp).toLocaleString('id-ID')+' (kurs '+Math.round(kurs).toLocaleString('id-ID')+')';
+}
+// Isi kolom "Dipakai untuk apa?" dari pilihan cepat (tetap bisa diketik manual)
+function pilihUntukApaRekKat(teks){
+  const el=document.getElementById('rekKatUntukApa');
+  if(el){ el.value=teks; el.focus(); }
 }
 async function simpanKas(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
