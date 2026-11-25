@@ -9448,10 +9448,13 @@ function getAlokasiResetTanggal(){
   return cachedAlokasiResetTanggal;
 }
 function getTotalWdUntukAlokasi(){
-  const data=getWdProfitPerHari();
+  // WD dari statement FBS (sumber yang sama dengan kartu Rekonsiliasi MT4), bukan selisih saldo harian
+  // yang bisa meleset dan membuat WD palsu.
+  const detail=arusMt4Detail();
   const resetTgl=getAlokasiResetTanggal();
-  const filtered = resetTgl ? data.filter(d=>new Date(d.tanggal) > new Date(resetTgl)) : data;
-  return filtered.reduce((s,d)=>s+d.wd,0);
+  return Object.keys(detail)
+    .filter(tgl => !resetTgl || new Date(tgl) > new Date(resetTgl))
+    .reduce((s,tgl)=>s+(detail[tgl].wd||0),0);
 }
 async function resetAlokasiDana(){
   if(!isAdmin){toast('❌ Harus masuk sebagai Admin');return;}
