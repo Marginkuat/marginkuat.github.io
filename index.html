@@ -19218,14 +19218,14 @@ function kurvaAmbilData(akun,admin){
   const simbol=Array.from(new Set(baris.map(b=>b.sim).filter(Boolean))).sort();
   return {baris, satuan:'pips', simbol, nama:(g==='FOREX'?'Datuk Crypto 89':'Datuk EURUSD'), mt4:false, admin};
 }
-// ══ BATAS DD DATUK EURUSD (disepakati): peringatan 1.500 pips, batas keras 2.000 pips. 1 pip = $0,10 (lot 0,01). ══
+// ══ BATAS DD DATUK EURUSD per bulan kalender: peringatan 1.500 pips, batas keras 2.000 pips (stop hari itu juga, lanjut bulan depan). 1 pip = $0,10 (lot 0,01). ══
 const DD_PERINGATAN_PIPS=1500, DD_BATAS_PIPS=2000, DD_USD_PER_PIP=0.10;
 function ddUsdTeks(pips){ return '$'+(pips*DD_USD_PER_PIP).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function bannerDdKurva(dd3){
   const p=dd3.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1});
   const kotak=(bg,border,judul,teks)=>'<div style="margin-top:10px;padding:10px;border-radius:10px;background:'+bg+';border:2px solid '+border+';font-size:11px;color:#FFFFFF;line-height:1.6"><b>'+judul+'</b><br>'+teks+'</div>';
-  const info='DD 3 bulan terakhir '+p+' pips (≈ '+ddUsdTeks(dd3)+')';
-  if(dd3>=DD_BATAS_PIPS) return kotak('#7F1D1D','#F87171','⛔ DD batas keras tercapai', info+' sudah melewati '+DD_BATAS_PIPS.toLocaleString('id-ID')+' pips. Hentikan sinyal baru sampai dievaluasi.');
+  const info='DD bulan ini '+p+' pips (≈ '+ddUsdTeks(dd3)+')';
+  if(dd3>=DD_BATAS_PIPS) return kotak('#7F1D1D','#F87171','⛔ DD batas keras tercapai', info+' sudah melewati '+DD_BATAS_PIPS.toLocaleString('id-ID')+' pips. Stop trading hari ini juga, lanjut bulan depan.');
   if(dd3>=DD_PERINGATAN_PIPS) return kotak('#78350F','#FBBF24','⚠️ DD peringatan', info+' sudah di atas '+DD_PERINGATAN_PIPS.toLocaleString('id-ID')+' pips. Evaluasi dan tahan sinyal baru.');
   return kotak('#14532D','#4ADE80','✅ DD dalam batas', info+', di bawah '+DD_PERINGATAN_PIPS.toLocaleString('id-ID')+' pips.');
 }
@@ -19326,7 +19326,7 @@ const ddUsdTxt=(akun==='analis'&&!data.mt4&&h.dd>0.0001)?' (≈ '+ddUsdTeks(h.dd
       +'</div>';
     isi=kontrol+kurvaSvg(h)+penjelasan;
 if(akun==='analis' && !data.mt4){
-  const h3=kurvaBangun(data,'3M','ALL','');
+  const h3=kurvaBangun(data,'1M','ALL',bulanKeyNow());
   isi+= h3 ? bannerDdKurva(h3.dd) : '<div style="margin-top:10px;font-size:11px;color:#E5E7EB">Belum ada data 3 bulan terakhir untuk cek DD.</div>';
 }
     var judulKanan='<div style="text-align:right"><div style="font-size:16px;font-weight:800;color:'+warnaAngka(h.akhir)+'">'+sg(h.akhir)+fm(h.akhir)+'</div>'+((!data.mt4)?'<div style="font-size:10px;color:'+warnaAngka(h.totalVp)+'">('+_kvAngka(h.totalVp,2)+' VP)</div>':'')+'</div>';
