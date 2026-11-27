@@ -19095,13 +19095,22 @@ function renderPeringatanAtasXAU(){
     if(host) host.insertBefore(el, host.firstChild);
   }
 }
-// Kartu WD Aman / Tahan WD ditaruh tepat di bawah tab akun, di atas kotak WAJIB, supaya terlihat sebelum REM.
-function taruhWdAmanAtas(){
-  const sec=document.getElementById('secWdAman'), sw=document.getElementById('akunSwitch');
-  if(!sec||!sw||!sw.parentNode) return;
-  if(sec.parentNode!==sw.parentNode || sw.nextElementSibling!==sec) sw.parentNode.insertBefore(sec, sw.nextSibling);
+// Urutan di halaman Akun MT4: tab akun → kotak WAJIB + PAKAI LOT (lot yang dipakai) → kartu WD Aman / batas WD → isi lain.
+// Kotak WAJIB tetap diberi data-akun="mt4" supaya ikut tersembunyi saat tab Datuk dipilih.
+function taruhAtasMt4(){
+  const sw=document.getElementById('akunSwitch'); if(!sw||!sw.parentNode) return;
+  const lot=document.getElementById('redBoxLot');
+  const box=lot&&lot.parentNode;
+  if(box && box.parentNode){
+    box.setAttribute('data-akun','mt4');
+    if(box.previousElementSibling!==sw) sw.parentNode.insertBefore(box, sw.nextSibling);
+  }
+  const sec=document.getElementById('secWdAman');
+  if(sec && box && box.parentNode && (sec.previousElementSibling!==box || sec.parentNode!==box.parentNode)){
+    box.parentNode.insertBefore(sec, box.nextSibling);
+  }
 }
-setTimeout(taruhWdAmanAtas, 1200); setInterval(taruhWdAmanAtas, 2500);
+setTimeout(taruhAtasMt4, 1200); setInterval(taruhAtasMt4, 2500);
 setTimeout(renderPeringatanAtasXAU, 1000); setInterval(renderPeringatanAtasXAU, 2000);
 setInterval(renderBannerInputXAU, 3000);
 setTimeout(renderEksporAnalis, 1500); setInterval(renderEksporAnalis, 3000);
