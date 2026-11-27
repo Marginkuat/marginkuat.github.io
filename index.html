@@ -281,7 +281,7 @@ function kanalTampil(){ var a=document.body&&document.body.getAttribute('data-ak
       <details class="kamus-item"><summary>Profit Factor</summary><div class="kamus-body">Perbandingan antara total keuntungan dari transaksi profit (Gross Profit) dengan total kerugian dari transaksi loss (Gross Loss).<br><br>Rumus: Gross Profit ÷ Gross Loss (6 bulan terakhir).<br><br>Semakin besar nilainya, semakin sehat performanya — di atas 1 artinya untung lebih besar dari rugi secara total.</div></details>
       <details class="kamus-item"><summary>Recovery Factor</summary><div class="kamus-body">Tingkat kemampuan akun buat pulih (recovery) dari kerugian terdalam yang pernah dialami.<br><br>Rumus: Nett P/L ÷ Drawdown terbesar (6 bulan terakhir).<br><br>Makin besar, makin cepat/kuat akun ini "menyembuhkan diri" tiap kali kena rugi dalam.</div></details>
       <details class="kamus-item"><summary>Max Drawdown (Max DD)</summary><div class="kamus-body">Penurunan TERBESAR dari titik puncak (peak) tertinggi saldo ke titik terendah setelahnya, dalam periode tertentu.<br><br>Ini mengukur "luka terdalam" yang pernah dialami akun — beda dari Current Drawdown yang lihat kondisi HARI INI.</div></details>
-      <details class="kamus-item"><summary>Drawdown terdalam bulan ini &amp; Sekarang</summary><div class="kamus-body"><b>Terdalam</b> = penurunan saldo terbesar dari puncak <b>bulan berjalan</b>, dibanding saldo awal bulan.<br>Rumus: (puncak saldo − saldo terendah setelah puncak) ÷ saldo awal bulan × 100%.<br>Contoh Nov 2026: (728,52 − 520,56) ÷ 627,28 = 33,2%.<br><b>Sekarang</b> = jarak saldo hari ini dari puncak bulan ini. Kalau saldo sedang di puncak, nilainya 0%.<br><br>Beda dengan Max DD (histori), ini nunjukin kondisi akun HARI INI — lagi floating minus dalam, atau udah recover.</div></details>
+      <details class="kamus-item"><summary>Drawdown terdalam bulan ini &amp; Sekarang</summary><div class="kamus-body"><b>Terdalam</b> = penurunan profit trading terbesar dari puncak <b>bulan berjalan</b>, dibanding saldo awal bulan. Setoran dan WD tidak dihitung.<br>Rumus: (puncak profit kumulatif − profit kumulatif terendah setelah puncak) ÷ saldo awal bulan × 100%.<br>Contoh Nov 2026: ¢242,92 ÷ ¢627,28 = 38,7% (rugi trading tanggal 23 Nov).<br><b>Sekarang</b> = jarak profit hari ini dari puncak bulan ini. Kalau saldo sedang di puncak, nilainya 0%.<br><br>Beda dengan Max DD (histori), ini nunjukin kondisi akun HARI INI — lagi floating minus dalam, atau udah recover.</div></details>
       <details class="kamus-item"><summary>Monthly Loss Ratio</summary><div class="kamus-body">Perbandingan antara loss terbesar dalam sebulan dengan rata-rata profit bulanan (6 bulan terakhir).<br><br>Semakin kecil persentasenya, semakin sehat — artinya loss terburukmu gak terlalu jauh dari kondisi normal.</div></details>
       <details class="kamus-item"><summary>Consistency Score</summary><div class="kamus-body">Skor seberapa STABIL profit bulanan kamu (gak naik-turun ekstrem tiap bulan).<br><br>Dihitung dari variasi/standar deviasi profit tiap bulan — makin kecil variasinya, makin konsisten &amp; makin tinggi skornya.</div></details>
       <details class="kamus-item"><summary>Sharpe Ratio</summary><div class="kamus-body">Rasio yang mengukur seberapa besar return yang kamu dapat DIBANDING risiko/volatilitas yang diambil buat dapetin return itu.<br><br>Rumus umum: (Rata-rata return − return bebas risiko) ÷ Standar deviasi return.<br><br>Makin tinggi, makin "efisien" — untung yang didapat sepadan dengan risiko yang diambil, bukan untung yang kebetulan/spekulatif.</div></details>
@@ -3465,7 +3465,7 @@ function renderBalanceDrawdown(){
         ddNowHtml=` · Sekarang: <b style="color:${ddNow<0.05?'#4ADE80':'#FBBF24'}">${ddNow.toFixed(1)}%</b>`;
       }
     }catch(e){ console.error('dd sekarang',e); }
-    el.innerHTML=`🛡️ Drawdown terdalam bulan ini: <b style="color:${zone.color}">${data.ddMaxPct.toFixed(1)}%</b> <span style="color:${zone.color}">(${zone.label})</span>${ddNowHtml}<div style="font-size:10px;color:#E5E7EB;font-weight:400;margin-top:3px">Terdalam = penurunan terbesar dari puncak saldo bulan ini ÷ saldo awal bulan. Sekarang = jarak saldo saat ini dari puncak bulan ini. Bukan kerugian total sejak awal.</div>${bufferHtml}`;
+    el.innerHTML=`🛡️ Drawdown terdalam bulan ini: <b style="color:${zone.color}">${data.ddMaxPct.toFixed(1)}%</b> <span style="color:${zone.color}">(${zone.label})</span>${ddNowHtml}<div style="font-size:10px;color:#E5E7EB;font-weight:400;margin-top:3px">Terdalam = penurunan terbesar dari puncak profit trading bulan ini ÷ saldo awal bulan. Setoran dan WD tidak dihitung. Sekarang = jarak profit saat ini dari puncak bulan ini. Bukan kerugian total sejak awal.</div>${bufferHtml}`;
   }catch(e){ el.innerHTML=''; }
 }
 function toggleBalanceMask(){
@@ -19603,6 +19603,12 @@ function renderWdAturan(){
 const WD_AMAN_PERSEN_PROFIT=40;  // maksimal WD = 40% dari profit bersih bulan ini
 const WD_AMAN_BUFFER_MIN=20;     // saldo setelah WD tidak boleh di bawah 20× risiko per kalah
 const WD_AMAN_DD_MAKS=20;        // tahan WD kalau drawdown terdalam bulan ini lebih dari 20%
+// Banner di kartu Tahan WD: DD dihitung dari profit trading, setoran dan WD tidak dihitung sebagai rugi.
+function catatanDdWd(ddPct, awal){
+  const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const nom=(ddPct>0 && awal>0)? ddPct/100*awal : 0;
+  return '<div style="margin-bottom:10px;padding:8px 10px;border-radius:8px;background:#1E3A5F;border:1px solid #60A5FA;font-size:11px;color:#E5E7EB;line-height:1.5"><b style="color:#93C5FD">ℹ️ Cara hitung DD</b><br>DD dihitung dari profit trading. Setoran dan WD tidak dihitung sebagai rugi.'+(nom>0?' Bulan ini: '+(+ddPct).toFixed(1)+'% = '+c(nom)+' ÷ saldo awal '+c(awal)+'.':'')+'</div>';
+}
 function renderWdAman(){
   const el=document.getElementById('wdAmanBox'); if(!el) return;
   let p,rm; try{ p=hitungPerformaMt4(); rm=getRiskMeterData(); }catch(e){ el.textContent='Data belum siap.'; return; }
@@ -19636,6 +19642,7 @@ function renderWdAman(){
     +row(tahan?'Batas WD jika semua syarat terpenuhi':'Batas WD aman',c(batas),tahan?'#FBBF24':'#4ADE80');
   if(!tahan && risikoCent>0) h+='<div style="font-size:11px;margin-top:6px">Setelah WD maksimal, saldo '+c(saldo-batas)+' dengan buffer sekitar <b>'+Math.floor((saldo-batas)/risikoCent)+'× kalah beruntun</b>.</div>';
   h+='<div style="font-size:10px;margin-top:8px;line-height:1.5">Aturan: WD hanya dari profit bulan berjalan (maks '+WD_AMAN_PERSEN_PROFIT+'%), saldo setelah WD tidak di bawah '+WD_AMAN_BUFFER_MIN+'× risiko per kalah, dan tahan WD kalau bulan lalu rugi atau drawdown terdalam bulan ini lebih dari '+WD_AMAN_DD_MAKS+'%. Ini patokan hitungan, bukan saran keuangan.</div>';
+  h=catatanDdWd(rm?rm.ddMaxPct:0, bKini.start)+h;
   el.innerHTML=h;
 }
 (function(){
