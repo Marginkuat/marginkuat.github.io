@@ -2302,6 +2302,8 @@ function renderInvCalcDisclaimer(){
   </div>
 </div>
 
+<!-- DD PER BULAN (MT4): profit trading saja, DP dan WD tidak dihitung -->
+<div class="section" data-akun="mt4" id="secDdBulan"><div class="sec-title">📉 DD per Bulan (tanpa DP &amp; WD)</div><div class="graph-card"><div id="ddBulanBox" style="font-size:12px;color:#E5E7EB;line-height:1.6">Memuat...</div></div></div>
 <!-- RIWAYAT DEPOSIT & PENARIKAN (WD) -->
 <div class="section" data-akun="mt4" id="secWdAman">
   <div class="sec-title">🛡️ WD Aman Bulan Ini</div>
@@ -17969,7 +17971,7 @@ document.addEventListener('DOMContentLoaded',()=>{ setAkunTampilan('mt4'); loadR
 // Bagian lain (kalkulator, riwayat, dan seterusnya) hanya tampil judulnya dengan tombol untuk membuka.
 // Akun Analis juga dilipat: hanya tampilan (tombol tampilkan), angka dan logika tidak diubah.
 (function(){
-  const TAMPIL_PENUH = ['Pertumbuhan', 'WD Aman'];
+  const TAMPIL_PENUH = ['Pertumbuhan', 'WD Aman', 'DD per Bulan'];
   function ringkaskan(){
     document.querySelectorAll('.section').forEach(sec=>{
       if(sec.dataset.ringkas==='1') return;
@@ -19105,10 +19107,16 @@ function taruhAtasMt4(){
     box.setAttribute('data-akun','mt4');
     if(box.previousElementSibling!==sw) sw.parentNode.insertBefore(box, sw.nextSibling);
   }
-  const sec=document.getElementById('secWdAman');
-  if(sec && box && box.parentNode && (sec.previousElementSibling!==box || sec.parentNode!==box.parentNode)){
-    box.parentNode.insertBefore(sec, box.nextSibling);
+  if(!box || !box.parentNode) return;
+  let cb=document.getElementById('catatanDdBox');
+  if(!cb){
+    cb=document.createElement('div'); cb.id='catatanDdBox';
+    cb.setAttribute('data-akun','mt4');
+    cb.style.cssText='margin:12px 0 16px;padding:14px;border-radius:14px;background:linear-gradient(135deg,#7F1D1D,#450A0A);border:2px solid #F87171;box-shadow:0 0 0 3px rgba(248,113,113,.15);display:none';
   }
+  if(cb.previousElementSibling!==box || cb.parentNode!==box.parentNode) box.parentNode.insertBefore(cb, box.nextSibling);
+  const sec=document.getElementById('secWdAman');
+  if(sec && (sec.previousElementSibling!==cb || sec.parentNode!==cb.parentNode)) cb.parentNode.insertBefore(sec, cb.nextSibling);
 }
 setTimeout(taruhAtasMt4, 1200); setInterval(taruhAtasMt4, 2500);
 setTimeout(renderPeringatanAtasXAU, 1000); setInterval(renderPeringatanAtasXAU, 2000);
@@ -19607,8 +19615,34 @@ const WD_AMAN_DD_MAKS=20;        // tahan WD kalau drawdown terdalam bulan ini l
 function catatanDdWd(ddPct, awal){
   const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
   const nom=(ddPct>0 && awal>0)? ddPct/100*awal : 0;
-  return '<div style="margin-bottom:10px;padding:8px 10px;border-radius:8px;background:#1E3A5F;border:1px solid #60A5FA;font-size:11px;color:#E5E7EB;line-height:1.5"><b style="color:#93C5FD">ℹ️ Cara hitung DD</b><br>DD dihitung dari profit trading. Setoran dan WD tidak dihitung sebagai rugi.'+(nom>0?' Bulan ini: '+(+ddPct).toFixed(1)+'% = '+c(nom)+' ÷ saldo awal '+c(awal)+'.':'')+'</div>';
+  return '<div style="font-size:16px;font-weight:900;color:#FFFFFF;line-height:1.3;margin-bottom:6px">📉 Cara hitung DD</div>'
+    +'<div style="font-size:13px;color:#FECACA;line-height:1.5">DD dihitung dari profit trading. Setoran dan WD tidak dihitung sebagai rugi.'+(nom>0?' Bulan ini: '+(+ddPct).toFixed(1)+'% = '+c(nom)+' ÷ saldo awal '+c(awal)+'.':'')+'</div>';
 }
+// Kartu DD per bulan (MT4). DD per bulan kalender dari profit trading (ddMaksBulanMt4), DP dan WD tidak dihitung.
+function htmlDdBulan(perf, batasPct){
+  const NB=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const c=v=>'¢'+(+v||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const B=(perf&&perf.bulan)||[];
+  if(!B.length) return 'Belum ada data.';
+  const rows=B.slice().reverse().map(b=>{
+    const dd=ddMaksBulanMt4(perf,b.periode);
+    const nom=(dd>0 && b.start>0)? dd/100*b.start : 0;
+    const [y,m]=b.periode.split('-').map(Number);
+    const label=NB[m-1]+' '+y;
+    const st=dd>batasPct ? '<b style="color:#F87171">di atas '+batasPct+'%</b>' : '<b style="color:#4ADE80">di bawah '+batasPct+'%</b>';
+    return '<div style="padding:8px 0;border-bottom:1px solid #1F2A1F">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px"><b style="color:#FFFFFF">'+label+'</b><b style="color:'+(dd>batasPct?'#F87171':'#FFFFFF')+'">'+dd.toFixed(1)+'%'+(nom>0?' · '+c(nom):'')+'</b></div>'
+      +'<div style="font-size:11px;color:#9CA3AF;margin-top:2px">Profit trading '+c(b.sumProf)+' · DP '+c(b.dep)+' (tidak dihitung) · WD '+c(b.wd)+' (tidak dihitung) · '+st+'</div>'
+      +'</div>';
+  }).join('');
+  return '<div style="font-size:11px;color:#E5E7EB;margin-bottom:6px">DD dihitung per bulan kalender dari profit trading. DP dan WD tidak dihitung sebagai rugi.</div>'+rows;
+}
+function renderDdBulanMt4(){
+  const el=document.getElementById('ddBulanBox'); if(!el) return;
+  let p; try{ p=hitungPerformaMt4(); }catch(e){ el.textContent='Data belum siap.'; return; }
+  el.innerHTML=htmlDdBulan(p, WD_AMAN_DD_MAKS);
+}
+setTimeout(renderDdBulanMt4, 2600); setInterval(renderDdBulanMt4, 4000);
 function renderWdAman(){
   const el=document.getElementById('wdAmanBox'); if(!el) return;
   let p,rm; try{ p=hitungPerformaMt4(); rm=getRiskMeterData(); }catch(e){ el.textContent='Data belum siap.'; return; }
@@ -19642,8 +19676,8 @@ function renderWdAman(){
     +row(tahan?'Batas WD jika semua syarat terpenuhi':'Batas WD aman',c(batas),tahan?'#FBBF24':'#4ADE80');
   if(!tahan && risikoCent>0) h+='<div style="font-size:11px;margin-top:6px">Setelah WD maksimal, saldo '+c(saldo-batas)+' dengan buffer sekitar <b>'+Math.floor((saldo-batas)/risikoCent)+'× kalah beruntun</b>.</div>';
   h+='<div style="font-size:10px;margin-top:8px;line-height:1.5">Aturan: WD hanya dari profit bulan berjalan (maks '+WD_AMAN_PERSEN_PROFIT+'%), saldo setelah WD tidak di bawah '+WD_AMAN_BUFFER_MIN+'× risiko per kalah, dan tahan WD kalau bulan lalu rugi atau drawdown terdalam bulan ini lebih dari '+WD_AMAN_DD_MAKS+'%. Ini patokan hitungan, bukan saran keuangan.</div>';
-  h=catatanDdWd(rm?rm.ddMaxPct:0, bKini.start)+h;
   el.innerHTML=h;
+  const cb=document.getElementById('catatanDdBox'); if(cb){ cb.innerHTML=catatanDdWd(rm?rm.ddMaxPct:0, bKini.start); cb.style.display=''; }
 }
 (function(){
   if(typeof renderPertumbuhanBulanan==='function'){ const _rwm=renderPertumbuhanBulanan; renderPertumbuhanBulanan=function(){ _rwm.apply(this,arguments); try{ renderWdAman(); }catch(e){ console.error('wdaman',e); } }; }
