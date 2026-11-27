@@ -17965,11 +17965,11 @@ function setAkunTampilan(a){
 document.addEventListener('DOMContentLoaded',()=>{ setAkunTampilan('mt4'); loadRiwayatTutup().then(()=>{ try{ if(typeof renderPertumbuhanBulanan==='function') renderPertumbuhanBulanan(); }catch(e){} }); });
 </script>
 <script>
-// Tampilan ringkas: hanya Saldo MT4, Audit (Laporan Keuangan Saya), dan Pertumbuhan yang tampil penuh.
+// Tampilan ringkas: hanya Saldo MT4, Audit (Laporan Keuangan Saya), Pertumbuhan, dan WD Aman yang tampil penuh.
 // Bagian lain (kalkulator, riwayat, dan seterusnya) hanya tampil judulnya dengan tombol untuk membuka.
 // Akun Analis juga dilipat: hanya tampilan (tombol tampilkan), angka dan logika tidak diubah.
 (function(){
-  const TAMPIL_PENUH = ['Pertumbuhan'];
+  const TAMPIL_PENUH = ['Pertumbuhan', 'WD Aman'];
   function ringkaskan(){
     document.querySelectorAll('.section').forEach(sec=>{
       if(sec.dataset.ringkas==='1') return;
