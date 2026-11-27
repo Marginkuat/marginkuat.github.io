@@ -19236,6 +19236,7 @@ function kurvaAmbilData(akun,admin){
 }
 // ══ BATAS DD DATUK EURUSD per bulan kalender: peringatan 1.500 pips, batas keras 2.000 pips (stop hari itu juga, lanjut bulan depan). 1 pip = $0,10 (lot 0,01). ══
 const DD_PERINGATAN_PIPS=1500, DD_BATAS_PIPS=2000, DD_USD_PER_PIP=0.10;
+const DD_CRYPTO_PERINGATAN_PIPS=1200, DD_CRYPTO_BATAS_PIPS=1500; // Datuk Crypto 89: peringatan 1.200 pips (80% dari batas), batas keras 1.500 pips. 1 pip = $0,10.
 function ddUsdTeks(pips){ return '$'+(pips*DD_USD_PER_PIP).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function bannerDdKurva(dd3){
   const p=dd3.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1});
@@ -19246,13 +19247,34 @@ function bannerDdKurva(dd3){
   return kotak('#14532D','#4ADE80','✅ DD dalam batas', info+', di bawah '+DD_PERINGATAN_PIPS.toLocaleString('id-ID')+' pips.');
 }
 // Banner DD ditaruh paling atas halaman Datuk EURUSD, supaya terlihat sebelum REM. Satu elemen, selalu di atas.
-function taruhBannerDdAtas(html){
-  const host=document.querySelector('[data-akun="analis"]');
-  if(!host) return;
-  let el=document.getElementById('bannerDdAtasAnalis');
-  if(!el){ el=document.createElement('div'); el.id='bannerDdAtasAnalis'; el.style.cssText='margin:6px 0 10px 0'; }
+function taruhBannerDdAtas(html, akun){
+  akun=akun||'analis';
+  const id = akun==='analis' ? 'bannerDdAtasAnalis' : 'bannerDdAtas_'+akun;
+  let el=document.getElementById(id);
+  if(!el){ el=document.createElement('div'); el.id=id; el.style.cssText='margin:6px 0 10px 0'; }
   el.innerHTML=html;
-  if(el.parentNode!==host || host.firstChild!==el) host.insertBefore(el, host.firstChild);
+  if(akun==='analis'){
+    const host=document.querySelector('[data-akun="analis"]');
+    if(!host) return;
+    if(el.parentNode!==host || host.firstChild!==el) host.insertBefore(el, host.firstChild);
+  } else {
+    const ref=document.querySelector('[data-akun="'+akun+'"]');
+    if(!ref || !ref.parentNode) return;
+    el.setAttribute('data-akun', akun);
+    if(el.nextElementSibling!==ref) ref.parentNode.insertBefore(el, ref);
+  }
+}
+// Banner DD per akun. EURUSD: peringatan 1.500 dan batas 2.000. Crypto 89: batas 1.500 saja, tanpa dolar.
+function bannerDdKurvaAkun(dd3, akun){
+  if(akun!=='crypto89') return bannerDdKurva(dd3);
+  const p=dd3.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1});
+  const kotak=(bg,border,judul,teks)=>'<div style="margin-top:10px;padding:10px;border-radius:10px;background:'+bg+';border:2px solid '+border+';font-size:14px;color:#FFFFFF;line-height:1.6"><b style="font-size:16px">'+judul+'</b><br>'+teks+'</div>';
+  const info='DD bulan ini '+p+' pips (≈ '+ddUsdTeks(dd3)+')';
+  const batas=DD_CRYPTO_BATAS_PIPS.toLocaleString('id-ID');
+  const warn=DD_CRYPTO_PERINGATAN_PIPS.toLocaleString('id-ID');
+  if(dd3>=DD_CRYPTO_BATAS_PIPS) return kotak('#7F1D1D','#F87171','⛔ DD batas tercapai', info+' sudah mencapai '+batas+' pips. Stop trading hari ini juga, lanjut bulan depan.');
+  if(dd3>=DD_CRYPTO_PERINGATAN_PIPS) return kotak('#78350F','#FBBF24','⚠️ DD peringatan', info+' sudah di atas '+warn+' pips. Evaluasi dan tahan sinyal baru.');
+  return kotak('#14532D','#4ADE80','✅ DD dalam batas', info+', di bawah '+warn+' pips.');
 }
 function kurvaBangun(data,rangeKey,simbol,bulanPilih){
   const bulan=(KURVA_RANGE.find(x=>x[0]===rangeKey)||KURVA_RANGE[2])[1];
@@ -19350,11 +19372,12 @@ const ddUsdTxt=(akun==='analis'&&!data.mt4&&h.dd>0.0001)?' (≈ '+ddUsdTeks(h.dd
       +(h.worst&&h.worst.nilai<0?'<div><b>'+(data.mt4?'Hari':'Sinyal')+' rugi terbesar:</b> <span style="color:#F87171;font-weight:800">'+(data.mt4?'-¢'+_kvAngka(Math.abs(h.worst.nilai),2):_kvAngka(h.worst.nilai,1)+' pips')+'</span> ('+(data.mt4?_kvTgl(h.worst.tgl):h.worst.sim+', '+_kvTgl(h.worst.tgl))+')</div>':'')
       +'</div>';
     isi=kontrol+kurvaSvg(h)+penjelasan;
-if(akun==='analis' && !data.mt4){
+if(!data.mt4 && (akun==='analis' || akun==='crypto89')){
   const h3=kurvaBangun(data,'1M','ALL',bulanKeyNow());
-  taruhBannerDdAtas(h3 ? bannerDdKurva(h3.dd) : '<div style="padding:10px;font-size:13px;color:#E5E7EB">Belum ada data bulan ini untuk cek DD.</div>');
+  taruhBannerDdAtas(h3 ? bannerDdKurvaAkun(h3.dd, akun) : '<div style="padding:10px;font-size:13px;color:#E5E7EB">Belum ada data bulan ini untuk cek DD.</div>', akun);
+  ['bannerDdAtasAnalis','bannerDdAtas_crypto89'].forEach(id=>{ if(id!==(akun==='analis'?'bannerDdAtasAnalis':'bannerDdAtas_'+akun)){ const e=document.getElementById(id); if(e) e.remove(); } });
 } else {
-  const lamaDd=document.getElementById('bannerDdAtasAnalis'); if(lamaDd) lamaDd.remove();
+  ['bannerDdAtasAnalis','bannerDdAtas_crypto89'].forEach(id=>{ const e=document.getElementById(id); if(e) e.remove(); });
 }
     var judulKanan='<div style="text-align:right"><div style="font-size:16px;font-weight:800;color:'+warnaAngka(h.akhir)+'">'+sg(h.akhir)+fm(h.akhir)+'</div>'+((!data.mt4)?'<div style="font-size:10px;color:'+warnaAngka(h.totalVp)+'">('+_kvAngka(h.totalVp,2)+' VP)</div>':'')+'</div>';
     var subKiri='<div style="font-size:10px;color:#E5E7EB">'+h.sinyal+' '+(data.mt4?'order':'sinyal')+' · '+h.jumlahTitik+' '+(data.mt4?'hari':'penutupan')+'</div>';
